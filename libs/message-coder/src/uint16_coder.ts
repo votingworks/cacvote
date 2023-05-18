@@ -1,10 +1,11 @@
 import { Buffer } from 'buffer';
-import { resultBlock } from '@votingworks/basics';
+import { Result, ok, resultBlock } from '@votingworks/basics';
 import { MAX_UINT16, MIN_UINT16 } from './constants';
 import {
   BitLength,
   BitOffset,
   Coder,
+  CoderError,
   DecodeResult,
   EncodeResult,
   Uint16,
@@ -16,8 +17,8 @@ import { UintCoder } from './uint_coder';
  * order.
  */
 export class Uint16Coder extends UintCoder {
-  bitLength(): BitLength {
-    return 16;
+  bitLength(): Result<BitLength, CoderError> {
+    return ok(16);
   }
 
   protected minValue = MIN_UINT16;
