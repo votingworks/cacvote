@@ -27,7 +27,6 @@ export interface WorkspaceFolder {
 const DEFAULT_EXTRA_FOLDERS: readonly WorkspaceFolder[] = [
   'docs',
   'libs/usb-mocking',
-  'services/converter-ms-sems',
 ].map((path) => ({ path, name: path }));
 
 function DEFAULT_PACKAGE_FILTER(pkg: PackageInfo) {
