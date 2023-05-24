@@ -103,7 +103,6 @@ export function generateConfig(pkgs: ReadonlyMap<string, PackageInfo>): string {
   const jobIds = [
     ...[...jobs.keys()].map((pkg) => jobIdForPackage(pkg)),
     // hardcoded jobs
-    'test-services-converter-ms-sems',
     'validate-monorepo',
   ];
 
@@ -134,23 +133,6 @@ jobs:
 ${[...jobs.values()]
   .map((lines) => lines.map((line) => `  ${line}`).join('\n'))
   .join('\n\n')}
-
-  # TODO: remove this once we replace the Python code
-  test-services-converter-ms-sems:
-    executor: nodejs
-    resource_class: medium
-    steps:
-      - checkout
-      - run:
-          name: Dependencies
-          command: |
-            sudo apt update -y
-            make -C services/converter-ms-sems install-dependencies
-            make -C services/converter-ms-sems install-dev-dependencies
-      - run:
-          name: Test
-          command: |
-            make -C services/converter-ms-sems coverage
 
   validate-monorepo:
     executor: nodejs
