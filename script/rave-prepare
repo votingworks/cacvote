@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+# This script is used to prepare the project after rebasing from `vxsuite`.
+
+no_commit=false
+no_config=false
+
+for arg in "$@"; do
+  case $arg in
+    --no-commit)
+      no_commit=true
+      shift
+      ;;
+    
+    --no-config)
+      no_config=true
+      shift
+      ;;
+
+    *)
+      echo "error: unknown option $arg"
+      exit 1
+      ;;
+  esac
+done
+
+# go to the root of the package
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$DIR/../"
+
+echo "🪓 Remove services:"
+rm -rf services
+
+echo "🪓 Remove applications:"
+./libs/monorepo-utils/bin/remove-package \
+  @votingworks/admin-frontend \
+  @votingworks/admin-backend \
+  @votingworks/admin-integration-testing \
+  @votingworks/central-scan-frontend \
+  @votingworks/central-scan-backend \
+  @votingworks/central-scan-integration-testing \
+  @votingworks/mark-frontend \
+  @votingworks/mark-backend \
+  @votingworks/mark-integration-testing \
+  @votingworks/mark-scan-frontend \
+  @votingworks/mark-scan-backend \
+  @votingworks/mark-scan-integration-testing \
+  @votingworks/scan-frontend \
+  @votingworks/scan-backend \
+  @votingworks/design-frontend \
+  @votingworks/design-backend
+
+echo "🪓 Remove libraries (step 1):"
+./libs/monorepo-utils/bin/remove-package \
+  @votingworks/cvr-fixture-generator \
+  @votingworks/custom-paper-handler
+
+echo "🪓 Remove unused packages:"
+./libs/monorepo-utils/bin/prune-unused
+
+echo "🪓 Remove libraries (step 2):"
+./libs/monorepo-utils/bin/remove-package \
+  @votingworks/ballot-interpreter-vx
+
+if [ "$no_config" = false ]; then
+  # regenerate config
+  pnpm -w generate-circleci-config
+  pnpm -w update-vscode-workspace
+
+  # regenerate lockfile
+  pnpm install
+fi
+
+if [ "$no_commit" = false ]; then
+  # commit changes
+  git add -A
+  git commit -m "chore: remove unused apps and packages"
+fi
