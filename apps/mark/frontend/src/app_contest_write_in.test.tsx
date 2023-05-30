@@ -18,8 +18,8 @@ import {
 
 import {
   singleSeatContestWithWriteIn,
-  setElectionInStorage,
   setStateInStorage,
+  electionDefinition,
 } from '../test/helpers/election';
 import { ApiMock, createApiMock } from '../test/helpers/mock_api_client';
 import { hackActuallyCleanUpReactModal } from '../test/test_utils';
@@ -31,7 +31,6 @@ beforeEach(() => {
   window.location.href = '/';
   apiMock = createApiMock();
   apiMock.expectGetSystemSettings();
-  apiMock.expectGetElectionDefinition(null);
 });
 
 afterEach(() => {
@@ -43,9 +42,9 @@ it('Single Seat Contest with Write In', async () => {
 
   const hardware = MemoryHardware.buildStandard();
   const storage = new MemoryStorage();
+  apiMock.expectGetElectionDefinition(electionDefinition);
   apiMock.expectGetMachineConfig();
 
-  await setElectionInStorage(storage);
   await setStateInStorage(storage);
 
   const { container } = render(

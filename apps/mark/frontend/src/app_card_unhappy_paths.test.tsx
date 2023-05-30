@@ -6,7 +6,7 @@ import { App } from './app';
 import { advanceTimersAndPromises } from '../test/helpers/timers';
 
 import {
-  setElectionInStorage,
+  electionDefinition,
   setStateInStorage,
 } from '../test/helpers/election';
 import { ApiMock, createApiMock } from '../test/helpers/mock_api_client';
@@ -18,7 +18,6 @@ beforeEach(() => {
   window.location.href = '/';
   apiMock = createApiMock();
   apiMock.expectGetSystemSettings();
-  apiMock.expectGetElectionDefinition(null);
 });
 
 afterEach(() => {
@@ -29,8 +28,7 @@ test('Shows card backwards screen when card connection error occurs', async () =
   const hardware = MemoryHardware.buildStandard();
   const storage = new MemoryStorage();
   apiMock.expectGetMachineConfig();
-
-  await setElectionInStorage(storage);
+  apiMock.expectGetElectionDefinition(electionDefinition);
   await setStateInStorage(storage);
 
   render(
@@ -42,7 +40,7 @@ test('Shows card backwards screen when card connection error occurs', async () =
     />
   );
   await advanceTimersAndPromises();
-  screen.getByText('Insert Card');
+  await screen.findByText('Insert Card');
 
   apiMock.setAuthStatus({
     status: 'logged_out',
