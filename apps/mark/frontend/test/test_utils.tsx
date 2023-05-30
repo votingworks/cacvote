@@ -12,7 +12,8 @@ import { MachineConfig } from '@votingworks/mark-backend';
 
 import { electionSampleNoSealDefinition } from '@votingworks/fixtures';
 import { randomBallotId } from '@votingworks/utils';
-import { render as testRender } from './react_testing_library';
+import { screen } from '@testing-library/react';
+import { render as testRender, waitFor } from './react_testing_library';
 
 import { BallotContext } from '../src/contexts/ballot_context';
 import { fakeMachineConfig } from './helpers/fake_machine_config';
@@ -80,4 +81,20 @@ export function render(
       </BallotContext.Provider>
     ),
   };
+}
+
+/**
+ * HACK: The modal library we're using applies an `aria-hidden` attribute
+ * to the root element when a modal is open and removes it when the modal
+ * is closed, but this isn't happening in the jest environment, for some
+ * reason. Works as expected in production.
+ * We're removing the attribute here to make sure our getByRole queries work
+ * properly.
+ */
+export async function hackActuallyCleanUpReactModal(): Promise<void> {
+  await waitFor(() => {
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  window.document.body.firstElementChild?.removeAttribute('aria-hidden');
 }

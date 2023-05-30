@@ -5,12 +5,22 @@ import {
   Election,
   FullElectionTally,
   getPartyIdsWithContests,
+  PartyId,
+  PrecinctId,
   PrecinctSelection,
   Tally,
 } from '@votingworks/types';
 import { assert } from '@votingworks/basics';
-import { getTallyIdentifier } from './compressed_tallies';
 import { filterTalliesByParams } from './votes';
+
+const ALL_PRECINCTS = '__ALL_PRECINCTS';
+
+export function getTallyIdentifier(
+  partyId?: PartyId,
+  precinctId: PrecinctId = ALL_PRECINCTS
+): string {
+  return `${partyId},${precinctId}`;
+}
 
 export function combineContestTallies(
   firstTally: ContestTally,

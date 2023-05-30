@@ -715,7 +715,6 @@ export function AppRoot({
           updatePollsState={updatePollsState}
           hasVotes={!!votes}
           reload={reload}
-          logger={logger}
         />
       );
     }

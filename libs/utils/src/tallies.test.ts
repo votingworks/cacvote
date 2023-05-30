@@ -3,17 +3,45 @@ import {
   electionMinimalExhaustiveSample,
   electionSample,
 } from '@votingworks/fixtures';
-import { ContestTally, FullElectionTally } from '@votingworks/types';
+import {
+  ContestTally,
+  FullElectionTally,
+  PartyIdSchema,
+  unsafeParse,
+} from '@votingworks/types';
 import { assert } from '@votingworks/basics';
 import { getEmptyTally, tallyVotesByContest } from './votes';
 import {
   combineContestTallies,
   getSubTalliesByPartyAndPrecinct,
+  getTallyIdentifier,
 } from './tallies';
 import {
   ALL_PRECINCTS_SELECTION,
   singlePrecinctSelectionFor,
 } from './precinct_selection';
+
+describe('getTallyIdentifier', () => {
+  const party1 = unsafeParse(PartyIdSchema, 'party1');
+
+  test('returns expected identifier with a party and precinct', () => {
+    expect(getTallyIdentifier(party1, 'precinct1')).toEqual('party1,precinct1');
+  });
+
+  test('returns expected identifier with no party and a precinct', () => {
+    expect(getTallyIdentifier(undefined, 'precinct1')).toEqual(
+      'undefined,precinct1'
+    );
+  });
+
+  test('returns expected identifier with a party and no precinct', () => {
+    expect(getTallyIdentifier(party1)).toEqual('party1,__ALL_PRECINCTS');
+  });
+
+  test('returns expected identifier with no party and no precinct', () => {
+    expect(getTallyIdentifier()).toEqual('undefined,__ALL_PRECINCTS');
+  });
+});
 
 test('combineContestTallies adds tallies together', () => {
   const contestZeroTallies = tallyVotesByContest({
