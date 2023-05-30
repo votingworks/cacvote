@@ -2,7 +2,7 @@ import type Express from 'express';
 import * as grout from '@votingworks/grout';
 import * as fs from 'fs';
 import { Optional, assert } from '@votingworks/basics';
-import { safeParseElectionDefinition, UserRole } from '@votingworks/types';
+import { Id, safeParseElectionDefinition, UserRole } from '@votingworks/types';
 import { isAbsolute, join } from 'path';
 import {
   CardStatus,
@@ -98,15 +98,21 @@ function buildApi(devDockFilePath: string) {
       return readFromCardMockFile().cardStatus;
     },
 
-    async insertCard(input: { role: DevDockUserRole }): Promise<void> {
+    async insertCard(input: {
+      role: DevDockUserRole;
+      commonAccessCardId?: Id;
+    }): Promise<void> {
       const { electionInfo } = readDevDockFileContents(devDockFilePath);
       assert(electionInfo !== undefined);
 
       await execFile(MOCK_CARD_SCRIPT_PATH, [
         '--card-type',
         input.role.replace('_', '-'),
-        '--electionDefinition',
+        '--election-definition',
         electionPathToAbsolute(electionInfo.path),
+        ...(input.commonAccessCardId !== undefined
+          ? ['--common-access-card-id', input.commonAccessCardId]
+          : []),
       ]);
     },
 

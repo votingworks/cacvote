@@ -1,4 +1,10 @@
-import React, { RefObject, useEffect, useRef, useState } from 'react';
+import {
+  faCamera,
+  faCaretDown,
+  faCaretUp,
+  faCircleDown,
+} from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   QueryClient,
   QueryClientProvider,
@@ -7,23 +13,18 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import styled from 'styled-components';
-import * as grout from '@votingworks/grout';
-import { assert, assertDefined, uniqueBy } from '@votingworks/basics';
+import { assert } from '@votingworks/basics';
 import type { Api, DevDockUserRole } from '@votingworks/dev-dock-backend';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import * as grout from '@votingworks/grout';
+import { Id } from '@votingworks/types';
 import {
-  faCamera,
-  faCaretDown,
-  faCaretUp,
-  faCircleDown,
-} from '@fortawesome/free-solid-svg-icons';
-import {
-  isFeatureFlagEnabled,
   BooleanEnvironmentVariableName,
+  isFeatureFlagEnabled,
 } from '@votingworks/utils';
-import { UsbDriveIcon } from './usb_drive_icon';
+import React, { RefObject, useEffect, useRef, useState } from 'react';
+import styled from 'styled-components';
 import { Colors } from './colors';
+import { UsbDriveIcon } from './usb_drive_icon';
 
 export type ApiClient = grout.Client<Api>;
 
@@ -51,92 +52,6 @@ const Column = styled.div`
   gap: 15px;
 `;
 
-const ElectionControlSelect = styled.select`
-  /* Use the exact width of the flex parent based on the width of the next row. */
-  width: 0;
-  min-width: 100%;
-  padding: 8px;
-  border-radius: 4px;
-  background-color: white;
-  option {
-    font-size: 14px;
-    padding: 0;
-  }
-`;
-
-// For now, we have a small list of pre-populated election choices, plus the
-// ability to pick from a file. Some future ideas:
-// - Start with all elections in the fixtures directory.
-// - Show a list of recently used elections.
-// - Allow searching for elections.
-const ELECTIONS = [
-  {
-    title: 'Sample General Election',
-    path: 'libs/fixtures/data/electionSample.json',
-  },
-  {
-    title: 'Sample Primary Election',
-    path: 'libs/fixtures/data/electionPrimary/electionPrimarySample.json',
-  },
-  {
-    title: 'Famous Names',
-    path: 'libs/fixtures/data/electionFamousNames2021/election.json',
-  },
-];
-
-function ElectionControl(): JSX.Element | null {
-  const queryClient = useQueryClient();
-  const apiClient = useApiClient();
-  const getElectionQuery = useQuery(
-    ['getElection'],
-    async () => (await apiClient.getElection()) ?? null
-  );
-  const setElectionMutation = useMutation(apiClient.setElection, {
-    onSuccess: async () => await queryClient.invalidateQueries(['getElection']),
-  });
-
-  if (!getElectionQuery.isSuccess) return <ElectionControlSelect />;
-
-  const selectedElection = getElectionQuery.data;
-
-  async function onSelectElection(
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) {
-    const path = event.target.value;
-    if (path === 'Pick from file...') {
-      const dialogResult = await assertDefined(window.kiosk).showOpenDialog({
-        properties: ['openFile'],
-      });
-      if (dialogResult.canceled) return;
-      const selectedPath = dialogResult.filePaths[0];
-      if (selectedPath) {
-        setElectionMutation.mutate({ path: selectedPath });
-      }
-    } else {
-      setElectionMutation.mutate({ path });
-    }
-  }
-
-  const elections = uniqueBy(
-    ELECTIONS.concat(selectedElection ?? []),
-    (election) => election.path
-  );
-
-  return (
-    <ElectionControlSelect
-      value={selectedElection?.path}
-      onChange={onSelectElection}
-    >
-      {elections.map((election) => (
-        <option key={election.path} value={election.path}>
-          {election.title} - {election.path}
-        </option>
-      ))}
-      {window.kiosk && <option>Pick from file...</option>}
-    </ElectionControlSelect>
-  );
-}
-
 const SmartCardButton = styled.button<{ isInserted: boolean }>`
   background-color: white;
   border: ${(props) =>
@@ -162,21 +77,16 @@ const SmartCardButton = styled.button<{ isInserted: boolean }>`
 `;
 
 function SmartCardControl({
-  role,
+  label,
   isInserted,
   onClick,
   disabled,
 }: {
-  role: DevDockUserRole;
+  label: string;
   isInserted: boolean;
   onClick(): void;
   disabled: boolean;
 }): JSX.Element {
-  const label = {
-    poll_worker: 'Poll Worker',
-    election_manager: 'Election Manager',
-    system_administrator: 'System Admin',
-  }[role];
   return (
     <SmartCardButton
       onClick={onClick}
@@ -206,12 +116,6 @@ const SmartCardMocksDisabledMessage = styled.div`
   }
 `;
 
-const ROLES = [
-  'system_administrator',
-  'election_manager',
-  'poll_worker',
-] as const;
-
 function SmartCardMockControls() {
   const queryClient = useQueryClient();
   const apiClient = useApiClient();
@@ -227,18 +131,24 @@ function SmartCardMockControls() {
     onSuccess: async () =>
       await queryClient.invalidateQueries(['getCardStatus']),
   });
+  const voters: Array<{ commonAccessCardId: string }> = [
+    { commonAccessCardId: 'User 1' },
+    { commonAccessCardId: 'User 2' },
+    { commonAccessCardId: 'User 3' },
+    { commonAccessCardId: 'User 4' },
+    { commonAccessCardId: 'User 5' },
+  ];
 
   const cardStatus = getCardStatusQuery.data;
-  const insertedCardRole =
-    cardStatus?.status === 'ready'
-      ? cardStatus.cardDetails?.user.role
-      : undefined;
+  const insertedCardUser =
+    cardStatus?.status === 'ready' ? cardStatus.cardDetails?.user : undefined;
+  const insertedCardRole = insertedCardUser?.role;
 
-  function onCardClick(role: DevDockUserRole) {
+  function onCardClick(role: DevDockUserRole, commonAccessCardId?: Id) {
     if (insertedCardRole === role) {
       removeCardMutation.mutate();
     } else {
-      insertCardMutation.mutate({ role });
+      insertCardMutation.mutate({ role, commonAccessCardId });
     }
   }
 
@@ -257,16 +167,21 @@ function SmartCardMockControls() {
           </p>
         </SmartCardMocksDisabledMessage>
       )}
-      {ROLES.map((role) => (
+      {voters.map(({ commonAccessCardId }) => (
         <SmartCardControl
-          key={role}
-          isInserted={insertedCardRole === role}
-          role={role}
-          onClick={() => onCardClick(role)}
+          key={commonAccessCardId}
+          isInserted={
+            insertedCardUser?.role === 'rave_voter' &&
+            insertedCardUser.commonAccessCardId === commonAccessCardId
+          }
+          label={commonAccessCardId}
+          onClick={() => onCardClick('rave_voter', commonAccessCardId)}
           disabled={
             !areSmartCardMocksEnabled ||
             !getCardStatusQuery.isSuccess ||
-            (insertedCardRole !== undefined && insertedCardRole !== role)
+            (insertedCardUser !== undefined &&
+              (insertedCardUser?.role !== 'rave_voter' ||
+                insertedCardUser?.commonAccessCardId !== commonAccessCardId))
           }
         />
       ))}
@@ -501,6 +416,7 @@ function DevDock() {
   function onKeyDown(event: KeyboardEvent): void {
     if (event.key === 'd' && event.metaKey) {
       setIsOpen((previousIsOpen) => !previousIsOpen);
+      event.preventDefault();
     }
     if (isOpen) {
       if (event.key === 'Escape') setIsOpen(false);
@@ -515,9 +431,6 @@ function DevDock() {
   return (
     <Container ref={containerRef} className={isOpen ? '' : 'closed'}>
       <Content>
-        <Row>
-          <ElectionControl />
-        </Row>
         <Row>
           <Column>
             <Row>

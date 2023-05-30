@@ -2,6 +2,7 @@ import {
   CardlessVoterUser,
   ElectionManagerUser,
   PollWorkerUser,
+  RaveVoterUser,
   SystemAdministratorUser,
   UserRole,
 } from './auth';
@@ -20,7 +21,11 @@ export interface LoggedOut {
 
 export interface CheckingPin {
   readonly status: 'checking_pin';
-  readonly user: SystemAdministratorUser | ElectionManagerUser | PollWorkerUser;
+  readonly user:
+    | SystemAdministratorUser
+    | ElectionManagerUser
+    | PollWorkerUser
+    | RaveVoterUser;
   readonly error?: true;
   readonly lockedOutUntil?: Date;
   readonly wrongPinEnteredAt?: Date;
@@ -51,11 +56,18 @@ export interface CardlessVoterLoggedIn {
   readonly sessionExpiresAt: Date;
 }
 
+export interface RaveVoterLoggedIn {
+  readonly status: 'logged_in';
+  readonly user: RaveVoterUser;
+  readonly sessionExpiresAt: Date;
+}
+
 export type LoggedIn =
   | SystemAdministratorLoggedIn
   | ElectionManagerLoggedIn
   | PollWorkerLoggedIn
-  | CardlessVoterLoggedIn;
+  | CardlessVoterLoggedIn
+  | RaveVoterLoggedIn;
 
 export type AuthStatus = LoggedOut | CheckingPin | LoggedIn;
 
