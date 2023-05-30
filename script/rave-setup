@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+
+### Sets up a Debian system for running RAVE apps. ###
+
+set -euo pipefail
+
+setup-prereqs() {
+  echo "📦 Installing prerequisites"
+
+  if [[ "${PATH}" != */usr/local/bin* ]]; then
+    echo -e "\e[1;31merror:\e[0;31m /usr/local/bin doesn't appear to be in your PATH\e[0m" >&2
+    echo -e "" >&2
+    echo -e "    \e[33mPATH=${PATH}\e[0m" >&2
+    echo -e "" >&2
+    echo -e "\e[1mhint:\e[0m edit your shell config to include this line:" >&2
+    echo -e "" >&2
+    echo -e "    \e[34mexport PATH=\"\${PATH}:/usr/local/bin\"\e[0m" >&2
+    echo -e "" >&2
+    echo -e "After you do that, open a new shell and re-run this script." >&2
+    exit 1
+  fi
+
+  sudo apt-get install \
+    build-essential \
+    curl \
+    git \
+    libcairo2-dev \
+    libgif-dev \
+    libjpeg-dev \
+    libpango1.0-dev \
+    libpcsclite-dev \
+    libpixman-1-dev \
+    libpng-dev \
+    libsane \
+    libssl-dev \
+    libx11-dev \
+    pcscd \
+    --yes \
+    --quiet \
+    --no-upgrade
+}
+
+setup-node() {
+  echo "🌳 NodeJS"
+
+  local ARCH=$(arch)
+  local NODE_VERSION=16.19.1
+  local NODE_ARCH=
+
+  local EXISTING_NODE_VERSION=$(node -v 2>/dev/null || true)
+
+  case "${EXISTING_NODE_VERSION}" in
+    "v${NODE_VERSION}")
+      echo -e "\e[1m[skip]\e[0m NodeJS ${NODE_VERSION} is already installed"
+      return
+      ;;
+
+    "")
+      ;;
+
+    *)
+      echo -e "\e[1;31merror:\e[0;31m incorrect NodeJS version\e[0m" >&2
+      echo -e "" >&2
+      echo -e "  \e[1mexisting version = \e[0m${EXISTING_NODE_VERSION}" >&2
+      echo -e "    \e[1mwanted version = \e[0m${NODE_VERSION}" >&2
+      echo -e "" >&2
+      echo -e "\e[1mhint:\e[0m remove the 'node' installation at $(which node):" >&2
+      exit 1
+      ;;
+  esac
+
+  case "${ARCH}" in
+    aarch64)
+      NODE_ARCH=arm64
+      ;;
+
+    x86_64)
+      NODE_ARCH=x64
+      ;;
+
+    *)
+      echo "unsupported architecture: ${ARCH}" >&2
+      exit 1
+      ;;
+  esac
+
+  curl -sLo- \
+    "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.gz" \
+    | sudo tar xz --strip-components 1 -C /usr/local
+
+  if [ "$(node -v)" = "v${NODE_VERSION}" ]; then
+    echo -e "✅ NodeJS ${NODE_VERSION} installed"
+  else
+    echo -e "\e[1;31merror:\e[0;31m NodeJS install failed\e[0m" >&2
+    exit 1
+  fi
+}
+
+setup-rust() {
+  echo "🦀 Rust"
+
+  if [ -f ~/.cargo/env ]; then
+    source ~/.cargo/env
+  fi
+
+  local EXISTING_RUST_VERSION=$(rustc -V 2>/dev/null || true)
+
+  if [ -n "${EXISTING_RUST_VERSION}" ]; then
+    echo -e "\e[1m[skip]\e[0m ${EXISTING_RUST_VERSION} is already installed"
+  else
+    # install rustup and disable confirmation prompt
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source ~/.cargo/env
+
+    if rustc -V >/dev/null 2>&1; then
+      echo -e "✅ $(rustc -V)"
+    else
+      echo -e "\e[1;31merror:\e[0;31m Rust install failed\e[0m" >&2
+      exit 1
+    fi
+  fi
+
+  rustup target add wasm32-unknown-unknown
+}
+
+setup-global-devtools() {
+  echo "🛠️ Global Devtools"
+
+  if ! which dx >/dev/null 2>&1; then
+    cargo install --locked dioxus-cli
+  else
+    echo -e "\e[1m[skip]\e[0m dioxus-cli is already installed"
+  fi
+
+  if ! which sqlx >/dev/null 2>&1; then
+    cargo install --locked sqlx-cli
+  else
+    echo -e "\e[1m[skip]\e[0m sqlx-cli is already installed"
+  fi
+
+  if ! which mprocs >/dev/null 2>&1; then
+    cargo install --locked mprocs
+  else
+    echo -e "\e[1m[skip]\e[0m mprocs is already installed"
+  fi
+
+  if ! which cargo-watch >/dev/null 2>&1; then
+    cargo install --locked cargo-watch
+  else
+    echo -e "\e[1m[skip]\e[0m cargo-watch is already installed"
+  fi
+
+   local PNPM_VERSION=8.1.0
+   local EXISTING_PNPM_VERSION=$(pnpm --version 2>/dev/null || true)
+
+   if [ "${EXISTING_PNPM_VERSION}" != "${PNPM_VERSION}" ]; then
+     sudo npm install --global pnpm@${PNPM_VERSION}
+  else
+    echo -e "\e[1m[skip]\e[0m pnpm@${PNPM_VERSION} is already installed"
+   fi
+}
+
+setup-postgresql() {
+  echo "💾 PostgreSQL Databases"
+
+  sudo apt-get install postgresql --yes --quiet --no-upgrade
+
+  if ! systemctl is-active --quiet postgresql; then
+    sudo service start postgresql
+  fi
+
+  local USER_IS_SUPERUSER=$(
+    cd /tmp
+    sudo -u postgres \
+      psql postgres \
+      --tuples-only \
+      --quiet \
+      -c "select pg_user.usesuper from pg_catalog.pg_user where pg_user.usename = '${USER}' limit 1;" \
+      | tr -d '[:space:]' \
+    || true
+  )
+
+  case "${USER_IS_SUPERUSER}" in
+    t)
+      echo -e "\e[1m[skip]\e[0m ${USER} is already a PostgreSQL superuser"
+      ;;
+
+    f)
+      echo -e "👤 Altering ${USER} PostgreSQL user to be a superuser"
+      sudo -u postgres \
+        psql postgres \
+        --quiet \
+        -c "alter user ${USER} with superuser;"
+      ;;
+
+    "")
+      echo -e "👤 Creating ${USER} PostgreSQL superuser"
+      sudo -u postgres \
+        createuser --superuser "${USER}"
+      ;;
+
+    *)
+      echo -e "\e[1;31merror:\e[0;31m failed to check whether ${USER} is a superuser; unexpected psql output: ${USER_IS_SUPERUSER}\e[0m"
+      exit 1
+      ;;
+  esac
+
+  # $USER should be a superuser at this point, so create the databases directly
+  for dbname in rave rave_jx rave_scan; do
+    local HAS_DB=$(psql postgres \
+      --quiet \
+      --tuples-only \
+      -c "select count(*) from pg_database where datistemplate = false and datname = '${dbname}'" \
+      | tr -d '[:space:]'
+    )
+
+    if [ "${HAS_DB}" = 0 ]; then
+      echo -e "➕ creating database '${dbname}'"
+      createdb "${dbname}"
+    else
+      echo -e "\e[1m[skip]\e[0m ${dbname} database already exists"
+    fi
+  done
+
+  setup-app-db services/rave-server postgres:rave
+  setup-app-db apps/rave-jx-terminal/backend postgres:rave_jx
+  setup-app-db apps/rave-scan/backend postgres:rave_scan
+}
+
+setup-app-db() {
+  local APP="${1}"
+  local DATABASE_URL="${2}"
+
+  (
+    echo -e "\e[1mmigrate:\e[0m running migrations for ${APP}"
+    cd "${APP}"
+    cargo sqlx migrate run \
+      --source db/migrations \
+      --database-url "${DATABASE_URL}"
+  )
+}
+
+setup-prereqs
+setup-node
+setup-rust
+setup-global-devtools
+setup-postgresql
+
+echo -e "\e[32m🎉 Success! Please restart your shell.\e[0m"

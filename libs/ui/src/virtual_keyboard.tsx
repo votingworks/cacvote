@@ -55,7 +55,7 @@ interface KeyMap {
   rows: Array<Key[]>;
 }
 
-const US_ENGLISH_KEYMAP: KeyMap = {
+export const US_ENGLISH_ALPHA_KEYMAP: KeyMap = {
   rows: [
     [
       { label: 'Q' },
@@ -97,11 +97,29 @@ const US_ENGLISH_KEYMAP: KeyMap = {
   ],
 };
 
+export const US_ENGLISH_ALNUM_KEYMAP: KeyMap = {
+  rows: [
+    [
+      { label: '1' },
+      { label: '2' },
+      { label: '3' },
+      { label: '4' },
+      { label: '5' },
+      { label: '6' },
+      { label: '7' },
+      { label: '8' },
+      { label: '9' },
+      { label: '0' },
+    ],
+    ...US_ENGLISH_ALPHA_KEYMAP.rows,
+  ],
+};
+
 export function VirtualKeyboard({
   onBackspace,
   onKeyPress,
   keyDisabled,
-  keyMap = US_ENGLISH_KEYMAP,
+  keyMap = US_ENGLISH_ALPHA_KEYMAP,
 }: VirtualKeyboardProps): JSX.Element {
   return (
     <Keyboard data-testid="virtual-keyboard">

@@ -4,6 +4,7 @@ import {
   DEFAULT_OVERALL_SESSION_TIME_LIMIT_HOURS,
   ElectionManagerUser,
   PollWorkerUser,
+  RaveVoterUser,
   SystemAdministratorUser,
   TEST_JURISDICTION,
 } from '@votingworks/types';
@@ -47,6 +48,19 @@ export function fakeCardlessVoterUser(
     role: 'cardless_voter',
     ballotStyleId: 'ballot-style-id',
     precinctId: 'precinct-id',
+    ...props,
+  };
+}
+
+export function fakeRaveVoterUser(
+  props: Partial<RaveVoterUser> = {}
+): RaveVoterUser {
+  return {
+    role: 'rave_voter',
+    commonAccessCardId: 'test-common-access-card-id',
+    givenName: 'Bob',
+    familyName: 'Smith',
+    jurisdiction: 'USA',
     ...props,
   };
 }
