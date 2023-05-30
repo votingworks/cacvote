@@ -3,9 +3,10 @@ import fs from 'fs';
 import * as dotenv from 'dotenv';
 import * as dotenvExpand from 'dotenv-expand';
 import * as server from './server';
-import { NODE_ENV, PORT } from './globals';
+import { NODE_ENV, PORT, RAVE_MARK_WORKSPACE } from './globals';
+import { Workspace, createWorkspace } from './workspace';
 
-export type { Api } from './app';
+export type { Api, CreateTestVoterInput } from './app';
 
 // https://github.com/bkeepers/dotenv#what-other-env-files-can-i-use
 const dotEnvPath = '.env';
@@ -34,8 +35,27 @@ for (const dotenvFile of dotenvFiles) {
 
 const logger = new Logger(LogSource.VxMarkBackend);
 
+function resolveWorkspace(): Workspace {
+  const workspacePath = RAVE_MARK_WORKSPACE;
+  if (!workspacePath) {
+    void logger.log(LogEventId.ScanServiceConfigurationMessage, 'system', {
+      message:
+        'workspace path could not be determined; pass a workspace or run with MARK_WORKSPACE',
+      disposition: 'failure',
+    });
+    throw new Error(
+      'workspace path could not be determined; pass a workspace or run with MARK_WORKSPACE'
+    );
+  }
+  return createWorkspace(workspacePath);
+}
+
 function main(): number {
-  server.start({ port: PORT, logger });
+  server.start({
+    port: PORT,
+    logger,
+    workspace: resolveWorkspace(),
+  });
   return 0;
 }
 

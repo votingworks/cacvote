@@ -12,6 +12,9 @@ packages:
   - 'libs/dev-dock/*'
   - 'libs/hmpb/*'
 
+  # include all services
+  - 'services/*'
+
   # include top-level development project
   - 'codemods'
   - 'script'

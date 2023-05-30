@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT server_id as \"server_id: ServerId\"\n        FROM printed_ballots\n        WHERE server_id IS NOT NULL\n        ORDER BY created_at DESC\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "server_id: ServerId",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "77cfca0407dbe89841c06d4f8b3b06d6c793237585194b9acb0919a1ac07997f"
+}

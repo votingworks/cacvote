@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            client_id as \"client_id: ClientId\",\n            machine_id,\n            (SELECT client_id FROM elections WHERE id = election_id) as \"election_id!: ClientId\",\n            cast_vote_record,\n            created_at\n        FROM scanned_ballots\n        WHERE server_id IS NULL\n        ORDER BY created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "client_id: ClientId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "machine_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "election_id!: ClientId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "cast_vote_record",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "389d4aa3005b51684781c3ce06a432308c5dd00dc14898452f7c0c0146e23595"
+}
