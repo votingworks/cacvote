@@ -84,7 +84,10 @@ function endCardlessVoterSession() {
 function configureWithSampleDefinitionAndSystemSettings() {
   cy.request(
     'POST',
-    methodUrl('configureWithSampleBallotPackageForIntegrationTest', 'http://localhost:3000/api'),
+    methodUrl(
+      'configureWithSampleBallotPackageForIntegrationTest',
+      'http://localhost:3000/api'
+    ),
     {}
   );
 }
@@ -110,7 +113,6 @@ beforeEach(() => {
   // Open polls
   insertPollWorkerCard();
   cy.contains('Open Polls').click();
-  cy.contains('Open Polls on VxMark Now').click();
 
   // Activate ballot
   cy.contains('Center Springfield').click();

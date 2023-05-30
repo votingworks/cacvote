@@ -7,7 +7,6 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor,
   within,
 } from '../test/react_testing_library';
 import { App } from './app';
@@ -23,24 +22,9 @@ import {
   setStateInStorage,
 } from '../test/helpers/election';
 import { ApiMock, createApiMock } from '../test/helpers/mock_api_client';
+import { hackActuallyCleanUpReactModal } from '../test/test_utils';
 
 let apiMock: ApiMock;
-
-/**
- * HACK: The modal library we're using applies an `aria-hidden` attribute
- * to the root element when a modal is open and removes it when the modal
- * is closed, but this isn't happening in the jest environment, for some
- * reason. Works as expected in production.
- * We're removing the attribute here to make sure our getByRole queries work
- * properly.
- */
-async function hackActuallyCleanUpReactModal() {
-  await waitFor(() => {
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-  });
-
-  window.document.body.firstElementChild?.removeAttribute('aria-hidden');
-}
 
 beforeEach(() => {
   jest.useFakeTimers();
