@@ -3,7 +3,6 @@ import EventEmitter from 'events';
 import pcscLite from 'pcsclite';
 import { mockOf } from '@votingworks/test-utils';
 
-import { numericArray } from '../test/utils';
 import {
   CardCommand,
   GET_RESPONSE,
@@ -70,34 +69,26 @@ const commandWithLotsOfData = {
     ins: 0x01,
     p1: 0x02,
     p2: 0x03,
-    data: Buffer.from(
-      numericArray({ length: MAX_COMMAND_APDU_DATA_LENGTH * 2 + 10 })
-    ),
+    data: Buffer.alloc(MAX_COMMAND_APDU_DATA_LENGTH * 2 + 10),
   }),
   buffers: [
-    Buffer.from([
-      0x10,
-      0x01,
-      0x02,
-      0x03,
-      MAX_COMMAND_APDU_DATA_LENGTH,
-      ...numericArray({ length: MAX_COMMAND_APDU_DATA_LENGTH }),
+    Buffer.concat([
+      Buffer.from([0x10, 0x01, 0x02, 0x03, MAX_COMMAND_APDU_DATA_LENGTH]),
+      Buffer.alloc(MAX_COMMAND_APDU_DATA_LENGTH),
     ]),
-    Buffer.from([
-      0x10,
-      0x01,
-      0x02,
-      0x03,
-      MAX_COMMAND_APDU_DATA_LENGTH,
-      ...numericArray({ length: MAX_COMMAND_APDU_DATA_LENGTH }),
+    Buffer.concat([
+      Buffer.from([0x10, 0x01, 0x02, 0x03, MAX_COMMAND_APDU_DATA_LENGTH]),
+      Buffer.alloc(MAX_COMMAND_APDU_DATA_LENGTH),
     ]),
-    Buffer.from([
-      0x00,
-      0x01,
-      0x02,
-      0x03,
-      0x0a, // 10 in hex
-      ...numericArray({ length: 10 }),
+    Buffer.concat([
+      Buffer.from([
+        0x00,
+        0x01,
+        0x02,
+        0x03,
+        0x0a, // 10 in hex
+      ]),
+      Buffer.alloc(10),
     ]),
   ],
 } as const;
@@ -106,8 +97,6 @@ const mockConnectProtocol = 0;
 const mockConnectSuccess: Connect = (_options, cb) =>
   cb(undefined, mockConnectProtocol);
 const mockConnectError: Connect = (_options, cb) => cb(new Error('Whoa!'));
-const mockDisconnectSuccess: Disconnect = (cb) => cb(undefined);
-const mockDisconnectError: Disconnect = (cb) => cb(new Error('Whoa'));
 function newMockTransmitSuccess(response: Buffer): Transmit {
   return (_data, _responseLength, _protocol, cb) => cb(undefined, response);
 }
@@ -172,28 +161,6 @@ test('CardReader status changes', () => {
   mockPcscLiteReader.emit('end');
   expect(onReaderStatusChange).toHaveBeenCalledTimes(6);
   expect(onReaderStatusChange).toHaveBeenNthCalledWith(6, 'no_card_reader');
-});
-
-test('CardReader card disconnect - success', async () => {
-  const cardReader = newCardReader('ready');
-  mockOf(mockPcscLiteReader.disconnect).mockImplementationOnce(
-    mockDisconnectSuccess
-  );
-
-  await cardReader.disconnectCard();
-
-  expect(mockPcscLiteReader.disconnect).toHaveBeenCalledTimes(1);
-});
-
-test('CardReader card disconnect - error', async () => {
-  const cardReader = newCardReader('ready');
-  mockOf(mockPcscLiteReader.disconnect).mockImplementationOnce(
-    mockDisconnectError
-  );
-
-  await expect(cardReader.disconnectCard()).rejects.toThrow();
-
-  expect(mockPcscLiteReader.disconnect).toHaveBeenCalledTimes(1);
 });
 
 test('CardReader command transmission - reader not ready', async () => {
@@ -322,27 +289,25 @@ test('CardReader command transmission - chained response', async () => {
   const cardReader = newCardReader('ready');
   mockOf(mockPcscLiteReader.transmit).mockImplementationOnce(
     newMockTransmitSuccess(
-      Buffer.from([
-        ...numericArray({ length: MAX_RESPONSE_APDU_DATA_LENGTH, value: 1 }),
-        STATUS_WORD.SUCCESS_MORE_DATA_AVAILABLE.SW1,
-        10,
+      Buffer.concat([
+        Buffer.alloc(MAX_RESPONSE_APDU_DATA_LENGTH, 1),
+        Buffer.from([STATUS_WORD.SUCCESS_MORE_DATA_AVAILABLE.SW1, 10]),
       ])
     )
   );
   mockOf(mockPcscLiteReader.transmit).mockImplementationOnce(
     newMockTransmitSuccess(
-      Buffer.from([
-        ...numericArray({ length: 10, value: 2 }),
-        STATUS_WORD.SUCCESS.SW1,
-        STATUS_WORD.SUCCESS.SW2,
+      Buffer.concat([
+        Buffer.alloc(10, 2),
+        Buffer.from([STATUS_WORD.SUCCESS.SW1, STATUS_WORD.SUCCESS.SW2]),
       ])
     )
   );
 
   expect(await cardReader.transmit(simpleCommand.command)).toEqual(
-    Buffer.from([
-      ...numericArray({ length: MAX_RESPONSE_APDU_DATA_LENGTH, value: 1 }),
-      ...numericArray({ length: 10, value: 2 }),
+    Buffer.concat([
+      Buffer.alloc(MAX_RESPONSE_APDU_DATA_LENGTH, 1),
+      Buffer.alloc(10, 2),
     ])
   );
 

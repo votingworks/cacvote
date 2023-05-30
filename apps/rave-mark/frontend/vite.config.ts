@@ -17,6 +17,7 @@ export default defineConfig((env) => {
   const processEnvDefines = [
     ...Object.entries(rootDotenvValues),
     ...Object.entries(coreDotenvValues),
+    ['IS_INTEGRATION_TEST', process.env.IS_INTEGRATION_TEST || 'false'],
   ].reduce<Record<string, string>>(
     (acc, [key, value]) => ({
       ...acc,
@@ -25,9 +26,12 @@ export default defineConfig((env) => {
     {}
   );
 
+  const basePort = Number(process.env.BASE_PORT) || 3000;
+  const port = Number(process.env.PORT) || basePort;
+
   return {
     server: {
-      port: 3000,
+      port,
     },
 
     build: {
@@ -86,7 +90,7 @@ export default defineConfig((env) => {
       {
         name: 'development-proxy',
         configureServer: (app) => {
-          setupProxy(app.middlewares);
+          setupProxy(app.middlewares, basePort);
         },
       },
     ],

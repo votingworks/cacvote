@@ -1,52 +1,17 @@
 import { DateTime } from 'luxon';
 import {
-  CardlessVoterUser,
   DEFAULT_OVERALL_SESSION_TIME_LIMIT_HOURS,
-  ElectionManagerUser,
-  PollWorkerUser,
-  SystemAdministratorUser,
-  TEST_JURISDICTION,
+  RaveVoterUser,
 } from '@votingworks/types';
 
-export function fakeSystemAdministratorUser(
-  props: Partial<SystemAdministratorUser> = {}
-): SystemAdministratorUser {
+export function fakeRaveVoterUser(
+  props: Partial<RaveVoterUser> = {}
+): RaveVoterUser {
   return {
-    role: 'system_administrator',
-    jurisdiction: TEST_JURISDICTION,
-    ...props,
-  };
-}
-
-export function fakeElectionManagerUser(
-  props: Partial<ElectionManagerUser> = {}
-): ElectionManagerUser {
-  return {
-    role: 'election_manager',
-    jurisdiction: TEST_JURISDICTION,
-    electionHash: 'election-hash',
-    ...props,
-  };
-}
-
-export function fakePollWorkerUser(
-  props: Partial<PollWorkerUser> = {}
-): PollWorkerUser {
-  return {
-    role: 'poll_worker',
-    jurisdiction: TEST_JURISDICTION,
-    electionHash: 'election-hash',
-    ...props,
-  };
-}
-
-export function fakeCardlessVoterUser(
-  props: Partial<CardlessVoterUser> = {}
-): CardlessVoterUser {
-  return {
-    role: 'cardless_voter',
-    ballotStyleId: 'ballot-style-id',
-    precinctId: 'precinct-id',
+    role: 'rave_voter',
+    commonAccessCardId: 'test-common-access-card-id',
+    givenName: 'Bob',
+    familyName: 'Smith',
     ...props,
   };
 }

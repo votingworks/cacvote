@@ -48,7 +48,7 @@ test('full lifecycle with USBControllerButton', async () => {
     return (
       <UsbControllerButton
         usbDriveStatus={usbDrive.status}
-        usbDriveEject={() => usbDrive.eject('election_manager')}
+        usbDriveEject={() => usbDrive.eject('system')}
       />
     );
   }
@@ -111,12 +111,12 @@ test('full lifecycle with USBControllerButton', async () => {
   expect(logger.log).toHaveBeenNthCalledWith(
     4,
     LogEventId.UsbDriveEjectInit,
-    'election_manager'
+    'system'
   );
   expect(logger.log).toHaveBeenNthCalledWith(
     5,
     LogEventId.UsbDriveEjected,
-    'election_manager',
+    'system',
     expect.objectContaining({ disposition: 'success' })
   );
 
@@ -183,7 +183,7 @@ describe('removing USB in any unexpected states still resets to absent', () => {
       expect(result.current.status).toEqual('mounted');
     });
 
-    const ejectPromise = result.current.eject('poll_worker');
+    const ejectPromise = result.current.eject('system');
     await waitFor(() => {
       expect(result.current.status).toEqual('ejecting');
     });
@@ -240,7 +240,7 @@ test('error in ejecting gets logged as expected', async () => {
   // When there is an already mounted USB drive, mount should not be called
   expect(mockKiosk.mountUsbDrive).not.toHaveBeenCalled();
 
-  const ejectPromise = result.current.eject('poll_worker');
+  const ejectPromise = result.current.eject('system');
   await waitFor(() => {
     expect(result.current.status).toEqual('ejecting');
   });
@@ -254,7 +254,7 @@ test('error in ejecting gets logged as expected', async () => {
   });
   expect(logger.log).toHaveBeenCalledWith(
     LogEventId.UsbDriveEjected,
-    'poll_worker',
+    'system',
     expect.objectContaining({
       disposition: 'failure',
     })
@@ -300,13 +300,13 @@ describe('usb formatting', () => {
     });
 
     await act(async () => {
-      await result.current.format('poll_worker', { action: 'eject' });
+      await result.current.format('system', { action: 'eject' });
     });
 
     expect(logger.log).toHaveBeenNthCalledWith(
       2,
       LogEventId.UsbDriveFormatInit,
-      'poll_worker'
+      'system'
     );
 
     expect(mockKiosk.formatUsbDrive).toHaveBeenCalled();
@@ -346,7 +346,7 @@ describe('usb formatting', () => {
     // initiate format
     let formatPromise = Promise.resolve();
     act(() => {
-      formatPromise = result.current.format('poll_worker', {
+      formatPromise = result.current.format('system', {
         action: 'mount',
       });
     });
@@ -385,7 +385,7 @@ describe('usb formatting', () => {
 
     await act(async () => {
       await expect(
-        result.current.format('poll_worker', { action: 'eject' })
+        result.current.format('system', { action: 'eject' })
       ).rejects.toThrowError('format error');
     });
 

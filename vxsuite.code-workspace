@@ -1,6 +1,14 @@
 {
   "folders": [
     {
+      "path": "apps/rave-jx-terminal/backend",
+      "name": "apps/rave-jx-terminal/backend"
+    },
+    {
+      "path": "apps/rave-jx-terminal/frontend",
+      "name": "apps/rave-jx-terminal/frontend"
+    },
+    {
       "path": "apps/rave-mark/backend",
       "name": "apps/rave-mark/backend"
     },
@@ -9,8 +17,12 @@
       "name": "apps/rave-mark/frontend"
     },
     {
-      "path": "apps/rave-mark/integration-testing",
-      "name": "apps/rave-mark/integration-testing"
+      "path": "apps/rave-scan/backend",
+      "name": "apps/rave-scan/backend"
+    },
+    {
+      "path": "apps/rave-scan/frontend",
+      "name": "apps/rave-scan/frontend"
     },
     {
       "path": "codemods",
@@ -33,6 +45,10 @@
       "name": "libs/ballot-encoder"
     },
     {
+      "path": "libs/ballot-encoder-rs",
+      "name": "libs/ballot-encoder-rs"
+    },
+    {
       "path": "libs/basics",
       "name": "libs/basics"
     },
@@ -41,16 +57,12 @@
       "name": "libs/cdf-schema-builder"
     },
     {
+      "path": "libs/central-scanner",
+      "name": "libs/central-scanner"
+    },
+    {
       "path": "libs/db",
       "name": "libs/db"
-    },
-    {
-      "path": "libs/dev-dock/backend",
-      "name": "libs/dev-dock/backend"
-    },
-    {
-      "path": "libs/dev-dock/frontend",
-      "name": "libs/dev-dock/frontend"
     },
     {
       "path": "libs/eslint-plugin-vx",
@@ -93,8 +105,16 @@
       "name": "libs/types"
     },
     {
+      "path": "libs/types-rs",
+      "name": "libs/types-rs"
+    },
+    {
       "path": "libs/ui",
       "name": "libs/ui"
+    },
+    {
+      "path": "libs/ui-rs",
+      "name": "libs/ui-rs"
     },
     {
       "path": "libs/usb-drive",
@@ -111,6 +131,10 @@
     {
       "path": "script",
       "name": "script"
+    },
+    {
+      "path": "services/rave-server",
+      "name": "services/rave-server"
     }
   ],
   "settings": {

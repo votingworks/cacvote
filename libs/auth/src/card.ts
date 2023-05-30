@@ -1,78 +1,28 @@
+import { Byte, Id } from '@votingworks/types';
 import { Buffer } from 'buffer';
-import {
-  ElectionManagerUser,
-  PollWorkerUser,
-  SystemAdministratorUser,
-} from '@votingworks/types';
 
-interface SystemAdministratorCardDetails {
-  user: SystemAdministratorUser;
-  numIncorrectPinAttempts?: number;
-}
-
-interface ElectionManagerCardDetails {
-  user: ElectionManagerUser;
-  numIncorrectPinAttempts?: number;
-}
-
-interface PollWorkerCardDetails {
-  user: PollWorkerUser;
-  numIncorrectPinAttempts?: number;
-
-  /**
-   * Unlike system administrator and election manager cards, which always have PINs, poll worker
-   * cards by default don't have PINs but can if the relevant system setting is enabled.
-   */
-  hasPin: boolean;
+/**
+ * Details about a Common Access Card.
+ */
+export interface CommonAccessCardDetails {
+  commonAccessCardId: Id;
+  givenName: string;
+  middleName?: string;
+  familyName: string;
+  numIncorrectPinAttempts: number;
 }
 
 /**
  * Details about a programmed card
  */
-export type CardDetails =
-  | SystemAdministratorCardDetails
-  | ElectionManagerCardDetails
-  | PollWorkerCardDetails;
+export type CardDetails = CommonAccessCardDetails;
 
-/**
- * A CardDetails type guard
- */
-export function areSystemAdministratorCardDetails(
-  cardDetails: CardDetails
-): cardDetails is SystemAdministratorCardDetails {
-  return cardDetails.user.role === 'system_administrator';
-}
-
-/**
- * A CardDetails type guard
- */
-export function areElectionManagerCardDetails(
-  cardDetails: CardDetails
-): cardDetails is ElectionManagerCardDetails {
-  return cardDetails.user.role === 'election_manager';
-}
-
-/**
- * A CardDetails type guard
- */
-export function arePollWorkerCardDetails(
-  cardDetails: CardDetails
-): cardDetails is PollWorkerCardDetails {
-  return cardDetails.user.role === 'poll_worker';
-}
-
-/**
- * A sub-type of CardStatus
- */
-export interface CardStatusReady {
+interface CardStatusReady {
   status: 'ready';
-  cardDetails?: CardDetails;
+  cardDetails: CardDetails;
 }
 
-/**
- * A sub-type of CardStatus
- */
-export interface CardStatusNotReady {
+interface CardStatusNotReady {
   status: 'card_error' | 'no_card' | 'unknown_error';
 }
 
@@ -104,16 +54,9 @@ export interface Card {
   getCardStatus(): Promise<CardStatus>;
 
   checkPin(pin: string): Promise<CheckPinResponse>;
-
-  program(
-    input:
-      | { user: SystemAdministratorUser; pin: string }
-      | { user: ElectionManagerUser; pin: string }
-      | { user: PollWorkerUser; pin?: string }
-  ): Promise<void>;
-  unprogram(): Promise<void>;
-
-  readData(): Promise<Buffer>;
-  writeData(data: Buffer): Promise<void>;
-  clearData(): Promise<void>;
+  generateSignature(
+    message: Buffer,
+    options: { privateKeyId: Byte; pin?: string }
+  ): Promise<Buffer>;
+  getCertificate(options: { objectId: Buffer }): Promise<Buffer>;
 }
