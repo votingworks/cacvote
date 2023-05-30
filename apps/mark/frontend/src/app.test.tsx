@@ -10,10 +10,7 @@ import * as React from 'react';
 import { electionSampleDefinition } from '@votingworks/fixtures';
 import userEvent from '@testing-library/user-event';
 import { fireEvent, screen, waitFor } from '../test/react_testing_library';
-import {
-  setElectionInStorage,
-  setStateInStorage,
-} from '../test/helpers/election';
+import { setStateInStorage } from '../test/helpers/election';
 import { fakeTts } from '../test/helpers/fake_tts';
 import { advanceTimersAndPromises } from '../test/helpers/timers';
 import { render } from '../test/test_utils';
@@ -130,23 +127,22 @@ it('changes screen reader settings based on keyboard inputs', async () => {
 // This test is only really here to provide coverage for the default value for
 // `App`'s `reload` prop.
 it('uses window.location.reload by default', async () => {
+  const electionDefinition = electionSampleDefinition;
   // Stub location in a way that's good enough for this test, but not good
   // enough for general `window.location` use.
   const reload = jest.fn();
   apiMock.expectGetMachineConfig();
   apiMock.expectGetSystemSettings();
-  apiMock.expectGetElectionDefinition(null);
+  apiMock.expectGetElectionDefinition(electionDefinition);
   jest.spyOn(window, 'location', 'get').mockReturnValue({
     ...window.location,
     reload,
   });
 
   // Set up in an already-configured state.
-  const electionDefinition = electionSampleDefinition;
   const hardware = MemoryHardware.buildStandard();
   const storage = new MemoryStorage();
 
-  await setElectionInStorage(storage, electionDefinition);
   await setStateInStorage(storage, {
     appPrecinct: ALL_PRECINCTS_SELECTION,
     pollsState: 'polls_closed_initial',
