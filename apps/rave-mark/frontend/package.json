@@ -12,13 +12,12 @@
   "scripts": {
     "build": "pnpm type-check && vite build",
     "format": "prettier '**/*.+(css|graphql|json|less|md|mdx|sass|scss|yaml|yml)' --write",
-    "lint": "pnpm type-check && eslint . && pnpm stylelint:run",
-    "lint:fix": "pnpm type-check && eslint . --fix && pnpm stylelint:run --fix",
+    "lint": "pnpm type-check && eslint .",
+    "lint:fix": "pnpm type-check && eslint . --fix",
     "pre-commit": "lint-staged",
     "start": "pnpm -w run-dev rave-mark",
     "start:core": "pnpm -w run-dev vm-rave-mark --core-only",
     "start:prod": "concurrently --names frontend,backend 'pnpm --dir prodserver start' 'pnpm --dir ../backend start'",
-    "stylelint:run": "stylelint 'src/**/*.{js,jsx,ts,tsx}'",
     "test": "is-ci test:ci test:watch",
     "test:ci": "TZ=UTC CI=true jest --maxWorkers=7",
     "test:coverage": "TZ=UTC jest --coverage --watchAll=false",
@@ -28,7 +27,6 @@
   },
   "lint-staged": {
     "*.+(js|jsx|ts|tsx)": [
-      "stylelint",
       "eslint --quiet --fix"
     ],
     "*.+(css|graphql|json|less|md|mdx|sass|scss|yaml|yml)": [
