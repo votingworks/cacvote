@@ -371,6 +371,80 @@ jobs:
       - store_artifacts:
           path: apps/mark/integration-testing/test-results/
 
+  # @votingworks/rave-mark-backend
+  test-apps-rave-mark-backend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-mark/backend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-mark/backend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-mark/backend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-mark/backend/reports/
+
+  # @votingworks/rave-mark-frontend
+  test-apps-rave-mark-frontend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-mark/frontend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-mark/frontend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-mark/frontend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-mark/frontend/reports/
+
+  # @votingworks/rave-mark-integration-testing
+  test-apps-rave-mark-integration-testing:
+    executor: nodejs-browsers
+    resource_class: xlarge
+    steps:
+      - install-cypress-browser
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-mark/integration-testing build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-mark/integration-testing lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-mark/integration-testing test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-mark/integration-testing/reports/
+      - store_artifacts:
+          path: apps/rave-mark/integration-testing/cypress/screenshots/
+      - store_artifacts:
+          path: apps/rave-mark/integration-testing/cypress/videos/
+
   # @votingworks/scan-backend
   test-apps-scan-backend:
     executor: nodejs
@@ -1161,6 +1235,9 @@ workflows:
       - test-apps-mark-backend
       - test-apps-mark-frontend
       - test-apps-mark-integration-testing
+      - test-apps-rave-mark-backend
+      - test-apps-rave-mark-frontend
+      - test-apps-rave-mark-integration-testing
       - test-apps-scan-backend
       - test-apps-scan-frontend
       - test-libs-api
