@@ -93,23 +93,17 @@ test('findAllMonorepoDependencies yields all dependencies', () => {
 
   // many dependencies
   expect(
-    [
-      ...findAllMonorepoDependencies(
-        pkgs,
-        pkgs.get('@votingworks/mark-frontend')!
-      ),
-    ].map((pkg) => pkg.name)
+    [...findAllMonorepoDependencies(pkgs, pkgs.get('@votingworks/ui')!)].map(
+      (pkg) => pkg.name
+    )
   ).toEqual(
     // this list is intentionally incomplete to avoid breaking this test
     // when new packages are added or dependencies are changed
     expect.arrayContaining([
       '@votingworks/basics',
-      '@votingworks/fixtures',
       '@votingworks/logging',
       '@votingworks/types',
-      '@votingworks/ui',
       '@votingworks/utils',
-      '@votingworks/mark-backend',
     ])
   );
 });
