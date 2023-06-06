@@ -1,0 +1,54 @@
+{
+  "name": "@votingworks/rave-mark-integration-testing",
+  "version": "1.0.0",
+  "private": true,
+  "license": "GPL-3.0",
+  "author": "VotingWorks Eng <eng@voting.works>",
+  "scripts": {
+    "build": "pnpm --dir ../frontend run build",
+    "cypress:open": "DISPLAY=:0 cypress open --e2e --browser chromium",
+    "cypress:run": "is-ci cypress:run:ci cypress:run:local",
+    "cypress:run:ci": "cypress run --browser chrome --reporter junit",
+    "cypress:run:local": "DISPLAY=:0 cypress run --browser chromium --reporter junit",
+    "format": "prettier '**/*.+(css|graphql|json|less|md|mdx|sass|scss|yaml|yml)' --write",
+    "lint": "eslint .",
+    "lint:fix": "pnpm lint --fix",
+    "pre-commit": "lint-staged",
+    "start": "pnpm --dir ../frontend run start:prod",
+    "test": "start-server-and-test start http://localhost:3000 cypress:run",
+    "test:watch": "start-server-and-test start http://localhost:3000 cypress:open"
+  },
+  "lint-staged": {
+    "*.+(css|graphql|json|less|md|mdx|sass|scss|yaml|yml)": [
+      "prettier --write"
+    ],
+    "*.+(js|jsx|ts|tsx)": [
+      "eslint --quiet --fix"
+    ],
+    "package.json": [
+      "sort-package-json"
+    ]
+  },
+  "dependencies": {
+    "cypress": "^12.13.0"
+  },
+  "devDependencies": {
+    "@testing-library/cypress": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "5.37.0",
+    "@typescript-eslint/parser": "5.37.0",
+    "eslint": "8.23.1",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-import-resolver-node": "^0.3.4",
+    "eslint-plugin-cypress": "^2.12.1",
+    "eslint-plugin-flowtype": "^5.2.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jest": "^26.1.5",
+    "eslint-plugin-jsx-a11y": "^6.6.1",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-vx": "workspace:*",
+    "is-ci-cli": "^2.1.2",
+    "start-server-and-test": "^1.12.5",
+    "typescript": "4.6.3"
+  }
+}
