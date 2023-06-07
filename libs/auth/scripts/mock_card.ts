@@ -17,6 +17,7 @@ const CARD_TYPES = [
   'election-manager',
   'poll-worker',
   'poll-worker-with-pin',
+  'rave-voter',
   'unprogrammed',
   'no-card',
 ] as const;
@@ -25,6 +26,7 @@ type CardType = typeof CARD_TYPES[number];
 interface MockCardInput {
   cardType: CardType;
   electionHash?: string;
+  commonAccessCardId?: string;
 }
 
 async function parseCommandLineArgs(): Promise<MockCardInput> {
@@ -39,6 +41,11 @@ async function parseCommandLineArgs(): Promise<MockCardInput> {
         description:
           'The election definition to use for an election manager or poll worker card',
         type: 'string',
+      },
+      'common-access-card-id': {
+        description: 'The Common Access Card ID to use for a RAVE voter card',
+        type: 'string',
+        alias: 'cac-id',
       },
     })
     .hide('help')
@@ -72,6 +79,7 @@ async function parseCommandLineArgs(): Promise<MockCardInput> {
   const args = argParser.parse(process.argv.slice(2)) as {
     cardType?: CardType;
     electionDefinition?: string;
+    commonAccessCardId?: string;
     help?: boolean;
   };
 
@@ -85,10 +93,12 @@ async function parseCommandLineArgs(): Promise<MockCardInput> {
   }
 
   let electionHash: Optional<string>;
-  if (['election-manager', 'poll-worker'].includes(args.cardType)) {
+  if (
+    ['election-manager', 'poll-worker', 'rave-voter'].includes(args.cardType)
+  ) {
     if (!args.electionDefinition) {
       throw new Error(
-        `Must specify election definition for election manager and poll worker cards\n\n${helpMessage}`
+        `Must specify election definition for ${args.cardType}\n\n${helpMessage}`
       );
     }
     const electionData = fs
@@ -105,10 +115,15 @@ async function parseCommandLineArgs(): Promise<MockCardInput> {
   return {
     cardType: args.cardType,
     electionHash,
+    commonAccessCardId: args.commonAccessCardId,
   };
 }
 
-function mockCardWrapper({ cardType, electionHash }: MockCardInput) {
+function mockCardWrapper({
+  cardType,
+  electionHash,
+  commonAccessCardId,
+}: MockCardInput) {
   switch (cardType) {
     case 'system-administrator': {
       mockCard({
@@ -177,6 +192,22 @@ function mockCardWrapper({ cardType, electionHash }: MockCardInput) {
       });
       break;
     }
+    case 'rave-voter': {
+      assert(commonAccessCardId !== undefined);
+      mockCard({
+        cardStatus: {
+          status: 'ready',
+          cardDetails: {
+            user: {
+              role: 'rave_voter',
+              commonAccessCardId,
+            },
+          },
+        },
+        pin: '000000',
+      });
+      break;
+    }
     case 'unprogrammed': {
       mockCard({
         cardStatus: {
@@ -209,6 +240,7 @@ export async function main(): Promise<void> {
     const mockCardInput = await parseCommandLineArgs();
     mockCardWrapper(mockCardInput);
   } catch (error) {
+    console.error(error);
     console.error(`❌ ${extractErrorMessage(error)}`);
     process.exit(1);
   }

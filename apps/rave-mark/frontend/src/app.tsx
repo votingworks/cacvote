@@ -1,4 +1,3 @@
-import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LogSource, Logger } from '@votingworks/logging';
 import { ColorMode, ScreenType, SizeMode } from '@votingworks/types';
@@ -10,6 +9,7 @@ import {
   createApiClient,
   createQueryClient,
 } from './api';
+import { AppRoot } from './app_root';
 
 const DEFAULT_COLOR_MODE: ColorMode = 'contrastMedium';
 const DEFAULT_SCREEN_TYPE: ScreenType = 'elo15';
@@ -45,7 +45,7 @@ export function App({
         >
           <ApiClientContext.Provider value={apiClient}>
             <QueryClientProvider client={queryClient}>
-              <H1>Hello RAVE</H1>
+              <AppRoot />
             </QueryClientProvider>
           </ApiClientContext.Provider>
         </ErrorBoundary>

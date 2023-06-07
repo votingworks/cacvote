@@ -170,6 +170,17 @@ test.each<{
       hasPin: true,
     },
   },
+  {
+    subject:
+      'subject=C = US, ST = CA, O = VotingWorks, ' +
+      '1.3.6.1.4.1.59817.1 = card, ' +
+      `1.3.6.1.4.1.59817.2 = ${jurisdiction}, ` +
+      '1.3.6.1.4.1.59817.3 = rave-voter, ' +
+      '1.3.6.1.4.1.59817.99 = 12345',
+    expectedCardDetails: {
+      user: { role: 'rave_voter', commonAccessCardId: '12345' },
+    },
+  },
 ])('parseUserDataFromCert', async ({ subject, expectedCardDetails }) => {
   mockOf(openssl).mockImplementationOnce(() =>
     Promise.resolve(Buffer.from(subject, 'utf-8'))
@@ -255,6 +266,17 @@ test.each<{
       `/1.3.6.1.4.1.59817.2=${jurisdiction}` +
       '/1.3.6.1.4.1.59817.3=poll-worker-with-pin' +
       `/1.3.6.1.4.1.59817.4=${electionHash}/`,
+  },
+  {
+    cardDetails: {
+      user: { role: 'rave_voter', commonAccessCardId: '12345' },
+      hasPin: true,
+    },
+    expectedSubject:
+      '/C=US/ST=CA/O=VotingWorks' +
+      '/1.3.6.1.4.1.59817.1=card' +
+      '/1.3.6.1.4.1.59817.3=rave-voter' +
+      `/1.3.6.1.4.1.59817.99=12345/`,
   },
 ])('constructCardCertSubject', ({ cardDetails, expectedSubject }) => {
   expect(constructCardCertSubject(cardDetails)).toEqual(expectedSubject);

@@ -33,6 +33,7 @@ import {
   CardDetails,
   CardStatus,
   CheckPinResponse,
+  getUserJurisdiction,
 } from './card';
 import {
   InsertedSmartCardAuthApi,
@@ -404,6 +405,11 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
                       ? { status: 'checking_pin', user, lockedOutUntil }
                       : { status: 'logged_in', user, sessionExpiresAt };
                   }
+                  case 'rave_voter': {
+                    return skipPinEntry
+                      ? { status: 'logged_in', user, sessionExpiresAt }
+                      : { status: 'checking_pin', user, lockedOutUntil };
+                  }
                   /* istanbul ignore next: Compile-time check for completeness */
                   default: {
                     throwIllegalValue(user, 'role');
@@ -432,25 +438,43 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
         switch (action.checkPinResponse.response) {
           case 'correct': {
             const sessionExpiresAt = computeSessionEndTime(machineState);
-            if (currentAuthStatus.user.role === 'system_administrator') {
-              return {
-                status: 'logged_in',
-                user: currentAuthStatus.user,
-                sessionExpiresAt,
-              };
+            switch (currentAuthStatus.user.role) {
+              case 'system_administrator': {
+                return {
+                  status: 'logged_in',
+                  user: currentAuthStatus.user,
+                  sessionExpiresAt,
+                };
+              }
+              case 'election_manager': {
+                return {
+                  status: 'logged_in',
+                  user: currentAuthStatus.user,
+                  sessionExpiresAt,
+                };
+              }
+              case 'poll_worker': {
+                return {
+                  status: 'logged_in',
+                  user: currentAuthStatus.user,
+                  sessionExpiresAt,
+                };
+              }
+              case 'rave_voter': {
+                return {
+                  status: 'logged_in',
+                  user: currentAuthStatus.user,
+                  sessionExpiresAt,
+                };
+              }
+              /* istanbul ignore next: Compile-time check for completeness */
+              default: {
+                throwIllegalValue(currentAuthStatus.user, 'role');
+                break;
+              }
             }
-            if (currentAuthStatus.user.role === 'election_manager') {
-              return {
-                status: 'logged_in',
-                user: currentAuthStatus.user,
-                sessionExpiresAt,
-              };
-            }
-            return {
-              status: 'logged_in',
-              user: currentAuthStatus.user,
-              sessionExpiresAt,
-            };
+            /* istanbul ignore next: unreachable */
+            break;
           }
           case 'incorrect': {
             return {
@@ -471,6 +495,8 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
             return throwIllegalValue(action.checkPinResponse, 'response');
           }
         }
+        /* istanbul ignore next: unreachable */
+        break;
       }
 
       case 'log_out': {
@@ -506,7 +532,7 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
 
     if (
       machineState.jurisdiction &&
-      user.jurisdiction !== machineState.jurisdiction
+      getUserJurisdiction(user) !== machineState.jurisdiction
     ) {
       return err('invalid_user_on_card');
     }

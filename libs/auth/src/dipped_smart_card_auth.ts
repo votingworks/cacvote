@@ -24,6 +24,7 @@ import {
   CardDetails,
   CardStatus,
   CheckPinResponse,
+  getUserJurisdiction,
 } from './card';
 import {
   DippedSmartCardAuthApi,
@@ -62,7 +63,7 @@ function cardStatusToProgrammableCard(
         programmedUser:
           // If one jurisdiction somehow attains a card from another jurisdiction, treat it as
           // unprogrammed
-          user?.jurisdiction !== machineState.jurisdiction ||
+          (user && getUserJurisdiction(user)) !== machineState.jurisdiction ||
           // If a poll worker card doesn't have a PIN but poll worker card PINs are enabled, treat
           // the card as unprogrammed. And vice versa. If a poll worker card does have a PIN but
           // poll worker card PINs are not enabled, also treat the card as unprogrammed.
@@ -605,7 +606,7 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
 
     if (
       machineState.jurisdiction &&
-      user.jurisdiction !== machineState.jurisdiction
+      getUserJurisdiction(user) !== machineState.jurisdiction
     ) {
       return err('invalid_user_on_card');
     }

@@ -9,7 +9,9 @@ import * as grout from '@votingworks/grout';
 import { Application } from 'express';
 import { Server } from 'http';
 import { AddressInfo } from 'net';
+import { dirSync } from 'tmp';
 import { Api, buildApp } from '../src/app';
+import { createWorkspace } from '../src/workspace';
 
 interface MockAppContents {
   apiClient: grout.Client<Api>;
@@ -24,8 +26,12 @@ export function createApp(): MockAppContents {
   const mockAuth = buildMockInsertedSmartCardAuth();
   const mockArtifactAuthenticator = buildMockArtifactAuthenticator();
   const mockUsb = createMockUsb();
+  const workdir = dirSync().name;
 
-  const app = buildApp();
+  const app = buildApp({
+    auth: mockAuth,
+    workspace: createWorkspace(workdir),
+  });
 
   const server = app.listen();
   const { port } = server.address() as AddressInfo;

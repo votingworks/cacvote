@@ -22,6 +22,7 @@ import {
   isFeatureFlagEnabled,
   BooleanEnvironmentVariableName,
 } from '@votingworks/utils';
+import { Id } from '@votingworks/types';
 import { UsbDriveIcon } from './usb_drive_icon';
 import { Colors } from './colors';
 
@@ -162,21 +163,16 @@ const SmartCardButton = styled.button<{ isInserted: boolean }>`
 `;
 
 function SmartCardControl({
-  role,
+  label,
   isInserted,
   onClick,
   disabled,
 }: {
-  role: DevDockUserRole;
+  label: string;
   isInserted: boolean;
   onClick(): void;
   disabled: boolean;
 }): JSX.Element {
-  const label = {
-    poll_worker: 'Poll Worker',
-    election_manager: 'Election Manager',
-    system_administrator: 'System Admin',
-  }[role];
   return (
     <SmartCardButton
       onClick={onClick}
@@ -206,12 +202,6 @@ const SmartCardMocksDisabledMessage = styled.div`
   }
 `;
 
-const ROLES = [
-  'system_administrator',
-  'election_manager',
-  'poll_worker',
-] as const;
-
 function SmartCardMockControls() {
   const queryClient = useQueryClient();
   const apiClient = useApiClient();
@@ -229,22 +219,56 @@ function SmartCardMockControls() {
   });
 
   const cardStatus = getCardStatusQuery.data;
-  const insertedCardRole =
-    cardStatus?.status === 'ready'
-      ? cardStatus.cardDetails?.user.role
-      : undefined;
+  const insertedCardUser =
+    cardStatus?.status === 'ready' ? cardStatus.cardDetails?.user : undefined;
+  const insertedCardRole = insertedCardUser?.role;
 
-  function onCardClick(role: DevDockUserRole) {
+  function onCardClick(role: DevDockUserRole, commonAccessCardId?: Id) {
     if (insertedCardRole === role) {
       removeCardMutation.mutate();
     } else {
-      insertCardMutation.mutate({ role });
+      insertCardMutation.mutate({ role, commonAccessCardId });
     }
   }
 
   const areSmartCardMocksEnabled = isFeatureFlagEnabled(
     BooleanEnvironmentVariableName.USE_MOCK_CARDS
   );
+
+  const COMMON_ACCESS_CARDS = [
+    {
+      commonAccessCardId: 'voter-unregistered',
+      label: 'Unreg.',
+    },
+    {
+      commonAccessCardId: 'voter-registration-pending',
+      label: 'Pending',
+    },
+    {
+      commonAccessCardId: 'voter-registered',
+      label: 'Reg.',
+    },
+    {
+      commonAccessCardId: 'voter-voted',
+      label: 'Voted',
+    },
+    {
+      commonAccessCardId: 'admin-unregistered',
+      label: 'Unreg. (Admin)',
+    },
+    {
+      commonAccessCardId: 'admin-registration-pending',
+      label: 'Pending (Admin)',
+    },
+    {
+      commonAccessCardId: 'admin-registered',
+      label: 'Reg. (Admin)',
+    },
+    {
+      commonAccessCardId: 'admin-voted',
+      label: 'Voted (Admin)',
+    },
+  ];
 
   return (
     <Row style={{ position: 'relative' }}>
@@ -257,16 +281,21 @@ function SmartCardMockControls() {
           </p>
         </SmartCardMocksDisabledMessage>
       )}
-      {ROLES.map((role) => (
+      {COMMON_ACCESS_CARDS.map(({ commonAccessCardId, label }) => (
         <SmartCardControl
-          key={role}
-          isInserted={insertedCardRole === role}
-          role={role}
-          onClick={() => onCardClick(role)}
+          key={commonAccessCardId}
+          isInserted={
+            insertedCardUser?.role === 'rave_voter' &&
+            insertedCardUser.commonAccessCardId === commonAccessCardId
+          }
+          label={label}
+          onClick={() => onCardClick('rave_voter', commonAccessCardId)}
           disabled={
             !areSmartCardMocksEnabled ||
             !getCardStatusQuery.isSuccess ||
-            (insertedCardRole !== undefined && insertedCardRole !== role)
+            (insertedCardUser !== undefined &&
+              (insertedCardUser?.role !== 'rave_voter' ||
+                insertedCardUser?.commonAccessCardId !== commonAccessCardId))
           }
         />
       ))}
