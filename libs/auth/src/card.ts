@@ -2,8 +2,10 @@ import { Buffer } from 'buffer';
 import {
   ElectionManagerUser,
   PollWorkerUser,
+  RaveVoterUser,
   SystemAdministratorUser,
 } from '@votingworks/types';
+import { throwIllegalValue } from '@votingworks/basics';
 
 interface SystemAdministratorCardDetails {
   user: SystemAdministratorUser;
@@ -26,13 +28,19 @@ interface PollWorkerCardDetails {
   hasPin: boolean;
 }
 
+interface RaveVoterCardDetails {
+  user: RaveVoterUser;
+  numIncorrectPinAttempts?: number;
+}
+
 /**
  * Details about a programmed card
  */
 export type CardDetails =
   | SystemAdministratorCardDetails
   | ElectionManagerCardDetails
-  | PollWorkerCardDetails;
+  | PollWorkerCardDetails
+  | RaveVoterCardDetails;
 
 /**
  * A CardDetails type guard
@@ -59,6 +67,36 @@ export function arePollWorkerCardDetails(
   cardDetails: CardDetails
 ): cardDetails is PollWorkerCardDetails {
   return cardDetails.user.role === 'poll_worker';
+}
+
+/**
+ * A CardDetails type guard
+ */
+export function areRaveVoterCardDetails(
+  cardDetails: CardDetails
+): cardDetails is RaveVoterCardDetails {
+  return cardDetails.user.role === 'rave_voter';
+}
+
+/**
+ * Get the jurisdiction of a card, if any.
+ */
+export function getUserJurisdiction(
+  user: CardDetails['user']
+): string | undefined {
+  switch (user.role) {
+    case 'system_administrator':
+    case 'election_manager':
+    case 'poll_worker':
+      return user.jurisdiction;
+
+    case 'rave_voter':
+      return undefined;
+
+    /* istanbul ignore next */
+    default:
+      throwIllegalValue(user);
+  }
 }
 
 interface CardStatusReady {

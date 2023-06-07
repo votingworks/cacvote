@@ -24,6 +24,7 @@ import {
   CardDetails,
   CardStatus,
   CheckPinResponse,
+  getUserJurisdiction,
 } from './card';
 import { CardReader } from './card_reader';
 import {
@@ -447,9 +448,10 @@ export class JavaCard implements Card {
     await this.verifyCardPrivateKey(CARD_VX_CERT.PRIVATE_KEY_ID, cardVxCert);
 
     const cardDetails = await parseCardDetailsFromCert(cardVxAdminCert);
+    const jurisdiction = getUserJurisdiction(cardDetails.user);
     assert(
-      cardDetails.user.jurisdiction ===
-        vxAdminCertAuthorityCertDetails.jurisdiction
+      !jurisdiction ||
+        jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction
     );
 
     /**

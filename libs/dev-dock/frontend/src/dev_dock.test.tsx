@@ -8,11 +8,9 @@ import {
   getFeatureFlagMock,
 } from '@votingworks/utils';
 import {
-  fakeSystemAdministratorUser,
-  fakeElectionManagerUser,
-  fakePollWorkerUser,
   fakeKiosk,
   fakeFileWriter,
+  fakeRaveVoterUser,
 } from '@votingworks/test-utils';
 import { CardStatus } from '@votingworks/auth';
 import { DevDock } from './dev_dock';
@@ -20,23 +18,20 @@ import { DevDock } from './dev_dock';
 const noCardStatus: CardStatus = {
   status: 'no_card',
 };
-const systemAdminCardStatus: CardStatus = {
+const raveUnregisteredVoterCardStatus: CardStatus = {
   status: 'ready',
   cardDetails: {
-    user: fakeSystemAdministratorUser(),
+    user: fakeRaveVoterUser({
+      commonAccessCardId: 'voter-unregistered',
+    }),
   },
 };
-const electionManagerCardStatus: CardStatus = {
+const raveRegisteredAdminCardStatus: CardStatus = {
   status: 'ready',
   cardDetails: {
-    user: fakeElectionManagerUser(),
-  },
-};
-const pollWorkerCardStatus: CardStatus = {
-  status: 'ready',
-  cardDetails: {
-    user: fakePollWorkerUser(),
-    hasPin: false,
+    user: fakeRaveVoterUser({
+      commonAccessCardId: 'admin-registered',
+    }),
   },
 };
 
@@ -90,79 +85,61 @@ test('card mock controls', async () => {
   render(<DevDock apiClient={mockApiClient} />);
 
   // Card controls should enable once status loads
-  const systemAdminControl = screen.getByRole('button', {
-    name: 'System Admin',
+  const unregisteredVoterControl = screen.getByRole('button', {
+    name: 'Unreg.',
   });
   await waitFor(() => {
-    expect(systemAdminControl).toBeEnabled();
+    expect(unregisteredVoterControl).toBeEnabled();
   });
-  const electionManagerControl = screen.getByRole('button', {
-    name: 'Election Manager',
+  const registeredAdminControl = screen.getByRole('button', {
+    name: 'Reg. (Admin)',
   });
-  const pollWorkerControl = screen.getByRole('button', {
-    name: 'Poll Worker',
-  });
-  expect(electionManagerControl).toBeEnabled();
-  expect(pollWorkerControl).toBeEnabled();
+  expect(registeredAdminControl).toBeEnabled();
 
-  // Insert system admin card
+  // Insert unregistered voter card
   mockApiClient.insertCard
-    .expectCallWith({ role: 'system_administrator' })
-    .resolves();
-  mockApiClient.getCardStatus.expectCallWith().resolves(systemAdminCardStatus);
-  userEvent.click(systemAdminControl);
-  await waitFor(() => {
-    expect(electionManagerControl).toBeDisabled();
-    expect(pollWorkerControl).toBeDisabled();
-  });
-
-  // Remove system admin card
-  mockApiClient.removeCard.expectCallWith().resolves();
-  mockApiClient.getCardStatus.expectCallWith().resolves(noCardStatus);
-  userEvent.click(systemAdminControl);
-  await waitFor(() => {
-    expect(electionManagerControl).toBeEnabled();
-    expect(pollWorkerControl).toBeEnabled();
-  });
-
-  // Insert election manager card
-  mockApiClient.insertCard
-    .expectCallWith({ role: 'election_manager' })
+    .expectCallWith({
+      role: 'rave_voter',
+      commonAccessCardId: 'voter-unregistered',
+    })
     .resolves();
   mockApiClient.getCardStatus
     .expectCallWith()
-    .resolves(electionManagerCardStatus);
-  userEvent.click(electionManagerControl);
+    .resolves(raveUnregisteredVoterCardStatus);
+  userEvent.click(unregisteredVoterControl);
   await waitFor(() => {
-    expect(systemAdminControl).toBeDisabled();
-    expect(pollWorkerControl).toBeDisabled();
+    expect(registeredAdminControl).toBeDisabled();
   });
 
-  // Remove election manager card
+  // Remove unregistered voter card
   mockApiClient.removeCard.expectCallWith().resolves();
   mockApiClient.getCardStatus.expectCallWith().resolves(noCardStatus);
-  userEvent.click(electionManagerControl);
+  userEvent.click(unregisteredVoterControl);
   await waitFor(() => {
-    expect(systemAdminControl).toBeEnabled();
-    expect(pollWorkerControl).toBeEnabled();
+    expect(registeredAdminControl).toBeEnabled();
   });
 
-  // Insert poll worker card
-  mockApiClient.insertCard.expectCallWith({ role: 'poll_worker' }).resolves();
-  mockApiClient.getCardStatus.expectCallWith().resolves(pollWorkerCardStatus);
-  userEvent.click(pollWorkerControl);
+  // Insert registered admin card
+  mockApiClient.insertCard
+    .expectCallWith({
+      role: 'rave_voter',
+      commonAccessCardId: 'admin-registered',
+    })
+    .resolves();
+  mockApiClient.getCardStatus
+    .expectCallWith()
+    .resolves(raveRegisteredAdminCardStatus);
+  userEvent.click(registeredAdminControl);
   await waitFor(() => {
-    expect(systemAdminControl).toBeDisabled();
-    expect(electionManagerControl).toBeDisabled();
+    expect(unregisteredVoterControl).toBeDisabled();
   });
 
-  // Remove poll worker card
+  // Remove registered admin card
   mockApiClient.removeCard.expectCallWith().resolves();
   mockApiClient.getCardStatus.expectCallWith().resolves(noCardStatus);
-  userEvent.click(pollWorkerControl);
+  userEvent.click(registeredAdminControl);
   await waitFor(() => {
-    expect(systemAdminControl).toBeEnabled();
-    expect(electionManagerControl).toBeEnabled();
+    expect(unregisteredVoterControl).toBeEnabled();
   });
 });
 
@@ -173,22 +150,18 @@ test('disabled card mock controls if card mocks are disabled', async () => {
   render(<DevDock apiClient={mockApiClient} />);
 
   screen.getByText('Smart card mocks disabled');
-  const systemAdminControl = screen.getByRole('button', {
-    name: 'System Admin',
+  const registeredAdminControl = screen.getByRole('button', {
+    name: 'Reg. (Admin)',
   });
-  const electionManagerControl = screen.getByRole('button', {
-    name: 'Election Manager',
-  });
-  const pollWorkerControl = screen.getByRole('button', {
-    name: 'Poll Worker',
+  const unregisteredVoterControl = screen.getByRole('button', {
+    name: 'Unreg.',
   });
   // Since the controls are disabled until the card status loads, we need to
   // wait for the API call to complete before checking that the controls are
   // still disabled.
   await waitFor(() => mockApiClient.assertComplete());
-  expect(systemAdminControl).toBeDisabled();
-  expect(electionManagerControl).toBeDisabled();
-  expect(pollWorkerControl).toBeDisabled();
+  expect(registeredAdminControl).toBeDisabled();
+  expect(unregisteredVoterControl).toBeDisabled();
 });
 
 test('election selector', async () => {

@@ -1,11 +1,13 @@
-import { unsafeParse } from '@votingworks/types';
+import { safeParseInt, unsafeParse } from '@votingworks/types';
+import { join } from 'path';
 import { z } from 'zod';
 
+const BASE_PORT = safeParseInt(process.env.BASE_PORT).ok() || 3000;
+
 /**
- * Default port for the VxMark API.
+ * Default port for the RaveMark backend.
  */
-// eslint-disable-next-line vx/gts-safe-number-parse
-export const PORT = Number(process.env.PORT || 3002);
+export const PORT = safeParseInt(process.env.PORT).ok() || BASE_PORT + 2;
 
 const NodeEnvSchema = z.union([
   z.literal('development'),
@@ -20,3 +22,12 @@ export const NODE_ENV = unsafeParse(
   NodeEnvSchema,
   process.env.NODE_ENV ?? 'development'
 );
+
+/**
+ * Where should the database and audio files go?
+ */
+export const RAVE_MARK_WORKSPACE =
+  process.env.RAVE_MARK_WORKSPACE ??
+  (NODE_ENV === 'development'
+    ? join(__dirname, '../dev-workspace')
+    : undefined);

@@ -16,6 +16,7 @@ import {
   fakeCardlessVoterUser,
   fakeElectionManagerUser,
   fakePollWorkerUser,
+  fakeRaveVoterUser,
   fakeSystemAdministratorUser,
   mockOf,
 } from '@votingworks/test-utils';
@@ -79,12 +80,17 @@ const defaultMachineState: InsertedSmartCardAuthMachineState = {
   electionHash,
   jurisdiction,
 };
+const defaultMachineStateWithoutJurisdiction: InsertedSmartCardAuthMachineState =
+  {
+    electionHash,
+  };
 const systemAdministratorUser = fakeSystemAdministratorUser({ jurisdiction });
 const electionManagerUser = fakeElectionManagerUser({
   jurisdiction,
   electionHash,
 });
 const pollWorkerUser = fakePollWorkerUser({ jurisdiction, electionHash });
+const raveVoterUser = fakeRaveVoterUser();
 const cardlessVoterUser = fakeCardlessVoterUser();
 
 function mockCardStatus(cardStatus: CardStatus) {
@@ -257,6 +263,13 @@ test.each<{
     cardDetails: {
       user: pollWorkerUser,
       hasPin: true,
+    },
+  },
+  {
+    description: 'rave voter card',
+    machineState: defaultMachineStateWithoutJurisdiction,
+    cardDetails: {
+      user: raveVoterUser,
     },
   },
 ])(
@@ -1306,6 +1319,13 @@ test.each<{
     cardDetails: {
       user: pollWorkerUser,
       hasPin: true,
+    },
+  },
+  {
+    description: 'rave voter',
+    machineState: defaultMachineStateWithoutJurisdiction,
+    cardDetails: {
+      user: raveVoterUser,
     },
   },
 ])(

@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders 1`] = `
+<div>
+  <div
+    class="sc-gGCCur iZaNgk"
+  >
+    <main
+      class="sc-clIAKW hKjkrg"
+    >
+      <h1
+        class="sc-eCImvq bpCFLR"
+      >
+        Welcome
+      </h1>
+      <p
+        class="sc-dkPtyc XGKAk"
+      >
+        Insert your CAC to begin.
+      </p>
+    </main>
+  </div>
+</div>
+`;

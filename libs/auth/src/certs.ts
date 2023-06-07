@@ -2,7 +2,11 @@ import { Buffer } from 'buffer';
 import { z } from 'zod';
 import { assert, throwIllegalValue } from '@votingworks/basics';
 
-import { arePollWorkerCardDetails, CardDetails } from './card';
+import {
+  arePollWorkerCardDetails,
+  CardDetails,
+  getUserJurisdiction,
+} from './card';
 import { openssl } from './openssl';
 
 /**
@@ -22,6 +26,8 @@ const VX_CUSTOM_CERT_FIELD = {
   CARD_TYPE: `${VX_IANA_ENTERPRISE_OID}.3`,
   /** The SHA-256 hash of the election definition  */
   ELECTION_HASH: `${VX_IANA_ENTERPRISE_OID}.4`,
+  /** The Common Access Card ID */
+  COMMON_ACCESS_CARD_ID: `${VX_IANA_ENTERPRISE_OID}.99`,
 } as const;
 
 /**
@@ -63,9 +69,17 @@ interface ElectionCardCustomCertFields {
   electionHash: string;
 }
 
+interface RaveVoterCardCustomCertFields {
+  component: 'card';
+  jurisdiction: string;
+  cardType: 'rave-voter';
+  commonAccessCardId: string;
+}
+
 type CardCustomCertFields =
   | SystemAdministratorCardCustomCertFields
-  | ElectionCardCustomCertFields;
+  | ElectionCardCustomCertFields
+  | RaveVoterCardCustomCertFields;
 
 /**
  * Parsed custom cert fields
@@ -132,9 +146,18 @@ const ElectionCardCustomCertFieldsSchema: z.ZodSchema<ElectionCardCustomCertFiel
     electionHash: z.string(),
   });
 
+const RaveVoterCardCustomCertFieldsSchema: z.ZodSchema<RaveVoterCardCustomCertFields> =
+  z.object({
+    component: z.literal('card'),
+    jurisdiction: z.string(),
+    cardType: z.literal('rave-voter'),
+    commonAccessCardId: z.string(),
+  });
+
 const CardCustomCertFieldsSchema: z.ZodSchema<CardCustomCertFields> = z.union([
   SystemAdministratorCardCustomCertFieldsSchema,
   ElectionCardCustomCertFieldsSchema,
+  RaveVoterCardCustomCertFieldsSchema,
 ]);
 
 /**
@@ -187,6 +210,7 @@ export async function parseCert(cert: Buffer): Promise<CustomCertFields> {
     jurisdiction: certFields[VX_CUSTOM_CERT_FIELD.JURISDICTION],
     cardType: certFields[VX_CUSTOM_CERT_FIELD.CARD_TYPE],
     electionHash: certFields[VX_CUSTOM_CERT_FIELD.ELECTION_HASH],
+    commonAccessCardId: certFields[VX_CUSTOM_CERT_FIELD.COMMON_ACCESS_CARD_ID],
   });
 
   return certDetails;
@@ -201,9 +225,9 @@ export async function parseCardDetailsFromCert(
 ): Promise<CardDetails> {
   const certDetails = await parseCert(cert);
   assert(certDetails.component === 'card');
-  const { jurisdiction, cardType } = certDetails;
+  const { jurisdiction } = certDetails;
 
-  switch (cardType) {
+  switch (certDetails.cardType) {
     case 'system-administrator': {
       return {
         user: { role: 'system_administrator', jurisdiction },
@@ -229,9 +253,18 @@ export async function parseCardDetailsFromCert(
         hasPin: true,
       };
     }
+    case 'rave-voter': {
+      const { commonAccessCardId } = certDetails;
+      return {
+        user: {
+          role: 'rave_voter',
+          commonAccessCardId,
+        },
+      };
+    }
     /* istanbul ignore next: Compile-time check for completeness */
     default: {
-      throwIllegalValue(cardType);
+      throwIllegalValue(certDetails);
     }
   }
 }
@@ -245,6 +278,7 @@ export function constructCardCertSubject(cardDetails: CardDetails): string {
 
   let cardType: CardType;
   let electionHash: string | undefined;
+  let commonAccessCardId: string | undefined;
   switch (user.role) {
     case 'system_administrator': {
       cardType = 'system-administrator';
@@ -261,6 +295,11 @@ export function constructCardCertSubject(cardDetails: CardDetails): string {
       electionHash = user.electionHash;
       break;
     }
+    case 'rave_voter': {
+      cardType = 'rave-voter';
+      commonAccessCardId = user.commonAccessCardId;
+      break;
+    }
     /* istanbul ignore next: Compile-time check for completeness */
     default: {
       throwIllegalValue(user, 'role');
@@ -270,11 +309,22 @@ export function constructCardCertSubject(cardDetails: CardDetails): string {
   const entries = [
     ...STANDARD_CERT_FIELDS,
     `${VX_CUSTOM_CERT_FIELD.COMPONENT}=${component}`,
-    `${VX_CUSTOM_CERT_FIELD.JURISDICTION}=${user.jurisdiction}`,
-    `${VX_CUSTOM_CERT_FIELD.CARD_TYPE}=${cardType}`,
   ];
+
+  const jurisdiction = getUserJurisdiction(user);
+  if (jurisdiction) {
+    entries.push(`${VX_CUSTOM_CERT_FIELD.JURISDICTION}=${jurisdiction}`);
+  }
+
+  entries.push(`${VX_CUSTOM_CERT_FIELD.CARD_TYPE}=${cardType}`);
+
   if (electionHash) {
     entries.push(`${VX_CUSTOM_CERT_FIELD.ELECTION_HASH}=${electionHash}`);
+  }
+  if (commonAccessCardId) {
+    entries.push(
+      `${VX_CUSTOM_CERT_FIELD.COMMON_ACCESS_CARD_ID}=${commonAccessCardId}`
+    );
   }
   const certSubject = `/${entries.join('/')}/`;
 

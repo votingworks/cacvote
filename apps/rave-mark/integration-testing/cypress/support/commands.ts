@@ -23,3 +23,11 @@
 //
 // -- This will overwrite an existing command --
 // Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
+
+import { Id } from '@votingworks/types';
+
+Cypress.Commands.add('createVoter', (options = {}) => {
+  cy.task<Id>('createVoter', options).then((commonAccessCardId) => {
+    Cypress.env('commonAccessCardId', commonAccessCardId);
+  });
+});

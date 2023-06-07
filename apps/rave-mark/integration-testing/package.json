@@ -5,7 +5,7 @@
   "license": "GPL-3.0",
   "author": "VotingWorks Eng <eng@voting.works>",
   "scripts": {
-    "build": "pnpm --dir ../frontend run build",
+    "build": "make build",
     "cypress:open": "DISPLAY=:0 cypress open --e2e --browser chromium",
     "cypress:run": "is-ci cypress:run:ci cypress:run:local",
     "cypress:run:ci": "cypress run --browser chrome --reporter junit",
@@ -14,9 +14,9 @@
     "lint": "eslint .",
     "lint:fix": "pnpm lint --fix",
     "pre-commit": "lint-staged",
-    "start": "pnpm --dir ../frontend run start:prod",
-    "test": "start-server-and-test start http://localhost:3000 cypress:run",
-    "test:watch": "start-server-and-test start http://localhost:3000 cypress:open"
+    "start": "make run",
+    "test": "make test",
+    "test:watch": "make test-watch"
   },
   "lint-staged": {
     "*.+(css|graphql|json|less|md|mdx|sass|scss|yaml|yml)": [
@@ -30,12 +30,17 @@
     ]
   },
   "dependencies": {
-    "cypress": "^12.13.0"
-  },
-  "devDependencies": {
     "@testing-library/cypress": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "5.37.0",
     "@typescript-eslint/parser": "5.37.0",
+    "@votingworks/auth": "workspace:*",
+    "@votingworks/grout": "workspace:*",
+    "@votingworks/rave-mark-backend": "workspace:*",
+    "@votingworks/types": "workspace:*",
+    "cypress": "^12.13.0"
+  },
+  "devDependencies": {
+    "concurrently": "^7.4.0",
     "eslint": "8.23.1",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-config-prettier": "^8.5.0",
