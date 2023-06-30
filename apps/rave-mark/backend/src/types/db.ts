@@ -40,6 +40,36 @@ export interface VoterRegistrationInfo {
   familyName: string;
 
   /**
+   * Voter's address line 1.
+   */
+  addressLine1: string;
+
+  /**
+   * Voter's address line 2.
+   */
+  addressLine2?: string;
+
+  /**
+   * Voter's city.
+   */
+  city: string;
+
+  /**
+   * Voter's state.
+   */
+  state: string;
+
+  /**
+   * Voter's postal code.
+   */
+  postalCode: string;
+
+  /**
+   * Voter's state ID.
+   */
+  stateId: string;
+
+  /**
    * Database ID for a the election record associated with this voter
    * registration.
    */

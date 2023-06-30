@@ -228,6 +228,12 @@ export class Store {
         election_id as electionId,
         given_name as givenName,
         family_name as familyName,
+        address_line_1 as addressLine1,
+        address_line_2 as addressLine2,
+        city,
+        state,
+        postal_code as postalCode,
+        state_id as stateId,
         voted_at as votedAt
       from voter_registrations
       where voter_id = ?
@@ -239,6 +245,12 @@ export class Store {
       electionId: string | null;
       givenName: string;
       familyName: string;
+      addressLine1: string;
+      addressLine2: string | null;
+      city: string;
+      state: string;
+      postalCode: string;
+      stateId: string;
       votedAt: string | null;
     }>;
 
@@ -248,6 +260,12 @@ export class Store {
       electionId: row.electionId ?? undefined,
       givenName: row.givenName,
       familyName: row.familyName,
+      addressLine1: row.addressLine1,
+      addressLine2: row.addressLine2 ?? undefined,
+      city: row.city,
+      state: row.state,
+      postalCode: row.postalCode,
+      stateId: row.stateId,
       votedAt: row.votedAt ? DateTime.fromSQL(row.votedAt) : undefined,
     }));
   }
@@ -292,10 +310,22 @@ export class Store {
     commonAccessCardId,
     givenName,
     familyName,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    postalCode,
+    stateId,
   }: {
     commonAccessCardId: Id;
     givenName: string;
     familyName: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    stateId: string;
   }): Id {
     const voterInfo = this.getOrCreateVoterInfo(commonAccessCardId);
     const id = uuid();
@@ -306,15 +336,27 @@ export class Store {
         id,
         voter_id,
         given_name,
-        family_name
+        family_name,
+        address_line_1,
+        address_line_2,
+        city,
+        state,
+        postal_code,
+        state_id
       ) values (
-        ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
       id,
       voterInfo.id,
       givenName,
-      familyName
+      familyName,
+      addressLine1,
+      addressLine2 ?? null,
+      city,
+      state,
+      postalCode,
+      stateId
     );
 
     return id;

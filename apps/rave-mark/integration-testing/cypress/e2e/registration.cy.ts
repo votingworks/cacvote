@@ -33,16 +33,28 @@ it('allows submitting registration', () => {
   });
 
   // register
-  cy.get('[placeholder="Given Name"]').type('John');
-  cy.get('[placeholder="Family Name"]').type('Doe');
+  cy.get('[data-testid="given-name"]').type('John');
+  cy.get('[data-testid="family-name"]').type('Doe');
+  cy.get('[data-testid="address-line-1"]').type('123 Main St');
+  cy.get('[data-testid="address-line-2"]').type('Apt 1');
+  cy.get('[data-testid="city"]').type('Anytown');
+  cy.get('[data-testid="state"]').type('CA');
+  cy.get('[data-testid="postal-code"]').type('95959');
+  cy.get('[data-testid="state-id"]').type('B2201793');
   cy.contains('Submit').click();
 
-  // // registration is created
+  // registration is created
   cy.contains('Registration is pending.');
   getVoterRegistrations().then((registrations) => {
     expect(registrations).to.have.lengthOf(1);
     expect(registrations[0]?.givenName).to.equal('John');
     expect(registrations[0]?.familyName).to.equal('Doe');
+    expect(registrations[0]?.addressLine1).to.equal('123 Main St');
+    expect(registrations[0]?.addressLine2).to.equal('Apt 1');
+    expect(registrations[0]?.city).to.equal('Anytown');
+    expect(registrations[0]?.state).to.equal('CA');
+    expect(registrations[0]?.postalCode).to.equal('95959');
+    expect(registrations[0]?.stateId).to.equal('B2201793');
     expect(registrations[0]?.electionId).to.equal(undefined);
   });
 });

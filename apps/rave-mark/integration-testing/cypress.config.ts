@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { resolveWorkspace } from '@votingworks/rave-mark-backend';
 import { Id, safeParseInt } from '@votingworks/types';
 import { defineConfig } from 'cypress';
@@ -16,9 +17,11 @@ export default defineConfig({
 
     setupNodeEvents(on) {
       on('task', {
-        async createVoter(options: Cypress.CreateVoterOptions = {}) {
+        createVoter(options: Cypress.CreateVoterOptions = {}) {
           const commonAccessCardId = createUniqueCommonAccessCardId();
-          const workspace = await resolveWorkspace();
+          const workspace = resolveWorkspace();
+          console.log('Found workspace at path:', workspace.path);
+          console.log('Creating voter with CAC ID:', commonAccessCardId);
           const voterInfo =
             workspace.store.getOrCreateVoterInfo(commonAccessCardId);
           workspace.store.setVoterIsAdmin(
@@ -31,6 +34,12 @@ export default defineConfig({
               commonAccessCardId,
               givenName: options.registration.givenName ?? 'Rebecca',
               familyName: options.registration.familyName ?? 'Welton',
+              addressLine1: options.registration.addressLine1 ?? '123 Main St',
+              addressLine2: options.registration.addressLine2,
+              city: options.registration.city ?? 'Anytown',
+              state: options.registration.state ?? 'CA',
+              postalCode: options.registration.postalCode ?? '95959',
+              stateId: options.registration.stateId ?? 'B2201793',
             });
 
             if (options.registration.electionData) {
