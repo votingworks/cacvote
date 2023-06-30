@@ -135,6 +135,12 @@ function buildApi({
     async createVoterRegistration(input: {
       givenName: string;
       familyName: string;
+      addressLine1: string;
+      addressLine2?: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      stateId: string;
     }): Promise<{ id: Id }> {
       const authStatus = await getAuthStatus();
 
@@ -149,6 +155,12 @@ function buildApi({
         commonAccessCardId: authStatus.user.commonAccessCardId,
         givenName: input.givenName,
         familyName: input.familyName,
+        addressLine1: input.addressLine1,
+        addressLine2: input.addressLine2,
+        city: input.city,
+        state: input.state,
+        postalCode: input.postalCode,
+        stateId: input.stateId,
       });
       return { id };
     },
