@@ -1,12 +1,17 @@
-import { throwIllegalValue } from '@votingworks/basics';
+import { find, throwIllegalValue } from '@votingworks/basics';
 import {
   Contest as MarkFlowContest,
   Review as MarkFlowReview,
 } from '@votingworks/mark-flow-ui';
-import { ContestId, OptionalVote, VotesDict } from '@votingworks/types';
+import {
+  ContestId,
+  OptionalVote,
+  VotesDict,
+  getContests,
+} from '@votingworks/types';
 import { Button, H1, Main, Screen, WithScrollButtons } from '@votingworks/ui';
 import styled from 'styled-components';
-import { getElectionDefinition, saveVotes } from '../../api';
+import { getElectionConfiguration, saveVotes } from '../../api';
 import { ButtonFooter } from '../../components/button_footer';
 
 const ContentHeader = styled.div`
@@ -31,15 +36,23 @@ export function MarkScreen({
   goToIndex,
 }: MarkScreenProps): JSX.Element | null {
   const saveVotesMutation = saveVotes.useMutation();
-  const getElectionDefinitionQuery = getElectionDefinition.useQuery();
-  const electionDefinition = getElectionDefinitionQuery.data;
+  const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
+  const electionConfiguration = getElectionConfigurationQuery.data;
 
-  if (!electionDefinition) {
+  if (!electionConfiguration) {
     return null;
   }
 
-  // TODO: filter contests by precinct/ballot style
-  const { contests } = electionDefinition.election;
+  const { electionDefinition, ballotStyleId, precinctId } =
+    electionConfiguration;
+  const ballotStyle = find(
+    electionDefinition.election.ballotStyles,
+    (bs) => bs.id === ballotStyleId
+  );
+  const contests = getContests({
+    election: electionDefinition.election,
+    ballotStyle,
+  });
 
   function printBallot() {
     saveVotesMutation.mutate({ votes });
@@ -56,7 +69,7 @@ export function MarkScreen({
             <MarkFlowReview
               election={electionDefinition.election}
               contests={contests}
-              precinctId="123"
+              precinctId={precinctId}
               votes={votes}
               returnToContest={(contestId) => {
                 goToIndex(contests.findIndex((c) => c.id === contestId));

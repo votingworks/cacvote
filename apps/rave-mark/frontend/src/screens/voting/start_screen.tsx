@@ -1,5 +1,5 @@
 import { Button, H1, Main, P, Screen } from '@votingworks/ui';
-import { getElectionDefinition } from '../../api';
+import { getElectionConfiguration } from '../../api';
 
 export interface StartScreenProps {
   onStartVoting: () => void;
@@ -8,10 +8,10 @@ export interface StartScreenProps {
 export function StartScreen({
   onStartVoting,
 }: StartScreenProps): JSX.Element | null {
-  const getElectionDefinitionQuery = getElectionDefinition.useQuery();
-  const electionDefinition = getElectionDefinitionQuery.data;
+  const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
+  const electionConfiguration = getElectionConfigurationQuery.data;
 
-  if (!electionDefinition) {
+  if (!electionConfiguration) {
     return null;
   }
 
@@ -19,7 +19,7 @@ export function StartScreen({
     <Screen>
       <Main>
         <H1>Voting</H1>
-        <P>{electionDefinition.election.title}</P>
+        <P>{electionConfiguration.electionDefinition.election.title}</P>
         <Button onPress={onStartVoting}>Start Voting</Button>
       </Main>
     </Screen>

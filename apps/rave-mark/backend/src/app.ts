@@ -252,7 +252,7 @@ function buildApi({
       return { id };
     },
 
-    async getElectionDefinition() {
+    async getElectionConfiguration() {
       const authStatus = await getAuthStatus();
 
       if (
@@ -280,9 +280,20 @@ function buildApi({
         return undefined;
       }
 
-      return workspace.store.getElectionDefinitionForVoterRegistration(
-        registration.id
-      );
+      const electionDefinition =
+        workspace.store.getElectionDefinitionForVoterRegistration(
+          registration.id
+        );
+
+      if (!electionDefinition) {
+        return undefined;
+      }
+
+      return {
+        electionDefinition,
+        ballotStyleId: registration.ballotStyleId,
+        precinctId: registration.precinctId,
+      };
     },
 
     async saveVotes(input: { votes: VotesDict }) {

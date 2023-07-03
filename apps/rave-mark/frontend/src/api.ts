@@ -87,15 +87,15 @@ export const getVoterStatus = {
   },
 } as const;
 
-export const getElectionDefinition = {
+export const getElectionConfiguration = {
   queryKey(): QueryKey {
-    return ['getElectionDefinition'];
+    return ['getElectionConfiguration'];
   },
   useQuery() {
     const apiClient = useApiClient();
     return useQuery(
       this.queryKey(),
-      async () => (await apiClient.getElectionDefinition()) ?? null,
+      async () => (await apiClient.getElectionConfiguration()) ?? null,
       { staleTime: 0 }
     );
   },
