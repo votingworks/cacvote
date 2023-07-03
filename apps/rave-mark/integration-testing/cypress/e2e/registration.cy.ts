@@ -5,12 +5,16 @@ import {
   mockCardRemoval,
   mockRaveMarkVoterCardInsertion,
 } from '../support/auth';
-import { closeDevDock, getVoterRegistrations } from '../support/helpers';
+import {
+  closeDevDock,
+  createTestVoter,
+  getVoterRegistrations,
+} from '../support/helpers';
 
 beforeEach(() => {
   mockCardRemoval();
   logOut();
-  cy.createVoter();
+  createTestVoter();
   cy.visit(`/`);
   closeDevDock();
 });

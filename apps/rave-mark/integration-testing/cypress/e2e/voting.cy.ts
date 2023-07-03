@@ -5,14 +5,14 @@ import {
   mockCardRemoval,
   mockRaveMarkVoterCardInsertion,
 } from '../support/auth';
-import { closeDevDock } from '../support/helpers';
+import { closeDevDock, createTestVoter } from '../support/helpers';
 
 beforeEach(() => {
   mockCardRemoval();
   logOut();
   cy.readFile('cypress/fixtures/electionFamousNames2021.json', null).then(
     (electionData) => {
-      cy.createVoter({
+      createTestVoter({
         registration: { electionData: electionData.toString() },
       });
     }

@@ -6,8 +6,7 @@ import * as server from './server';
 import { NODE_ENV, PORT, RAVE_MARK_WORKSPACE } from './globals';
 import { Workspace, createWorkspace } from './workspace';
 
-export type { Api } from './app';
-export type { Workspace } from './workspace';
+export type { Api, CreateTestVoterInput } from './app';
 
 // https://github.com/bkeepers/dotenv#what-other-env-files-can-i-use
 const dotEnvPath = '.env';
@@ -36,7 +35,7 @@ for (const dotenvFile of dotenvFiles) {
 
 const logger = new Logger(LogSource.VxMarkBackend);
 
-export function resolveWorkspace(): Workspace {
+function resolveWorkspace(): Workspace {
   const workspacePath = RAVE_MARK_WORKSPACE;
   if (!workspacePath) {
     void logger.log(LogEventId.ScanServiceConfigurationMessage, 'system', {
