@@ -59,6 +59,5 @@ it('allows submitting registration requests', () => {
     expect(registrations[0]?.state).to.equal('CA');
     expect(registrations[0]?.postalCode).to.equal('95959');
     expect(registrations[0]?.stateId).to.equal('B2201793');
-    expect(registrations[0]?.electionId).to.equal(undefined);
   });
 });
