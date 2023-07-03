@@ -9,6 +9,7 @@ import {
   createTestVoter,
   getVoterSelectionVotes,
 } from '../support/helpers';
+import { virtualKeyboardType } from '../support/keyboard';
 
 beforeEach(() => {
   mockCardRemoval();
@@ -42,14 +43,7 @@ it('records votes', () => {
   cy.contains('Natalie Portman').click();
   cy.contains('Next').click();
   cy.contains('add write-in candidate').click();
-  cy.get('[data-testid="virtual-keyboard"]').within(() => {
-    cy.contains('M').click();
-    cy.contains('E').click();
-    cy.contains('R').click();
-    cy.contains('L').click();
-    cy.contains('I').click();
-    cy.contains('N').click();
-  });
+  virtualKeyboardType('MERLIN');
   cy.contains('Accept').click();
   cy.contains('Next').click();
   cy.contains('Steve Jobs').click();
