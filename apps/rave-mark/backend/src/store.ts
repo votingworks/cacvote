@@ -303,6 +303,27 @@ export class Store {
   }
 
   /**
+   * Gets the votes for the given voter registration ID.
+   */
+  getVotesForVoterRegistration(voterRegistrationId: Id): Optional<VotesDict> {
+    const result = this.client.one(
+      `
+      select
+        votes_json as votesJson
+      from voter_registrations
+      where id = ?
+      `,
+      voterRegistrationId
+    ) as Optional<{ votesJson: string }>;
+
+    if (!result) {
+      return undefined;
+    }
+
+    return JSON.parse(result.votesJson);
+  }
+
+  /**
    * Creates a voter registration for the voter with the given Common Access
    * Card ID.
    */

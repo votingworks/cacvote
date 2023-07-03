@@ -8,6 +8,7 @@ import express, { Application } from 'express';
 import { Id, InsertedSmartCardAuth, VotesDict } from '@votingworks/types';
 import { Optional } from '@votingworks/basics';
 import { isDeepStrictEqual } from 'util';
+import { DateTime } from 'luxon';
 import { Workspace } from './workspace';
 import { VoterInfo, VoterRegistrationInfo } from './types/db';
 import { IS_INTEGRATION_TEST } from './globals';
@@ -102,6 +103,12 @@ function buildApi({
       ...authStatus,
       isRaveAdmin,
     };
+  }
+
+  function assertIsIntegrationTest() {
+    if (!IS_INTEGRATION_TEST) {
+      throw new Error('This is not an integration test');
+    }
   }
 
   return grout.createApi({
@@ -289,9 +296,7 @@ function buildApi({
     },
 
     createTestVoter(input: CreateTestVoterInput) {
-      if (!IS_INTEGRATION_TEST) {
-        throw new Error('Not in integration test mode');
-      }
+      assertIsIntegrationTest();
 
       function createUniqueCommonAccessCardId(): Id {
         const tenRandomDigits = Math.floor(Math.random() * 1e10).toString();
@@ -329,6 +334,48 @@ function buildApi({
       }
 
       return { commonAccessCardId };
+    },
+
+    async getTestVoterVotes() {
+      assertIsIntegrationTest();
+
+      const authStatus = await getAuthStatus();
+
+      if (
+        authStatus.status !== 'logged_in' ||
+        authStatus.user.role !== 'rave_voter'
+      ) {
+        throw new Error('Not logged in');
+      }
+
+      const voterInfo = workspace.store.getVoterInfo(
+        authStatus.user.commonAccessCardId
+      );
+
+      if (!voterInfo) {
+        throw new Error('Not registered');
+      }
+
+      const registrations = workspace.store
+        .getVoterRegistrations(voterInfo.id)
+        .filter(
+          (
+            registration
+          ): registration is VoterRegistrationInfo & { votedAt: DateTime } =>
+            registration.votedAt !== undefined
+        )
+        .sort((a, b) => b.votedAt.valueOf() - a.votedAt.valueOf());
+
+      const [mostRecentlyVotedRegistration] = registrations;
+      if (!mostRecentlyVotedRegistration) {
+        throw new Error('No votes found');
+      }
+
+      const votes = workspace.store.getVotesForVoterRegistration(
+        mostRecentlyVotedRegistration.id
+      );
+
+      return votes;
     },
   });
 }

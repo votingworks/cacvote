@@ -1,11 +1,10 @@
 import {
   enterPin,
-  getCommonAccessCardId,
   logOut,
   mockCardRemoval,
   mockRaveMarkVoterCardInsertion,
 } from '../support/auth';
-import { closeDevDock, createTestVoter } from '../support/helpers';
+import { closeDevDock, createTestVoter, getVotes } from '../support/helpers';
 
 beforeEach(() => {
   mockCardRemoval();
@@ -23,9 +22,7 @@ beforeEach(() => {
 
 it('records votes', () => {
   // get started
-  mockRaveMarkVoterCardInsertion({
-    commonAccessCardId: getCommonAccessCardId(),
-  });
+  mockRaveMarkVoterCardInsertion();
   enterPin();
   cy.contains('Start Voting').click();
 
@@ -62,4 +59,78 @@ it('records votes', () => {
 
   // check that we're done
   cy.contains('You’re done!').should('be.visible');
+
+  getVotes().should('deep.equal', {
+    mayor: [
+      {
+        id: 'sherlock-holmes',
+        name: 'Sherlock Holmes',
+        partyIds: ['0'],
+      },
+    ],
+    controller: [
+      {
+        id: 'oprah-winfrey',
+        name: 'Oprah Winfrey',
+        partyIds: ['1'],
+      },
+    ],
+    attorney: [
+      {
+        id: 'mark-twain',
+        name: 'Mark Twain',
+        partyIds: ['3'],
+      },
+    ],
+    'public-works-director': [
+      {
+        id: 'bill-nye',
+        name: 'Bill Nye',
+        partyIds: ['3'],
+      },
+    ],
+    'chief-of-police': [
+      {
+        id: 'natalie-portman',
+        name: 'Natalie Portman',
+        partyIds: ['0'],
+      },
+    ],
+    'parks-and-recreation-director': [
+      {
+        id: 'write-in-merlin',
+        isWriteIn: true,
+        name: 'MERLIN',
+      },
+    ],
+    'board-of-alderman': [
+      {
+        id: 'steve-jobs',
+        name: 'Steve Jobs',
+        partyIds: ['1'],
+      },
+      {
+        id: 'pablo-picasso',
+        name: 'Pablo Picasso',
+        partyIds: ['1'],
+      },
+      {
+        id: 'helen-keller',
+        name: 'Helen Keller',
+        partyIds: ['0'],
+      },
+    ],
+    'city-council': [
+      {
+        id: 'marie-curie',
+        name: 'Marie Curie',
+        partyIds: ['0'],
+      },
+      {
+        id: 'mona-lisa',
+        name: 'Mona Lisa',
+        partyIds: ['3'],
+      },
+    ],
+  });
 });
