@@ -80,7 +80,6 @@ export function VoterFlowScreen(): JSX.Element | null {
     }));
   }
 
-  console.log(voterStatus, voterFlowState);
   switch (voterStatus.status) {
     case 'unregistered':
       return <Registration.StartScreen />;

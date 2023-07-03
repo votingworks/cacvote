@@ -1,4 +1,4 @@
-import { Id } from '@votingworks/types';
+import { BallotStyleId, Id, PrecinctId, VotesDict } from '@votingworks/types';
 import { DateTime } from 'luxon';
 
 export interface VoterInfo {
@@ -18,9 +18,9 @@ export interface VoterInfo {
   isAdmin: boolean;
 }
 
-export interface VoterRegistrationInfo {
+export interface VoterRegistrationRequest {
   /**
-   * Database ID for a voter registration record.
+   * Database ID for a voter registration request record.
    */
   id: Id;
 
@@ -68,15 +68,64 @@ export interface VoterRegistrationInfo {
    * Voter's state ID.
    */
   stateId: string;
+}
+
+export interface VoterElectionRegistration {
+  /**
+   * Database ID for an election registration record.
+   */
+  id: Id;
+
+  /**
+   * Database ID for a voter record.
+   */
+  voterId: Id;
+
+  /**
+   * Database ID for the voter's registration request record.
+   */
+  voterRegistrationRequestId: Id;
 
   /**
    * Database ID for a the election record associated with this voter
    * registration.
    */
-  electionId?: Id;
+  electionId: Id;
 
   /**
-   * The date and time at which this voter voted.
+   * Precinct ID for the voter's precinct.
    */
-  votedAt?: DateTime;
+  precinctId: PrecinctId;
+
+  /**
+   * Ballot style ID for the voter's ballot style.
+   */
+  ballotStyleId: BallotStyleId;
+
+  /**
+   * Date and time when the voter registered for the election.
+   */
+  createdAt: DateTime;
+}
+
+export interface VoterElectionSelection {
+  /**
+   * Database ID for a voter record.
+   */
+  voterId: Id;
+
+  /**
+   * Database ID for the voter's election registration record.
+   */
+  voterElectionRegistrationId: Id;
+
+  /**
+   * Votes cast by the voter.
+   */
+  votes: VotesDict;
+
+  /**
+   * Date and time when the voter cast their votes.
+   */
+  createdAt: DateTime;
 }

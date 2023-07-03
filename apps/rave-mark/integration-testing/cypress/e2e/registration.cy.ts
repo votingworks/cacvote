@@ -8,7 +8,7 @@ import {
 import {
   closeDevDock,
   createTestVoter,
-  getVoterRegistrations,
+  getVoterRegistrationRequests,
 } from '../support/helpers';
 
 beforeEach(() => {
@@ -26,13 +26,13 @@ it('prompts voter to register', () => {
   cy.contains('Registration');
 });
 
-it('allows submitting registration', () => {
+it('allows submitting registration requests', () => {
   const commonAccessCardId = getCommonAccessCardId();
   mockRaveMarkVoterCardInsertion({ commonAccessCardId });
   enterPin();
 
   // no registrations yet
-  getVoterRegistrations().then((registrations) => {
+  getVoterRegistrationRequests().then((registrations) => {
     expect(registrations).to.have.lengthOf(0);
   });
 
@@ -47,9 +47,9 @@ it('allows submitting registration', () => {
   cy.get('[data-testid="state-id"]').type('B2201793');
   cy.contains('Submit').click();
 
-  // registration is created
+  // registration request is created
   cy.contains('Registration is pending.');
-  getVoterRegistrations().then((registrations) => {
+  getVoterRegistrationRequests().then((registrations) => {
     expect(registrations).to.have.lengthOf(1);
     expect(registrations[0]?.givenName).to.equal('John');
     expect(registrations[0]?.familyName).to.equal('Doe');

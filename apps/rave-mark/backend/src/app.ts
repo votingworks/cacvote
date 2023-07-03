@@ -5,12 +5,17 @@ import {
 import { useDevDockRouter } from '@votingworks/dev-dock-backend';
 import * as grout from '@votingworks/grout';
 import express, { Application } from 'express';
-import { Id, InsertedSmartCardAuth, VotesDict } from '@votingworks/types';
-import { Optional } from '@votingworks/basics';
+import {
+  BallotStyleId,
+  Id,
+  InsertedSmartCardAuth,
+  PrecinctId,
+  VotesDict,
+} from '@votingworks/types';
+import { Optional, assert, find, iter } from '@votingworks/basics';
 import { isDeepStrictEqual } from 'util';
-import { DateTime } from 'luxon';
 import { Workspace } from './workspace';
-import { VoterInfo, VoterRegistrationInfo } from './types/db';
+import { VoterInfo, VoterRegistrationRequest } from './types/db';
 import { IS_INTEGRATION_TEST } from './globals';
 
 function constructAuthMachineState(
@@ -36,7 +41,7 @@ export interface CreateTestVoterInput {
    */
   isAdmin?: boolean;
 
-  registration?: {
+  registrationRequest?: {
     /**
      * Voter's given name, i.e. first name.
      */
@@ -76,11 +81,23 @@ export interface CreateTestVoterInput {
      * Voter's state ID.
      */
     stateId?: string;
+  };
 
+  registration?: {
     /**
      * Election definition as a JSON string.
      */
     electionData?: string;
+
+    /**
+     * Precinct ID to register the voter to.
+     */
+    precinctId?: PrecinctId;
+
+    /**
+     * Ballot style ID to register the voter to.
+     */
+    ballotStyleId?: BallotStyleId;
   };
 }
 
@@ -139,25 +156,33 @@ function buildApi({
         return { status: 'unregistered', isRaveAdmin: false };
       }
 
-      const registrations = workspace.store.getVoterRegistrations(voterInfo.id);
       const isRaveAdmin = voterInfo.isAdmin;
-      const isRegistered = registrations.length > 0;
-      if (!isRegistered) {
-        return { status: 'unregistered', isRaveAdmin };
-      }
-
-      const allRegistrationsPending = registrations.every(
-        (registration) => typeof registration.electionId === 'undefined'
-      );
-      if (allRegistrationsPending) {
-        return { status: 'registration_pending', isRaveAdmin };
-      }
-
-      const hasVoted = registrations.some(
-        (registration) => registration.votedAt
+      const registrations = workspace.store.getVoterElectionRegistrations(
+        voterInfo.id
       );
 
-      return { status: hasVoted ? 'voted' : 'registered', isRaveAdmin };
+      if (registrations.length === 0) {
+        const registrationRequests =
+          workspace.store.getVoterRegistrationRequests(voterInfo.id);
+
+        return {
+          status:
+            registrationRequests.length > 0
+              ? 'registration_pending'
+              : 'unregistered',
+          isRaveAdmin,
+        };
+      }
+
+      // TODO: support multiple registrations
+      const registration = registrations[0];
+      assert(registration);
+      const selection =
+        workspace.store.getVoterSelectionForVoterElectionRegistration(
+          registration.id
+        );
+
+      return { status: selection ? 'voted' : 'registered', isRaveAdmin };
     },
 
     async getVoterInfo(): Promise<Optional<VoterInfo>> {
@@ -173,7 +198,7 @@ function buildApi({
       return workspace.store.getVoterInfo(authStatus.user.commonAccessCardId);
     },
 
-    async getVoterRegistrations(): Promise<VoterRegistrationInfo[]> {
+    async getVoterRegistrationRequests(): Promise<VoterRegistrationRequest[]> {
       const authStatus = await getAuthStatus();
 
       if (
@@ -191,7 +216,7 @@ function buildApi({
         return [];
       }
 
-      return workspace.store.getVoterRegistrations(voterInfo.id);
+      return workspace.store.getVoterRegistrationRequests(voterInfo.id);
     },
 
     async createVoterRegistration(input: {
@@ -213,7 +238,7 @@ function buildApi({
         throw new Error('Not logged in');
       }
 
-      const id = workspace.store.createVoterRegistration({
+      const id = workspace.store.createVoterRegistrationRequest({
         commonAccessCardId: authStatus.user.commonAccessCardId,
         givenName: input.givenName,
         familyName: input.familyName,
@@ -245,10 +270,11 @@ function buildApi({
         return undefined;
       }
 
-      const registrations = workspace.store.getVoterRegistrations(voterInfo.id);
-      const registration = registrations.find(
-        ({ electionId }) => typeof electionId !== 'undefined'
+      const registrations = workspace.store.getVoterElectionRegistrations(
+        voterInfo.id
       );
+      // TODO: Handle multiple registrations
+      const registration = registrations[0];
 
       if (!registration) {
         return undefined;
@@ -277,7 +303,9 @@ function buildApi({
         throw new Error('Not registered');
       }
 
-      const registrations = workspace.store.getVoterRegistrations(voterInfo.id);
+      const registrations = workspace.store.getVoterElectionRegistrations(
+        voterInfo.id
+      );
       // TODO: Handle multiple registrations
       const registration = registrations[0];
 
@@ -285,8 +313,9 @@ function buildApi({
         throw new Error('Not registered');
       }
 
-      workspace.store.recordVotesForVoterRegistration({
-        voterRegistrationId: registration.id,
+      workspace.store.createVoterSelectionForVoterElectionRegistration({
+        voterId: voterInfo.id,
+        voterElectionRegistrationId: registration.id,
         votes: input.votes,
       });
     },
@@ -308,35 +337,61 @@ function buildApi({
         workspace.store.getOrCreateVoterInfo(commonAccessCardId);
       workspace.store.setVoterIsAdmin(voterInfo.id, input.isAdmin ?? false);
 
-      if (input.registration) {
-        const registrationId = workspace.store.createVoterRegistration({
-          commonAccessCardId,
-          givenName: input.registration.givenName ?? 'Rebecca',
-          familyName: input.registration.familyName ?? 'Welton',
-          addressLine1: input.registration.addressLine1 ?? '123 Main St',
-          addressLine2: input.registration.addressLine2,
-          city: input.registration.city ?? 'Anytown',
-          state: input.registration.state ?? 'CA',
-          postalCode: input.registration.postalCode ?? '95959',
-          stateId: input.registration.stateId ?? 'B2201793',
-        });
+      if (input.registrationRequest || input.registration) {
+        const voterRegistrationRequestId =
+          workspace.store.createVoterRegistrationRequest({
+            commonAccessCardId,
+            givenName: input.registrationRequest?.givenName ?? 'Rebecca',
+            familyName: input.registrationRequest?.familyName ?? 'Welton',
+            addressLine1:
+              input.registrationRequest?.addressLine1 ?? '123 Main St',
+            addressLine2: input.registrationRequest?.addressLine2,
+            city: input.registrationRequest?.city ?? 'Anytown',
+            state: input.registrationRequest?.state ?? 'CA',
+            postalCode: input.registrationRequest?.postalCode ?? '95959',
+            stateId: input.registrationRequest?.stateId ?? 'B2201793',
+          });
 
-        if (input.registration.electionData) {
+        if (input.registration?.electionData) {
           const electionId = workspace.store.createElectionDefinition(
             input.registration.electionData.toString()
           );
+          const electionDefinition =
+            workspace.store.getElectionDefinition(electionId);
+          assert(electionDefinition);
 
-          workspace.store.setVoterRegistrationElection(
-            registrationId,
-            electionId
-          );
+          const { registration } = input;
+
+          const ballotStyle = registration.ballotStyleId
+            ? find(
+                electionDefinition.election.ballotStyles,
+                ({ id }) => id === registration.ballotStyleId
+              )
+            : electionDefinition.election.ballotStyles[0];
+          assert(ballotStyle);
+
+          const precinctId = registration.precinctId
+            ? find(
+                ballotStyle.precincts,
+                (id) => id === registration.precinctId
+              )
+            : ballotStyle.precincts[0];
+          assert(typeof precinctId === 'string');
+
+          workspace.store.createVoterElectionRegistration({
+            voterId: voterInfo.id,
+            voterRegistrationRequestId,
+            electionId,
+            precinctId,
+            ballotStyleId: ballotStyle.id,
+          });
         }
       }
 
       return { commonAccessCardId };
     },
 
-    async getTestVoterVotes() {
+    async getTestVoterSelectionVotes() {
       assertIsIntegrationTest();
 
       const authStatus = await getAuthStatus();
@@ -356,26 +411,23 @@ function buildApi({
         throw new Error('Not registered');
       }
 
-      const registrations = workspace.store
-        .getVoterRegistrations(voterInfo.id)
-        .filter(
-          (
-            registration
-          ): registration is VoterRegistrationInfo & { votedAt: DateTime } =>
-            registration.votedAt !== undefined
-        )
-        .sort((a, b) => b.votedAt.valueOf() - a.votedAt.valueOf());
+      const mostRecentVotes = iter(
+        workspace.store.getVoterElectionRegistrations(voterInfo.id)
+      )
+        .flatMap((registration) => {
+          const selection =
+            workspace.store.getVoterSelectionForVoterElectionRegistration(
+              registration.id
+            );
+          return selection ? [selection] : [];
+        })
+        .first();
 
-      const [mostRecentlyVotedRegistration] = registrations;
-      if (!mostRecentlyVotedRegistration) {
+      if (!mostRecentVotes) {
         throw new Error('No votes found');
       }
 
-      const votes = workspace.store.getVotesForVoterRegistration(
-        mostRecentlyVotedRegistration.id
-      );
-
-      return votes;
+      return mostRecentVotes;
     },
   });
 }

@@ -4,7 +4,7 @@ import { CreateTestVoterInput } from '@votingworks/rave-mark-backend';
 // eslint-disable-next-line vx/no-import-workspace-subfolders
 import {
   type VoterInfo,
-  type VoterRegistrationInfo,
+  type VoterRegistrationRequest,
 } from '@votingworks/rave-mark-backend/src/types/db';
 import { Id, VotesDict } from '@votingworks/types';
 
@@ -36,14 +36,14 @@ export function getVoterInfo(): Cypress.Chainable<VoterInfo> {
   return sendGroutRequest('getVoterInfo', {});
 }
 
-export function getVoterRegistrations(): Cypress.Chainable<
-  VoterRegistrationInfo[]
+export function getVoterRegistrationRequests(): Cypress.Chainable<
+  VoterRegistrationRequest[]
 > {
-  return sendGroutRequest('getVoterRegistrations', {});
+  return sendGroutRequest('getVoterRegistrationRequests', {});
 }
 
-export function getVotes(): Cypress.Chainable<VotesDict> {
-  return sendGroutRequest('getTestVoterVotes', {});
+export function getVoterSelectionVotes(): Cypress.Chainable<VotesDict> {
+  return sendGroutRequest('getTestVoterSelectionVotes', {});
 }
 
 export function createTestVoter(
