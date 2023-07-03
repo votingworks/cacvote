@@ -3,8 +3,10 @@ import { v4 as uuid } from 'uuid';
 import { assert, Optional } from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
 import {
+  BallotStyleId,
   ElectionDefinition,
   Id,
+  PrecinctId,
   safeParseElectionDefinition,
   SystemSettings,
   SystemSettingsDbRow,
@@ -12,7 +14,11 @@ import {
 } from '@votingworks/types';
 import { join } from 'path';
 import { DateTime } from 'luxon';
-import { VoterInfo, VoterRegistrationInfo } from './types/db';
+import {
+  VoterElectionRegistration,
+  VoterInfo,
+  VoterRegistrationRequest,
+} from './types/db';
 
 const SchemaPath = join(__dirname, '../schema.sql');
 
@@ -217,15 +223,14 @@ export class Store {
   /**
    * Gets all the registrations for a given voter by database ID.
    *
-   * @param id The database ID of the voter, notably NOT the CAC ID.
+   * @param voterId The database ID of the voter, notably NOT the CAC ID.
    */
-  getVoterRegistrations(id: Id): VoterRegistrationInfo[] {
+  getVoterRegistrationRequests(voterId: Id): VoterRegistrationRequest[] {
     const result = this.client.all(
       `
       select
         id,
         voter_id as voterId,
-        election_id as electionId,
         given_name as givenName,
         family_name as familyName,
         address_line_1 as addressLine1,
@@ -233,16 +238,14 @@ export class Store {
         city,
         state,
         postal_code as postalCode,
-        state_id as stateId,
-        voted_at as votedAt
-      from voter_registrations
+        state_id as stateId
+      from voter_registration_requests
       where voter_id = ?
       `,
-      id
+      voterId
     ) as Array<{
       id: string;
       voterId: string;
-      electionId: string | null;
       givenName: string;
       familyName: string;
       addressLine1: string;
@@ -251,13 +254,11 @@ export class Store {
       state: string;
       postalCode: string;
       stateId: string;
-      votedAt: string | null;
     }>;
 
     return result.map((row) => ({
       id: row.id,
       voterId: row.voterId,
-      electionId: row.electionId ?? undefined,
       givenName: row.givenName,
       familyName: row.familyName,
       addressLine1: row.addressLine1,
@@ -266,7 +267,46 @@ export class Store {
       state: row.state,
       postalCode: row.postalCode,
       stateId: row.stateId,
-      votedAt: row.votedAt ? DateTime.fromSQL(row.votedAt) : undefined,
+    }));
+  }
+
+  /**
+   * @returns registrations sorted by most recent first
+   */
+  getVoterElectionRegistrations(voterId: Id): VoterElectionRegistration[] {
+    const result = this.client.all(
+      `
+      select
+        id,
+        voter_id as voterId,
+        voter_registration_request_id as voterRegistrationRequestId,
+        election_id as electionId,
+        precinct_id as precinctId,
+        ballot_style_id as ballotStyleId,
+        created_at as createdAt
+      from voter_election_registrations
+      where voter_id = ?
+      order by created_at desc
+      `,
+      voterId
+    ) as Array<{
+      id: string;
+      voterId: string;
+      voterRegistrationRequestId: string;
+      electionId: string;
+      precinctId: string;
+      ballotStyleId: string;
+      createdAt: string;
+    }>;
+
+    return result.map((row) => ({
+      id: row.id,
+      voterId: row.voterId,
+      voterRegistrationRequestId: row.voterRegistrationRequestId,
+      electionId: row.electionId,
+      precinctId: row.precinctId,
+      ballotStyleId: row.ballotStyleId,
+      createdAt: DateTime.fromSQL(row.createdAt),
     }));
   }
 
@@ -280,9 +320,9 @@ export class Store {
       `
       select
         election_data as electionData
-      from voter_registrations
-      inner join elections on elections.id = voter_registrations.election_id
-      where voter_registrations.id = ?
+      from voter_election_registrations
+      inner join elections on elections.id = voter_election_registrations.election_id
+      where voter_election_registrations.id = ?
       `,
       voterRegistrationId
     ) as Optional<{ electionData: string | Buffer }>;
@@ -310,8 +350,8 @@ export class Store {
       `
       select
         votes_json as votesJson
-      from voter_registrations
-      where id = ?
+      from voter_election_selections
+      where voter_election_registration_id = ?
       `,
       voterRegistrationId
     ) as Optional<{ votesJson: string }>;
@@ -324,10 +364,10 @@ export class Store {
   }
 
   /**
-   * Creates a voter registration for the voter with the given Common Access
-   * Card ID.
+   * Creates a voter registration request for the voter with the given Common
+   * Access Card ID.
    */
-  createVoterRegistration({
+  createVoterRegistrationRequest({
     commonAccessCardId,
     givenName,
     familyName,
@@ -353,7 +393,7 @@ export class Store {
 
     this.client.run(
       `
-      insert into voter_registrations (
+      insert into voter_registration_requests (
         id,
         voter_id,
         given_name,
@@ -386,40 +426,108 @@ export class Store {
   /**
    * Associates a voter registration with an election.
    */
-  setVoterRegistrationElection(voterRegistrationId: Id, electionId?: Id): void {
+  createVoterElectionRegistration({
+    voterId,
+    voterRegistrationRequestId,
+    electionId,
+    precinctId,
+    ballotStyleId,
+  }: {
+    voterId: Id;
+    voterRegistrationRequestId: Id;
+    electionId: Id;
+    precinctId: PrecinctId;
+    ballotStyleId: BallotStyleId;
+  }): Id {
+    const id = uuid();
+    const voterRegistrationRequests =
+      this.getVoterRegistrationRequests(voterId);
+
+    assert(
+      voterRegistrationRequests.some(
+        (r) => r.id === voterRegistrationRequestId
+      ),
+      `no voter registration request found with ID ${voterRegistrationRequestId}`
+    );
+
     this.client.run(
       `
-      update voter_registrations
-      set election_id = ?
-      where id = ?
+      insert into voter_election_registrations (
+        id,
+        voter_id,
+        voter_registration_request_id,
+        election_id,
+        precinct_id,
+        ballot_style_id
+      ) values (
+        ?, ?, ?, ?, ?, ?
+      )
       `,
-      electionId ?? null,
-      voterRegistrationId
+      id,
+      voterId,
+      voterRegistrationRequestId,
+      electionId,
+      precinctId,
+      ballotStyleId
     );
+
+    return id;
   }
 
   /**
    * Records votes for a voter registration.
    */
-  recordVotesForVoterRegistration({
-    voterRegistrationId,
+  createVoterSelectionForVoterElectionRegistration({
+    voterId,
+    voterElectionRegistrationId,
     votes,
   }: {
-    voterRegistrationId: Id;
+    voterId: Id;
+    voterElectionRegistrationId: Id;
     votes: VotesDict;
   }): void {
+    const id = uuid();
+
     // TODO: validate votes against election definition
     this.client.run(
       `
-      update voter_registrations
-      set
-        voted_at = ?,
-        votes_json = ?
-      where id = ?
+      insert into voter_election_selections (
+        id,
+        voter_id,
+        voter_election_registration_id,
+        votes_json
+      ) values (
+        ?, ?, ?, ?
+      )
       `,
-      DateTime.utc().toSQL(),
-      JSON.stringify(votes),
-      voterRegistrationId
+      id,
+      voterId,
+      voterElectionRegistrationId,
+      JSON.stringify(votes)
     );
+  }
+
+  /**
+   * Gets the voter selection for the given voter registration ID.
+   */
+  getVoterSelectionForVoterElectionRegistration(
+    voterElectionRegistrationId: Id
+  ): Optional<VotesDict> {
+    const result = this.client.one(
+      `
+      select
+        votes_json as votesJson
+      from voter_election_selections
+      where voter_election_registration_id = ?
+      order by created_at desc
+      `,
+      voterElectionRegistrationId
+    ) as Optional<{ votesJson: string }>;
+
+    if (!result) {
+      return undefined;
+    }
+
+    return JSON.parse(result.votesJson);
   }
 }

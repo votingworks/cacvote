@@ -21,7 +21,7 @@ create table voters (
   created_at timestamp not null default current_timestamp
 );
 
-create table voter_registrations (
+create table voter_registration_requests (
   id varchar(36) primary key,
   voter_id varchar(36) not null references voters(id),
   given_name text not null,
@@ -32,8 +32,23 @@ create table voter_registrations (
   state text not null,
   postal_code text not null,
   state_id text not null,
-  election_id varchar(36) references elections(id),
-  votes_json text,
-  created_at timestamp not null default current_timestamp,
-  voted_at timestamp
+  created_at timestamp not null default current_timestamp
+);
+
+create table voter_election_registrations (
+  id varchar(36) primary key,
+  voter_id varchar(36) not null references voters(id),
+  voter_registration_request_id varchar(36) not null references voter_registration_requests(id),
+  election_id varchar(36) not null references elections(id),
+  precinct_id text not null,
+  ballot_style_id text not null,
+  created_at timestamp not null default current_timestamp
+);
+
+create table voter_election_selections (
+  id varchar(36) primary key,
+  voter_id varchar(36) not null references voters(id),
+  voter_election_registration_id varchar(36) not null references voter_election_registrations(id),
+  votes_json text not null,
+  created_at timestamp not null default current_timestamp
 );

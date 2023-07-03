@@ -4,7 +4,11 @@ import {
   mockCardRemoval,
   mockRaveMarkVoterCardInsertion,
 } from '../support/auth';
-import { closeDevDock, createTestVoter, getVotes } from '../support/helpers';
+import {
+  closeDevDock,
+  createTestVoter,
+  getVoterSelectionVotes,
+} from '../support/helpers';
 
 beforeEach(() => {
   mockCardRemoval();
@@ -60,7 +64,7 @@ it('records votes', () => {
   // check that we're done
   cy.contains('You’re done!').should('be.visible');
 
-  getVotes().should('deep.equal', {
+  getVoterSelectionVotes().should('deep.equal', {
     mayor: [
       {
         id: 'sherlock-holmes',
