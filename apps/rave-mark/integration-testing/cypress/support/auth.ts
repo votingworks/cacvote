@@ -21,10 +21,10 @@ export function getCommonAccessCardId(): string {
 }
 
 export function mockRaveMarkVoterCardInsertion({
-  commonAccessCardId,
+  commonAccessCardId = getCommonAccessCardId(),
 }: {
-  commonAccessCardId: string;
-}): void {
+  commonAccessCardId?: string;
+} = {}): void {
   mockCardCypress({
     cardStatus: {
       status: 'ready',
