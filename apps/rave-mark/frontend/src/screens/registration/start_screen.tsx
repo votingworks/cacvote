@@ -34,75 +34,75 @@ export function StartScreen(): JSX.Element {
         <P>Fill out your information to register to vote.</P>
         <InlineForm>
           <TextInput
-            placeholder="Given Name"
+            label="Given Name"
             data-testid="given-name"
             value={givenName}
-            onInput={(event) => {
-              setGivenName(event.currentTarget.value);
+            onChange={(newValue) => {
+              setGivenName(newValue);
             }}
           />
           <TextInput
-            placeholder="Family Name"
+            label="Family Name"
             data-testid="family-name"
             value={familyName}
-            onInput={(event) => {
-              setFamilyName(event.currentTarget.value);
+            onChange={(newValue) => {
+              setFamilyName(newValue);
             }}
           />
         </InlineForm>
         <InlineForm>
           <TextInput
-            placeholder="Address Line 1"
+            label="Address Line 1"
             data-testid="address-line-1"
             value={addressLine1}
-            onInput={(event) => {
-              setAddressLine1(event.currentTarget.value);
+            onChange={(newValue) => {
+              setAddressLine1(newValue);
             }}
           />
         </InlineForm>
         <InlineForm>
           <TextInput
-            placeholder="Address Line 2"
+            label="Address Line 2"
             data-testid="address-line-2"
             value={addressLine2}
-            onInput={(event) => {
-              setAddressLine2(event.currentTarget.value);
+            onChange={(newValue) => {
+              setAddressLine2(newValue);
             }}
           />
         </InlineForm>
         <InlineForm>
           <TextInput
-            placeholder="City"
+            label="City"
             data-testid="city"
             value={city}
-            onInput={(event) => {
-              setCity(event.currentTarget.value);
+            onChange={(newValue) => {
+              setCity(newValue);
             }}
           />
           <TextInput
-            placeholder="State"
+            label="State"
             data-testid="state"
             value={state}
-            onInput={(event) => {
-              setState(event.currentTarget.value);
+            onChange={(newValue) => {
+              setState(newValue);
             }}
           />
           <TextInput
-            placeholder="Postal Code"
+            label="Postal Code"
             data-testid="postal-code"
             value={postalCode}
-            onInput={(event) => {
-              setPostalCode(event.currentTarget.value);
+            onChange={(newValue) => {
+              setPostalCode(newValue);
             }}
           />
         </InlineForm>
         <InlineForm>
           <TextInput
-            placeholder="State ID / Driver’s License ID"
+            label="State ID / Driver’s License ID"
             data-testid="state-id"
             value={stateId}
-            onInput={(event) => {
-              setStateId(event.currentTarget.value);
+            onChange={(newValue) => {
+              setStateId(newValue);
             }}
           />
           <Button onPress={onSubmit}>Submit</Button>
