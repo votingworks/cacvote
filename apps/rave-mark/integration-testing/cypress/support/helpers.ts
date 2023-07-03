@@ -1,10 +1,12 @@
 import { deserialize, methodUrl, serialize } from '@votingworks/grout';
+import { CreateTestVoterInput } from '@votingworks/rave-mark-backend';
 
 // eslint-disable-next-line vx/no-import-workspace-subfolders
 import {
   type VoterInfo,
   type VoterRegistrationInfo,
 } from '@votingworks/rave-mark-backend/src/types/db';
+import { Id } from '@votingworks/types';
 
 /**
  * Closes the dev dock if it is open so it doesn't interfere with the test.
@@ -38,4 +40,16 @@ export function getVoterRegistrations(): Cypress.Chainable<
   VoterRegistrationInfo[]
 > {
   return sendGroutRequest('getVoterRegistrations', {});
+}
+
+export function createTestVoter(
+  input: CreateTestVoterInput = {}
+): Cypress.Chainable<Id> {
+  return sendGroutRequest<CreateTestVoterInput, { commonAccessCardId: Id }>(
+    'createTestVoter',
+    input
+  ).then(({ commonAccessCardId }) => {
+    Cypress.env('commonAccessCardId', commonAccessCardId);
+    return commonAccessCardId;
+  });
 }

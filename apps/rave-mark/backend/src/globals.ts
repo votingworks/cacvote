@@ -31,3 +31,8 @@ export const RAVE_MARK_WORKSPACE =
   (NODE_ENV === 'development'
     ? join(__dirname, '../dev-workspace')
     : undefined);
+
+/**
+ * Is this running as part of an integration test?
+ */
+export const IS_INTEGRATION_TEST = process.env.IS_INTEGRATION_TEST === 'true';

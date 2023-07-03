@@ -10,6 +10,7 @@ import { Optional } from '@votingworks/basics';
 import { isDeepStrictEqual } from 'util';
 import { Workspace } from './workspace';
 import { VoterInfo, VoterRegistrationInfo } from './types/db';
+import { IS_INTEGRATION_TEST } from './globals';
 
 function constructAuthMachineState(
   workspace: Workspace
@@ -27,6 +28,60 @@ export type VoterStatus =
   | 'registration_pending'
   | 'registered'
   | 'voted';
+
+export interface CreateTestVoterInput {
+  /**
+   * Whether or not the voter should be an admin.
+   */
+  isAdmin?: boolean;
+
+  registration?: {
+    /**
+     * Voter's given name, i.e. first name.
+     */
+    givenName?: string;
+
+    /**
+     * Voter's family name, i.e. last name.
+     */
+    familyName?: string;
+
+    /**
+     * Voter's address line 1.
+     */
+    addressLine1?: string;
+
+    /**
+     * Voter's address line 2.
+     */
+    addressLine2?: string;
+
+    /**
+     * Voter's city.
+     */
+    city?: string;
+
+    /**
+     * Voter's state.
+     */
+    state?: string;
+
+    /**
+     * Voter's postal code.
+     */
+    postalCode?: string;
+
+    /**
+     * Voter's state ID.
+     */
+    stateId?: string;
+
+    /**
+     * Election definition as a JSON string.
+     */
+    electionData?: string;
+  };
+}
 
 function buildApi({
   auth,
@@ -231,6 +286,49 @@ function buildApi({
 
     logOut() {
       return auth.logOut(constructAuthMachineState(workspace));
+    },
+
+    createTestVoter(input: CreateTestVoterInput) {
+      if (!IS_INTEGRATION_TEST) {
+        throw new Error('Not in integration test mode');
+      }
+
+      function createUniqueCommonAccessCardId(): Id {
+        const tenRandomDigits = Math.floor(Math.random() * 1e10).toString();
+        return `test-${tenRandomDigits.toString().padStart(10, '0')}`;
+      }
+
+      const commonAccessCardId = createUniqueCommonAccessCardId();
+      const voterInfo =
+        workspace.store.getOrCreateVoterInfo(commonAccessCardId);
+      workspace.store.setVoterIsAdmin(voterInfo.id, input.isAdmin ?? false);
+
+      if (input.registration) {
+        const registrationId = workspace.store.createVoterRegistration({
+          commonAccessCardId,
+          givenName: input.registration.givenName ?? 'Rebecca',
+          familyName: input.registration.familyName ?? 'Welton',
+          addressLine1: input.registration.addressLine1 ?? '123 Main St',
+          addressLine2: input.registration.addressLine2,
+          city: input.registration.city ?? 'Anytown',
+          state: input.registration.state ?? 'CA',
+          postalCode: input.registration.postalCode ?? '95959',
+          stateId: input.registration.stateId ?? 'B2201793',
+        });
+
+        if (input.registration.electionData) {
+          const electionId = workspace.store.createElectionDefinition(
+            input.registration.electionData.toString()
+          );
+
+          workspace.store.setVoterRegistrationElection(
+            registrationId,
+            electionId
+          );
+        }
+      }
+
+      return { commonAccessCardId };
     },
   });
 }
