@@ -17,6 +17,7 @@ export default defineConfig((env) => {
   const processEnvDefines = [
     ...Object.entries(rootDotenvValues),
     ...Object.entries(coreDotenvValues),
+    ['IS_INTEGRATION_TEST', process.env.IS_INTEGRATION_TEST || 'false'],
   ].reduce<Record<string, string>>(
     (acc, [key, value]) => ({
       ...acc,
