@@ -25,6 +25,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {};
+    this.handleUnhandledRejection = this.handleUnhandledRejection.bind(this);
   }
 
   static getDerivedStateFromError(error: unknown): State {
