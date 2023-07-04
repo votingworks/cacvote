@@ -2,6 +2,7 @@ import { find, throwIllegalValue } from '@votingworks/basics';
 import {
   Contest as MarkFlowContest,
   Review as MarkFlowReview,
+  PrintPage as MarkFlowPrintPage,
 } from '@votingworks/mark-flow-ui';
 import {
   ContestId,
@@ -11,6 +12,7 @@ import {
 } from '@votingworks/types';
 import { Button, H1, Main, Screen, WithScrollButtons } from '@votingworks/ui';
 import styled from 'styled-components';
+import { useEffect, useRef, useState } from 'react';
 import { getElectionConfiguration, saveVotes } from '../../api';
 import { ButtonFooter } from '../../components/button_footer';
 
@@ -35,9 +37,17 @@ export function MarkScreen({
   goPrevious,
   goToIndex,
 }: MarkScreenProps): JSX.Element | null {
+  const [isPrinting, setIsPrinting] = useState(false);
+  const printTimer = useRef<number>();
   const saveVotesMutation = saveVotes.useMutation();
   const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
   const electionConfiguration = getElectionConfigurationQuery.data;
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(printTimer.current);
+    };
+  }, []);
 
   if (!electionConfiguration) {
     return null;
@@ -55,7 +65,29 @@ export function MarkScreen({
   });
 
   function printBallot() {
-    saveVotesMutation.mutate({ votes });
+    setIsPrinting(true);
+  }
+
+  if (isPrinting) {
+    return (
+      <MarkFlowPrintPage
+        electionDefinition={electionDefinition}
+        ballotStyleId={ballotStyleId}
+        precinctId={precinctId}
+        generateBallotId={() => ''}
+        // TODO: use test vs live mode?
+        isLiveMode={false}
+        votes={votes}
+        onPrintStarted={() => {
+          printTimer.current = window.setTimeout(
+            () => {
+              saveVotesMutation.mutate({ votes });
+            },
+            process.env.IS_INTEGRATION_TEST === 'true' ? 500 : 5000
+          );
+        }}
+      />
+    );
   }
 
   if (contestIndex === contests.length) {

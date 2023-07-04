@@ -26,6 +26,10 @@ beforeEach(() => {
 });
 
 it('records votes', () => {
+  cy.window().then((win) => {
+    cy.stub(win, 'print').as('print');
+  });
+
   // get started
   mockRaveMarkVoterCardInsertion();
   enterPin();
@@ -54,6 +58,9 @@ it('records votes', () => {
   cy.contains('Mona Lisa').click();
   cy.contains('Next').click();
   cy.contains('Print My Ballot').click();
+
+  cy.contains('Printing Your Official Ballot').should('be.visible');
+  cy.get('@print').should('be.calledOnce');
 
   // check that we're done
   cy.contains('You’re done!').should('be.visible');
