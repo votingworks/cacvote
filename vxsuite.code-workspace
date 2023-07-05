@@ -1,66 +1,6 @@
 {
   "folders": [
     {
-      "path": "apps/admin/backend",
-      "name": "apps/admin/backend"
-    },
-    {
-      "path": "apps/admin/frontend",
-      "name": "apps/admin/frontend"
-    },
-    {
-      "path": "apps/admin/integration-testing",
-      "name": "apps/admin/integration-testing"
-    },
-    {
-      "path": "apps/central-scan/backend",
-      "name": "apps/central-scan/backend"
-    },
-    {
-      "path": "apps/central-scan/frontend",
-      "name": "apps/central-scan/frontend"
-    },
-    {
-      "path": "apps/central-scan/integration-testing",
-      "name": "apps/central-scan/integration-testing"
-    },
-    {
-      "path": "apps/design/backend",
-      "name": "apps/design/backend"
-    },
-    {
-      "path": "apps/design/frontend",
-      "name": "apps/design/frontend"
-    },
-    {
-      "path": "apps/design/shared",
-      "name": "apps/design/shared"
-    },
-    {
-      "path": "apps/mark-scan/backend",
-      "name": "apps/mark-scan/backend"
-    },
-    {
-      "path": "apps/mark-scan/frontend",
-      "name": "apps/mark-scan/frontend"
-    },
-    {
-      "path": "apps/mark-scan/integration-testing",
-      "name": "apps/mark-scan/integration-testing"
-    },
-    {
-      "path": "apps/mark/backend",
-      "name": "apps/mark/backend"
-    },
-    {
-      "path": "apps/mark/frontend",
-      "name": "apps/mark/frontend"
-    },
-    {
-      "path": "apps/mark/integration-testing",
-      "name": "apps/mark/integration-testing"
-    },
-    {
       "path": "apps/rave-mark/backend",
       "name": "apps/rave-mark/backend"
     },
@@ -73,24 +13,12 @@
       "name": "apps/rave-mark/integration-testing"
     },
     {
-      "path": "apps/scan/backend",
-      "name": "apps/scan/backend"
-    },
-    {
-      "path": "apps/scan/frontend",
-      "name": "apps/scan/frontend"
-    },
-    {
       "path": "codemods",
       "name": "codemods"
     },
     {
       "path": "docs",
       "name": "docs"
-    },
-    {
-      "path": "libs/api",
-      "name": "libs/api"
     },
     {
       "path": "libs/auth",
@@ -105,40 +33,12 @@
       "name": "libs/ballot-encoder"
     },
     {
-      "path": "libs/ballot-interpreter",
-      "name": "libs/ballot-interpreter"
-    },
-    {
-      "path": "libs/ballot-interpreter-nh",
-      "name": "libs/ballot-interpreter-nh"
-    },
-    {
-      "path": "libs/ballot-interpreter-vx",
-      "name": "libs/ballot-interpreter-vx"
-    },
-    {
       "path": "libs/basics",
       "name": "libs/basics"
     },
     {
       "path": "libs/cdf-schema-builder",
       "name": "libs/cdf-schema-builder"
-    },
-    {
-      "path": "libs/converter-nh-accuvote",
-      "name": "libs/converter-nh-accuvote"
-    },
-    {
-      "path": "libs/custom-paper-handler",
-      "name": "libs/custom-paper-handler"
-    },
-    {
-      "path": "libs/custom-scanner",
-      "name": "libs/custom-scanner"
-    },
-    {
-      "path": "libs/cvr-fixture-generator",
-      "name": "libs/cvr-fixture-generator"
     },
     {
       "path": "libs/db",
@@ -181,10 +81,6 @@
       "name": "libs/mark-flow-ui"
     },
     {
-      "path": "libs/message-coder",
-      "name": "libs/message-coder"
-    },
-    {
       "path": "libs/monorepo-utils",
       "name": "libs/monorepo-utils"
     },
@@ -205,10 +101,6 @@
       "name": "libs/ui"
     },
     {
-      "path": "libs/usb-drive",
-      "name": "libs/usb-drive"
-    },
-    {
       "path": "libs/usb-mocking",
       "name": "libs/usb-mocking"
     },
@@ -219,10 +111,6 @@
     {
       "path": "script",
       "name": "script"
-    },
-    {
-      "path": "services/converter-ms-sems",
-      "name": "services/converter-ms-sems"
     }
   ],
   "settings": {
