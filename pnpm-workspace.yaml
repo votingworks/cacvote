@@ -12,6 +12,9 @@ packages:
   - 'libs/grout/*'
   - 'libs/dev-dock/*'
 
+  # include all services
+  - 'services/*'
+
   # include top-level development project
   - 'codemods'
   - 'script'
