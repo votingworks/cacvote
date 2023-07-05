@@ -111,6 +111,10 @@
     {
       "path": "script",
       "name": "script"
+    },
+    {
+      "path": "services/rave-server",
+      "name": "services/rave-server"
     }
   ],
   "settings": {

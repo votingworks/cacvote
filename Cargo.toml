@@ -1,5 +1,5 @@
 [workspace]
 
 members = [
-    "libs/ballot-interpreter-nh"
+    "services/rave-server",
 ]

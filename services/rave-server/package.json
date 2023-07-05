@@ -1,0 +1,11 @@
+{
+  "name": "@votingworks/rave-server",
+  "version": "1.0.0",
+  "description": "VotingWorks RAVE Server",
+  "scripts": {
+    "test": "cargo test"
+  },
+  "keywords": [],
+  "author": "VotingWorks Eng <eng@voting.works>",
+  "license": "GPL-3.0"
+}
