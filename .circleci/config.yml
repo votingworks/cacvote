@@ -601,6 +601,29 @@ jobs:
       - store_test_results:
           path: libs/utils/reports/
 
+  # @votingworks/rave-server
+  test-services-rave-server:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir services/rave-server build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir services/rave-server lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir services/rave-server test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: services/rave-server/reports/
+
   validate-monorepo:
     executor: nodejs
     resource_class: xlarge
@@ -643,6 +666,7 @@ workflows:
       - test-libs-types
       - test-libs-ui
       - test-libs-utils
+      - test-services-rave-server
       - validate-monorepo
 
 commands:
