@@ -4,6 +4,7 @@ import { assert, Optional } from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
 import {
   BallotStyleId,
+  CVR,
   ElectionDefinition,
   Id,
   PrecinctId,
@@ -343,27 +344,6 @@ export class Store {
   }
 
   /**
-   * Gets the votes for the given voter registration ID.
-   */
-  getVotesForVoterRegistration(voterRegistrationId: Id): Optional<VotesDict> {
-    const result = this.client.one(
-      `
-      select
-        votes_json as votesJson
-      from voter_election_selections
-      where voter_election_registration_id = ?
-      `,
-      voterRegistrationId
-    ) as Optional<{ votesJson: string }>;
-
-    if (!result) {
-      return undefined;
-    }
-
-    return JSON.parse(result.votesJson);
-  }
-
-  /**
    * Creates a voter registration request for the voter with the given Common
    * Access Card ID.
    */
@@ -478,16 +458,16 @@ export class Store {
    * Records votes for a voter registration.
    */
   createVoterSelectionForVoterElectionRegistration({
+    id,
     voterId,
     voterElectionRegistrationId,
-    votes,
+    castVoteRecord,
   }: {
+    id: Id;
     voterId: Id;
     voterElectionRegistrationId: Id;
-    votes: VotesDict;
+    castVoteRecord: CVR.CVR;
   }): void {
-    const id = uuid();
-
     // TODO: validate votes against election definition
     this.client.run(
       `
@@ -495,7 +475,7 @@ export class Store {
         id,
         voter_id,
         voter_election_registration_id,
-        votes_json
+        cast_vote_record
       ) values (
         ?, ?, ?, ?
       )
@@ -503,31 +483,31 @@ export class Store {
       id,
       voterId,
       voterElectionRegistrationId,
-      JSON.stringify(votes)
+      JSON.stringify(castVoteRecord)
     );
   }
 
   /**
    * Gets the voter selection for the given voter registration ID.
    */
-  getVoterSelectionForVoterElectionRegistration(
+  getCastVoteRecordForVoterElectionRegistration(
     voterElectionRegistrationId: Id
   ): Optional<VotesDict> {
     const result = this.client.one(
       `
       select
-        votes_json as votesJson
+        cast_vote_record as castVoteRecordJson
       from voter_election_selections
       where voter_election_registration_id = ?
       order by created_at desc
       `,
       voterElectionRegistrationId
-    ) as Optional<{ votesJson: string }>;
+    ) as Optional<{ castVoteRecordJson: string }>;
 
     if (!result) {
       return undefined;
     }
 
-    return JSON.parse(result.votesJson);
+    return JSON.parse(result.castVoteRecordJson);
   }
 }

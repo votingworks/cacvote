@@ -1,3 +1,4 @@
+/* eslint-disable vx/gts-identifiers */
 import {
   enterPin,
   logOut,
@@ -7,7 +8,7 @@ import {
 import {
   closeDevDock,
   createTestVoter,
-  getVoterSelectionVotes,
+  getVoterCastVoteRecord,
 } from '../support/helpers';
 import { virtualKeyboardType } from '../support/keyboard';
 
@@ -65,77 +66,230 @@ it('records votes', () => {
   // check that we're done
   cy.contains('You’re done!').should('be.visible');
 
-  getVoterSelectionVotes().should('deep.equal', {
-    mayor: [
+  getVoterCastVoteRecord()
+    .then((cvr) => cvr.CVRSnapshot[0]?.CVRContest)
+    .should('deep.equal', [
       {
-        id: 'sherlock-holmes',
-        name: 'Sherlock Holmes',
-        partyIds: ['0'],
-      },
-    ],
-    controller: [
-      {
-        id: 'oprah-winfrey',
-        name: 'Oprah Winfrey',
-        partyIds: ['1'],
-      },
-    ],
-    attorney: [
-      {
-        id: 'mark-twain',
-        name: 'Mark Twain',
-        partyIds: ['3'],
-      },
-    ],
-    'public-works-director': [
-      {
-        id: 'bill-nye',
-        name: 'Bill Nye',
-        partyIds: ['3'],
-      },
-    ],
-    'chief-of-police': [
-      {
-        id: 'natalie-portman',
-        name: 'Natalie Portman',
-        partyIds: ['0'],
-      },
-    ],
-    'parks-and-recreation-director': [
-      {
-        id: 'write-in-merlin',
-        isWriteIn: true,
-        name: 'MERLIN',
-      },
-    ],
-    'board-of-alderman': [
-      {
-        id: 'steve-jobs',
-        name: 'Steve Jobs',
-        partyIds: ['1'],
+        '@type': 'CVR.CVRContest',
+        ContestId: 'mayor',
+        Overvotes: 0,
+        Undervotes: 0,
+        WriteIns: 0,
+        CVRContestSelection: [
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'sherlock-holmes',
+            OptionPosition: 0,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+        ],
       },
       {
-        id: 'pablo-picasso',
-        name: 'Pablo Picasso',
-        partyIds: ['1'],
+        '@type': 'CVR.CVRContest',
+        ContestId: 'controller',
+        Overvotes: 0,
+        Undervotes: 0,
+        WriteIns: 0,
+        CVRContestSelection: [
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'oprah-winfrey',
+            OptionPosition: 1,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+        ],
       },
       {
-        id: 'helen-keller',
-        name: 'Helen Keller',
-        partyIds: ['0'],
+        '@type': 'CVR.CVRContest',
+        ContestId: 'attorney',
+        Overvotes: 0,
+        Undervotes: 0,
+        WriteIns: 0,
+        CVRContestSelection: [
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'mark-twain',
+            OptionPosition: 1,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+        ],
       },
-    ],
-    'city-council': [
       {
-        id: 'marie-curie',
-        name: 'Marie Curie',
-        partyIds: ['0'],
+        '@type': 'CVR.CVRContest',
+        ContestId: 'public-works-director',
+        Overvotes: 0,
+        Undervotes: 0,
+        WriteIns: 0,
+        CVRContestSelection: [
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'bill-nye',
+            OptionPosition: 2,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+        ],
       },
       {
-        id: 'mona-lisa',
-        name: 'Mona Lisa',
-        partyIds: ['3'],
+        '@type': 'CVR.CVRContest',
+        ContestId: 'chief-of-police',
+        Overvotes: 0,
+        Undervotes: 0,
+        WriteIns: 0,
+        CVRContestSelection: [
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'natalie-portman',
+            OptionPosition: 0,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+        ],
       },
-    ],
-  });
+      {
+        '@type': 'CVR.CVRContest',
+        ContestId: 'parks-and-recreation-director',
+        Overvotes: 0,
+        Undervotes: 0,
+        WriteIns: 1,
+        CVRContestSelection: [
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'write-in-0',
+            OptionPosition: 4,
+            Status: ['needs-adjudication'],
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'unknown',
+                CVRWriteIn: {
+                  '@type': 'CVR.CVRWriteIn',
+                  Text: 'MERLIN',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        '@type': 'CVR.CVRContest',
+        ContestId: 'board-of-alderman',
+        Overvotes: 0,
+        Undervotes: 1,
+        WriteIns: 0,
+        Status: ['undervoted'],
+        CVRContestSelection: [
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'steve-jobs',
+            OptionPosition: 1,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'pablo-picasso',
+            OptionPosition: 4,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'helen-keller',
+            OptionPosition: 0,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        '@type': 'CVR.CVRContest',
+        ContestId: 'city-council',
+        Overvotes: 0,
+        Undervotes: 2,
+        WriteIns: 0,
+        Status: ['undervoted'],
+        CVRContestSelection: [
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'marie-curie',
+            OptionPosition: 0,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+          {
+            '@type': 'CVR.CVRContestSelection',
+            ContestSelectionId: 'mona-lisa',
+            OptionPosition: 2,
+            SelectionPosition: [
+              {
+                '@type': 'CVR.SelectionPosition',
+                HasIndication: 'yes',
+                NumberVotes: 1,
+                IsAllocable: 'yes',
+              },
+            ],
+          },
+        ],
+      },
+    ]);
 });
