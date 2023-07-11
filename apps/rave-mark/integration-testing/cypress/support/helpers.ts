@@ -6,7 +6,7 @@ import {
   type VoterInfo,
   type VoterRegistrationRequest,
 } from '@votingworks/rave-mark-backend/src/types/db';
-import { Id, VotesDict } from '@votingworks/types';
+import { CVR, Id } from '@votingworks/types';
 
 /**
  * Closes the dev dock if it is open so it doesn't interfere with the test.
@@ -42,8 +42,8 @@ export function getVoterRegistrationRequests(): Cypress.Chainable<
   return sendGroutRequest('getVoterRegistrationRequests', {});
 }
 
-export function getVoterSelectionVotes(): Cypress.Chainable<VotesDict> {
-  return sendGroutRequest('getTestVoterSelectionVotes', {});
+export function getVoterCastVoteRecord(): Cypress.Chainable<CVR.CVR> {
+  return sendGroutRequest('getTestVoterCastVoteRecord', {});
 }
 
 export function createTestVoter(

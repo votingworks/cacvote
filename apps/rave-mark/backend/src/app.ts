@@ -2,21 +2,26 @@ import {
   InsertedSmartCardAuthApi,
   InsertedSmartCardAuthMachineState,
 } from '@votingworks/auth';
+import { VX_MACHINE_ID, buildCastVoteRecord } from '@votingworks/backend';
+import { Optional, assert, find, iter } from '@votingworks/basics';
 import { useDevDockRouter } from '@votingworks/dev-dock-backend';
 import * as grout from '@votingworks/grout';
-import express, { Application } from 'express';
 import {
+  BallotIdSchema,
   BallotStyleId,
+  BallotType,
   Id,
   InsertedSmartCardAuth,
   PrecinctId,
   VotesDict,
+  unsafeParse,
 } from '@votingworks/types';
-import { Optional, assert, find, iter } from '@votingworks/basics';
+import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
-import { Workspace } from './workspace';
-import { VoterInfo, VoterRegistrationRequest } from './types/db';
+import { v4 as uuid } from 'uuid';
 import { IS_INTEGRATION_TEST } from './globals';
+import { VoterInfo, VoterRegistrationRequest } from './types/db';
+import { Workspace } from './workspace';
 
 function constructAuthMachineState(
   workspace: Workspace
@@ -178,7 +183,7 @@ function buildApi({
       const registration = registrations[0];
       assert(registration);
       const selection =
-        workspace.store.getVoterSelectionForVoterElectionRegistration(
+        workspace.store.getCastVoteRecordForVoterElectionRegistration(
           registration.id
         );
 
@@ -324,10 +329,43 @@ function buildApi({
         throw new Error('Not registered');
       }
 
+      const electionDefinition =
+        workspace.store.getElectionDefinitionForVoterRegistration(
+          registration.id
+        );
+
+      if (!electionDefinition) {
+        throw new Error('no election definition found for registration');
+      }
+
+      const castVoteRecordId = unsafeParse(BallotIdSchema, uuid());
+      const castVoteRecord = buildCastVoteRecord({
+        election: electionDefinition.election,
+        electionId: electionDefinition.electionHash,
+        scannerId: VX_MACHINE_ID,
+        // TODO: what should the batch ID be?
+        batchId: '',
+        castVoteRecordId,
+        interpretation: {
+          type: 'InterpretedBmdPage',
+          metadata: {
+            ballotStyleId: registration.ballotStyleId,
+            precinctId: registration.precinctId,
+            ballotType: BallotType.Absentee,
+            electionHash: electionDefinition.electionHash,
+            // TODO: support test mode
+            isTestMode: false,
+          },
+          votes: input.votes,
+        },
+        ballotMarkingMode: 'machine',
+      });
+
       workspace.store.createVoterSelectionForVoterElectionRegistration({
+        id: castVoteRecordId,
         voterId: voterInfo.id,
         voterElectionRegistrationId: registration.id,
-        votes: input.votes,
+        castVoteRecord,
       });
     },
 
@@ -402,7 +440,7 @@ function buildApi({
       return { commonAccessCardId };
     },
 
-    async getTestVoterSelectionVotes() {
+    async getTestVoterCastVoteRecord() {
       assertIsIntegrationTest();
 
       const authStatus = await getAuthStatus();
@@ -427,7 +465,7 @@ function buildApi({
       )
         .flatMap((registration) => {
           const selection =
-            workspace.store.getVoterSelectionForVoterElectionRegistration(
+            workspace.store.getCastVoteRecordForVoterElectionRegistration(
               registration.id
             );
           return selection ? [selection] : [];
