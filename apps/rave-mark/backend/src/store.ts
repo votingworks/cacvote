@@ -16,6 +16,7 @@ import {
 import { join } from 'path';
 import { DateTime } from 'luxon';
 import {
+  ServerSyncAttempt,
   VoterElectionRegistration,
   VoterInfo,
   VoterRegistrationRequest,
@@ -509,5 +510,109 @@ export class Store {
     }
 
     return JSON.parse(result.castVoteRecordJson);
+  }
+
+  /**
+   * Creates a new server synchronization attempt record.
+   */
+  createServerSyncAttempt({
+    creator,
+    trigger,
+    initialStatusMessage,
+  }: {
+    creator: string;
+    trigger: 'manual' | 'scheduled';
+    initialStatusMessage: string;
+  }): Id {
+    const id = uuid();
+    this.client.run(
+      `
+      insert into server_sync_attempts (
+        id,
+        creator,
+        trigger,
+        status_message
+      ) values (
+        ?, ?, ?, ?
+      )
+      `,
+      id,
+      creator,
+      trigger,
+      initialStatusMessage
+    );
+    return id;
+  }
+
+  /**
+   * Updates the state for the given server synchronization attempt.
+   */
+  updateServerSyncAttempt({
+    id,
+    status,
+    statusMessage,
+  }: {
+    id: Id;
+    status: 'pending' | 'success' | 'failure';
+    statusMessage: string;
+  }): void {
+    this.client.run(
+      `
+      update server_sync_attempts
+      set
+        status_message = ?,
+        success = ?,
+        completed_at = ?
+      where id = ?
+      `,
+      statusMessage,
+      status === 'pending' ? null : status === 'success' ? 1 : 0,
+      status === 'pending' ? null : DateTime.utc().toSQL(),
+      id
+    );
+  }
+
+  /**
+   * Gets the most recent server synchronization attempts.
+   */
+  getServerSyncAttempts({
+    limit = 100,
+  }: { limit?: number } = {}): ServerSyncAttempt[] {
+    return (
+      this.client.all(
+        `
+        select
+          id,
+          creator,
+          trigger,
+          status_message as statusMessage,
+          success,
+          created_at as createdAt,
+          completed_at as completedAt
+        from server_sync_attempts
+        order by created_at desc
+        limit ?
+        `,
+        limit
+      ) as Array<{
+        id: Id;
+        creator: string;
+        trigger: string;
+        statusMessage: string;
+        success: 0 | 1 | null;
+        createdAt: string;
+        completedAt: string | null;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      creator: row.creator,
+      trigger: row.trigger,
+      statusMessage: row.statusMessage,
+      success: row.success === null ? undefined : row.success === 1,
+      createdAt: DateTime.fromSQL(row.createdAt),
+      completedAt: row.completedAt
+        ? DateTime.fromSQL(row.completedAt)
+        : undefined,
+    }));
   }
 }

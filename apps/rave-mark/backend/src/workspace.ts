@@ -26,7 +26,7 @@ export function createWorkspace(root: string): Workspace {
   const resolvedRoot = resolve(root);
   ensureDirSync(resolvedRoot);
 
-  const dbPath = join(resolvedRoot, 'mark.db');
+  const dbPath = join(resolvedRoot, 'rave-mark.db');
   const store = Store.fileStore(dbPath);
 
   return {

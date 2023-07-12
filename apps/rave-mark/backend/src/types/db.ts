@@ -129,3 +129,40 @@ export interface VoterElectionSelection {
    */
   createdAt: DateTime;
 }
+
+export interface ServerSyncAttempt {
+  /**
+   * Database ID for a server sync attempt record.
+   */
+  id: Id;
+
+  /**
+   * Creator for the user who initiated the server sync attempt.
+   */
+  creator: string;
+
+  /**
+   * Trigger type for the server sync attempt.
+   */
+  trigger: string;
+
+  /**
+   * Status message for the server sync attempt.
+   */
+  statusMessage: string;
+
+  /**
+   * Date and time when the server sync attempt was made.
+   */
+  createdAt: DateTime;
+
+  /**
+   * Whether or not the server sync attempt was successful.
+   */
+  success?: boolean;
+
+  /**
+   * Date and time when the server sync attempt was completed.
+   */
+  completedAt?: DateTime;
+}

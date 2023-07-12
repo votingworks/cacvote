@@ -15,7 +15,7 @@
     "lint": "pnpm type-check && eslint .",
     "lint:fix": "pnpm type-check && eslint . --fix",
     "pre-commit": "lint-staged",
-    "start": "pnpm -w run-dev rave-mark",
+    "start": "TZ=UTC pnpm -w run-dev rave-mark",
     "start:core": "pnpm -w run-dev vm-rave-mark --core-only",
     "start:prod": "concurrently --names frontend,backend 'pnpm --dir prodserver start' 'pnpm --dir ../backend start'",
     "test": "is-ci test:ci test:watch",
