@@ -136,3 +136,28 @@ export const saveVotes = {
     });
   },
 } as const;
+
+export const sync = {
+  useMutation() {
+    const apiClient = useApiClient();
+    const queryClient = useQueryClient();
+    return useMutation(apiClient.sync, {
+      async onSuccess() {
+        await queryClient.invalidateQueries();
+      },
+    });
+  },
+} as const;
+
+export const getServerSyncAttempts = {
+  queryKey(): QueryKey {
+    return ['getServerSyncAttempts'];
+  },
+  useQuery() {
+    const apiClient = useApiClient();
+    return useQuery(this.queryKey(), () => apiClient.getServerSyncAttempts(), {
+      staleTime: 0,
+      refetchInterval: 1000,
+    });
+  },
+} as const;

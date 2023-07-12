@@ -120,7 +120,10 @@ function buildApi({
     const isRaveAdmin =
       authStatus.status === 'logged_in' &&
       authStatus.user.role === 'rave_voter' &&
-      authStatus.user.commonAccessCardId.startsWith('admin-');
+      (workspace.store.getVoterInfo(authStatus.user.commonAccessCardId)
+        ?.isAdmin ??
+        false);
+
     return {
       ...authStatus,
       isRaveAdmin,
@@ -367,6 +370,35 @@ function buildApi({
         voterElectionRegistrationId: registration.id,
         castVoteRecord,
       });
+    },
+
+    async sync() {
+      const authStatus = await getAuthStatus();
+      assert(
+        authStatus.status === 'logged_in' &&
+          authStatus.user.role === 'rave_voter' &&
+          authStatus.isRaveAdmin,
+        'not logged in as admin'
+      );
+
+      const id = workspace.store.createServerSyncAttempt({
+        creator: authStatus.user.commonAccessCardId,
+        trigger: 'manual',
+        initialStatusMessage: 'Syncing…',
+      });
+
+      setTimeout(() => {
+        workspace.store.updateServerSyncAttempt({
+          id,
+          status: 'success',
+          statusMessage:
+            'Sent: 0 registrations, 0 votes. Received: 0 registrations, 0 votes.',
+        });
+      }, 2000);
+    },
+
+    getServerSyncAttempts() {
+      return workspace.store.getServerSyncAttempts();
     },
 
     logOut() {

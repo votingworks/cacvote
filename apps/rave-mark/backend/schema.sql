@@ -1,9 +1,3 @@
-create table elections (
-  id uuid primary key,
-  election_data json not null,
-  created_at timestamp not null default current_timestamp
-);
-
 create table system_settings (
   -- enforce singleton table
   id integer primary key check (id = 1),
@@ -12,6 +6,22 @@ create table system_settings (
   num_incorrect_pin_attempts_allowed_before_card_lockout integer not null,
   overall_session_time_limit_hours integer not null,
   starting_card_lockout_duration_seconds integer not null
+);
+
+create table server_sync_attempts (
+  id uuid primary key,
+  creator text not null,
+  trigger text not null,
+  status_message text not null,
+  success boolean,
+  created_at timestamp not null default current_timestamp,
+  completed_at timestamp
+);
+
+create table elections (
+  id uuid primary key,
+  election_data json not null,
+  created_at timestamp not null default current_timestamp
 );
 
 create table voters (
