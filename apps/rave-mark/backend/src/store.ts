@@ -1,5 +1,4 @@
-import { Buffer } from 'buffer';
-import { v4 as uuid } from 'uuid';
+import { VX_MACHINE_ID } from '@votingworks/backend';
 import { assert, Optional } from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
 import {
@@ -13,13 +12,27 @@ import {
   SystemSettingsDbRow,
   VotesDict,
 } from '@votingworks/types';
-import { join } from 'path';
+import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
+import { join } from 'path';
 import {
+  Ballot,
+  BallotRow,
+  ClientId,
+  deserializeBallot,
+  deserializeElection,
+  deserializeRegistration,
+  deserializeRegistrationRequest,
+  deserializeServerSyncAttempt,
+  Election,
+  ElectionRow,
+  Registration,
+  RegistrationRequest,
+  RegistrationRequestRow,
+  RegistrationRow,
+  ServerId,
   ServerSyncAttempt,
-  VoterElectionRegistration,
-  VoterInfo,
-  VoterRegistrationRequest,
+  ServerSyncAttemptRow,
 } from './types/db';
 
 const SchemaPath = join(__dirname, '../schema.sql');
@@ -56,48 +69,79 @@ export class Store {
   }
 
   /**
-   * Gets the current election definition.
+   * Gets an election.
    */
-  getElectionDefinition(id: Id): Optional<ElectionDefinition> {
+  getElection({ clientId }: { clientId: ClientId }): Optional<Election>;
+  getElection({ serverId }: { serverId: ServerId }): Optional<Election>;
+  getElection({
+    clientId,
+    serverId,
+  }: {
+    clientId?: ClientId;
+    serverId?: ServerId;
+  }): Optional<Election> {
+    const id = clientId ?? serverId;
+    assert(id, 'Must provide either clientId or serverId');
     const electionRow = this.client.one(
       `select
-        election_data as electionData
+        id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        election
       from elections
-      where id = ?
+      where ${clientId ? 'client_id' : 'server_id'} = ?
       `,
       id
-    ) as Optional<{ electionData: string }>;
+    ) as Optional<ElectionRow>;
 
-    if (!electionRow?.electionData) {
-      return undefined;
-    }
-
-    return safeParseElectionDefinition(electionRow.electionData).assertOk(
-      'Unable to parse stored election data.'
-    );
+    return electionRow ? deserializeElection(electionRow) : undefined;
   }
 
   /**
-   * Creates a new election definition from a JSON string.
+   * Creates a new election record.
    */
-  createElectionDefinition(electionData: string): Id {
-    safeParseElectionDefinition(electionData).assertOk(
-      `Unable to parse election data: ${electionData}`
+  createElection({
+    id = ClientId(),
+    serverId,
+    clientId = id,
+    machineId = VX_MACHINE_ID,
+    election,
+  }: {
+    id?: ClientId;
+    serverId?: ServerId;
+    clientId?: ClientId;
+    machineId?: Id;
+    election: string;
+  }): ClientId {
+    assert(
+      (id === clientId) === (machineId === VX_MACHINE_ID),
+      'election ID must equal clientId if and only if the record was created on this machine'
     );
 
-    const id = uuid();
+    safeParseElectionDefinition(election).assertOk(
+      `Unable to parse election data: ${election}`
+    );
+
     this.client.run(
       `
       insert into elections (
         id,
-        election_data
+        server_id,
+        client_id,
+        machine_id,
+        election
       ) values (
-        ?, ?
+        ?, ?, ?, ?, ?
       )
       `,
       id,
-      electionData
+      serverId ?? null,
+      clientId,
+      machineId,
+      election
     );
+
     return id;
   }
 
@@ -161,180 +205,131 @@ export class Store {
   /**
    * Gets basic information about a voter by CAC ID.
    */
-  getVoterInfo(commonAccessCardId: Id): Optional<VoterInfo> {
+  isAdmin(commonAccessCardId: Id): boolean {
     const result = this.client.one(
       `
       select
-        id,
-        common_access_card_id as commonAccessCardId,
-        is_admin as isAdmin
-      from voters
+        count(*) as count
+      from admins
       where common_access_card_id = ?
       `,
       commonAccessCardId
-    ) as Optional<{ id: string; commonAccessCardId: string; isAdmin: 0 | 1 }>;
+    ) as { count: number };
 
-    if (!result) {
-      return undefined;
-    }
-
-    return {
-      id: result.id,
-      commonAccessCardId: result.commonAccessCardId,
-      isAdmin: result.isAdmin === 1,
-    };
+    return result.count > 0;
   }
 
   /**
-   * Gets or creates a voter by CAC ID.
+   * Makes a user with the given CAC ID an admin.
    */
-  getOrCreateVoterInfo(commonAccessCardId: Id): VoterInfo {
-    const existingVoterInfo = this.getVoterInfo(commonAccessCardId);
-
-    if (existingVoterInfo) {
-      return existingVoterInfo;
-    }
-
-    const id = uuid();
-    this.client.run(
-      `insert into voters (id, common_access_card_id) values (?, ?)`,
-      id,
-      commonAccessCardId
-    );
-
-    const newVoterInfo = this.getVoterInfo(commonAccessCardId);
-    assert(newVoterInfo, 'Failed to create voter info');
-    return newVoterInfo;
-  }
-
-  /**
-   * Sets whether a voter is an admin.
-   */
-  setVoterIsAdmin(id: Id, isAdmin: boolean): void {
+  createAdmin({
+    commonAccessCardId,
+    createdAt,
+  }: {
+    commonAccessCardId: Id;
+    createdAt?: DateTime;
+  }): void {
     this.client.run(
       `
-      update voters
-      set is_admin = ?
-      where id = ?
+      insert or replace into admins (
+        common_access_card_id,
+        created_at
+      ) values (
+        ?, ?
+      )
       `,
-      isAdmin ? 1 : 0,
-      id
+      commonAccessCardId,
+      (createdAt ?? DateTime.utc()).toSQL()
     );
   }
 
   /**
-   * Gets all the registrations for a given voter by database ID.
-   *
-   * @param voterId The database ID of the voter, notably NOT the CAC ID.
+   * Clears all admin users.
    */
-  getVoterRegistrationRequests(voterId: Id): VoterRegistrationRequest[] {
+  resetAdmins(): void {
+    this.client.run('delete from admins');
+  }
+
+  /**
+   * Gets all the registrations for a given voter by CAC ID.
+   */
+  getRegistrationRequests(commonAccessCardId: Id): RegistrationRequest[] {
     const result = this.client.all(
       `
       select
-        id,
-        voter_id as voterId,
+        id as id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        common_access_card_id as commonAccessCardId,
         given_name as givenName,
         family_name as familyName,
         address_line_1 as addressLine1,
         address_line_2 as addressLine2,
-        city,
-        state,
+        city as city,
+        state as state,
         postal_code as postalCode,
-        state_id as stateId
-      from voter_registration_requests
-      where voter_id = ?
+        state_id as stateId,
+        created_at as createdAt
+      from registration_requests
+      where common_access_card_id = ?
       `,
-      voterId
-    ) as Array<{
-      id: string;
-      voterId: string;
-      givenName: string;
-      familyName: string;
-      addressLine1: string;
-      addressLine2: string | null;
-      city: string;
-      state: string;
-      postalCode: string;
-      stateId: string;
-    }>;
+      commonAccessCardId
+    ) as RegistrationRequestRow[];
 
-    return result.map((row) => ({
-      id: row.id,
-      voterId: row.voterId,
-      givenName: row.givenName,
-      familyName: row.familyName,
-      addressLine1: row.addressLine1,
-      addressLine2: row.addressLine2 ?? undefined,
-      city: row.city,
-      state: row.state,
-      postalCode: row.postalCode,
-      stateId: row.stateId,
-    }));
+    return result.map(deserializeRegistrationRequest);
   }
 
   /**
    * @returns registrations sorted by most recent first
    */
-  getVoterElectionRegistrations(voterId: Id): VoterElectionRegistration[] {
+  getRegistrations(commonAccessCardId: Id): Registration[] {
     const result = this.client.all(
       `
       select
         id,
-        voter_id as voterId,
-        voter_registration_request_id as voterRegistrationRequestId,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        common_access_card_id as commonAccessCardId,
+        registration_request_id as registrationRequestId,
         election_id as electionId,
         precinct_id as precinctId,
         ballot_style_id as ballotStyleId,
         created_at as createdAt
-      from voter_election_registrations
-      where voter_id = ?
+      from registrations
+      where common_access_card_id = ?
       order by created_at desc
       `,
-      voterId
-    ) as Array<{
-      id: string;
-      voterId: string;
-      voterRegistrationRequestId: string;
-      electionId: string;
-      precinctId: string;
-      ballotStyleId: string;
-      createdAt: string;
-    }>;
+      commonAccessCardId
+    ) as RegistrationRow[];
 
-    return result.map((row) => ({
-      id: row.id,
-      voterId: row.voterId,
-      voterRegistrationRequestId: row.voterRegistrationRequestId,
-      electionId: row.electionId,
-      precinctId: row.precinctId,
-      ballotStyleId: row.ballotStyleId,
-      createdAt: DateTime.fromSQL(row.createdAt),
-    }));
+    return result.map(deserializeRegistration);
   }
 
   /**
    * Gets the election for the given voter registration ID.
    */
-  getElectionDefinitionForVoterRegistration(
-    voterRegistrationId: Id
+  getRegistrationElection(
+    registrationId: ClientId
   ): Optional<ElectionDefinition> {
     const result = this.client.one(
       `
       select
-        election_data as electionData
-      from voter_election_registrations
-      inner join elections on elections.id = voter_election_registrations.election_id
-      where voter_election_registrations.id = ?
+        election
+      from registrations
+      inner join elections on elections.id = registrations.election_id
+      where registrations.id = ?
       `,
-      voterRegistrationId
-    ) as Optional<{ electionData: string | Buffer }>;
+      registrationId
+    ) as Optional<{ election: string | Buffer }>;
 
     if (!result) {
       return undefined;
     }
 
     const electionDefinitionParseResult = safeParseElectionDefinition(
-      result.electionData.toString()
+      result.election.toString()
     );
 
     if (electionDefinitionParseResult.isErr()) {
@@ -345,10 +340,13 @@ export class Store {
   }
 
   /**
-   * Creates a voter registration request for the voter with the given Common
-   * Access Card ID.
+   * Creates a registration request for the voter with the given CAC ID.
    */
-  createVoterRegistrationRequest({
+  createRegistrationRequest({
+    id,
+    serverId,
+    clientId,
+    machineId = VX_MACHINE_ID,
     commonAccessCardId,
     givenName,
     familyName,
@@ -359,6 +357,10 @@ export class Store {
     postalCode,
     stateId,
   }: {
+    id?: ClientId;
+    serverId?: ServerId;
+    clientId?: ClientId;
+    machineId?: Id;
     commonAccessCardId: Id;
     givenName: string;
     familyName: string;
@@ -368,15 +370,25 @@ export class Store {
     state: string;
     postalCode: string;
     stateId: string;
-  }): Id {
-    const voterInfo = this.getOrCreateVoterInfo(commonAccessCardId);
-    const id = uuid();
+  }): ClientId {
+    assert(
+      (serverId === undefined) === (clientId === undefined),
+      'registration request serverId must be defined if and only if clientId is defined'
+    );
+    assert(
+      (id === undefined) === (serverId !== undefined),
+      'registration request ID must be defined if and only if serverId is not defined'
+    );
 
+    const idToUse = id ?? ClientId();
     this.client.run(
       `
-      insert into voter_registration_requests (
+      insert or replace into registration_requests (
         id,
-        voter_id,
+        server_id,
+        client_id,
+        machine_id,
+        common_access_card_id,
         given_name,
         family_name,
         address_line_1,
@@ -386,11 +398,14 @@ export class Store {
         postal_code,
         state_id
       ) values (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
-      id,
-      voterInfo.id,
+      idToUse,
+      serverId ?? null,
+      clientId ?? idToUse,
+      machineId,
+      commonAccessCardId,
       givenName,
       familyName,
       addressLine1,
@@ -401,108 +416,216 @@ export class Store {
       stateId
     );
 
-    return id;
+    return idToUse;
   }
 
   /**
-   * Associates a voter registration with an election.
+   * Associates a registration with an election.
    */
-  createVoterElectionRegistration({
-    voterId,
-    voterRegistrationRequestId,
+  createRegistration({
+    id,
+    serverId,
+    clientId,
+    machineId = VX_MACHINE_ID,
+    registrationRequestId,
     electionId,
     precinctId,
     ballotStyleId,
   }: {
-    voterId: Id;
-    voterRegistrationRequestId: Id;
-    electionId: Id;
+    id?: ClientId;
+    serverId?: ServerId;
+    clientId?: ClientId;
+    machineId?: Id;
+    registrationRequestId: ClientId;
+    electionId: ClientId;
     precinctId: PrecinctId;
     ballotStyleId: BallotStyleId;
-  }): Id {
-    const id = uuid();
-    const voterRegistrationRequests =
-      this.getVoterRegistrationRequests(voterId);
-
+  }): ClientId {
     assert(
-      voterRegistrationRequests.some(
-        (r) => r.id === voterRegistrationRequestId
-      ),
-      `no voter registration request found with ID ${voterRegistrationRequestId}`
+      (serverId === undefined) === (clientId === undefined),
+      'registration serverId must be defined if and only if clientId is defined'
+    );
+    assert(
+      (id === undefined) === (serverId !== undefined),
+      'registration ID must be defined if and only if serverId is not defined'
+    );
+
+    const idToUse = id ?? ClientId();
+    const registrationRequest = this.getRegistrationRequest({
+      clientId: registrationRequestId,
+    });
+    assert(
+      registrationRequest,
+      `registration request ${registrationRequestId} not found`
     );
 
     this.client.run(
       `
-      insert into voter_election_registrations (
+      insert or replace into registrations (
         id,
-        voter_id,
-        voter_registration_request_id,
+        server_id,
+        client_id,
+        machine_id,
+        common_access_card_id,
+        registration_request_id,
         election_id,
         precinct_id,
         ballot_style_id
       ) values (
-        ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
-      id,
-      voterId,
-      voterRegistrationRequestId,
+      idToUse,
+      serverId ?? null,
+      clientId ?? idToUse,
+      machineId,
+      registrationRequest.commonAccessCardId,
+      registrationRequest.id,
       electionId,
       precinctId,
       ballotStyleId
     );
 
-    return id;
+    return idToUse;
+  }
+
+  getRegistrationRequest({
+    serverId,
+  }: {
+    serverId: ServerId;
+  }): Optional<RegistrationRequest>;
+  getRegistrationRequest({
+    clientId,
+  }: {
+    clientId: ClientId;
+  }): Optional<RegistrationRequest>;
+  getRegistrationRequest({
+    serverId,
+    clientId,
+  }: {
+    serverId?: ServerId;
+    clientId?: ClientId;
+  }): Optional<RegistrationRequest> {
+    const id = serverId ?? clientId;
+    assert(id !== undefined, 'serverId or clientId must be defined');
+
+    const result = this.client.one(
+      `
+      select
+        id as id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        common_access_card_id as commonAccessCardId,
+        given_name as givenName,
+        family_name as familyName,
+        address_line_1 as addressLine1,
+        address_line_2 as addressLine2,
+        city as city,
+        state as state,
+        postal_code as postalCode,
+        state_id as stateId,
+        created_at as createdAt
+      from registration_requests
+      where ${serverId ? 'server_id' : 'client_id'} = ?
+      `,
+      id
+    ) as Optional<RegistrationRequestRow>;
+
+    return result ? deserializeRegistrationRequest(result) : undefined;
   }
 
   /**
-   * Records votes for a voter registration.
+   * Records a cast ballot for a voter registration.
    */
-  createVoterSelectionForVoterElectionRegistration({
-    id,
-    voterId,
-    voterElectionRegistrationId,
+  createBallot({
+    id = ClientId(),
+    serverId,
+    clientId = id,
+    machineId = VX_MACHINE_ID,
+    registrationId,
     castVoteRecord,
   }: {
-    id: Id;
-    voterId: Id;
-    voterElectionRegistrationId: Id;
+    id?: ClientId;
+    serverId?: ServerId;
+    clientId?: ClientId;
+    machineId?: Id;
+    registrationId: ClientId;
     castVoteRecord: CVR.CVR;
-  }): void {
+  }): ClientId {
+    assert(
+      (id === clientId) === (machineId === VX_MACHINE_ID),
+      'ballot ID must equal clientId if and only if the record was created on this machine'
+    );
+
+    const registration = this.getRegistration(registrationId);
+    assert(registration, `no registration found with ID ${registrationId}`);
+
     // TODO: validate votes against election definition
     this.client.run(
       `
-      insert into voter_election_selections (
+      insert into ballots (
         id,
-        voter_id,
-        voter_election_registration_id,
+        server_id,
+        client_id,
+        machine_id,
+        common_access_card_id,
+        registration_id,
         cast_vote_record
       ) values (
-        ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?
       )
       `,
       id,
-      voterId,
-      voterElectionRegistrationId,
+      serverId ?? null,
+      clientId,
+      machineId,
+      registration.commonAccessCardId,
+      registrationId,
       JSON.stringify(castVoteRecord)
     );
+
+    return id;
+  }
+
+  getRegistration(registrationId: string): Optional<Registration> {
+    const result = this.client.one(
+      `
+      select
+        id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        common_access_card_id as commonAccessCardId,
+        registration_request_id as registrationRequestId,
+        election_id as electionId,
+        precinct_id as precinctId,
+        ballot_style_id as ballotStyleId,
+        created_at as createdAt
+      from registrations
+      where id = ?
+      `,
+      registrationId
+    ) as Optional<RegistrationRow>;
+
+    return result ? deserializeRegistration(result) : undefined;
   }
 
   /**
    * Gets the voter selection for the given voter registration ID.
    */
-  getCastVoteRecordForVoterElectionRegistration(
-    voterElectionRegistrationId: Id
+  getCastVoteRecordForRegistration(
+    registrationId: ClientId
   ): Optional<VotesDict> {
     const result = this.client.one(
       `
       select
         cast_vote_record as castVoteRecordJson
-      from voter_election_selections
-      where voter_election_registration_id = ?
+      from ballots
+      where registration_id = ?
       order by created_at desc
       `,
-      voterElectionRegistrationId
+      registrationId
     ) as Optional<{ castVoteRecordJson: string }>;
 
     if (!result) {
@@ -523,8 +646,8 @@ export class Store {
     creator: string;
     trigger: 'manual' | 'scheduled';
     initialStatusMessage: string;
-  }): Id {
-    const id = uuid();
+  }): ClientId {
+    const id = ClientId();
     this.client.run(
       `
       insert into server_sync_attempts (
@@ -552,7 +675,7 @@ export class Store {
     status,
     statusMessage,
   }: {
-    id: Id;
+    id: ClientId;
     status: 'pending' | 'success' | 'failure';
     statusMessage: string;
   }): void {
@@ -594,25 +717,108 @@ export class Store {
         limit ?
         `,
         limit
-      ) as Array<{
-        id: Id;
-        creator: string;
-        trigger: string;
-        statusMessage: string;
-        success: 0 | 1 | null;
-        createdAt: string;
-        completedAt: string | null;
-      }>
-    ).map((row) => ({
-      id: row.id,
-      creator: row.creator,
-      trigger: row.trigger,
-      statusMessage: row.statusMessage,
-      success: row.success === null ? undefined : row.success === 1,
-      createdAt: DateTime.fromSQL(row.createdAt),
-      completedAt: row.completedAt
-        ? DateTime.fromSQL(row.completedAt)
-        : undefined,
-    }));
+      ) as ServerSyncAttemptRow[]
+    ).map(deserializeServerSyncAttempt);
+  }
+
+  getLastSyncedElectionId(): Optional<ServerId> {
+    const result = this.client.one(
+      `
+      select
+        server_id as serverId
+      from elections
+      where server_id is not null
+      order by created_at desc
+      `
+    ) as Optional<{ serverId: ServerId }>;
+
+    return result ? result.serverId : undefined;
+  }
+
+  getLastSyncedRegistrationRequestId(): Optional<ServerId> {
+    const result = this.client.one(
+      `
+      select
+        server_id as serverId
+      from registration_requests
+      where server_id is not null
+      order by created_at desc
+      `
+    ) as Optional<{ serverId: ServerId }>;
+
+    return result ? result.serverId : undefined;
+  }
+
+  getLastSyncedRegistrationId(): Optional<ServerId> {
+    const result = this.client.one(
+      `
+      select
+        server_id as serverId
+      from registrations
+      where server_id is not null
+      order by created_at desc
+      `
+    ) as Optional<{ serverId: ServerId }>;
+
+    return result ? result.serverId : undefined;
+  }
+
+  getLastSyncedBallotId(): Optional<ServerId> {
+    const result = this.client.one(
+      `
+      select
+        server_id as serverId
+      from ballots
+      where server_id is not null
+      order by created_at desc
+      `
+    ) as Optional<{ serverId: ServerId }>;
+
+    return result ? result.serverId : undefined;
+  }
+
+  getRegistrationRequestsToSync(): RegistrationRequest[] {
+    const result = this.client.all(
+      `
+      select
+        id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        common_access_card_id as commonAccessCardId,
+        given_name as givenName,
+        family_name as familyName,
+        address_line_1 as addressLine1,
+        address_line_2 as addressLine2,
+        city,
+        state,
+        postal_code as postalCode,
+        state_id as stateId
+      from registration_requests
+      where server_id is null
+      `
+    ) as RegistrationRequestRow[];
+
+    return result.map(deserializeRegistrationRequest);
+  }
+
+  getBallotsToSync(): Ballot[] {
+    const result = this.client.all(
+      `
+      select
+        id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        common_access_card_id as commonAccessCardId,
+        registration_id as registrationId,
+        cast_vote_record as castVoteRecord,
+        created_at as createdAt
+      from ballots
+      where server_id is null
+      `
+    ) as BallotRow[];
+
+    return result.map(deserializeBallot);
   }
 }

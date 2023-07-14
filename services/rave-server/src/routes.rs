@@ -1,5 +1,5 @@
-use crate::cvr::{CastVoteRecordReport, Election};
-use crate::db;
+use crate::cvr::Election;
+use crate::{client, db};
 use rocket::http::{ContentType, Status};
 use rocket::serde::json::{json, Json};
 use rocket_db_pools::{sqlx, Connection};
@@ -84,65 +84,33 @@ pub(crate) async fn create_election(
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetVotersInput {
-    since: Option<time::PrimitiveDateTime>,
-}
-
-#[post("/api/getVoters", format = "json", data = "<input>")]
-pub(crate) async fn get_voters(
-    mut db: Connection<db::Db>,
-    input: Json<GetVotersInput>,
-) -> (Status, (ContentType, String)) {
-    let result = db::get_voters(&mut db, input.since).await;
-
-    match result {
-        Err(e) => (
-            Status::InternalServerError,
-            (
-                ContentType::JSON,
-                json!({ "error": e.to_string() }).to_string(),
-            ),
-        ),
-        Ok(voters) => (Status::Ok, (ContentType::JSON, json!(voters).to_string())),
-    }
-}
-
-#[post("/api/parseCastVoteRecordReport", format = "json", data = "<input>")]
-pub(crate) async fn parse_cast_vote_record_report(
-    input: Json<CastVoteRecordReport>,
-) -> (Status, (ContentType, String)) {
-    (
-        Status::Ok,
-        (
-            ContentType::JSON,
-            serde_json::to_string_pretty(&json!(*input)).unwrap(),
-        ),
-    )
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RaveMarkSyncInput {
     #[serde(default)]
+    last_synced_registration_request_id: Option<Uuid>,
+    #[serde(default)]
+    last_synced_registration_id: Option<Uuid>,
+    #[serde(default)]
     last_synced_election_id: Option<Uuid>,
     #[serde(default)]
-    last_synced_voter_election_registration_id: Option<Uuid>,
+    last_synced_ballot_id: Option<Uuid>,
     #[serde(default)]
-    last_synced_voter_election_selection_id: Option<Uuid>,
+    registration_requests: Vec<client::input::RegistrationRequest>,
     #[serde(default)]
-    voter_registration_requests: Vec<db::VoterRegistrationRequest>,
+    registrations: Vec<client::input::Registration>,
     #[serde(default)]
-    voter_election_selections: Vec<db::VoterElectionSelection>,
+    ballots: Vec<client::input::Ballot>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RaveMarkSyncOutput {
-    elections: Vec<db::Election>,
-    voter_election_registrations: Vec<db::VoterElectionRegistration>,
-    voter_election_selections: Vec<db::VoterElectionSelection>,
+    admins: Vec<client::output::Admin>,
+    elections: Vec<client::output::Election>,
+    registration_requests: Vec<client::output::RegistrationRequest>,
+    registrations: Vec<client::output::Registration>,
+    ballots: Vec<client::output::Ballot>,
 }
 
 #[post("/api/rave-mark/sync", format = "json", data = "<input>")]
@@ -151,28 +119,46 @@ pub(crate) async fn rave_mark_sync(
     input: Json<RaveMarkSyncInput>,
 ) -> (Status, (ContentType, String)) {
     let RaveMarkSyncInput {
+        last_synced_registration_request_id,
+        last_synced_registration_id,
         last_synced_election_id,
-        last_synced_voter_election_registration_id,
-        last_synced_voter_election_selection_id,
-        voter_registration_requests,
-        voter_election_selections,
+        last_synced_ballot_id,
+        registration_requests,
+        ballots,
+        ..
     } = input.into_inner();
 
-    for request in voter_registration_requests.iter() {
-        let result = db::add_voter_registration_request(&mut db, request).await;
+    for client_request in registration_requests.into_iter() {
+        let server_request: client::input::RegistrationRequest = client_request;
+        let result =
+            db::add_registration_request_from_voter_terminal(&mut db, &server_request).await;
 
         if let Err(e) = result {
-            error!("Failed to insert voter registration request: {}", e);
+            error!("Failed to insert registration request: {}", e);
         }
     }
 
-    for voter_election_selection in voter_election_selections.iter() {
-        let result = db::add_voter_election_selection(&mut db, voter_election_selection).await;
+    for ballot in ballots.into_iter() {
+        let result = db::add_ballot_from_voter_terminal(&mut db, ballot).await;
 
         if let Err(e) = result {
-            error!("Failed to insert voter election selection: {}", e);
+            error!("Failed to insert ballot: {}", e);
         }
     }
+
+    let get_admins_result = db::get_admins(&mut db).await;
+    let admins = match get_admins_result {
+        Err(e) => {
+            return (
+                Status::InternalServerError,
+                (
+                    ContentType::JSON,
+                    json!({ "error": e.to_string() }).to_string(),
+                ),
+            )
+        }
+        Ok(admins) => admins,
+    };
 
     let get_elections_result = db::get_elections(&mut db, last_synced_election_id).await;
     let elections = match get_elections_result {
@@ -188,10 +174,9 @@ pub(crate) async fn rave_mark_sync(
         Ok(elections) => elections,
     };
 
-    let get_voter_election_registrations_result =
-        db::get_voter_election_registrations(&mut db, last_synced_voter_election_registration_id)
-            .await;
-    let voter_election_registrations = match get_voter_election_registrations_result {
+    let get_registration_requests_result =
+        db::get_registration_requests(&mut db, last_synced_registration_request_id).await;
+    let registration_requests = match get_registration_requests_result {
         Err(e) => {
             return (
                 Status::InternalServerError,
@@ -201,29 +186,52 @@ pub(crate) async fn rave_mark_sync(
                 ),
             )
         }
-        Ok(voter_election_registrations) => voter_election_registrations,
+        Ok(registration_requests) => registration_requests,
     };
 
-    let voter_election_selections =
-        match db::get_voter_election_selections(&mut db, last_synced_voter_election_selection_id)
-            .await
-        {
-            Err(e) => {
-                return (
-                    Status::InternalServerError,
-                    (
-                        ContentType::JSON,
-                        json!({ "error": e.to_string() }).to_string(),
-                    ),
-                )
-            }
-            Ok(voter_election_selections) => voter_election_selections,
-        };
+    let get_registrations_result =
+        db::get_registrations(&mut db, last_synced_registration_id).await;
+    let registrations = match get_registrations_result {
+        Err(e) => {
+            return (
+                Status::InternalServerError,
+                (
+                    ContentType::JSON,
+                    json!({ "error": e.to_string() }).to_string(),
+                ),
+            )
+        }
+        Ok(registrations) => registrations,
+    };
+
+    let ballots = match db::get_ballots(&mut db, last_synced_ballot_id).await {
+        Err(e) => {
+            return (
+                Status::InternalServerError,
+                (
+                    ContentType::JSON,
+                    json!({ "error": e.to_string() }).to_string(),
+                ),
+            )
+        }
+        Ok(ballots) => ballots,
+    };
 
     let output = RaveMarkSyncOutput {
-        elections,
-        voter_election_registrations,
-        voter_election_selections,
+        admins: admins.into_iter().map(|admin| admin.into()).collect(),
+        elections: elections
+            .into_iter()
+            .map(|election| election.into())
+            .collect(),
+        registration_requests: registration_requests
+            .into_iter()
+            .map(|registration_request| registration_request.into())
+            .collect(),
+        registrations: registrations
+            .into_iter()
+            .map(|registration| registration.into())
+            .collect(),
+        ballots: ballots.into_iter().map(|ballot| ballot.into()).collect(),
     };
 
     (

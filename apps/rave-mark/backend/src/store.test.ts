@@ -51,10 +51,10 @@ test('reset clears the database', () => {
   const { electionDefinition } = electionMinimalExhaustiveSampleFixtures;
   const store = Store.memoryStore();
 
-  const electionId = store.createElectionDefinition(
-    electionDefinition.electionData
-  );
-  expect(store.getElectionDefinition(electionId)).toBeTruthy();
+  const electionId = store.createElection({
+    election: electionDefinition.electionData,
+  });
+  expect(store.getElection({ clientId: electionId })).toBeTruthy();
   store.reset();
-  expect(store.getElectionDefinition(electionId)).toBeFalsy();
+  expect(store.getElection({ clientId: electionId })).toBeFalsy();
 });

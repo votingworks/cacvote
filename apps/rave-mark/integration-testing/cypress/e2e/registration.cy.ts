@@ -8,7 +8,7 @@ import {
 import {
   closeDevDock,
   createTestVoter,
-  getVoterRegistrationRequests,
+  getRegistrationRequests,
 } from '../support/helpers';
 import { virtualKeyboardType } from '../support/keyboard';
 
@@ -33,7 +33,7 @@ it('allows submitting registration requests', () => {
   enterPin();
 
   // no registrations yet
-  getVoterRegistrationRequests().then((registrations) => {
+  getRegistrationRequests().then((registrations) => {
     expect(registrations).to.have.lengthOf(0);
   });
 
@@ -74,7 +74,7 @@ it('allows submitting registration requests', () => {
 
   // registration request is created
   cy.contains('Registration is pending.');
-  getVoterRegistrationRequests().then((registrations) => {
+  getRegistrationRequests().then((registrations) => {
     expect(registrations).to.have.lengthOf(1);
     expect(registrations[0]?.givenName).to.equal('JOHN');
     expect(registrations[0]?.familyName).to.equal('DOE');
