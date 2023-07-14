@@ -19,21 +19,37 @@ create table server_sync_attempts (
 );
 
 create table elections (
+  -- generated on this machine
   id uuid primary key,
-  election_data json not null,
+  -- generated on the server, present only if the record has been synced
+  server_id uuid,
+  -- generated on a client machine; should match `id` if this record was
+  -- generated on this machine
+  client_id uuid not null,
+  -- ID of the machine this record was originally created on
+  machine_id text not null,
+  election json not null,
   created_at timestamp not null default current_timestamp
 );
 
-create table voters (
-  id uuid primary key,
+create table admins (
+  -- CAC ID of the admin user
   common_access_card_id uuid not null unique,
-  is_admin boolean not null default false,
   created_at timestamp not null default current_timestamp
 );
 
-create table voter_registration_requests (
+create table registration_requests (
+  -- generated on this machine
   id uuid primary key,
-  voter_id uuid not null references voters(id),
+  -- generated on the server, present only if the record has been synced
+  server_id uuid,
+  -- generated on a client machine; should match `id` if this record was
+  -- generated on this machine
+  client_id uuid not null unique,
+  -- ID of the machine this record was originally created on
+  machine_id text not null,
+  -- CAC ID of the person for this record
+  common_access_card_id uuid not null unique,
   given_name text not null,
   family_name text not null,
   address_line_1 text not null,
@@ -41,24 +57,44 @@ create table voter_registration_requests (
   city text not null,
   state text not null,
   postal_code text not null,
+  -- the state-issued id number of the person making the request,
+  -- e.g. a driver's license number
   state_id text not null,
   created_at timestamp not null default current_timestamp
 );
 
-create table voter_election_registrations (
+create table registrations (
+  -- generated on this machine
   id uuid primary key,
-  voter_id uuid not null references voters(id),
-  voter_registration_request_id uuid not null references voter_registration_requests(id),
+  -- generated on the server, present only if the record has been synced
+  server_id uuid,
+  -- generated on a client machine; should match `id` if this record was
+  -- generated on this machine
+  client_id uuid not null,
+  -- ID of the machine this record was originally created on
+  machine_id text not null,
+  -- CAC ID of the person for this record
+  common_access_card_id uuid not null unique,
+  registration_request_id uuid not null references registration_requests(id),
   election_id uuid not null references elections(id),
   precinct_id text not null,
   ballot_style_id text not null,
   created_at timestamp not null default current_timestamp
 );
 
-create table voter_election_selections (
+create table ballots (
+  -- generated on this machine
   id uuid primary key,
-  voter_id uuid not null references voters(id),
-  voter_election_registration_id uuid not null references voter_election_registrations(id),
+  -- generated on the server, present only if the record has been synced
+  server_id uuid,
+  -- generated on a client machine; should match `id` if this record was
+  -- generated on this machine
+  client_id uuid not null,
+  -- ID of the machine this record was originally created on
+  machine_id text not null,
+  -- CAC ID of the person for this record
+  common_access_card_id uuid not null unique,
+  registration_id uuid not null references registrations(id),
   cast_vote_record json not null,
   created_at timestamp not null default current_timestamp
 );

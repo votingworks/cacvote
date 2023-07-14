@@ -5,13 +5,18 @@ import {
   MockFileCard,
 } from '@votingworks/auth';
 import { LogEventId, Logger } from '@votingworks/logging';
-import { Server } from 'http';
 import {
   BooleanEnvironmentVariableName,
   isFeatureFlagEnabled,
   isIntegrationTest,
 } from '@votingworks/utils';
+import { Server } from 'http';
 import { buildApp } from './app';
+import { USE_MOCK_RAVE_SERVER } from './globals';
+import {
+  MockRaveServerClient,
+  RaveServerClientImpl,
+} from './rave_server_client';
 import { Workspace } from './workspace';
 
 export interface StartOptions {
@@ -43,6 +48,10 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
       }),
 
     workspace,
+
+    raveServerClient: USE_MOCK_RAVE_SERVER
+      ? new MockRaveServerClient(workspace.store)
+      : new RaveServerClientImpl(workspace.store),
   });
 
   return app.listen(

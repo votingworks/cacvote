@@ -18,9 +18,10 @@ import {
 } from '@votingworks/types';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
-import { v4 as uuid } from 'uuid';
 import { IS_INTEGRATION_TEST } from './globals';
-import { VoterInfo, VoterRegistrationRequest } from './types/db';
+import { RaveServerClient } from './rave_server_client';
+import { AuthStatus } from './types/auth';
+import { ClientId, RegistrationRequest, ServerId } from './types/db';
 import { Workspace } from './workspace';
 
 function constructAuthMachineState(
@@ -29,10 +30,6 @@ function constructAuthMachineState(
   const systemSettings = workspace.store.getSystemSettings();
   return { ...(systemSettings ?? {}) };
 }
-
-export type AuthStatus = InsertedSmartCardAuth.AuthStatus & {
-  isRaveAdmin: boolean;
-};
 
 export type VoterStatus =
   | 'unregistered'
@@ -109,9 +106,11 @@ export interface CreateTestVoterInput {
 function buildApi({
   auth,
   workspace,
+  raveServerClient,
 }: {
   auth: InsertedSmartCardAuthApi;
   workspace: Workspace;
+  raveServerClient: RaveServerClient;
 }) {
   async function getAuthStatus(): Promise<AuthStatus> {
     const authStatus = await auth.getAuthStatus(
@@ -120,9 +119,7 @@ function buildApi({
     const isRaveAdmin =
       authStatus.status === 'logged_in' &&
       authStatus.user.role === 'rave_voter' &&
-      (workspace.store.getVoterInfo(authStatus.user.commonAccessCardId)
-        ?.isAdmin ??
-        false);
+      workspace.store.isAdmin(authStatus.user.commonAccessCardId);
 
     return {
       ...authStatus,
@@ -157,21 +154,14 @@ function buildApi({
         return undefined;
       }
 
-      const voterInfo = workspace.store.getVoterInfo(
-        authStatus.user.commonAccessCardId
-      );
-      if (!voterInfo) {
-        return { status: 'unregistered', isRaveAdmin: false };
-      }
-
-      const isRaveAdmin = voterInfo.isAdmin;
-      const registrations = workspace.store.getVoterElectionRegistrations(
-        voterInfo.id
-      );
+      const { commonAccessCardId } = authStatus.user;
+      const isRaveAdmin = workspace.store.isAdmin(commonAccessCardId);
+      const registrations =
+        workspace.store.getRegistrations(commonAccessCardId);
 
       if (registrations.length === 0) {
         const registrationRequests =
-          workspace.store.getVoterRegistrationRequests(voterInfo.id);
+          workspace.store.getRegistrationRequests(commonAccessCardId);
 
         return {
           status:
@@ -185,28 +175,14 @@ function buildApi({
       // TODO: support multiple registrations
       const registration = registrations[0];
       assert(registration);
-      const selection =
-        workspace.store.getCastVoteRecordForVoterElectionRegistration(
-          registration.id
-        );
+      const selection = workspace.store.getCastVoteRecordForRegistration(
+        registration.id
+      );
 
       return { status: selection ? 'voted' : 'registered', isRaveAdmin };
     },
 
-    async getVoterInfo(): Promise<Optional<VoterInfo>> {
-      const authStatus = await getAuthStatus();
-
-      if (
-        authStatus.status !== 'logged_in' ||
-        authStatus.user.role !== 'rave_voter'
-      ) {
-        return undefined;
-      }
-
-      return workspace.store.getVoterInfo(authStatus.user.commonAccessCardId);
-    },
-
-    async getVoterRegistrationRequests(): Promise<VoterRegistrationRequest[]> {
+    async getRegistrationRequests(): Promise<RegistrationRequest[]> {
       const authStatus = await getAuthStatus();
 
       if (
@@ -216,15 +192,9 @@ function buildApi({
         return [];
       }
 
-      const voterInfo = workspace.store.getVoterInfo(
+      return workspace.store.getRegistrationRequests(
         authStatus.user.commonAccessCardId
       );
-
-      if (!voterInfo) {
-        return [];
-      }
-
-      return workspace.store.getVoterRegistrationRequests(voterInfo.id);
     },
 
     async createVoterRegistration(input: {
@@ -246,7 +216,9 @@ function buildApi({
         throw new Error('Not logged in');
       }
 
-      const id = workspace.store.createVoterRegistrationRequest({
+      const id = ClientId();
+      workspace.store.createRegistrationRequest({
+        id,
         commonAccessCardId: authStatus.user.commonAccessCardId,
         givenName: input.givenName,
         familyName: input.familyName,
@@ -270,17 +242,9 @@ function buildApi({
         return undefined;
       }
 
-      const voterInfo = workspace.store.getVoterInfo(
-        authStatus.user.commonAccessCardId
-      );
-
-      if (!voterInfo) {
-        return undefined;
-      }
-
-      const registrations = workspace.store.getVoterElectionRegistrations(
-        voterInfo.id
-      );
+      const { commonAccessCardId } = authStatus.user;
+      const registrations =
+        workspace.store.getRegistrations(commonAccessCardId);
       // TODO: Handle multiple registrations
       const registration = registrations[0];
 
@@ -288,10 +252,9 @@ function buildApi({
         return undefined;
       }
 
-      const electionDefinition =
-        workspace.store.getElectionDefinitionForVoterRegistration(
-          registration.id
-        );
+      const electionDefinition = workspace.store.getRegistrationElection(
+        registration.id
+      );
 
       if (!electionDefinition) {
         return undefined;
@@ -314,17 +277,9 @@ function buildApi({
         throw new Error('Not logged in');
       }
 
-      const voterInfo = workspace.store.getVoterInfo(
-        authStatus.user.commonAccessCardId
-      );
-
-      if (!voterInfo) {
-        throw new Error('Not registered');
-      }
-
-      const registrations = workspace.store.getVoterElectionRegistrations(
-        voterInfo.id
-      );
+      const { commonAccessCardId } = authStatus.user;
+      const registrations =
+        workspace.store.getRegistrations(commonAccessCardId);
       // TODO: Handle multiple registrations
       const registration = registrations[0];
 
@@ -332,16 +287,16 @@ function buildApi({
         throw new Error('Not registered');
       }
 
-      const electionDefinition =
-        workspace.store.getElectionDefinitionForVoterRegistration(
-          registration.id
-        );
+      const electionDefinition = workspace.store.getRegistrationElection(
+        registration.id
+      );
 
       if (!electionDefinition) {
         throw new Error('no election definition found for registration');
       }
 
-      const castVoteRecordId = unsafeParse(BallotIdSchema, uuid());
+      const ballotId = ClientId();
+      const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
       const castVoteRecord = buildCastVoteRecord({
         election: electionDefinition.election,
         electionId: electionDefinition.electionHash,
@@ -364,10 +319,9 @@ function buildApi({
         ballotMarkingMode: 'machine',
       });
 
-      workspace.store.createVoterSelectionForVoterElectionRegistration({
-        id: castVoteRecordId,
-        voterId: voterInfo.id,
-        voterElectionRegistrationId: registration.id,
+      workspace.store.createBallot({
+        id: ballotId,
+        registrationId: registration.id,
         castVoteRecord,
       });
     },
@@ -381,20 +335,7 @@ function buildApi({
         'not logged in as admin'
       );
 
-      const id = workspace.store.createServerSyncAttempt({
-        creator: authStatus.user.commonAccessCardId,
-        trigger: 'manual',
-        initialStatusMessage: 'Syncing…',
-      });
-
-      setTimeout(() => {
-        workspace.store.updateServerSyncAttempt({
-          id,
-          status: 'success',
-          statusMessage:
-            'Sent: 0 registrations, 0 votes. Received: 0 registrations, 0 votes.',
-        });
-      }, 2000);
+      void raveServerClient.sync({ authStatus });
     },
 
     getServerSyncAttempts() {
@@ -414,41 +355,53 @@ function buildApi({
       }
 
       const commonAccessCardId = createUniqueCommonAccessCardId();
-      const voterInfo =
-        workspace.store.getOrCreateVoterInfo(commonAccessCardId);
-      workspace.store.setVoterIsAdmin(voterInfo.id, input.isAdmin ?? false);
+      if (input.isAdmin) {
+        workspace.store.createAdmin({ commonAccessCardId });
+      }
 
       if (input.registrationRequest || input.registration) {
-        const voterRegistrationRequestId =
-          workspace.store.createVoterRegistrationRequest({
-            commonAccessCardId,
-            givenName: input.registrationRequest?.givenName ?? 'Rebecca',
-            familyName: input.registrationRequest?.familyName ?? 'Welton',
-            addressLine1:
-              input.registrationRequest?.addressLine1 ?? '123 Main St',
-            addressLine2: input.registrationRequest?.addressLine2,
-            city: input.registrationRequest?.city ?? 'Anytown',
-            state: input.registrationRequest?.state ?? 'CA',
-            postalCode: input.registrationRequest?.postalCode ?? '95959',
-            stateId: input.registrationRequest?.stateId ?? 'B2201793',
-          });
+        const serverRegistrationRequestId = input.registration
+          ? ServerId()
+          : undefined;
+        const clientRegistrationRequestId = input.registration
+          ? ClientId()
+          : undefined;
+        let localRegistrationRequestId = input.registration
+          ? undefined
+          : ClientId();
+
+        localRegistrationRequestId = workspace.store.createRegistrationRequest({
+          id: localRegistrationRequestId,
+          clientId: clientRegistrationRequestId,
+          serverId: serverRegistrationRequestId,
+          commonAccessCardId,
+          givenName: input.registrationRequest?.givenName ?? 'Rebecca',
+          familyName: input.registrationRequest?.familyName ?? 'Welton',
+          addressLine1:
+            input.registrationRequest?.addressLine1 ?? '123 Main St',
+          addressLine2: input.registrationRequest?.addressLine2,
+          city: input.registrationRequest?.city ?? 'Anytown',
+          state: input.registrationRequest?.state ?? 'CA',
+          postalCode: input.registrationRequest?.postalCode ?? '95959',
+          stateId: input.registrationRequest?.stateId ?? 'B2201793',
+        });
 
         if (input.registration?.electionData) {
-          const electionId = workspace.store.createElectionDefinition(
-            input.registration.electionData.toString()
-          );
-          const electionDefinition =
-            workspace.store.getElectionDefinition(electionId);
-          assert(electionDefinition);
+          const electionId = workspace.store.createElection({
+            election: input.registration.electionData.toString(),
+          });
+          const electionRecord = workspace.store.getElection({
+            clientId: electionId,
+          });
+          assert(electionRecord);
 
           const { registration } = input;
-
           const ballotStyle = registration.ballotStyleId
             ? find(
-                electionDefinition.election.ballotStyles,
+                electionRecord.electionDefinition.election.ballotStyles,
                 ({ id }) => id === registration.ballotStyleId
               )
-            : electionDefinition.election.ballotStyles[0];
+            : electionRecord.electionDefinition.election.ballotStyles[0];
           assert(ballotStyle);
 
           const precinctId = registration.precinctId
@@ -459,9 +412,10 @@ function buildApi({
             : ballotStyle.precincts[0];
           assert(typeof precinctId === 'string');
 
-          workspace.store.createVoterElectionRegistration({
-            voterId: voterInfo.id,
-            voterRegistrationRequestId,
+          workspace.store.createRegistration({
+            id: ClientId(),
+            registrationRequestId:
+              clientRegistrationRequestId ?? localRegistrationRequestId,
             electionId,
             precinctId,
             ballotStyleId: ballotStyle.id,
@@ -484,22 +438,14 @@ function buildApi({
         throw new Error('Not logged in');
       }
 
-      const voterInfo = workspace.store.getVoterInfo(
-        authStatus.user.commonAccessCardId
-      );
-
-      if (!voterInfo) {
-        throw new Error('Not registered');
-      }
-
+      const { commonAccessCardId } = authStatus.user;
       const mostRecentVotes = iter(
-        workspace.store.getVoterElectionRegistrations(voterInfo.id)
+        workspace.store.getRegistrations(commonAccessCardId)
       )
         .flatMap((registration) => {
-          const selection =
-            workspace.store.getCastVoteRecordForVoterElectionRegistration(
-              registration.id
-            );
+          const selection = workspace.store.getCastVoteRecordForRegistration(
+            registration.id
+          );
           return selection ? [selection] : [];
         })
         .first();
@@ -518,12 +464,14 @@ export type Api = ReturnType<typeof buildApi>;
 export function buildApp({
   auth,
   workspace,
+  raveServerClient,
 }: {
   auth: InsertedSmartCardAuthApi;
   workspace: Workspace;
+  raveServerClient: RaveServerClient;
 }): Application {
   const app: Application = express();
-  const api = buildApi({ auth, workspace });
+  const api = buildApi({ auth, workspace, raveServerClient });
 
   app.use('/api/watchAuthStatus', (req, res) => {
     res.set({

@@ -6,6 +6,7 @@ use rocket::fairing;
 use rocket_db_pools::Database;
 use routes::*;
 
+mod client;
 mod cvr;
 mod db;
 mod routes;
@@ -20,12 +21,6 @@ fn rocket() -> _ {
         ))
         .mount(
             "/",
-            routes![
-                create_election,
-                get_elections,
-                get_voters,
-                parse_cast_vote_record_report,
-                rave_mark_sync,
-            ],
+            routes![create_election, get_elections, rave_mark_sync,],
         )
 }

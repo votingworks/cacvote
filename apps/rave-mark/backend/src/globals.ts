@@ -36,3 +36,10 @@ export const RAVE_MARK_WORKSPACE =
  * Is this running as part of an integration test?
  */
 export const IS_INTEGRATION_TEST = process.env.IS_INTEGRATION_TEST === 'true';
+
+/**
+ * Should we mock the RAVE server?
+ */
+export const USE_MOCK_RAVE_SERVER =
+  (process.env.USE_MOCK_RAVE_SERVER === 'true' || IS_INTEGRATION_TEST) &&
+  process.env.USE_MOCK_RAVE_SERVER !== 'false';

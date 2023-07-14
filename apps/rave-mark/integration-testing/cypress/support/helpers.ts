@@ -2,10 +2,7 @@ import { deserialize, methodUrl, serialize } from '@votingworks/grout';
 import { CreateTestVoterInput } from '@votingworks/rave-mark-backend';
 
 // eslint-disable-next-line vx/no-import-workspace-subfolders
-import {
-  type VoterInfo,
-  type VoterRegistrationRequest,
-} from '@votingworks/rave-mark-backend/src/types/db';
+import { type RegistrationRequest } from '@votingworks/rave-mark-backend/src/types/db';
 import { CVR, Id } from '@votingworks/types';
 
 /**
@@ -32,14 +29,10 @@ export function sendGroutRequest<Req, Res extends object>(
     .then((response) => deserialize(JSON.stringify(response.body)) as Res);
 }
 
-export function getVoterInfo(): Cypress.Chainable<VoterInfo> {
-  return sendGroutRequest('getVoterInfo', {});
-}
-
-export function getVoterRegistrationRequests(): Cypress.Chainable<
-  VoterRegistrationRequest[]
+export function getRegistrationRequests(): Cypress.Chainable<
+  RegistrationRequest[]
 > {
-  return sendGroutRequest('getVoterRegistrationRequests', {});
+  return sendGroutRequest('getRegistrationRequests', {});
 }
 
 export function getVoterCastVoteRecord(): Cypress.Chainable<CVR.CVR> {

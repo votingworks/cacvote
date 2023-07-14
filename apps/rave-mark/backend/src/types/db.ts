@@ -1,41 +1,85 @@
-import { BallotStyleId, Id, PrecinctId, VotesDict } from '@votingworks/types';
+import { Optional } from '@votingworks/basics';
+import {
+  BallotStyleId,
+  CVR,
+  ElectionDefinition,
+  Id,
+  IdSchema,
+  NewType,
+  PrecinctId,
+  safeParseElectionDefinition,
+} from '@votingworks/types';
+import { v4 as uuid } from 'uuid';
 import { DateTime } from 'luxon';
+import { z } from 'zod';
 
-export interface VoterInfo {
+/**
+ * `ServerId` is the ID on the RAVE server, not the ID in this backend.
+ */
+export type ServerId = NewType<Id, 'ServerId'>;
+
+/**
+ * Creates a new `ServerId`.
+ */
+export function ServerId(): ServerId {
+  return uuid() as ServerId;
+}
+
+/**
+ * `ClientId` is the ID on this backend, not the ID on the RAVE server.
+ */
+export type ClientId = NewType<Id, 'ClientId'>;
+
+/**
+ * Creates a new `ClientId`.
+ */
+export function ClientId(): ClientId {
+  return uuid() as ClientId;
+}
+
+/**
+ * Schema for {@link ServerId}.
+ */
+export const ServerIdSchema = IdSchema as z.ZodSchema<ServerId>;
+
+/**
+ * Schema for {@link ClientId}.
+ */
+export const ClientIdSchema = IdSchema as z.ZodSchema<ClientId>;
+
+export interface RegistrationRequest {
   /**
-   * Database ID for a voter record.
+   * Database ID for a registration request record.
    */
-  id: Id;
+  id: ClientId;
 
   /**
-   * Common Access Card ID for a voter.
+   * Server-side ID for this registration request record, if sync'ed.
+   */
+  serverId?: ServerId;
+
+  /**
+   * Client-side ID for this registration request record.
+   */
+  clientId: ClientId;
+
+  /**
+   * Machine ID for the machine that created this registration request record.
+   */
+  machineId: Id;
+
+  /**
+   * Common Access Card ID for the voter who created this registration request.
    */
   commonAccessCardId: Id;
 
   /**
-   * Whether or not this voter can perform admin actions.
-   */
-  isAdmin: boolean;
-}
-
-export interface VoterRegistrationRequest {
-  /**
-   * Database ID for a voter registration request record.
-   */
-  id: Id;
-
-  /**
-   * Database ID for the associated voter record.
-   */
-  voterId: Id;
-
-  /**
-   * The voter's given name, i.e. first name.
+   * Voter's given name, i.e. first name.
    */
   givenName: string;
 
   /**
-   * The voter's family name, i.e. last name.
+   * Voter's family name, i.e. last name.
    */
   familyName: string;
 
@@ -65,32 +109,122 @@ export interface VoterRegistrationRequest {
   postalCode: string;
 
   /**
-   * Voter's state ID.
+   * State-issued ID number for the voter, e.g. driver's license number.
    */
   stateId: string;
+
+  /**
+   * Date and time when the voter registered for the election.
+   */
+  createdAt: DateTime;
 }
 
-export interface VoterElectionRegistration {
+export interface RegistrationRequestRow {
+  id: string;
+  serverId: string | null;
+  clientId: string;
+  machineId: string;
+  commonAccessCardId: string;
+  givenName: string;
+  familyName: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  stateId: string;
+  createdAt: string;
+}
+
+export interface Election {
+  /**
+   * Database ID for an election record.
+   */
+  id: ClientId;
+
+  /**
+   * Server-side ID for this election record, if sync'ed.
+   */
+  serverId?: ServerId;
+
+  /**
+   * Client-side ID for this election record.
+   */
+  clientId: ClientId;
+
+  /**
+   * Machine ID for the machine that created this election record.
+   */
+  machineId: Id;
+
+  /**
+   * Election data.
+   */
+  election: string;
+
+  /**
+   * Election definition.
+   */
+  electionDefinition: ElectionDefinition;
+}
+
+export interface ElectionRow {
+  id: string;
+  serverId: string | null;
+  clientId: string;
+  machineId: string;
+  election: string;
+}
+
+export function deserializeElection(row: ElectionRow): Election {
+  return {
+    id: row.id as ClientId,
+    serverId: row.serverId ? (row.serverId as ServerId) : undefined,
+    clientId: row.clientId as ClientId,
+    machineId: row.machineId,
+    election: row.election,
+    electionDefinition: safeParseElectionDefinition(
+      row.election
+    ).unsafeUnwrap(),
+  };
+}
+
+export interface Registration {
   /**
    * Database ID for an election registration record.
    */
-  id: Id;
+  id: ClientId;
 
   /**
-   * Database ID for a voter record.
+   * Server-side ID for this registration record, if sync'ed.
    */
-  voterId: Id;
+  serverId?: ServerId;
+
+  /**
+   * Client-side ID for this registration record.
+   */
+  clientId: ClientId;
+
+  /**
+   * Machine ID for the machine that created this registration record.
+   */
+  machineId: Id;
+
+  /**
+   * Common Access Card ID for the voter this registration belongs to.
+   */
+  commonAccessCardId: Id;
 
   /**
    * Database ID for the voter's registration request record.
    */
-  voterRegistrationRequestId: Id;
+  registrationRequestId: ClientId;
 
   /**
    * Database ID for a the election record associated with this voter
    * registration.
    */
-  electionId: Id;
+  electionId: ClientId;
 
   /**
    * Precinct ID for the voter's precinct.
@@ -108,21 +242,54 @@ export interface VoterElectionRegistration {
   createdAt: DateTime;
 }
 
-export interface VoterElectionSelection {
+export interface RegistrationRow {
+  id: string;
+  serverId: string | null;
+  clientId: string;
+  machineId: string;
+  commonAccessCardId: string;
+  registrationRequestId: string;
+  electionId: string;
+  precinctId: string;
+  ballotStyleId: string;
+  createdAt: string;
+}
+
+export interface Ballot {
   /**
-   * Database ID for a voter record.
+   * Database ID for a ballot record.
    */
-  voterId: Id;
+  id: ClientId;
 
   /**
-   * Database ID for the voter's election registration record.
+   * Server-side ID for this registration record, if sync'ed.
    */
-  voterElectionRegistrationId: Id;
+  serverId?: ServerId;
+
+  /**
+   * Client-side ID for this registration record.
+   */
+  clientId: ClientId;
+
+  /**
+   * Machine ID for the machine that created this registration record.
+   */
+  machineId: Id;
+
+  /**
+   * Common Access Card ID for the voter who created this ballot.
+   */
+  commonAccessCardId: Id;
+
+  /**
+   * Database ID for the associated registration record.
+   */
+  registrationId: ClientId;
 
   /**
    * Votes cast by the voter.
    */
-  votes: VotesDict;
+  castVoteRecord: CVR.CVR;
 
   /**
    * Date and time when the voter cast their votes.
@@ -130,11 +297,35 @@ export interface VoterElectionSelection {
   createdAt: DateTime;
 }
 
+export interface BallotRow {
+  id: string;
+  serverId: string | null;
+  clientId: string;
+  machineId: string;
+  commonAccessCardId: string;
+  registrationId: string;
+  castVoteRecord: string;
+  createdAt: string;
+}
+
+export function deserializeBallot(row: BallotRow): Ballot {
+  return {
+    id: row.id as ClientId,
+    serverId: (row.serverId ?? undefined) as Optional<ServerId>,
+    clientId: row.clientId as ClientId,
+    machineId: row.machineId,
+    commonAccessCardId: row.commonAccessCardId,
+    registrationId: row.registrationId as ClientId,
+    castVoteRecord: JSON.parse(row.castVoteRecord),
+    createdAt: DateTime.fromSQL(row.createdAt),
+  };
+}
+
 export interface ServerSyncAttempt {
   /**
    * Database ID for a server sync attempt record.
    */
-  id: Id;
+  id: ClientId;
 
   /**
    * Creator for the user who initiated the server sync attempt.
@@ -165,4 +356,66 @@ export interface ServerSyncAttempt {
    * Date and time when the server sync attempt was completed.
    */
   completedAt?: DateTime;
+}
+
+export interface ServerSyncAttemptRow {
+  id: string;
+  creator: string;
+  trigger: string;
+  statusMessage: string;
+  success: 0 | 1 | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export function deserializeRegistrationRequest(
+  row: RegistrationRequestRow
+): RegistrationRequest {
+  return {
+    id: row.id as ClientId,
+    serverId: (row.serverId ?? undefined) as Optional<ServerId>,
+    clientId: row.clientId as ClientId,
+    machineId: row.machineId,
+    commonAccessCardId: row.commonAccessCardId,
+    givenName: row.givenName,
+    familyName: row.familyName,
+    addressLine1: row.addressLine1,
+    addressLine2: row.addressLine2 ?? undefined,
+    city: row.city,
+    state: row.state,
+    postalCode: row.postalCode,
+    stateId: row.stateId,
+    createdAt: DateTime.fromSQL(row.createdAt),
+  };
+}
+
+export function deserializeRegistration(row: RegistrationRow): Registration {
+  return {
+    id: row.id as ClientId,
+    serverId: (row.serverId ?? undefined) as Optional<ServerId>,
+    clientId: row.clientId as ClientId,
+    machineId: row.machineId,
+    commonAccessCardId: row.commonAccessCardId,
+    registrationRequestId: row.registrationRequestId as ClientId,
+    electionId: row.electionId as ClientId,
+    precinctId: row.precinctId,
+    ballotStyleId: row.ballotStyleId,
+    createdAt: DateTime.fromSQL(row.createdAt),
+  };
+}
+
+export function deserializeServerSyncAttempt(
+  row: ServerSyncAttemptRow
+): ServerSyncAttempt {
+  return {
+    id: row.id as ClientId,
+    creator: row.creator,
+    trigger: row.trigger,
+    statusMessage: row.statusMessage,
+    createdAt: DateTime.fromSQL(row.createdAt),
+    success: row.success === 1 ? true : row.success === 0 ? false : undefined,
+    completedAt: row.completedAt
+      ? DateTime.fromSQL(row.completedAt)
+      : undefined,
+  };
 }
