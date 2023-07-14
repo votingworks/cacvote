@@ -1,3 +1,4 @@
+use crate::client::ServerId;
 use crate::cvr::Election;
 use crate::{client, db};
 use rocket::http::{ContentType, Status};
@@ -88,13 +89,13 @@ pub(crate) async fn create_election(
 #[serde(rename_all = "camelCase")]
 pub struct RaveMarkSyncInput {
     #[serde(default)]
-    last_synced_registration_request_id: Option<Uuid>,
+    last_synced_registration_request_id: Option<ServerId>,
     #[serde(default)]
-    last_synced_registration_id: Option<Uuid>,
+    last_synced_registration_id: Option<ServerId>,
     #[serde(default)]
-    last_synced_election_id: Option<Uuid>,
+    last_synced_election_id: Option<ServerId>,
     #[serde(default)]
-    last_synced_ballot_id: Option<Uuid>,
+    last_synced_ballot_id: Option<ServerId>,
     #[serde(default)]
     registration_requests: Vec<client::input::RegistrationRequest>,
     #[serde(default)]
@@ -124,8 +125,8 @@ pub(crate) async fn rave_mark_sync(
         last_synced_election_id,
         last_synced_ballot_id,
         registration_requests,
+        registrations,
         ballots,
-        ..
     } = input.into_inner();
 
     for client_request in registration_requests.into_iter() {
@@ -135,6 +136,14 @@ pub(crate) async fn rave_mark_sync(
 
         if let Err(e) = result {
             error!("Failed to insert registration request: {}", e);
+        }
+    }
+
+    for registration in registrations.into_iter() {
+        let result = db::add_registration_from_voter_terminal(&mut db, registration).await;
+
+        if let Err(e) = result {
+            error!("Failed to insert registration: {}", e);
         }
     }
 
