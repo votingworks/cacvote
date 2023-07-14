@@ -1,4 +1,5 @@
-import { Button, H1, Main, P, Screen, Table } from '@votingworks/ui';
+import { Button, H1, Main, P, Screen, Table, Text } from '@votingworks/ui';
+import React from 'react';
 import { getServerSyncAttempts, sync } from '../../api';
 
 export interface DashboardScreenProps {
@@ -37,7 +38,16 @@ export function DashboardScreen({
             {getServerSyncAttemptsQuery.data?.map((attempt) => (
               <tr key={attempt.id}>
                 <td>{attempt.creator}</td>
-                <td>{attempt.statusMessage}</td>
+                <td>
+                  <Text small>
+                    {attempt.statusMessage.split('\n').map((line, i, lines) => (
+                      <React.Fragment key={line}>
+                        {line}
+                        {i < lines.length - 1 && <br />}
+                      </React.Fragment>
+                    ))}
+                  </Text>
+                </td>
                 <td>{attempt.trigger}</td>
                 <td>{attempt.completedAt?.toRelative()}</td>
               </tr>

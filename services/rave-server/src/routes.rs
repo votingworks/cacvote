@@ -99,6 +99,8 @@ pub struct RaveMarkSyncInput {
     #[serde(default)]
     registration_requests: Vec<client::input::RegistrationRequest>,
     #[serde(default)]
+    elections: Vec<client::input::Election>,
+    #[serde(default)]
     registrations: Vec<client::input::Registration>,
     #[serde(default)]
     ballots: Vec<client::input::Ballot>,
@@ -114,7 +116,7 @@ pub struct RaveMarkSyncOutput {
     ballots: Vec<client::output::Ballot>,
 }
 
-#[post("/api/rave-mark/sync", format = "json", data = "<input>")]
+#[post("/api/sync", format = "json", data = "<input>")]
 pub(crate) async fn rave_mark_sync(
     mut db: Connection<db::Db>,
     input: Json<RaveMarkSyncInput>,
@@ -125,6 +127,7 @@ pub(crate) async fn rave_mark_sync(
         last_synced_election_id,
         last_synced_ballot_id,
         registration_requests,
+        elections,
         registrations,
         ballots,
     } = input.into_inner();
@@ -136,6 +139,14 @@ pub(crate) async fn rave_mark_sync(
 
         if let Err(e) = result {
             error!("Failed to insert registration request: {}", e);
+        }
+    }
+
+    for election in elections.into_iter() {
+        let result = db::add_election_from_voter_terminal(&mut db, election).await;
+
+        if let Err(e) = result {
+            error!("Failed to insert election: {}", e);
         }
     }
 

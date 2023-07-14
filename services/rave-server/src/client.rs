@@ -3,7 +3,8 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[repr(transparent)]
-pub struct ServerId(Uuid);
+// TODO: figure out how to hide the inner value and still work with sqlx
+pub struct ServerId(pub Uuid);
 
 impl ServerId {
     pub fn new() -> Self {
@@ -13,7 +14,8 @@ impl ServerId {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[repr(transparent)]
-pub struct ClientId(Uuid);
+// TODO: figure out how to hide the inner value and still work with sqlx
+pub struct ClientId(pub Uuid);
 
 pub mod input {
     use serde::Deserialize;
@@ -37,6 +39,14 @@ pub mod input {
         pub state: String,
         pub postal_code: String,
         pub state_id: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct Election {
+        pub client_id: ClientId,
+        pub machine_id: String,
+        pub election: String,
     }
 
     #[derive(Debug, Deserialize)]
@@ -119,7 +129,7 @@ pub mod output {
         pub server_id: ServerId,
         pub client_id: ClientId,
         pub machine_id: String,
-        pub election: Json<cvr::Election>,
+        pub election: Json<serde_json::Value>,
         #[serde(with = "time::serde::iso8601")]
         pub created_at: time::OffsetDateTime,
     }

@@ -21,7 +21,7 @@ import { isDeepStrictEqual } from 'util';
 import { IS_INTEGRATION_TEST } from './globals';
 import { RaveServerClient } from './rave_server_client';
 import { AuthStatus } from './types/auth';
-import { ClientId, RegistrationRequest, ServerId } from './types/db';
+import { ClientId, RegistrationRequest } from './types/db';
 import { Workspace } from './workspace';
 
 function constructAuthMachineState(
@@ -360,20 +360,10 @@ function buildApi({
       }
 
       if (input.registrationRequest || input.registration) {
-        const serverRegistrationRequestId = input.registration
-          ? ServerId()
-          : undefined;
-        const clientRegistrationRequestId = input.registration
-          ? ClientId()
-          : undefined;
-        let localRegistrationRequestId = input.registration
-          ? undefined
-          : ClientId();
+        const registrationRequestId = ClientId();
 
-        localRegistrationRequestId = workspace.store.createRegistrationRequest({
-          id: localRegistrationRequestId,
-          clientId: clientRegistrationRequestId,
-          serverId: serverRegistrationRequestId,
+        workspace.store.createRegistrationRequest({
+          id: registrationRequestId,
           commonAccessCardId,
           givenName: input.registrationRequest?.givenName ?? 'Rebecca',
           familyName: input.registrationRequest?.familyName ?? 'Welton',
@@ -387,7 +377,9 @@ function buildApi({
         });
 
         if (input.registration?.electionData) {
-          const electionId = workspace.store.createElection({
+          const electionId = ClientId();
+          workspace.store.createElection({
+            id: electionId,
             election: input.registration.electionData.toString(),
           });
           const electionRecord = workspace.store.getElection({
@@ -414,8 +406,7 @@ function buildApi({
 
           workspace.store.createRegistration({
             id: ClientId(),
-            registrationRequestId:
-              clientRegistrationRequestId ?? localRegistrationRequestId,
+            registrationRequestId,
             electionId,
             precinctId,
             ballotStyleId: ballotStyle.id,

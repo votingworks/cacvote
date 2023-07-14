@@ -102,21 +102,25 @@ export class Store {
    * Creates a new election record.
    */
   createElection({
-    id = ClientId(),
+    id,
     serverId,
-    clientId = id,
+    clientId,
     machineId = VX_MACHINE_ID,
     election,
   }: {
-    id?: ClientId;
+    id: ClientId;
     serverId?: ServerId;
     clientId?: ClientId;
     machineId?: Id;
     election: string;
   }): ClientId {
     assert(
-      (id === clientId) === (machineId === VX_MACHINE_ID),
-      'election ID must equal clientId if and only if the record was created on this machine'
+      (serverId === undefined) === (clientId === undefined),
+      'election serverId must be defined if and only if clientId is defined'
+    );
+    assert(
+      (machineId === VX_MACHINE_ID) === (clientId === id || !clientId),
+      'election machineId must be VX_MACHINE_ID if and only if ID equals clientId'
     );
 
     safeParseElectionDefinition(election).assertOk(
@@ -125,7 +129,7 @@ export class Store {
 
     this.client.run(
       `
-      insert into elections (
+      insert or replace into elections (
         id,
         server_id,
         client_id,
@@ -137,7 +141,7 @@ export class Store {
       `,
       id,
       serverId ?? null,
-      clientId,
+      clientId ?? id,
       machineId,
       election
     );
@@ -357,7 +361,7 @@ export class Store {
     postalCode,
     stateId,
   }: {
-    id?: ClientId;
+    id: ClientId;
     serverId?: ServerId;
     clientId?: ClientId;
     machineId?: Id;
@@ -376,11 +380,10 @@ export class Store {
       'registration request serverId must be defined if and only if clientId is defined'
     );
     assert(
-      (id === undefined) === (serverId !== undefined),
-      'registration request ID must be defined if and only if serverId is not defined'
+      (machineId === VX_MACHINE_ID) === (clientId === id || !clientId),
+      'registration request machineId must be VX_MACHINE_ID if and only if ID equals clientId'
     );
 
-    const idToUse = id ?? ClientId();
     this.client.run(
       `
       insert or replace into registration_requests (
@@ -401,9 +404,9 @@ export class Store {
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
-      idToUse,
+      id,
       serverId ?? null,
-      clientId ?? idToUse,
+      clientId ?? id,
       machineId,
       commonAccessCardId,
       givenName,
@@ -416,7 +419,7 @@ export class Store {
       stateId
     );
 
-    return idToUse;
+    return id;
   }
 
   /**
@@ -432,7 +435,7 @@ export class Store {
     precinctId,
     ballotStyleId,
   }: {
-    id?: ClientId;
+    id: ClientId;
     serverId?: ServerId;
     clientId?: ClientId;
     machineId?: Id;
@@ -446,11 +449,10 @@ export class Store {
       'registration serverId must be defined if and only if clientId is defined'
     );
     assert(
-      (id === undefined) === (serverId !== undefined),
-      'registration ID must be defined if and only if serverId is not defined'
+      (machineId === VX_MACHINE_ID) === (clientId === id || !clientId),
+      'registration machineId must be VX_MACHINE_ID if and only if ID equals clientId'
     );
 
-    const idToUse = id ?? ClientId();
     const registrationRequest = this.getRegistrationRequest({
       clientId: registrationRequestId,
     });
@@ -475,9 +477,9 @@ export class Store {
         ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
-      idToUse,
+      id,
       serverId ?? null,
-      clientId ?? idToUse,
+      clientId ?? id,
       machineId,
       registrationRequest.commonAccessCardId,
       registrationRequest.id,
@@ -486,7 +488,7 @@ export class Store {
       ballotStyleId
     );
 
-    return idToUse;
+    return id;
   }
 
   getRegistrationRequest({
@@ -539,14 +541,14 @@ export class Store {
    * Records a cast ballot for a voter registration.
    */
   createBallot({
-    id = ClientId(),
+    id,
     serverId,
-    clientId = id,
+    clientId,
     machineId = VX_MACHINE_ID,
     registrationId,
     castVoteRecord,
   }: {
-    id?: ClientId;
+    id: ClientId;
     serverId?: ServerId;
     clientId?: ClientId;
     machineId?: Id;
@@ -554,17 +556,24 @@ export class Store {
     castVoteRecord: CVR.CVR;
   }): ClientId {
     assert(
-      (id === clientId) === (machineId === VX_MACHINE_ID),
-      'ballot ID must equal clientId if and only if the record was created on this machine'
+      (serverId === undefined) === (clientId === undefined),
+      'ballot serverId must be defined if and only if clientId is defined'
+    );
+    assert(
+      (machineId === VX_MACHINE_ID) === (clientId === id || !clientId),
+      'ballot machineId must be VX_MACHINE_ID if and only if ID equals clientId'
     );
 
-    const registration = this.getRegistration(registrationId);
-    assert(registration, `no registration found with ID ${registrationId}`);
+    const registration = this.getRegistration({ clientId: registrationId });
+    assert(
+      registration,
+      `no registration found with client ID ${registrationId}`
+    );
 
     // TODO: validate votes against election definition
     this.client.run(
       `
-      insert into ballots (
+      insert or replace into ballots (
         id,
         server_id,
         client_id,
@@ -578,7 +587,7 @@ export class Store {
       `,
       id,
       serverId ?? null,
-      clientId,
+      clientId ?? id,
       machineId,
       registration.commonAccessCardId,
       registrationId,
@@ -588,7 +597,26 @@ export class Store {
     return id;
   }
 
-  getRegistration(registrationId: string): Optional<Registration> {
+  getRegistration({
+    clientId,
+  }: {
+    clientId?: ClientId;
+  }): Optional<Registration>;
+  getRegistration({
+    serverId,
+  }: {
+    serverId?: ServerId;
+  }): Optional<Registration>;
+  getRegistration({
+    clientId,
+    serverId,
+  }: {
+    clientId?: ClientId;
+    serverId?: ServerId;
+  }): Optional<Registration> {
+    const id = clientId ?? serverId;
+    assert(id !== undefined, 'clientId or serverId must be defined');
+
     const result = this.client.one(
       `
       select
@@ -603,9 +631,9 @@ export class Store {
         ballot_style_id as ballotStyleId,
         created_at as createdAt
       from registrations
-      where id = ?
+      where ${clientId ? 'client_id' : 'server_id'} = ?
       `,
-      registrationId
+      id
     ) as Optional<RegistrationRow>;
 
     return result ? deserializeRegistration(result) : undefined;
@@ -800,6 +828,44 @@ export class Store {
     ) as RegistrationRequestRow[];
 
     return result.map(deserializeRegistrationRequest);
+  }
+
+  getRegistrationsToSync(): Registration[] {
+    const result = this.client.all(
+      `
+      select
+        id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        common_access_card_id as commonAccessCardId,
+        registration_request_id as registrationRequestId,
+        election_id as electionId,
+        precinct_id as precinctId,
+        ballot_style_id as ballotStyleId
+      from registrations
+      where server_id is null
+      `
+    ) as RegistrationRow[];
+
+    return result.map(deserializeRegistration);
+  }
+
+  getElectionsToSync(): Election[] {
+    const result = this.client.all(
+      `
+      select
+        id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        election
+      from elections
+      where server_id is null
+      `
+    ) as ElectionRow[];
+
+    return result.map(deserializeElection);
   }
 
   getBallotsToSync(): Ballot[] {

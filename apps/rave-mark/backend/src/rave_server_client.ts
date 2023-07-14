@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { assert } from '@votingworks/basics';
 import fetch from 'cross-fetch';
+import makeDebug from 'debug';
 import {
   BallotStyleId,
   BallotStyleIdSchema,
@@ -11,11 +12,14 @@ import {
   PrecinctIdSchema,
   unsafeParse,
 } from '@votingworks/types';
-import { inspect } from 'util';
 import { DateTime } from 'luxon';
+import { format } from '@votingworks/utils';
+import { VX_MACHINE_ID } from '@votingworks/backend';
 import { Store } from './store';
 import { AuthStatus } from './types/auth';
 import { ClientId, ClientIdSchema, ServerId, ServerIdSchema } from './types/db';
+
+const debug = makeDebug('rave-server-client');
 
 export interface RaveServerClient {
   sync({ authStatus }: { authStatus: AuthStatus }): Promise<void>;
@@ -101,20 +105,25 @@ interface BallotInput {
   clientId: ClientId;
   machineId: Id;
   commonAccessCardId: string;
-  registrationId: Id;
+  registrationId: ClientId;
   castVoteRecord: CVR.CVR;
 }
 
-type BallotOutput = BallotInput & {
+interface BallotOutput {
   serverId: ServerId;
-};
+  clientId: ClientId;
+  machineId: Id;
+  commonAccessCardId: string;
+  registrationId: ServerId;
+  castVoteRecord: CVR.CVR;
+}
 
 const BallotOutputSchema: z.ZodSchema<BallotOutput> = z.object({
   serverId: ServerIdSchema,
   clientId: ClientIdSchema,
   machineId: z.string(),
   commonAccessCardId: z.string(),
-  registrationId: ClientIdSchema,
+  registrationId: ServerIdSchema,
   castVoteRecord: CVR.CVRSchema,
 });
 
@@ -132,8 +141,8 @@ const AdminOutputSchema: z.ZodSchema<AdminOutput> = z.object({
 
 interface ElectionInput {
   clientId: ClientId;
+  machineId: Id;
   election: string;
-  createdAt: DateTime;
 }
 
 type ElectionOutput = ElectionInput & {
@@ -143,6 +152,7 @@ type ElectionOutput = ElectionInput & {
 const ElectionOutputSchema: z.ZodSchema<ElectionOutput> = z.object({
   serverId: ServerIdSchema,
   clientId: ClientIdSchema,
+  machineId: z.string(),
   election: z.string(),
   createdAt: DateTimeSchema,
 });
@@ -152,9 +162,10 @@ interface RaveMarkSyncInput {
   lastSyncedRegistrationId?: ServerId;
   lastSyncedElectionId?: ServerId;
   lastSyncedBallotId?: ServerId;
-  registrationRequests: RegistrationRequestInput[];
-  registrations: RegistrationInput[];
-  ballots: BallotInput[];
+  registrationRequests?: RegistrationRequestInput[];
+  elections?: ElectionInput[];
+  registrations?: RegistrationInput[];
+  ballots?: BallotInput[];
 }
 
 interface RaveMarkSyncOutput {
@@ -173,8 +184,58 @@ const RaveMarkSyncOutputSchema: z.ZodSchema<RaveMarkSyncOutput> = z.object({
   ballots: z.array(BallotOutputSchema),
 });
 
+function describeSyncInputOrOutput(
+  data: RaveMarkSyncInput | RaveMarkSyncOutput
+): string[] {
+  const parts: string[] = [];
+
+  if (data.ballots?.length) {
+    parts.push(
+      format.countPhrase(data.ballots.length, {
+        one: '1 ballot',
+        many: `${data.ballots.length} ballots`,
+      })
+    );
+  }
+
+  if (data.elections?.length) {
+    parts.push(
+      format.countPhrase(data.elections.length, {
+        one: '1 election',
+        many: `${data.elections.length} elections`,
+      })
+    );
+  }
+
+  if (data.registrationRequests?.length) {
+    parts.push(
+      format.countPhrase(data.registrationRequests.length, {
+        one: '1 registration request',
+        many: `${data.registrationRequests.length} registration requests`,
+      })
+    );
+  }
+
+  if (data.registrations?.length) {
+    parts.push(
+      format.countPhrase(data.registrations.length, {
+        one: '1 registration',
+        many: `${data.registrations.length} registrations`,
+      })
+    );
+  }
+
+  return parts;
+}
+
 export class RaveServerClientImpl {
-  constructor(private readonly store: Store) {}
+  private readonly store: Store;
+  private readonly baseUrl: URL;
+
+  constructor({ store, baseUrl }: { store: Store; baseUrl: URL }) {
+    this.store = store;
+    this.baseUrl = baseUrl;
+  }
 
   async sync({ authStatus }: { authStatus: AuthStatus }): Promise<void> {
     assert(
@@ -184,12 +245,38 @@ export class RaveServerClientImpl {
       'not logged in as admin'
     );
 
-    const id = this.store.createServerSyncAttempt({
-      creator: authStatus.user.commonAccessCardId,
+    const syncAttemptId = this.createServerSyncAttempt(
+      authStatus.user.commonAccessCardId
+    );
+
+    try {
+      const input = this.createSyncInput();
+      const output = await this.performSyncRequest(input);
+      this.updateLocalStoreFromSyncOutput(output);
+      this.updateServerSyncAttempt({ syncAttemptId, input, output });
+    } catch (error) {
+      debug(
+        'RAVE server sync failed: %s',
+        error instanceof Error ? error.stack : error
+      );
+      this.store.updateServerSyncAttempt({
+        id: syncAttemptId,
+        status: 'failure',
+        statusMessage:
+          error instanceof Error ? error.message : `unknown error: ${error}`,
+      });
+    }
+  }
+
+  private createServerSyncAttempt(commonAccessCardId: Id): ClientId {
+    return this.store.createServerSyncAttempt({
+      creator: commonAccessCardId,
       trigger: 'manual',
       initialStatusMessage: 'Syncing…',
     });
+  }
 
+  private createSyncInput(): RaveMarkSyncInput {
     const input: RaveMarkSyncInput = {
       lastSyncedRegistrationRequestId:
         this.store.getLastSyncedRegistrationRequestId(),
@@ -197,89 +284,150 @@ export class RaveServerClientImpl {
       lastSyncedElectionId: this.store.getLastSyncedElectionId(),
       lastSyncedBallotId: this.store.getLastSyncedBallotId(),
       registrationRequests: this.store.getRegistrationRequestsToSync(),
-      registrations: [],
+      elections: this.store.getElectionsToSync(),
+      registrations: this.store.getRegistrationsToSync(),
       ballots: this.store.getBallotsToSync(),
     };
+    debug('RAVE sync input: %O', input);
+    return input;
+  }
 
-    try {
-      console.log(
-        'POSTING TO RAVE MARK SYNC',
-        inspect(input, false, Infinity),
-        JSON.stringify(input)
+  private async performSyncRequest(
+    input: RaveMarkSyncInput
+  ): Promise<RaveMarkSyncOutput> {
+    const syncUrl = new URL('api/sync', this.baseUrl);
+    const response = await fetch(syncUrl.toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    });
+    if (response.status !== 200) {
+      const text = await response.text();
+      throw new Error(
+        `Server responded with ${response.status} ${response.statusText}: ${text}}`
       );
-      const response = await fetch('http://localhost:8000/api/rave-mark/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(input),
-      });
-      if (response.status !== 200) {
-        const text = await response.text();
-        throw new Error(
-          `Server responded with ${response.status} ${response.statusText}: ${text}}`
-        );
-      }
-      const rawOutput = await response.json();
-      console.log(
-        'RAVE MARK SYNC RESPONSE',
-        inspect(rawOutput, false, Infinity)
-      );
-      const output = unsafeParse(RaveMarkSyncOutputSchema, rawOutput);
-      this.store.updateServerSyncAttempt({
-        id,
-        status: 'success',
-        statusMessage: `Sent: ${input.registrationRequests.length} registrations, ${input.ballots.length} ballots. Received: ${output.registrationRequests.length} registrations, ${output.ballots.length} ballots.`,
-      });
-
-      this.store.resetAdmins();
-      for (const admin of output.admins) {
-        this.store.createAdmin(admin);
-      }
-
-      for (const election of output.elections) {
-        this.store.createElection(election);
-      }
-
-      for (const registrationRequest of output.registrationRequests) {
-        this.store.createRegistrationRequest(registrationRequest);
-      }
-
-      for (const registration of output.registrations) {
-        const localRegistrationRequest = this.store.getRegistrationRequest({
-          serverId: registration.registrationRequestId,
-        });
-        assert(
-          localRegistrationRequest,
-          `could not find local registration request with server id ${registration.registrationRequestId}`
-        );
-
-        const localElection = this.store.getElection({
-          serverId: registration.electionId,
-        });
-        assert(
-          localElection,
-          `could not find local election with server id ${registration.electionId}`
-        );
-
-        this.store.createRegistration({
-          serverId: registration.serverId,
-          clientId: registration.clientId,
-          machineId: registration.machineId,
-          registrationRequestId: localRegistrationRequest.id,
-          electionId: localElection.id,
-          ballotStyleId: registration.ballotStyleId,
-          precinctId: registration.precinctId,
-        });
-      }
-    } catch (error) {
-      this.store.updateServerSyncAttempt({
-        id,
-        status: 'failure',
-        statusMessage:
-          error instanceof Error ? error.message : `unknown error: ${error}`,
-      });
     }
+
+    return this.parseSyncOutput(await response.json());
+  }
+
+  private parseSyncOutput(rawOutput: unknown): RaveMarkSyncOutput {
+    debug('RAVE sync raw output: %O', rawOutput);
+    const output = unsafeParse(RaveMarkSyncOutputSchema, rawOutput);
+    debug('RAVE sync parsed output: %O', output);
+    return output;
+  }
+
+  private updateLocalStoreFromSyncOutput(output: RaveMarkSyncOutput): void {
+    this.store.resetAdmins();
+    for (const admin of output.admins) {
+      this.store.createAdmin(admin);
+    }
+    debug('reset and replaced admins; count: %d', output.admins.length);
+
+    for (const election of output.elections) {
+      const electionId = this.store.createElection({
+        id:
+          election.machineId === VX_MACHINE_ID ? election.clientId : ClientId(),
+        ...election,
+      });
+      debug('created or replaced election %s', electionId);
+    }
+
+    for (const registrationRequest of output.registrationRequests) {
+      const registrationRequestId = this.store.createRegistrationRequest({
+        id:
+          registrationRequest.machineId === VX_MACHINE_ID
+            ? registrationRequest.clientId
+            : ClientId(),
+        ...registrationRequest,
+      });
+      debug(
+        'created or replaced registration request %s',
+        registrationRequestId
+      );
+    }
+
+    for (const registration of output.registrations) {
+      const localRegistrationRequest = this.store.getRegistrationRequest({
+        serverId: registration.registrationRequestId,
+      });
+      assert(
+        localRegistrationRequest,
+        `could not find local registration request with server id ${registration.registrationRequestId}`
+      );
+
+      const localElection = this.store.getElection({
+        serverId: registration.electionId,
+      });
+      assert(
+        localElection,
+        `could not find local election with server id ${registration.electionId}`
+      );
+
+      const registrationId = this.store.createRegistration({
+        id:
+          registration.machineId === VX_MACHINE_ID
+            ? registration.clientId
+            : ClientId(),
+        serverId: registration.serverId,
+        clientId: registration.clientId,
+        machineId: registration.machineId,
+        registrationRequestId: localRegistrationRequest.id,
+        electionId: localElection.id,
+        ballotStyleId: registration.ballotStyleId,
+        precinctId: registration.precinctId,
+      });
+
+      debug('created or replaced registration %s', registrationId);
+    }
+
+    for (const ballot of output.ballots) {
+      const localRegistration = this.store.getRegistration({
+        serverId: ballot.registrationId,
+      });
+
+      assert(
+        localRegistration,
+        `could not find local registration with server id ${ballot.registrationId}`
+      );
+
+      const ballotId = this.store.createBallot({
+        id: ballot.machineId === VX_MACHINE_ID ? ballot.clientId : ClientId(),
+        serverId: ballot.serverId,
+        clientId: ballot.clientId,
+        machineId: ballot.machineId,
+        registrationId: localRegistration.id,
+        castVoteRecord: ballot.castVoteRecord,
+      });
+
+      debug('created or replaced ballot %s', ballotId);
+    }
+  }
+
+  private updateServerSyncAttempt({
+    syncAttemptId,
+    input,
+    output,
+  }: {
+    syncAttemptId: ClientId;
+    input: RaveMarkSyncInput;
+    output: RaveMarkSyncOutput;
+  }): void {
+    const sentParts = describeSyncInputOrOutput(input);
+    const receivedParts = describeSyncInputOrOutput(output);
+
+    this.store.updateServerSyncAttempt({
+      id: syncAttemptId,
+      status: 'success',
+      statusMessage: `SENT: ${
+        sentParts.length === 0 ? 'nothing' : sentParts.join(', ')
+      }\nRECEIVED: ${
+        receivedParts.length === 0 ? 'nothing' : receivedParts.join(', ')
+      }`,
+    });
   }
 }
 
