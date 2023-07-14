@@ -51,7 +51,10 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
 
     raveServerClient: USE_MOCK_RAVE_SERVER
       ? new MockRaveServerClient(workspace.store)
-      : new RaveServerClientImpl(workspace.store),
+      : new RaveServerClientImpl({
+          store: workspace.store,
+          baseUrl: new URL('http://localhost:8000'),
+        }),
   });
 
   return app.listen(

@@ -52,7 +52,7 @@ pub(crate) struct Election {
     pub id: ServerId,
     pub client_id: ClientId,
     pub machine_id: String,
-    pub election: Json<crate::cvr::Election>,
+    pub election: Json<serde_json::Value>,
     pub created_at: sqlx::types::time::OffsetDateTime,
 }
 
@@ -289,7 +289,7 @@ pub(crate) async fn get_elections(
             FROM elections
             WHERE id = $1
             "#,
-            id as _
+            id.0,
         )
         .fetch_optional(&mut *db)
         .await
@@ -343,20 +343,20 @@ pub(crate) async fn get_registration_requests(
     since_registration_request_id: Option<ServerId>,
 ) -> Result<Vec<RegistrationRequest>, sqlx::Error> {
     let since_registration_request = match since_registration_request_id {
-        Some(id) => sqlx::query!(
-            r#"
-            SELECT created_at
-            FROM registration_requests
-            WHERE id = $1
-            "#,
-            id as _
-        )
-        .fetch_optional(&mut *db)
-        .await
-        .ok(),
+        Some(id) => {
+            sqlx::query!(
+                r#"
+                SELECT created_at
+                FROM registration_requests
+                WHERE id = $1
+                "#,
+                id.0
+            )
+            .fetch_optional(&mut *db)
+            .await?
+        }
         None => None,
-    }
-    .flatten();
+    };
 
     match since_registration_request {
         Some(registration_request) => {
@@ -418,18 +418,21 @@ pub(crate) async fn get_registrations(
     db: &mut PoolConnection<Postgres>,
     since_registration_id: Option<ServerId>,
 ) -> Result<Vec<Registration>, sqlx::Error> {
-    let since_registration = sqlx::query!(
-        r#"
+    let since_registration = match since_registration_id {
+        Some(registration_id) => sqlx::query!(
+            r#"
         SELECT created_at
         FROM registrations
         WHERE id = $1
         "#,
-        since_registration_id as _
-    )
-    .fetch_optional(&mut *db)
-    .await
-    .ok()
-    .flatten();
+            registration_id.0
+        )
+        .fetch_optional(&mut *db)
+        .await
+        .ok()
+        .flatten(),
+        None => None,
+    };
 
     match since_registration {
         Some(registration) => {
@@ -503,8 +506,8 @@ pub(crate) async fn add_registration_request_from_voter_terminal(
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         "#,
-        registration_request_id as _,
-        request.client_id as _,
+        registration_request_id.0,
+        request.client_id.0,
         request.machine_id,
         request.common_access_card_id,
         request.given_name,
@@ -522,35 +525,73 @@ pub(crate) async fn add_registration_request_from_voter_terminal(
     Ok(registration_request_id)
 }
 
+pub(crate) async fn add_election_from_voter_terminal(
+    db: &mut PoolConnection<Postgres>,
+    election: client::input::Election,
+) -> Result<ServerId, sqlx::Error> {
+    let election_id = ServerId::new();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO elections (
+            id,
+            client_id,
+            machine_id,
+            election
+        )
+        VALUES ($1, $2, $3, $4)
+        "#,
+        election_id.0,
+        election.client_id.0,
+        election.machine_id,
+        Json(election.election) as _
+    )
+    .execute(db)
+    .await?;
+
+    Ok(election_id)
+}
+
 pub(crate) async fn add_registration_from_voter_terminal(
     db: &mut PoolConnection<Postgres>,
     registration: client::input::Registration,
 ) -> Result<ServerId, sqlx::Error> {
     let registration_request = sqlx::query!(
         r#"
-        SELECT id
+        SELECT
+            id as "id: ServerId"
         FROM registration_requests
         WHERE client_id = $1
         AND machine_id = $2
         AND common_access_card_id = $3
         "#,
-        registration.registration_request_id as _,
+        registration.registration_request_id.0,
         registration.machine_id,
         registration.common_access_card_id
     )
     .fetch_one(&mut *db)
-    .await?;
+    .await
+    .map_err(|err| {
+        eprintln!("unable to find registration: {:?}", registration);
+        err
+    })?;
     let election = sqlx::query!(
         r#"
         SELECT
             id as "id: ServerId"
         FROM elections
-        WHERE id = $1
+        WHERE client_id = $1
+        AND machine_id = $2
         "#,
-        registration.election_id as _
+        registration.election_id.0,
+        registration.machine_id,
     )
     .fetch_one(&mut *db)
-    .await?;
+    .await
+    .map_err(|err| {
+        eprintln!("unable to find election: {:?}", registration);
+        err
+    })?;
 
     let registration_id = ServerId::new();
 
@@ -568,12 +609,12 @@ pub(crate) async fn add_registration_from_voter_terminal(
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         "#,
-        registration_id as _,
-        registration.client_id as _,
+        registration_id.0,
+        registration.client_id.0,
         registration.machine_id,
         registration.common_access_card_id,
-        registration_request.id as _,
-        election.id as _,
+        registration_request.id.0,
+        election.id.0,
         registration.precinct_id,
         registration.ballot_style_id
     )
@@ -596,7 +637,7 @@ pub(crate) async fn add_ballot_from_voter_terminal(
         AND machine_id = $2
         AND common_access_card_id = $3
         "#,
-        ballot.registration_id as _,
+        ballot.registration_id.0,
         ballot.machine_id,
         ballot.common_access_card_id
     )
@@ -618,8 +659,8 @@ pub(crate) async fn add_ballot_from_voter_terminal(
         )
         VALUES ($1, $2, $3, $4, $5, $6)
         "#,
-        ballot_id as _,
-        ballot.client_id as _,
+        ballot_id.0,
+        ballot.client_id.0,
         ballot.machine_id,
         ballot.common_access_card_id,
         registration.id,
@@ -638,11 +679,12 @@ pub(crate) async fn get_ballots(
     let since_ballot = match since_ballot_id {
         Some(id) => sqlx::query!(
             r#"
-            SELECT created_at
+            SELECT
+                created_at
             FROM ballots
             WHERE id = $1
             "#,
-            id as _
+            id.0,
         )
         .fetch_optional(&mut *db)
         .await
