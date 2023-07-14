@@ -454,7 +454,7 @@ export class MockRaveServerClient implements RaveServerClient {
       this.store.updateServerSyncAttempt({
         id,
         status: 'success',
-        statusMessage: `Sent: 0 registrations, 0 votes. Received: 0 registrations, 0 votes.`,
+        statusMessage: `SENT: nothing\nRECEIVED: nothing`,
       });
     }, 1000);
   }
