@@ -12,6 +12,8 @@ import { AddressInfo } from 'net';
 import { dirSync } from 'tmp';
 import { Api, buildApp } from '../src/app';
 import { createWorkspace } from '../src/workspace';
+import { MockRaveServerClient } from '../src/rave_server_client';
+import { Store } from '../src/store';
 
 interface MockAppContents {
   apiClient: grout.Client<Api>;
@@ -31,6 +33,7 @@ export function createApp(): MockAppContents {
   const app = buildApp({
     auth: mockAuth,
     workspace: createWorkspace(workdir),
+    raveServerClient: new MockRaveServerClient(Store.memoryStore()),
   });
 
   const server = app.listen();
