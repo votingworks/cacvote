@@ -280,7 +280,7 @@ pub(crate) async fn create_election(
 
 pub(crate) async fn get_elections(
     db: &mut PoolConnection<Postgres>,
-    since_election_id: Option<Uuid>,
+    since_election_id: Option<ServerId>,
 ) -> Result<Vec<Election>, sqlx::Error> {
     let since_election = match since_election_id {
         Some(id) => sqlx::query!(
@@ -289,7 +289,7 @@ pub(crate) async fn get_elections(
             FROM elections
             WHERE id = $1
             "#,
-            id
+            id as _
         )
         .fetch_optional(&mut *db)
         .await
@@ -340,7 +340,7 @@ pub(crate) async fn get_elections(
 
 pub(crate) async fn get_registration_requests(
     db: &mut PoolConnection<Postgres>,
-    since_registration_request_id: Option<Uuid>,
+    since_registration_request_id: Option<ServerId>,
 ) -> Result<Vec<RegistrationRequest>, sqlx::Error> {
     let since_registration_request = match since_registration_request_id {
         Some(id) => sqlx::query!(
@@ -349,7 +349,7 @@ pub(crate) async fn get_registration_requests(
             FROM registration_requests
             WHERE id = $1
             "#,
-            id
+            id as _
         )
         .fetch_optional(&mut *db)
         .await
@@ -416,7 +416,7 @@ pub(crate) async fn get_registration_requests(
 
 pub(crate) async fn get_registrations(
     db: &mut PoolConnection<Postgres>,
-    since_registration_id: Option<Uuid>,
+    since_registration_id: Option<ServerId>,
 ) -> Result<Vec<Registration>, sqlx::Error> {
     let since_registration = sqlx::query!(
         r#"
@@ -424,7 +424,7 @@ pub(crate) async fn get_registrations(
         FROM registrations
         WHERE id = $1
         "#,
-        since_registration_id
+        since_registration_id as _
     )
     .fetch_optional(&mut *db)
     .await
@@ -482,8 +482,8 @@ pub(crate) async fn get_registrations(
 pub(crate) async fn add_registration_request_from_voter_terminal(
     db: &mut PoolConnection<Postgres>,
     request: &client::input::RegistrationRequest,
-) -> Result<Uuid, sqlx::Error> {
-    let registration_request_id = Uuid::new_v4();
+) -> Result<ServerId, sqlx::Error> {
+    let registration_request_id = ServerId::new();
 
     sqlx::query!(
         r#"
@@ -503,7 +503,7 @@ pub(crate) async fn add_registration_request_from_voter_terminal(
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         "#,
-        registration_request_id,
+        registration_request_id as _,
         request.client_id as _,
         request.machine_id,
         request.common_access_card_id,
@@ -522,10 +522,71 @@ pub(crate) async fn add_registration_request_from_voter_terminal(
     Ok(registration_request_id)
 }
 
+pub(crate) async fn add_registration_from_voter_terminal(
+    db: &mut PoolConnection<Postgres>,
+    registration: client::input::Registration,
+) -> Result<ServerId, sqlx::Error> {
+    let registration_request = sqlx::query!(
+        r#"
+        SELECT id
+        FROM registration_requests
+        WHERE client_id = $1
+        AND machine_id = $2
+        AND common_access_card_id = $3
+        "#,
+        registration.registration_request_id as _,
+        registration.machine_id,
+        registration.common_access_card_id
+    )
+    .fetch_one(&mut *db)
+    .await?;
+    let election = sqlx::query!(
+        r#"
+        SELECT
+            id as "id: ServerId"
+        FROM elections
+        WHERE id = $1
+        "#,
+        registration.election_id as _
+    )
+    .fetch_one(&mut *db)
+    .await?;
+
+    let registration_id = ServerId::new();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO registrations (
+            id,
+            client_id,
+            machine_id,
+            common_access_card_id,
+            registration_request_id,
+            election_id,
+            precinct_id,
+            ballot_style_id
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        "#,
+        registration_id as _,
+        registration.client_id as _,
+        registration.machine_id,
+        registration.common_access_card_id,
+        registration_request.id as _,
+        election.id as _,
+        registration.precinct_id,
+        registration.ballot_style_id
+    )
+    .execute(&mut *db)
+    .await?;
+
+    Ok(registration_id)
+}
+
 pub(crate) async fn add_ballot_from_voter_terminal(
     db: &mut PoolConnection<Postgres>,
     ballot: client::input::Ballot,
-) -> Result<Uuid, sqlx::Error> {
+) -> Result<ServerId, sqlx::Error> {
     // we want to find the associated registration for this ballot
     let registration = sqlx::query!(
         r#"
@@ -543,7 +604,7 @@ pub(crate) async fn add_ballot_from_voter_terminal(
     .await?;
 
     // we want to insert the ballot, but use the registration id we just found
-    let ballot_id = Uuid::new_v4();
+    let ballot_id = ServerId::new();
 
     sqlx::query!(
         r#"
@@ -557,7 +618,7 @@ pub(crate) async fn add_ballot_from_voter_terminal(
         )
         VALUES ($1, $2, $3, $4, $5, $6)
         "#,
-        ballot_id,
+        ballot_id as _,
         ballot.client_id as _,
         ballot.machine_id,
         ballot.common_access_card_id,
@@ -572,7 +633,7 @@ pub(crate) async fn add_ballot_from_voter_terminal(
 
 pub(crate) async fn get_ballots(
     db: &mut PoolConnection<Postgres>,
-    since_ballot_id: Option<Uuid>,
+    since_ballot_id: Option<ServerId>,
 ) -> Result<Vec<Ballot>, sqlx::Error> {
     let since_ballot = match since_ballot_id {
         Some(id) => sqlx::query!(
@@ -581,7 +642,7 @@ pub(crate) async fn get_ballots(
             FROM ballots
             WHERE id = $1
             "#,
-            id
+            id as _
         )
         .fetch_optional(&mut *db)
         .await
