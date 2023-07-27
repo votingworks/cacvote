@@ -15,7 +15,7 @@ pub fn decode_page_from_image(image: image::GrayImage) -> color_eyre::Result<(u8
             |(_, content)| {
                 STANDARD
                     .decode(content.as_str())
-                    .or_else(|_| Err(eyre!("Unable to decode QR code: {}", content)))
+                    .map_err(|_| eyre!("Unable to decode QR code: {}", content))
             },
         )?;
 
