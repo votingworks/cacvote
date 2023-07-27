@@ -980,11 +980,7 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
-  libs/ballot-encoder-rs:
-    devDependencies:
-      is-ci-cli:
-        specifier: ^2.2.0
-        version: 2.2.0
+  libs/ballot-encoder-rs: {}
 
   libs/basics:
     dependencies:
@@ -1141,11 +1137,7 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
-  libs/central-scanner:
-    devDependencies:
-      is-ci-cli:
-        specifier: ^2.2.0
-        version: 2.2.0
+  libs/central-scanner: {}
 
   libs/db:
     dependencies:
@@ -2688,11 +2680,7 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
-  libs/types-rs:
-    devDependencies:
-      is-ci-cli:
-        specifier: ^2.2.0
-        version: 2.2.0
+  libs/types-rs: {}
 
   libs/ui:
     dependencies:
