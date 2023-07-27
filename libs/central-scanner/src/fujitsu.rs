@@ -91,20 +91,20 @@ fn start_scanimage(batch_template: &str) -> io::Result<Child> {
 
 /// Loops over `lines` until it finds the line containing `<RETURN>`. This line
 /// indicates that `scanimage` is ready to scan.
-fn block_until_scanimage_ready<I>(lines: &mut I)
+fn block_until_scanimage_ready<I>(lines: &mut I) -> io::Result<()>
 where
     I: Iterator<Item = io::Result<String>>,
 {
     debug!("[scanimage] blocking until ready to scan");
     for line in lines {
-        let line = line.unwrap();
+        let line = line?;
         debug!("[scanimage] stderr: {}", line);
-
         if line.contains("<RETURN>") {
             debug!("[scanimage] ready");
             break;
         }
     }
+    return Ok(());
 }
 
 /// Sends the lines from `lines` to the log as debug messages.
@@ -113,8 +113,7 @@ where
     I: Iterator<Item = io::Result<String>> + Send + 'static,
 {
     std::thread::spawn(move || {
-        for line in lines {
-            let line = line.unwrap();
+        for line in lines.flatten() {
             debug!("[scanimage] stderr: {}", line);
         }
 
@@ -168,7 +167,9 @@ fn establish_batch_scanimage_duplex_channel(
         for line in stdout_reader.lines().flatten() {
             debug!("[scanimage] stdout: {}", line);
             if let Some(first_line) = first_line.take() {
-                card_tx.send((first_line, line)).unwrap();
+                card_tx
+                    .send((first_line, line))
+                    .expect("unable to send card");
                 // wait for the next scan action before reading the next card,
                 // just in case the caller wants to stop the scan session early
                 wait_for_action()?;
@@ -201,14 +202,20 @@ impl ScanSession {
             .expect("unable to convert path to string");
         let mut scanimage = start_scanimage(batch_template)?;
 
-        let stdin = scanimage.stdin.take().unwrap();
-        let stdout = scanimage.stdout.take().unwrap();
-        let stderr = scanimage.stderr.take().unwrap();
+        let stdin = scanimage.stdin.take().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::BrokenPipe, "scanimage stdin not available")
+        })?;
+        let stdout = scanimage.stdout.take().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::BrokenPipe, "scanimage stdout not available")
+        })?;
+        let stderr = scanimage.stderr.take().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::BrokenPipe, "scanimage stderr not available")
+        })?;
 
         let stderr_reader = BufReader::new(stderr);
         let mut lines = stderr_reader.lines();
 
-        block_until_scanimage_ready(lines.by_ref());
+        block_until_scanimage_ready(lines.by_ref())?;
         pipe_stderr_to_log(lines);
         let (action_tx, card_rx) = establish_batch_scanimage_duplex_channel(stdin, stdout);
 
