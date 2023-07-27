@@ -21,6 +21,29 @@ executors:
           password: $VX_DOCKER_PASSWORD
 
 jobs:
+  # @votingworks/central-scan-backend
+  test-apps-central-scan-backend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/central-scan/backend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/central-scan/backend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/central-scan/backend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/central-scan/backend/reports/
+
   # @votingworks/rave-mark-backend
   test-apps-rave-mark-backend:
     executor: nodejs
@@ -187,6 +210,29 @@ jobs:
       - store_test_results:
           path: libs/ballot-encoder/reports/
 
+  # ballot-encoder-rs
+  test-libs-ballot-encoder-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/ballot-encoder-rs build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/ballot-encoder-rs lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/ballot-encoder-rs test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/ballot-encoder-rs/reports/
+
   # @votingworks/basics
   test-libs-basics:
     executor: nodejs
@@ -232,6 +278,29 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: libs/cdf-schema-builder/reports/
+
+  # central-scanner
+  test-libs-central-scanner:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/central-scanner build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/central-scanner lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/central-scanner test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/central-scanner/reports/
 
   # @votingworks/db
   test-libs-db:
@@ -555,6 +624,29 @@ jobs:
       - store_test_results:
           path: libs/types/reports/
 
+  # @votingworks/types-rs
+  test-libs-types-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/types-rs build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/types-rs lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/types-rs test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/types-rs/reports/
+
   # @votingworks/ui
   test-libs-ui:
     executor: nodejs
@@ -641,6 +733,7 @@ jobs:
 workflows:
   test:
     jobs:
+      - test-apps-central-scan-backend
       - test-apps-rave-mark-backend
       - test-apps-rave-mark-frontend
       - test-apps-rave-mark-integration-testing
@@ -648,8 +741,10 @@ workflows:
       - test-libs-auth
       - test-libs-backend
       - test-libs-ballot-encoder
+      - test-libs-ballot-encoder-rs
       - test-libs-basics
       - test-libs-cdf-schema-builder
+      - test-libs-central-scanner
       - test-libs-db
       - test-libs-dev-dock-backend
       - test-libs-dev-dock-frontend
@@ -664,6 +759,7 @@ workflows:
       - test-libs-res-to-ts
       - test-libs-test-utils
       - test-libs-types
+      - test-libs-types-rs
       - test-libs-ui
       - test-libs-utils
       - test-services-rave-server
