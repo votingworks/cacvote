@@ -87,7 +87,7 @@ fn test_compare_to_manually_encoded_empty_votes() {
     );
     let encodable_cvr = EncodableCvr::new(
         election_definition.election_hash,
-        cvr_with_no_votes.clone(),
+        cvr_with_no_votes,
         TestMode::Test,
     );
     assert_bytes_equal(

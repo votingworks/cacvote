@@ -58,7 +58,7 @@ pub fn encode_into<E: Endianness>(
 
     encode_election_hash_into(&partial_election_hash, writer)?;
     encode_ballot_config_into(
-        &election,
+        election,
         ballot_style_id,
         precinct_id,
         *test_mode,

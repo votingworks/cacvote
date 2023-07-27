@@ -22,7 +22,7 @@ pub fn decode(election: &Election, data: &[u8]) -> std::io::Result<EncodableCvr>
     let decoded = decode_from(election, &mut reader)?;
 
     while !reader.byte_aligned() {
-        if reader.read_bit()? == true {
+        if reader.read_bit()? {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "unexpected non-zero padding bit",

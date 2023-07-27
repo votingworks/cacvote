@@ -1,5 +1,4 @@
 #[allow(clippy::unusual_byte_groupings)]
-
 pub const FAMOUS_NAMES_EAST_LINCOLN_STYLE_1_NO_VOTES: [u8; 19] = [
     // prelude
     b'V',
@@ -37,6 +36,7 @@ pub const FAMOUS_NAMES_EAST_LINCOLN_STYLE_1_NO_VOTES: [u8; 19] = [
     //└── vote roll call #7 (false)
 ];
 
+#[allow(clippy::unusual_byte_groupings)]
 pub const FAMOUS_NAMES_EAST_LINCOLN_STYLE_1_VOTES_IN_ALL_CONTESTS: [u8; 23] = [
     // prelude
     b'V',
@@ -94,6 +94,7 @@ pub const FAMOUS_NAMES_EAST_LINCOLN_STYLE_1_VOTES_IN_ALL_CONTESTS: [u8; 23] = [
     //└┴┴┴── "city-council" votes #5-8 (mark-antony=no, harriet-tubman=yes, martin-luther-king=no, marilyn-monroe=yes)
 ];
 
+#[allow(clippy::unusual_byte_groupings)]
 pub const FAMOUS_NAMES_EAST_LINCOLN_STYLE_1_WRITE_INS: [u8; 61] = [
     // prelude
     b'V',
