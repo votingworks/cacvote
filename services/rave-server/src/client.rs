@@ -20,7 +20,7 @@ pub struct ClientId(pub Uuid);
 pub mod input {
     use serde::Deserialize;
 
-    use crate::cvr;
+    use types_rs::cdf::cvr;
 
     use super::ClientId;
 
@@ -76,7 +76,7 @@ pub mod output {
     use serde::Serialize;
     use sqlx::types::Json;
 
-    use crate::cvr;
+    use types_rs::cdf::cvr;
 
     use super::{ClientId, ServerId};
 

@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use nanoid::nanoid;
 use regex::Regex;
 
 use serde::{Deserialize, Serialize};
@@ -56,7 +57,7 @@ pub enum CVRStatus {
 }
 
 /// Used in CVRSnapshot::Type to indicate the type of snapshot.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CVRType {
     /// Has been adjudicated.
     #[serde(rename = "interpreted")]
@@ -68,6 +69,7 @@ pub enum CVRType {
 
     /// As scanned, no contest rules applied.
     #[serde(rename = "original")]
+    #[default]
     Original,
 }
 
@@ -172,7 +174,7 @@ pub enum IdentifierType {
 }
 
 /// Used in SelectionPosition::HasIndication to identify whether a selection indication is present.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum IndicationStatus {
     /// There is no selection indication.
     #[serde(rename = "no")]
@@ -180,6 +182,7 @@ pub enum IndicationStatus {
 
     /// It is unknown whether there is a selection indication, e.g., used for ambiguous marks.
     #[serde(rename = "unknown")]
+    #[default]
     Unknown,
 
     /// There is a selection indication present.
@@ -307,9 +310,10 @@ pub enum VoteVariation {
     SuperMajority,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum AnnotationObjectType {
     #[serde(rename = "CVR.Annotation")]
+    #[default]
     Annotation,
 }
 
@@ -367,9 +371,10 @@ pub struct BallotMeasureContest {
     pub vote_variation: Option<VoteVariation>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum BallotMeasureSelectionObjectType {
     #[serde(rename = "CVR.BallotMeasureSelection")]
+    #[default]
     BallotMeasure,
 }
 
@@ -390,9 +395,10 @@ pub struct BallotMeasureSelection {
     pub selection: String,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CVRObjectType {
     #[serde(rename = "CVR.CVR")]
+    #[default]
     Cvr,
 }
 
@@ -460,7 +466,30 @@ pub struct Cvr {
 
     /// Indicates whether the ballot is an absentee or precinct ballot.
     #[serde(rename = "vxBallotType")]
-    vx_ballot_type: VxBallotType,
+    pub vx_ballot_type: VxBallotType,
+}
+
+impl Default for Cvr {
+    fn default() -> Self {
+        Self {
+            object_type: CVRObjectType::Cvr,
+            ballot_audit_id: None,
+            ballot_image: None,
+            ballot_pre_printed_id: None,
+            ballot_sheet_id: None,
+            ballot_style_id: None,
+            ballot_style_unit_id: None,
+            batch_id: None,
+            batch_sequence_id: None,
+            cvr_snapshot: vec![],
+            creating_device_id: None,
+            current_snapshot_id: "".to_string(),
+            election_id: "".to_string(),
+            party_ids: None,
+            unique_id: None,
+            vx_ballot_type: VxBallotType::Precinct,
+        }
+    }
 }
 
 /// Used in CVR::vxBallotType to indicate whether the ballot is an absentee or precinct ballot.
@@ -476,14 +505,43 @@ pub enum VxBallotType {
     Provisional,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+impl VxBallotType {
+    pub fn max() -> u32 {
+        // updating this value is a breaking change
+        2u32.pow(4) - 1
+    }
+}
+
+impl From<VxBallotType> for u32 {
+    fn from(vx_ballot_type: VxBallotType) -> Self {
+        match vx_ballot_type {
+            VxBallotType::Precinct => 0,
+            VxBallotType::Absentee => 1,
+            VxBallotType::Provisional => 2,
+        }
+    }
+}
+
+impl From<u32> for VxBallotType {
+    fn from(vx_ballot_type: u32) -> Self {
+        match vx_ballot_type {
+            0 => VxBallotType::Precinct,
+            1 => VxBallotType::Absentee,
+            2 => VxBallotType::Provisional,
+            _ => panic!("Invalid VxBallotType"),
+        }
+    }
+}
+
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CVRContestObjectType {
     #[serde(rename = "CVR.CVRContest")]
+    #[default]
     CVRContest,
 }
 
 /// CVRContest class is included by CVRSnapshot for each contest on the ballot that was voted, that is, whose contest options contain indications that may constitute a vote. CVRContest includes CVRContestSelection for each contest option in the contest containing an indication or write-in.     CVRSnapshot can also include CVRContest for every contest on the ballot regardless of whether any of the contest options contain an indication, for cases where the CVR must include all contests that appeared on the ballot.     CVRContest attributes are for including summary information about the contest.  Overvotes plus Undervotes plus TotalVotes must equal the number of votes allowable in the contest, e.g., in a &quot;chose 3 of 5&quot; contest in which the voter chooses only 2, then Overvotes = 0, Undervotes = 1, and TotalVotes = 2, which adds up to the number of votes allowable = 3.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub struct CVRContest {
     #[serde(rename = "@type")]
     pub object_type: CVRContestObjectType,
@@ -524,14 +582,15 @@ pub struct CVRContest {
     pub write_ins: Option<i64>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CVRContestSelectionObjectType {
     #[serde(rename = "CVR.CVRContestSelection")]
+    #[default]
     CVRContestSelection,
 }
 
 /// CVRContestSelection is used to link a contest option containing an indication with information about the indication, such as whether a mark constitutes a countable vote, or whether a mark is determined to be marginal, etc.  CVRContest includes an instance of CVRContestSelection when an indication for the selection is present, and CVRContestSelection then includes SelectionPosition for each indication present. To tie the indication to the specific contest selection, CVRContestSelection links to an instance of ContestSelection that has previously been included by Contest.    Since multiple indications per contest option are possible for some voting methods, CVRContestSelection can include multiple instances of SelectionPosition, one per indication. CVRContestSelection can also be used for the purpose of including, in the CVR, all contest options in the contest regardless of whether indications are present.  In this case, CVRContestSelection would not include SelectionPosition if no indication is present but would link to the appropriate instance of ContestSelection.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub struct CVRContestSelection {
     #[serde(rename = "@type")]
     pub object_type: CVRContestSelectionObjectType,
@@ -573,9 +632,10 @@ pub struct CVRContestSelection {
 }
 
 /// CVRSnapshot contains a version of the contest selections for a CVR; there can be multiple versions of CVRSnapshot within the same CVR.  Type specifies the type of the snapshot, i.e., whether interpreted by the scanner according to contest rules, modified as a result of adjudication, or the original, that is, the version initially scanned before contest rules are applied.  CVR includes CVRSnapshot.Other attributes are repeated in each CVRSnapshot because they may differ across snapshots, e.g., the contests could be different as well as other status.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CVRSnapshotObjectType {
     #[serde(rename = "CVR.CVRSnapshot")]
+    #[default]
     CVRSnapshot,
 }
 
@@ -608,14 +668,29 @@ pub struct CVRSnapshot {
     pub snapshot_type: CVRType,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+impl Default for CVRSnapshot {
+    fn default() -> Self {
+        Self {
+            id: nanoid!(),
+            object_type: CVRSnapshotObjectType::default(),
+            annotation: None,
+            cvr_contest: None,
+            other_status: None,
+            status: None,
+            snapshot_type: CVRType::default(),
+        }
+    }
+}
+
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CVRWriteInObjectType {
     #[serde(rename = "CVR.CVRWriteIn")]
+    #[default]
     CVRWriteIn,
 }
 
 /// CVRWriteIn is used when the contest selection is a write-in. It has attributes for the image or text of the write-in.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub struct CVRWriteIn {
     #[serde(rename = "@type")]
     pub object_type: CVRWriteInObjectType,
@@ -630,9 +705,10 @@ pub struct CVRWriteIn {
 }
 
 /// Candidate identifies a candidate in a contest on the voter's ballot.  Election includes instances of Candidate for each candidate in a contest; typically, only those candidates who received votes would be included.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CandidateObjectType {
     #[serde(rename = "CVR.Candidate")]
+    #[default]
     Candidate,
 }
 
@@ -658,9 +734,10 @@ pub struct Candidate {
 }
 
 /// CandidateContest is a subclass of Contest and is used to identify the type of contest as involving one or more candidates. It inherits attributes from Contest.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CandidateContestObjectType {
     #[serde(rename = "CVR.CandidateContest")]
+    #[default]
     CandidateContest,
 }
 
@@ -709,9 +786,10 @@ pub struct CandidateContest {
 }
 
 /// CandidateSelection is a subclass of ContestSelection and is used for candidates, including for write-in candidates.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CandidateSelectionObjectType {
     #[serde(rename = "CVR.CandidateSelection")]
+    #[default]
     CandidateSelection,
 }
 
@@ -735,9 +813,10 @@ pub struct CandidateSelection {
     pub is_write_in: Option<bool>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CastVoteRecordReportObjectType {
     #[serde(rename = "CVR.CastVoteRecordReport")]
+    #[default]
     CastVoteRecordReport,
 }
 
@@ -796,9 +875,10 @@ pub struct CastVoteRecordReport {
     vx_batch: Vec<VxBatch>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum VxBatchObjectType {
     #[serde(rename = "CVR.vxBatch")]
+    #[default]
     VxBatch,
 }
 
@@ -841,9 +921,10 @@ pub struct VxBatch {
     creating_device_id: String,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CodeObjectType {
     #[serde(rename = "CVR.Code")]
+    #[default]
     Code,
 }
 
@@ -948,9 +1029,10 @@ pub enum AnyContest {
 /// Instances of CVRContestSelection subsequently link to the contest selections as needed so as to tie together the contest, the contest selection, and the mark(s) made for the contest selection.
 ///
 /// ContestSelection contains one attribute, Code, that can be used to identify the contest selection and thereby eliminate the need to identify it using the subclasses.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum ContestSelectionObjectType {
     #[serde(rename = "CVR.ContestSelection")]
+    #[default]
     ContestSelection,
 }
 
@@ -967,9 +1049,10 @@ pub struct ContestSelection {
 }
 
 /// Election defines instances of the Contest and Candidate classes so that they can be later referenced in CVR classes.  Election includes an instance of Contest for each contest in the election and includes an instance of Candidate for each candidate.  This is done to utilize file sizes more efficiently; otherwise each CVR would need to define these instances separately and much duplication would occur.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum ElectionObjectType {
     #[serde(rename = "CVR.Election")]
+    #[default]
     Election,
 }
 
@@ -1002,9 +1085,10 @@ pub struct Election {
     pub name: Option<String>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum FileObjectType {
     #[serde(rename = "CVR.File")]
+    #[default]
     File,
 }
 
@@ -1033,9 +1117,10 @@ pub struct File {
 /// The geographical scope of the election, or the unit of geography associated with an individual CVR.
 ///
 /// CastVoteRecordReport includes instances of GpUnit as needed. Election references GpUnit as ElectionScope, for the geographical scope of the election.  CVR CastVoteRecordReport includes instances of GpUnit as needed. Election references GpUnit as ElectionScope, for the geographical scope of the election.  CVR references GpUnit as BallotStyleUnit to link a CVR to the smallest political subdivision that uses the same ballot style as was used for the voter's ballot.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum GpUnitObjectType {
     #[serde(rename = "CVR.GpUnit")]
+    #[default]
     GpUnit,
 }
 
@@ -1068,9 +1153,10 @@ pub struct GpUnit {
     pub gp_unit_type: ReportingUnitType,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum HashObjectType {
     #[serde(rename = "CVR.Hash")]
+    #[default]
     Hash,
 }
 
@@ -1093,9 +1179,10 @@ pub struct Hash {
     pub value: String,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum ImageObjectType {
     #[serde(rename = "CVR.Image")]
+    #[default]
     Image,
 }
 
@@ -1117,9 +1204,10 @@ pub struct Image {
     pub mime_type: Option<String>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum ImageDataObjectType {
     #[serde(rename = "CVR.ImageData")]
+    #[default]
     ImageData,
 }
 
@@ -1147,9 +1235,10 @@ pub struct ImageData {
 }
 
 /// Party is used for describing information about a political party associated with the voter's ballot.  CVR includes instances of Party as needed, e.g., for a CVR corresponding to a ballot in a partisan primary, and CandidateContest references Party as needed to link a candidate to their political party.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum PartyObjectType {
     #[serde(rename = "CVR.Party")]
+    #[default]
     Party,
 }
 
@@ -1175,9 +1264,10 @@ pub struct Party {
 }
 
 /// PartyContest is a subclass of Contest and is used to identify the type of contest as involving a straight party selection.  It inherits attributes from Contest.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum PartyContestObjectType {
     #[serde(rename = "CVR.PartyContest")]
+    #[default]
     PartyContest,
 }
 
@@ -1214,9 +1304,10 @@ pub struct PartyContest {
 }
 
 /// PartySelection is a subclass of ContestSelection and is used typically for a contest selection in a straight-party contest.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum PartySelectionObjectType {
     #[serde(rename = "CVR.PartySelection")]
+    #[default]
     PartySelection,
 }
 
@@ -1236,9 +1327,10 @@ pub struct PartySelection {
     pub party_ids: Vec<String>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum ReportingDeviceObjectType {
     #[serde(rename = "CVR.ReportingDevice")]
+    #[default]
     ReportingDeviceType,
 }
 
@@ -1281,9 +1373,10 @@ pub struct ReportingDevice {
 }
 
 /// RetentionContest is a subclass of BallotMeasureContest and is used to identify the type of contest as involving a retention, such as for a judicial retention.  While it is similar to BallotMeasureContest, it contains a link to Candidate that BallotMeasureContest does not.  RetentionContest inherits attributes from Contest.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum RetentionContestObjectType {
     #[serde(rename = "CVR.RetentionContest")]
+    #[default]
     RetentionContest,
 }
 
@@ -1324,14 +1417,15 @@ pub struct RetentionContest {
     pub vote_variation: Option<VoteVariation>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum SelectionPositionObjectType {
     #[serde(rename = "CVR.SelectionPosition")]
+    #[default]
     SelectionPosition,
 }
 
 /// CVRContestSelection includes SelectionPosition to specify a voter's indication/mark in a contest option, and thus, a potential vote. The number of potential SelectionPositions that could be included by CVRContestSelection is the same as the number of ovals next to a particular option. There will be usually 1 instance of SelectionPosition for plurality voting, but there could be multiple instances for RCV, approval, cumulative, or other vote variations in which a voter can select multiple options per candidate.   MarkMetricValue specifies the measurement of a mark on a paper ballot. The measurement is assigned by the scanner for measurements of mark density or quality and would be used by the scanner to indicate whether the mark is a valid voter mark representing a vote or is marginal.SelectionPosition contains additional information about the mark to specify whether the indication/mark is allocable, as well as information needed for certain voting methods.SelectionPosition includes CVRWriteIn, whose attributes are used to include information about the write-in including the text of the write-in or an image of the write-in.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub struct SelectionPosition {
     #[serde(rename = "@type")]
     pub object_type: SelectionPositionObjectType,

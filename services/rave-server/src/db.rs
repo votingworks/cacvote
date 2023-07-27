@@ -4,6 +4,7 @@ use rocket::{fairing, Build, Rocket};
 use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
 use sqlx::{pool::PoolConnection, types::Json, Postgres};
+use types_rs::cdf::cvr::Cvr;
 use uuid::Uuid;
 
 use crate::client::{self, ClientId, ServerId};
@@ -212,7 +213,7 @@ pub(crate) struct Ballot {
     pub machine_id: String,
     pub common_access_card_id: String,
     pub registration_id: ServerId,
-    pub cast_vote_record: Json<crate::cvr::Cvr>,
+    pub cast_vote_record: Json<Cvr>,
     pub created_at: sqlx::types::time::OffsetDateTime,
 }
 
@@ -260,7 +261,7 @@ pub(crate) async fn get_admins(
 pub(crate) async fn create_election(
     db: &mut PoolConnection<Postgres>,
     id: Uuid,
-    election: crate::cvr::Election,
+    election: types_rs::cdf::cvr::Election,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"

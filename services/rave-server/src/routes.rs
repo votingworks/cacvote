@@ -1,5 +1,4 @@
 use crate::client::ServerId;
-use crate::cvr::Election;
 use crate::{client, db};
 use rocket::http::{ContentType, Status};
 use rocket::serde::json::{json, Json};
@@ -7,6 +6,7 @@ use rocket_db_pools::{sqlx, Connection};
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::types::Uuid;
+use types_rs::cdf::cvr::Election;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

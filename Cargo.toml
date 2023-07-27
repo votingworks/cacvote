@@ -1,5 +1,14 @@
 [workspace]
 
 members = [
+    "apps/central-scan/backend",
+    "libs/ballot-encoder-rs",
+    "libs/central-scanner",
+    "libs/types-rs",
     "services/rave-server",
 ]
+
+[workspace.dependencies]
+ballot-encoder-rs = { path = "libs/ballot-encoder-rs" }
+central-scanner = { path = "libs/central-scanner" }
+types-rs = { path = "libs/types-rs" }

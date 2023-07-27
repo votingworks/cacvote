@@ -1,0 +1,17 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ballot-encoder-rs = { workspace = true }
+base64 = "0.21.2"
+central-scanner = { workspace = true }
+color-eyre = "0.6.2"
+env_logger = "0.10.0"
+image = "0.24.6"
+rayon = "1.7.0"
+rocket = { version = "=0.5.0-rc.3", features = ["json"] }
+rqrr = "0.6.0"

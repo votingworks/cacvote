@@ -7,7 +7,6 @@ use rocket_db_pools::Database;
 use routes::*;
 
 mod client;
-mod cvr;
 mod db;
 mod routes;
 
