@@ -104,6 +104,12 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
+  apps/central-scan/backend:
+    devDependencies:
+      is-ci-cli:
+        specifier: ^2.2.0
+        version: 2.2.0
+
   apps/rave-mark/backend:
     dependencies:
       '@votingworks/auth':
@@ -978,6 +984,8 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
+  libs/ballot-encoder-rs: {}
+
   libs/basics:
     dependencies:
       util:
@@ -1132,6 +1140,8 @@ importers:
       typescript:
         specifier: 4.6.3
         version: 4.6.3
+
+  libs/central-scanner: {}
 
   libs/db:
     dependencies:
@@ -2673,6 +2683,8 @@ importers:
       typescript:
         specifier: 4.6.3
         version: 4.6.3
+
+  libs/types-rs: {}
 
   libs/ui:
     dependencies:
