@@ -104,11 +104,7 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
-  apps/central-scan/backend:
-    devDependencies:
-      is-ci-cli:
-        specifier: ^2.2.0
-        version: 2.2.0
+  apps/central-scan/backend: {}
 
   apps/rave-mark/backend:
     dependencies:
@@ -984,7 +980,11 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
-  libs/ballot-encoder-rs: {}
+  libs/ballot-encoder-rs:
+    devDependencies:
+      is-ci-cli:
+        specifier: ^2.2.0
+        version: 2.2.0
 
   libs/basics:
     dependencies:
@@ -1141,7 +1141,11 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
-  libs/central-scanner: {}
+  libs/central-scanner:
+    devDependencies:
+      is-ci-cli:
+        specifier: ^2.2.0
+        version: 2.2.0
 
   libs/db:
     dependencies:
@@ -2684,7 +2688,11 @@ importers:
         specifier: 4.6.3
         version: 4.6.3
 
-  libs/types-rs: {}
+  libs/types-rs:
+    devDependencies:
+      is-ci-cli:
+        specifier: ^2.2.0
+        version: 2.2.0
 
   libs/ui:
     dependencies:

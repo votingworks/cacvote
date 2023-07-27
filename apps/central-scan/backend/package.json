@@ -4,18 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "script/build",
-    "lint": "script/lint",
+    "build": "cargo build",
+    "lint": "cargo clippy -- -D warnings",
     "start": "cargo watch -x run",
-    "test:ci": "script/ci",
-    "test:dev": "cargo test",
-    "test": "is-ci test:ci test:dev"
+    "test": "cargo test"
   },
   "keywords": [],
   "author": "VotingWorks Eng <eng@voting.works>",
   "license": "GPL-3.0",
-  "devDependencies": {
-    "is-ci-cli": "^2.2.0"
-  },
   "packageManager": "pnpm@8.1.0"
 }
