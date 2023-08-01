@@ -1,120 +1,8 @@
-use crate::client::ServerId;
-use crate::{client, db};
+use crate::db;
 use rocket::http::{ContentType, Status};
 use rocket::serde::json::{json, Json};
-use rocket_db_pools::{sqlx, Connection};
-use serde::Deserialize;
-use serde::Serialize;
-use sqlx::types::Uuid;
-use types_rs::cdf::cvr::Election;
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetElectionsInput {}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetElectionsOutput {
-    elections: Vec<db::Election>,
-}
-
-#[post("/api/getElections", format = "json", data = "<_input>")]
-pub(crate) async fn get_elections(
-    mut db: Connection<db::Db>,
-    _input: Json<GetElectionsInput>,
-) -> (Status, (ContentType, String)) {
-    let elections = match db::get_elections(&mut db, None).await {
-        Err(e) => {
-            return (
-                Status::InternalServerError,
-                (
-                    ContentType::JSON,
-                    json!({ "error": e.to_string() }).to_string(),
-                ),
-            )
-        }
-        Ok(elections) => elections,
-    };
-
-    let output = GetElectionsOutput { elections };
-
-    (
-        Status::Ok,
-        (ContentType::JSON, serde_json::to_string(&output).unwrap()),
-    )
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateElectionInput {
-    id: Uuid,
-    election_data: String,
-}
-
-#[post("/api/createElection", format = "json", data = "<input>")]
-pub(crate) async fn create_election(
-    mut db: Connection<db::Db>,
-    input: Json<CreateElectionInput>,
-) -> (Status, (ContentType, String)) {
-    let id = input.id;
-    let election_data_parse_result: Result<Election, _> =
-        serde_json::from_str(&input.election_data);
-
-    let election = match election_data_parse_result {
-        Ok(election) => election,
-        Err(e) => {
-            return (
-                Status::BadRequest,
-                (
-                    ContentType::JSON,
-                    json!({ "error": e.to_string() }).to_string(),
-                ),
-            )
-        }
-    };
-
-    match db::create_election(&mut db, id, election).await {
-        Err(e) => (
-            Status::InternalServerError,
-            (
-                ContentType::JSON,
-                json!({ "error": e.to_string() }).to_string(),
-            ),
-        ),
-        Ok(_) => (Status::Created, (ContentType::JSON, json!({}).to_string())),
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RaveMarkSyncInput {
-    #[serde(default)]
-    last_synced_registration_request_id: Option<ServerId>,
-    #[serde(default)]
-    last_synced_registration_id: Option<ServerId>,
-    #[serde(default)]
-    last_synced_election_id: Option<ServerId>,
-    #[serde(default)]
-    last_synced_ballot_id: Option<ServerId>,
-    #[serde(default)]
-    registration_requests: Vec<client::input::RegistrationRequest>,
-    #[serde(default)]
-    elections: Vec<client::input::Election>,
-    #[serde(default)]
-    registrations: Vec<client::input::Registration>,
-    #[serde(default)]
-    ballots: Vec<client::input::Ballot>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RaveMarkSyncOutput {
-    admins: Vec<client::output::Admin>,
-    elections: Vec<client::output::Election>,
-    registration_requests: Vec<client::output::RegistrationRequest>,
-    registrations: Vec<client::output::Registration>,
-    ballots: Vec<client::output::Ballot>,
-}
+use rocket_db_pools::Connection;
+use types_rs::rave::{client, RaveMarkSyncInput, RaveMarkSyncOutput};
 
 #[post("/api/sync", format = "json", data = "<input>")]
 pub(crate) async fn rave_mark_sync(
@@ -125,11 +13,13 @@ pub(crate) async fn rave_mark_sync(
         last_synced_registration_request_id,
         last_synced_registration_id,
         last_synced_election_id,
-        last_synced_ballot_id,
+        last_synced_printed_ballot_id,
+        last_synced_scanned_ballot_id,
         registration_requests,
         elections,
         registrations,
-        ballots,
+        printed_ballots,
+        scanned_ballots,
     } = input.into_inner();
 
     for client_request in registration_requests.into_iter() {
@@ -143,7 +33,7 @@ pub(crate) async fn rave_mark_sync(
     }
 
     for election in elections.into_iter() {
-        let result = db::add_election_from_voter_terminal(&mut db, election).await;
+        let result = db::add_election(&mut db, election).await;
 
         if let Err(e) = result {
             error!("Failed to insert election: {}", e);
@@ -158,8 +48,16 @@ pub(crate) async fn rave_mark_sync(
         }
     }
 
-    for ballot in ballots.into_iter() {
-        let result = db::add_ballot_from_voter_terminal(&mut db, ballot).await;
+    for printed_ballot in printed_ballots.into_iter() {
+        let result = db::add_printed_ballot_from_voter_terminal(&mut db, printed_ballot).await;
+
+        if let Err(e) = result {
+            error!("Failed to insert ballot: {}", e);
+        }
+    }
+
+    for scanned_ballot in scanned_ballots.into_iter() {
+        let result = db::add_scanned_ballot_from_scan_terminal(&mut db, scanned_ballot).await;
 
         if let Err(e) = result {
             error!("Failed to insert ballot: {}", e);
@@ -224,18 +122,33 @@ pub(crate) async fn rave_mark_sync(
         Ok(registrations) => registrations,
     };
 
-    let ballots = match db::get_ballots(&mut db, last_synced_ballot_id).await {
-        Err(e) => {
-            return (
-                Status::InternalServerError,
-                (
-                    ContentType::JSON,
-                    json!({ "error": e.to_string() }).to_string(),
-                ),
-            )
-        }
-        Ok(ballots) => ballots,
-    };
+    let printed_ballots =
+        match db::get_printed_ballots(&mut db, last_synced_printed_ballot_id).await {
+            Err(e) => {
+                return (
+                    Status::InternalServerError,
+                    (
+                        ContentType::JSON,
+                        json!({ "error": e.to_string() }).to_string(),
+                    ),
+                )
+            }
+            Ok(ballots) => ballots,
+        };
+
+    let scanned_ballots =
+        match db::get_scanned_ballots(&mut db, last_synced_scanned_ballot_id).await {
+            Err(e) => {
+                return (
+                    Status::InternalServerError,
+                    (
+                        ContentType::JSON,
+                        json!({ "error": e.to_string() }).to_string(),
+                    ),
+                )
+            }
+            Ok(ballots) => ballots,
+        };
 
     let output = RaveMarkSyncOutput {
         admins: admins.into_iter().map(|admin| admin.into()).collect(),
@@ -251,7 +164,14 @@ pub(crate) async fn rave_mark_sync(
             .into_iter()
             .map(|registration| registration.into())
             .collect(),
-        ballots: ballots.into_iter().map(|ballot| ballot.into()).collect(),
+        printed_ballots: printed_ballots
+            .into_iter()
+            .map(|ballot| ballot.into())
+            .collect(),
+        scanned_ballots: scanned_ballots
+            .into_iter()
+            .map(|ballot| ballot.into())
+            .collect(),
     };
 
     (

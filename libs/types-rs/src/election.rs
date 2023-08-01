@@ -1,4 +1,5 @@
 use sha256::digest;
+use sqlx::Type;
 use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
@@ -36,10 +37,53 @@ impl FromStr for ElectionDefinition {
     }
 }
 
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ElectionDefinition
+where
+    sqlx::types::Json<Self>: sqlx::Decode<'r, sqlx::Postgres>,
+{
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        let election_data_bytes = value.as_bytes()?;
+        serde_json::from_slice(election_data_bytes).map_err(Into::into)
+    }
+}
+
+impl<'q, DB> sqlx::Encode<'q, DB> for ElectionDefinition
+where
+    String: sqlx::Encode<'q, DB>,
+    DB: sqlx::Database,
+{
+    fn encode_by_ref(
+        &self,
+        buf: &mut <DB as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
+        self.election_data.encode_by_ref(buf)
+    }
+}
+
+impl Type<sqlx::Postgres> for ElectionDefinition {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        println!("TYPE INFO");
+        sqlx::postgres::PgTypeInfo::with_name("json")
+    }
+}
+
 impl ElectionDefinition {
     pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> color_eyre::Result<Self> {
         let election_data = std::fs::read_to_string(path)?;
         Self::from_str(&election_data).map_err(Into::into)
+    }
+}
+
+impl Serialize for ElectionDefinition {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.election_data.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ElectionDefinition {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let election_data = String::deserialize(deserializer)?;
+        Self::from_str(&election_data).map_err(serde::de::Error::custom)
     }
 }
 

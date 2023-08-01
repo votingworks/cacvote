@@ -6,7 +6,6 @@ use rocket::fairing;
 use rocket_db_pools::Database;
 use routes::*;
 
-mod client;
 mod db;
 mod routes;
 
@@ -18,8 +17,5 @@ fn rocket() -> _ {
             "Run Migrations",
             run_migrations,
         ))
-        .mount(
-            "/",
-            routes![create_election, get_elections, rave_mark_sync,],
-        )
+        .mount("/", routes![rave_mark_sync])
 }

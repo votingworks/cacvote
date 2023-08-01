@@ -3,7 +3,7 @@ cd "${DIR}/.."
 
 sudo service postgresql start
 
-DB=rave
+DB=rave-scan
 USER=${1:-postgres}
 TEST_USER=${2:-rave}
 TEST_DB=${3:-${DB}_test}

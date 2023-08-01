@@ -104,7 +104,7 @@ where
             break;
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 /// Sends the lines from `lines` to the log as debug messages.

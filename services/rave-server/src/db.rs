@@ -4,10 +4,10 @@ use rocket::{fairing, Build, Rocket};
 use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
 use sqlx::{pool::PoolConnection, types::Json, Postgres};
-use types_rs::cdf::cvr::Cvr;
-use uuid::Uuid;
-
-use crate::client::{self, ClientId, ServerId};
+use types_rs::{
+    cdf::cvr::Cvr,
+    rave::{client, ClientId, ServerId},
+};
 
 #[derive(Database)]
 #[database("sqlx")]
@@ -53,7 +53,8 @@ pub(crate) struct Election {
     pub id: ServerId,
     pub client_id: ClientId,
     pub machine_id: String,
-    pub election: Json<serde_json::Value>,
+    pub election: types_rs::election::ElectionDefinition,
+    pub election_hash: String,
     pub created_at: sqlx::types::time::OffsetDateTime,
 }
 
@@ -64,6 +65,7 @@ impl From<Election> for client::output::Election {
             client_id,
             machine_id,
             election,
+            election_hash,
             created_at,
         } = election;
 
@@ -72,6 +74,7 @@ impl From<Election> for client::output::Election {
             client_id,
             machine_id,
             election,
+            election_hash,
             created_at,
         }
     }
@@ -207,7 +210,7 @@ impl From<Registration> for client::output::Registration {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct Ballot {
+pub(crate) struct PrintedBallot {
     pub id: ServerId,
     pub client_id: ClientId,
     pub machine_id: String,
@@ -217,9 +220,9 @@ pub(crate) struct Ballot {
     pub created_at: sqlx::types::time::OffsetDateTime,
 }
 
-impl From<Ballot> for client::output::Ballot {
-    fn from(ballot: Ballot) -> Self {
-        let Ballot {
+impl From<PrintedBallot> for client::output::PrintedBallot {
+    fn from(ballot: PrintedBallot) -> Self {
+        let PrintedBallot {
             id,
             client_id,
             machine_id,
@@ -235,6 +238,38 @@ impl From<Ballot> for client::output::Ballot {
             machine_id,
             common_access_card_id,
             registration_id,
+            cast_vote_record: cast_vote_record.0,
+            created_at,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct ScannedBallot {
+    pub id: ServerId,
+    pub client_id: ClientId,
+    pub machine_id: String,
+    pub election_id: ServerId,
+    pub cast_vote_record: Json<Cvr>,
+    pub created_at: sqlx::types::time::OffsetDateTime,
+}
+
+impl From<ScannedBallot> for client::output::ScannedBallot {
+    fn from(ballot: ScannedBallot) -> Self {
+        let ScannedBallot {
+            id,
+            client_id,
+            machine_id,
+            election_id,
+            cast_vote_record,
+            created_at,
+        } = ballot;
+
+        Self {
+            server_id: id,
+            client_id,
+            machine_id,
+            election_id,
             cast_vote_record: cast_vote_record.0,
             created_at,
         }
@@ -258,27 +293,6 @@ pub(crate) async fn get_admins(
     .await
 }
 
-pub(crate) async fn create_election(
-    db: &mut PoolConnection<Postgres>,
-    id: Uuid,
-    election: types_rs::cdf::cvr::Election,
-) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        r#"
-        INSERT INTO elections (
-            id,
-            election
-        )
-        VALUES ($1, $2)
-        "#,
-        id,
-        Json(election) as _
-    )
-    .execute(&mut *db)
-    .await
-    .map(|_| ())
-}
-
 pub(crate) async fn get_elections(
     db: &mut PoolConnection<Postgres>,
     since_election_id: Option<ServerId>,
@@ -290,7 +304,7 @@ pub(crate) async fn get_elections(
             FROM elections
             WHERE id = $1
             "#,
-            id.0,
+            id.as_uuid(),
         )
         .fetch_optional(&mut *db)
         .await
@@ -309,6 +323,7 @@ pub(crate) async fn get_elections(
                     client_id as "client_id: ClientId",
                     machine_id,
                     election as "election: _",
+                    election_hash,
                     created_at
                 FROM elections
                 WHERE created_at > $1
@@ -328,6 +343,7 @@ pub(crate) async fn get_elections(
                     client_id as "client_id: ClientId",
                     machine_id,
                     election as "election: _",
+                    election_hash,
                     created_at
                 FROM elections
                 ORDER BY created_at DESC
@@ -351,7 +367,7 @@ pub(crate) async fn get_registration_requests(
                 FROM registration_requests
                 WHERE id = $1
                 "#,
-                id.0
+                id.as_uuid()
             )
             .fetch_optional(&mut *db)
             .await?
@@ -426,7 +442,7 @@ pub(crate) async fn get_registrations(
         FROM registrations
         WHERE id = $1
         "#,
-            registration_id.0
+            registration_id.as_uuid()
         )
         .fetch_optional(&mut *db)
         .await
@@ -507,8 +523,8 @@ pub(crate) async fn add_registration_request_from_voter_terminal(
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         "#,
-        registration_request_id.0,
-        request.client_id.0,
+        registration_request_id.as_uuid(),
+        request.client_id.as_uuid(),
         request.machine_id,
         request.common_access_card_id,
         request.given_name,
@@ -526,11 +542,12 @@ pub(crate) async fn add_registration_request_from_voter_terminal(
     Ok(registration_request_id)
 }
 
-pub(crate) async fn add_election_from_voter_terminal(
+pub(crate) async fn add_election(
     db: &mut PoolConnection<Postgres>,
     election: client::input::Election,
-) -> Result<ServerId, sqlx::Error> {
+) -> Result<ServerId, color_eyre::eyre::Error> {
     let election_id = ServerId::new();
+    let election_definition = election.election;
 
     sqlx::query!(
         r#"
@@ -538,14 +555,17 @@ pub(crate) async fn add_election_from_voter_terminal(
             id,
             client_id,
             machine_id,
+            election_hash,
             election
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
         "#,
-        election_id.0,
-        election.client_id.0,
+        election_id.as_uuid(),
+        election.client_id.as_uuid(),
         election.machine_id,
-        Json(election.election) as _
+        election_definition.election_hash,
+        // TODO: just use `election_definition` given the right trait impls
+        Json(election_definition.election_data) as _
     )
     .execute(db)
     .await?;
@@ -566,7 +586,7 @@ pub(crate) async fn add_registration_from_voter_terminal(
         AND machine_id = $2
         AND common_access_card_id = $3
         "#,
-        registration.registration_request_id.0,
+        registration.registration_request_id.as_uuid(),
         registration.machine_id,
         registration.common_access_card_id
     )
@@ -584,7 +604,7 @@ pub(crate) async fn add_registration_from_voter_terminal(
         WHERE client_id = $1
         AND machine_id = $2
         "#,
-        registration.election_id.0,
+        registration.election_id.as_uuid(),
         registration.machine_id,
     )
     .fetch_one(&mut *db)
@@ -610,12 +630,12 @@ pub(crate) async fn add_registration_from_voter_terminal(
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         "#,
-        registration_id.0,
-        registration.client_id.0,
+        registration_id.as_uuid(),
+        registration.client_id.as_uuid(),
         registration.machine_id,
         registration.common_access_card_id,
-        registration_request.id.0,
-        election.id.0,
+        registration_request.id.as_uuid(),
+        election.id.as_uuid(),
         registration.precinct_id,
         registration.ballot_style_id
     )
@@ -625,9 +645,9 @@ pub(crate) async fn add_registration_from_voter_terminal(
     Ok(registration_id)
 }
 
-pub(crate) async fn add_ballot_from_voter_terminal(
+pub(crate) async fn add_printed_ballot_from_voter_terminal(
     db: &mut PoolConnection<Postgres>,
-    ballot: client::input::Ballot,
+    ballot: client::input::PrintedBallot,
 ) -> Result<ServerId, sqlx::Error> {
     // we want to find the associated registration for this ballot
     let registration = sqlx::query!(
@@ -638,7 +658,7 @@ pub(crate) async fn add_ballot_from_voter_terminal(
         AND machine_id = $2
         AND common_access_card_id = $3
         "#,
-        ballot.registration_id.0,
+        ballot.registration_id.as_uuid(),
         ballot.machine_id,
         ballot.common_access_card_id
     )
@@ -650,7 +670,7 @@ pub(crate) async fn add_ballot_from_voter_terminal(
 
     sqlx::query!(
         r#"
-        INSERT INTO ballots (
+        INSERT INTO printed_ballots (
             id,
             client_id,
             machine_id,
@@ -660,8 +680,8 @@ pub(crate) async fn add_ballot_from_voter_terminal(
         )
         VALUES ($1, $2, $3, $4, $5, $6)
         "#,
-        ballot_id.0,
-        ballot.client_id.0,
+        ballot_id.as_uuid(),
+        ballot.client_id.as_uuid(),
         ballot.machine_id,
         ballot.common_access_card_id,
         registration.id,
@@ -673,19 +693,19 @@ pub(crate) async fn add_ballot_from_voter_terminal(
     Ok(ballot_id)
 }
 
-pub(crate) async fn get_ballots(
+pub(crate) async fn get_printed_ballots(
     db: &mut PoolConnection<Postgres>,
     since_ballot_id: Option<ServerId>,
-) -> Result<Vec<Ballot>, sqlx::Error> {
+) -> Result<Vec<PrintedBallot>, sqlx::Error> {
     let since_ballot = match since_ballot_id {
         Some(id) => sqlx::query!(
             r#"
             SELECT
                 created_at
-            FROM ballots
+            FROM printed_ballots
             WHERE id = $1
             "#,
-            id.0,
+            id.as_uuid(),
         )
         .fetch_optional(&mut *db)
         .await
@@ -697,7 +717,7 @@ pub(crate) async fn get_ballots(
     match since_ballot {
         Some(ballot) => {
             sqlx::query_as!(
-                Ballot,
+                PrintedBallot,
                 r#"
                 SELECT
                     id as "id: ServerId",
@@ -707,7 +727,7 @@ pub(crate) async fn get_ballots(
                     registration_id as "registration_id: ServerId",
                     cast_vote_record as "cast_vote_record: _",
                     created_at
-                FROM ballots
+                FROM printed_ballots
                 WHERE created_at > $1
                 ORDER BY created_at DESC
                 "#,
@@ -718,7 +738,7 @@ pub(crate) async fn get_ballots(
         }
         None => {
             sqlx::query_as!(
-                Ballot,
+                PrintedBallot,
                 r#"
                 SELECT
                     id as "id: ServerId",
@@ -728,7 +748,97 @@ pub(crate) async fn get_ballots(
                     registration_id as "registration_id: ServerId",
                     cast_vote_record as "cast_vote_record: _",
                     created_at
-                FROM ballots
+                FROM printed_ballots
+                ORDER BY created_at DESC
+                "#,
+            )
+            .fetch_all(&mut *db)
+            .await
+        }
+    }
+}
+
+pub(crate) async fn add_scanned_ballot_from_scan_terminal(
+    db: &mut PoolConnection<Postgres>,
+    ballot: client::input::ScannedBallot,
+) -> Result<ServerId, sqlx::Error> {
+    let ballot_id = ServerId::new();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO scanned_ballots (
+            id,
+            client_id,
+            machine_id,
+            cast_vote_record
+        )
+        VALUES ($1, $2, $3, $4)
+        "#,
+        ballot_id.as_uuid(),
+        ballot.client_id.as_uuid(),
+        ballot.machine_id,
+        Json(ballot.cast_vote_record) as _
+    )
+    .execute(&mut *db)
+    .await?;
+
+    Ok(ballot_id)
+}
+
+pub(crate) async fn get_scanned_ballots(
+    db: &mut PoolConnection<Postgres>,
+    since_ballot_id: Option<ServerId>,
+) -> Result<Vec<ScannedBallot>, sqlx::Error> {
+    let since_ballot = match since_ballot_id {
+        Some(id) => sqlx::query!(
+            r#"
+            SELECT
+                created_at
+            FROM scanned_ballots
+            WHERE id = $1
+            "#,
+            id.as_uuid(),
+        )
+        .fetch_optional(&mut *db)
+        .await
+        .ok()
+        .flatten(),
+        None => None,
+    };
+
+    match since_ballot {
+        Some(ballot) => {
+            sqlx::query_as!(
+                ScannedBallot,
+                r#"
+                SELECT
+                    id as "id: ServerId",
+                    client_id as "client_id: ClientId",
+                    machine_id,
+                    election_id as "election_id: ServerId",
+                    cast_vote_record as "cast_vote_record: _",
+                    created_at
+                FROM scanned_ballots
+                WHERE created_at > $1
+                ORDER BY created_at DESC
+                "#,
+                ballot.created_at
+            )
+            .fetch_all(&mut *db)
+            .await
+        }
+        None => {
+            sqlx::query_as!(
+                ScannedBallot,
+                r#"
+                SELECT
+                    id as "id: ServerId",
+                    client_id as "client_id: ClientId",
+                    machine_id,
+                    election_id as "election_id: ServerId",
+                    cast_vote_record as "cast_vote_record: _",
+                    created_at
+                FROM scanned_ballots
                 ORDER BY created_at DESC
                 "#,
             )
