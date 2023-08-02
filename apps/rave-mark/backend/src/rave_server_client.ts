@@ -184,7 +184,8 @@ interface RaveMarkSyncInput {
   lastSyncedRegistrationRequestId?: ServerId;
   lastSyncedRegistrationId?: ServerId;
   lastSyncedElectionId?: ServerId;
-  lastSyncedBallotId?: ServerId;
+  lastSyncedPrintedBallotId?: ServerId;
+  lastSyncedScannedBallotId?: ServerId;
   registrationRequests?: RegistrationRequestInput[];
   elections?: ElectionInput[];
   registrations?: RegistrationInput[];
@@ -317,7 +318,8 @@ export class RaveServerClientImpl {
         this.store.getLastSyncedRegistrationRequestId(),
       lastSyncedRegistrationId: this.store.getLastSyncedRegistrationId(),
       lastSyncedElectionId: this.store.getLastSyncedElectionId(),
-      lastSyncedBallotId: this.store.getLastSyncedBallotId(),
+      lastSyncedPrintedBallotId: this.store.getLastSyncedPrintedBallotId(),
+      lastSyncedScannedBallotId: this.store.getLastSyncedScannedBallotId(),
       registrationRequests: this.store.getRegistrationRequestsToSync(),
       elections: this.store.getElectionsToSync(),
       registrations: this.store.getRegistrationsToSync(),

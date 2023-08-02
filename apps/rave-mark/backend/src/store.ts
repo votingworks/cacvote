@@ -794,12 +794,26 @@ export class Store {
     return result ? result.serverId : undefined;
   }
 
-  getLastSyncedBallotId(): Optional<ServerId> {
+  getLastSyncedPrintedBallotId(): Optional<ServerId> {
     const result = this.client.one(
       `
       select
         server_id as serverId
-      from ballots
+      from printed_ballots
+      where server_id is not null
+      order by created_at desc
+      `
+    ) as Optional<{ serverId: ServerId }>;
+
+    return result ? result.serverId : undefined;
+  }
+
+  getLastSyncedScannedBallotId(): Optional<ServerId> {
+    const result = this.client.one(
+      `
+      select
+        server_id as serverId
+      from scanned_ballots
       where server_id is not null
       order by created_at desc
       `
