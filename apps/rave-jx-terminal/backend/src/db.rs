@@ -789,46 +789,6 @@ pub(crate) async fn get_scanned_ballots_to_sync_to_rave_server(
         .collect::<Result<Vec<_>, _>>()
 }
 
-pub(crate) async fn add_scanned_ballot(
-    executor: &mut sqlx::PgConnection,
-    scanned_ballot: ScannedBallot,
-) -> Result<(), sqlx::Error> {
-    let ScannedBallot {
-        id,
-        server_id,
-        client_id,
-        machine_id,
-        election_id,
-        cast_vote_record,
-        created_at,
-    } = dbg!(scanned_ballot);
-    sqlx::query!(
-        r#"
-        INSERT INTO scanned_ballots (
-            id,
-            server_id,
-            client_id,
-            machine_id,
-            election_id,
-            cast_vote_record,
-            created_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        "#,
-        id.as_uuid(),
-        server_id.map(|id| id.as_uuid()),
-        client_id.as_uuid(),
-        machine_id,
-        election_id.as_uuid(),
-        Json(cast_vote_record) as _,
-        created_at
-    )
-    .execute(executor)
-    .await?;
-
-    Ok(())
-}
-
 pub(crate) async fn get_last_synced_scanned_ballot_id(
     executor: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<Option<ServerId>> {
@@ -844,30 +804,6 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
     .fetch_optional(&mut *executor)
     .await?
     .and_then(|r| r.server_id))
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ScannedBallotStats {
-    pub total: i64,
-    pub pending: i64,
-}
-
-pub(crate) async fn get_scanned_ballot_stats(
-    executor: &mut sqlx::PgConnection,
-) -> color_eyre::Result<ScannedBallotStats> {
-    sqlx::query_as!(
-        ScannedBallotStats,
-        r#"
-        SELECT
-            COUNT(*) as "total!: i64",
-            COUNT(*) FILTER (WHERE server_id IS NULL) as "pending!: i64"
-        FROM scanned_ballots
-        "#
-    )
-    .fetch_one(&mut *executor)
-    .await
-    .map_err(Into::into)
 }
 
 #[cfg(test)]

@@ -5,6 +5,10 @@
       "name": "apps/central-scan/backend"
     },
     {
+      "path": "apps/rave-jx-terminal/backend",
+      "name": "apps/rave-jx-terminal/backend"
+    },
+    {
       "path": "apps/rave-mark/backend",
       "name": "apps/rave-mark/backend"
     },

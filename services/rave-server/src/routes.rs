@@ -2,14 +2,19 @@ use crate::db;
 use rocket::http::{ContentType, Status};
 use rocket::serde::json::{json, Json};
 use rocket_db_pools::Connection;
-use types_rs::rave::{client, RaveMarkSyncInput, RaveMarkSyncOutput};
+use types_rs::rave::{client, RaveServerSyncInput, RaveServerSyncOutput};
+
+#[get("/api/status")]
+pub(crate) async fn get_status() -> Status {
+    Status::Ok
+}
 
 #[post("/api/sync", format = "json", data = "<input>")]
-pub(crate) async fn rave_mark_sync(
+pub(crate) async fn do_sync(
     mut db: Connection<db::Db>,
-    input: Json<RaveMarkSyncInput>,
+    input: Json<RaveServerSyncInput>,
 ) -> (Status, (ContentType, String)) {
-    let RaveMarkSyncInput {
+    let RaveServerSyncInput {
         last_synced_registration_request_id,
         last_synced_registration_id,
         last_synced_election_id,
@@ -24,8 +29,7 @@ pub(crate) async fn rave_mark_sync(
 
     for client_request in registration_requests.into_iter() {
         let server_request: client::input::RegistrationRequest = client_request;
-        let result =
-            db::add_registration_request_from_voter_terminal(&mut db, &server_request).await;
+        let result = db::add_registration_request_from_client(&mut db, &server_request).await;
 
         if let Err(e) = result {
             error!("Failed to insert registration request: {}", e);
@@ -41,7 +45,7 @@ pub(crate) async fn rave_mark_sync(
     }
 
     for registration in registrations.into_iter() {
-        let result = db::add_registration_from_voter_terminal(&mut db, registration).await;
+        let result = db::add_registration_from_client(&mut db, registration).await;
 
         if let Err(e) = result {
             error!("Failed to insert registration: {}", e);
@@ -49,7 +53,7 @@ pub(crate) async fn rave_mark_sync(
     }
 
     for printed_ballot in printed_ballots.into_iter() {
-        let result = db::add_printed_ballot_from_voter_terminal(&mut db, printed_ballot).await;
+        let result = db::add_printed_ballot_from_client(&mut db, printed_ballot).await;
 
         if let Err(e) = result {
             error!("Failed to insert ballot: {}", e);
@@ -57,7 +61,7 @@ pub(crate) async fn rave_mark_sync(
     }
 
     for scanned_ballot in scanned_ballots.into_iter() {
-        let result = db::add_scanned_ballot_from_scan_terminal(&mut db, scanned_ballot).await;
+        let result = db::add_scanned_ballot_from_client(&mut db, scanned_ballot).await;
 
         if let Err(e) = result {
             error!("Failed to insert ballot: {}", e);
@@ -150,7 +154,7 @@ pub(crate) async fn rave_mark_sync(
             Ok(ballots) => ballots,
         };
 
-    let output = RaveMarkSyncOutput {
+    let output = RaveServerSyncOutput {
         admins: admins.into_iter().map(|admin| admin.into()).collect(),
         elections: elections
             .into_iter()
@@ -178,4 +182,24 @@ pub(crate) async fn rave_mark_sync(
         Status::Ok,
         (ContentType::JSON, serde_json::to_string(&output).unwrap()),
     )
+}
+
+#[post("/api/admins", format = "json", data = "<input>")]
+pub(crate) async fn create_admin(
+    mut db: Connection<db::Db>,
+    input: Json<client::input::Admin>,
+) -> (Status, (ContentType, String)) {
+    let input = input.into_inner();
+    let result = db::add_admin(&mut db, input).await;
+
+    match result {
+        Ok(_) => (Status::Ok, (ContentType::JSON, json!({}).to_string())),
+        Err(e) => (
+            Status::InternalServerError,
+            (
+                ContentType::JSON,
+                json!({ "error": e.to_string() }).to_string(),
+            ),
+        ),
+    }
 }

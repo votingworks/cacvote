@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::cdf::cvr;
 use crate::election::ElectionDefinition;
-use crate::rave::{ClientId, ServerId};
+use crate::rave::ClientId;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -62,6 +62,6 @@ pub struct PrintedBallot {
 pub struct ScannedBallot {
     pub client_id: ClientId,
     pub machine_id: String,
-    pub election_id: ServerId,
+    pub election_id: ClientId,
     pub cast_vote_record: cvr::Cvr,
 }

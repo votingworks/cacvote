@@ -242,6 +242,7 @@ dependencies = [
  "env_logger",
  "image",
  "lazy_static",
+ "pretty_assertions",
  "rayon",
  "reqwest",
  "rocket",
@@ -251,6 +252,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "time",
+ "tokio",
  "types-rs",
  "uuid",
 ]
@@ -1755,11 +1757,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "rave-jx-terminal"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "lazy_static",
+ "pretty_assertions",
+ "regex",
+ "reqwest",
+ "rocket",
+ "rocket_db_pools",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "types-rs",
+ "uuid",
+]
+
+[[package]]
 name = "rave-server"
 version = "0.1.0"
 dependencies = [
  "color-eyre",
  "lazy_static",
+ "pretty_assertions",
  "regex",
  "reqwest",
  "rocket",

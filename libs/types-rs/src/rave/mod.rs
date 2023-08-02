@@ -58,7 +58,7 @@ impl From<Uuid> for ClientId {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct RaveMarkSyncInput {
+pub struct RaveServerSyncInput {
     #[serde(default)]
     pub last_synced_registration_request_id: Option<ServerId>,
     #[serde(default)]
@@ -83,7 +83,7 @@ pub struct RaveMarkSyncInput {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RaveMarkSyncOutput {
+pub struct RaveServerSyncOutput {
     pub admins: Vec<client::output::Admin>,
     pub elections: Vec<client::output::Election>,
     pub registration_requests: Vec<client::output::RegistrationRequest>,

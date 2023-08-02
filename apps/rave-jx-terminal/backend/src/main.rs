@@ -7,7 +7,9 @@ use rocket_db_pools::Database;
 use routes::*;
 
 mod db;
+mod env;
 mod routes;
+mod sync;
 
 #[launch]
 fn rocket() -> _ {
@@ -19,5 +21,9 @@ fn rocket() -> _ {
             "Run Migrations",
             run_migrations,
         ))
-        .mount("/", routes![get_status, do_sync, create_admin])
+        .attach(fairing::AdHoc::try_on_ignite(
+            "Sync with RAVE server periodically",
+            sync::sync_periodically,
+        ))
+        .mount("/", routes![index, get_status, do_sync])
 }

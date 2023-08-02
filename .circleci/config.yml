@@ -44,6 +44,29 @@ jobs:
       - store_test_results:
           path: apps/central-scan/backend/reports/
 
+  # @votingworks/rave-jx-terminal-backend
+  test-apps-rave-jx-terminal-backend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-jx-terminal/backend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-jx-terminal/backend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-jx-terminal/backend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-jx-terminal/backend/reports/
+
   # @votingworks/rave-mark-backend
   test-apps-rave-mark-backend:
     executor: nodejs
@@ -734,6 +757,7 @@ workflows:
   test:
     jobs:
       - test-apps-central-scan-backend
+      - test-apps-rave-jx-terminal-backend
       - test-apps-rave-mark-backend
       - test-apps-rave-mark-frontend
       - test-apps-rave-mark-integration-testing

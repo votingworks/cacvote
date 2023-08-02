@@ -2,6 +2,7 @@
 
 members = [
     "apps/central-scan/backend",
+    "apps/rave-jx-terminal/backend",
     "libs/ballot-encoder-rs",
     "libs/central-scanner",
     "libs/types-rs",

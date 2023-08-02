@@ -28,3 +28,6 @@ uuid = { version = "1.4.0", features = ["serde", "v4"] }
 version = "0.6.0"
 default-features = false
 features = ["macros", "offline", "migrate", "postgres", "time", "uuid", "json"]
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
