@@ -175,9 +175,10 @@ function buildApi({
       // TODO: support multiple registrations
       const registration = registrations[0];
       assert(registration);
-      const selection = workspace.store.getCastVoteRecordForRegistration(
-        registration.id
-      );
+      const selection =
+        workspace.store.getPrintedBallotCastVoteRecordForRegistration(
+          registration.id
+        );
 
       return { status: selection ? 'voted' : 'registered', isRaveAdmin };
     },
@@ -319,7 +320,7 @@ function buildApi({
         ballotMarkingMode: 'machine',
       });
 
-      workspace.store.createBallot({
+      workspace.store.createPrintedBallot({
         id: ballotId,
         registrationId: registration.id,
         castVoteRecord,
@@ -434,9 +435,10 @@ function buildApi({
         workspace.store.getRegistrations(commonAccessCardId)
       )
         .flatMap((registration) => {
-          const selection = workspace.store.getCastVoteRecordForRegistration(
-            registration.id
-          );
+          const selection =
+            workspace.store.getPrintedBallotCastVoteRecordForRegistration(
+              registration.id
+            );
           return selection ? [selection] : [];
         })
         .first();

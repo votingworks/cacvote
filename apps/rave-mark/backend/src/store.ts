@@ -16,10 +16,10 @@ import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
 import { join } from 'path';
 import {
-  Ballot,
-  BallotRow,
+  PrintedBallot,
+  PrintedBallotRow,
   ClientId,
-  deserializeBallot,
+  deserializePrintedBallot,
   deserializeElection,
   deserializeRegistration,
   deserializeRegistrationRequest,
@@ -33,6 +33,9 @@ import {
   ServerId,
   ServerSyncAttempt,
   ServerSyncAttemptRow,
+  ScannedBallot,
+  ScannedBallotRow,
+  deserializeScannedBallot,
 } from './types/db';
 
 const SchemaPath = join(__dirname, '../schema.sql');
@@ -540,7 +543,7 @@ export class Store {
   /**
    * Records a cast ballot for a voter registration.
    */
-  createBallot({
+  createPrintedBallot({
     id,
     serverId,
     clientId,
@@ -642,14 +645,14 @@ export class Store {
   /**
    * Gets the voter selection for the given voter registration ID.
    */
-  getCastVoteRecordForRegistration(
+  getPrintedBallotCastVoteRecordForRegistration(
     registrationId: ClientId
   ): Optional<VotesDict> {
     const result = this.client.one(
       `
       select
         cast_vote_record as castVoteRecordJson
-      from ballots
+      from printed_ballots
       where registration_id = ?
       order by created_at desc
       `,
@@ -868,7 +871,7 @@ export class Store {
     return result.map(deserializeElection);
   }
 
-  getBallotsToSync(): Ballot[] {
+  getPrintedBallotsToSync(): PrintedBallot[] {
     const result = this.client.all(
       `
       select
@@ -880,11 +883,30 @@ export class Store {
         registration_id as registrationId,
         cast_vote_record as castVoteRecord,
         created_at as createdAt
-      from ballots
+      from printed_ballots
       where server_id is null
       `
-    ) as BallotRow[];
+    ) as PrintedBallotRow[];
 
-    return result.map(deserializeBallot);
+    return result.map(deserializePrintedBallot);
+  }
+
+  getScannedBallotsToSync(): ScannedBallot[] | undefined {
+    const result = this.client.all(
+      `
+      select
+        id,
+        server_id as serverId,
+        client_id as clientId,
+        machine_id as machineId,
+        election_id as electionId,
+        cast_vote_record as castVoteRecord,
+        created_at as createdAt
+      from scanned_ballots
+      where server_id is null
+      `
+    ) as ScannedBallotRow[];
+
+    return result.map(deserializeScannedBallot);
   }
 }

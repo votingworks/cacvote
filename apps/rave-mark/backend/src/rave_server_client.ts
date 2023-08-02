@@ -101,7 +101,7 @@ const RegistrationOutputSchema: z.ZodSchema<RegistrationOutput> = z.object({
   createdAt: DateTimeSchema,
 });
 
-interface BallotInput {
+interface PrintedBallotInput {
   clientId: ClientId;
   machineId: Id;
   commonAccessCardId: string;
@@ -109,7 +109,14 @@ interface BallotInput {
   castVoteRecord: CVR.CVR;
 }
 
-interface BallotOutput {
+interface ScannedBallotInput {
+  clientId: ClientId;
+  machineId: Id;
+  electionId: ClientId;
+  castVoteRecord: CVR.CVR;
+}
+
+interface PrintedBallotOutput {
   serverId: ServerId;
   clientId: ClientId;
   machineId: Id;
@@ -118,12 +125,28 @@ interface BallotOutput {
   castVoteRecord: CVR.CVR;
 }
 
-const BallotOutputSchema: z.ZodSchema<BallotOutput> = z.object({
+const PrintedBallotOutputSchema: z.ZodSchema<PrintedBallotOutput> = z.object({
   serverId: ServerIdSchema,
   clientId: ClientIdSchema,
   machineId: z.string(),
   commonAccessCardId: z.string(),
   registrationId: ServerIdSchema,
+  castVoteRecord: CVR.CVRSchema,
+});
+
+interface ScannedBallotOutput {
+  serverId: ServerId;
+  clientId: ClientId;
+  machineId: Id;
+  electionId: ServerId;
+  castVoteRecord: CVR.CVR;
+}
+
+const ScannedBallotOutputSchema: z.ZodSchema<ScannedBallotOutput> = z.object({
+  serverId: ServerIdSchema,
+  clientId: ClientIdSchema,
+  machineId: z.string(),
+  electionId: ServerIdSchema,
   castVoteRecord: CVR.CVRSchema,
 });
 
@@ -165,7 +188,8 @@ interface RaveMarkSyncInput {
   registrationRequests?: RegistrationRequestInput[];
   elections?: ElectionInput[];
   registrations?: RegistrationInput[];
-  ballots?: BallotInput[];
+  printedBallots?: PrintedBallotInput[];
+  scannedBallots?: ScannedBallotInput[];
 }
 
 interface RaveMarkSyncOutput {
@@ -173,7 +197,8 @@ interface RaveMarkSyncOutput {
   elections: ElectionOutput[];
   registrationRequests: RegistrationRequestOutput[];
   registrations: RegistrationOutput[];
-  ballots: BallotOutput[];
+  printedBallots: PrintedBallotOutput[];
+  scannedBallots: ScannedBallotOutput[];
 }
 
 const RaveMarkSyncOutputSchema: z.ZodSchema<RaveMarkSyncOutput> = z.object({
@@ -181,7 +206,8 @@ const RaveMarkSyncOutputSchema: z.ZodSchema<RaveMarkSyncOutput> = z.object({
   elections: z.array(ElectionOutputSchema),
   registrationRequests: z.array(RegistrationRequestOutputSchema),
   registrations: z.array(RegistrationOutputSchema),
-  ballots: z.array(BallotOutputSchema),
+  printedBallots: z.array(PrintedBallotOutputSchema),
+  scannedBallots: z.array(ScannedBallotOutputSchema),
 });
 
 function describeSyncInputOrOutput(
@@ -189,11 +215,20 @@ function describeSyncInputOrOutput(
 ): string[] {
   const parts: string[] = [];
 
-  if (data.ballots?.length) {
+  if (data.printedBallots?.length) {
     parts.push(
-      format.countPhrase(data.ballots.length, {
-        one: '1 ballot',
-        many: `${data.ballots.length} ballots`,
+      format.countPhrase(data.printedBallots.length, {
+        one: '1 printed ballot',
+        many: `${data.printedBallots.length} printed ballots`,
+      })
+    );
+  }
+
+  if (data.scannedBallots?.length) {
+    parts.push(
+      format.countPhrase(data.scannedBallots.length, {
+        one: '1 scanned ballot',
+        many: `${data.scannedBallots.length} scanned ballots`,
       })
     );
   }
@@ -286,7 +321,8 @@ export class RaveServerClientImpl {
       registrationRequests: this.store.getRegistrationRequestsToSync(),
       elections: this.store.getElectionsToSync(),
       registrations: this.store.getRegistrationsToSync(),
-      ballots: this.store.getBallotsToSync(),
+      printedBallots: this.store.getPrintedBallotsToSync(),
+      scannedBallots: this.store.getScannedBallotsToSync(),
     };
     debug('RAVE sync input: %O', input);
     return input;
@@ -384,23 +420,26 @@ export class RaveServerClientImpl {
       debug('created or replaced registration %s', registrationId);
     }
 
-    for (const ballot of output.ballots) {
+    for (const printedBallot of output.printedBallots) {
       const localRegistration = this.store.getRegistration({
-        serverId: ballot.registrationId,
+        serverId: printedBallot.registrationId,
       });
 
       assert(
         localRegistration,
-        `could not find local registration with server id ${ballot.registrationId}`
+        `could not find local registration with server id ${printedBallot.registrationId}`
       );
 
-      const ballotId = this.store.createBallot({
-        id: ballot.machineId === VX_MACHINE_ID ? ballot.clientId : ClientId(),
-        serverId: ballot.serverId,
-        clientId: ballot.clientId,
-        machineId: ballot.machineId,
+      const ballotId = this.store.createPrintedBallot({
+        id:
+          printedBallot.machineId === VX_MACHINE_ID
+            ? printedBallot.clientId
+            : ClientId(),
+        serverId: printedBallot.serverId,
+        clientId: printedBallot.clientId,
+        machineId: printedBallot.machineId,
         registrationId: localRegistration.id,
-        castVoteRecord: ballot.castVoteRecord,
+        castVoteRecord: printedBallot.castVoteRecord,
       });
 
       debug('created or replaced ballot %s', ballotId);

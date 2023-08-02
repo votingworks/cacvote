@@ -255,7 +255,7 @@ export interface RegistrationRow {
   createdAt: string;
 }
 
-export interface Ballot {
+export interface PrintedBallot {
   /**
    * Database ID for a ballot record.
    */
@@ -297,7 +297,66 @@ export interface Ballot {
   createdAt: DateTime;
 }
 
-export interface BallotRow {
+export interface ScannedBallotRow {
+  id: string;
+  serverId: string | null;
+  clientId: string;
+  machineId: string;
+  electionId: string;
+  castVoteRecord: string;
+  createdAt: string;
+}
+
+export function deserializeScannedBallot(row: ScannedBallotRow): ScannedBallot {
+  return {
+    id: row.id as ClientId,
+    serverId: (row.serverId ?? undefined) as Optional<ServerId>,
+    clientId: row.clientId as ClientId,
+    machineId: row.machineId,
+    electionId: row.electionId as ClientId,
+    castVoteRecord: JSON.parse(row.castVoteRecord),
+    createdAt: DateTime.fromSQL(row.createdAt),
+  };
+}
+
+export interface ScannedBallot {
+  /**
+   * Database ID for a ballot record.
+   */
+  id: ClientId;
+
+  /**
+   * Server-side ID for this registration record, if sync'ed.
+   */
+  serverId?: ServerId;
+
+  /**
+   * Client-side ID for this registration record.
+   */
+  clientId: ClientId;
+
+  /**
+   * Machine ID for the machine that created this registration record.
+   */
+  machineId: Id;
+
+  /**
+   * Database ID for the associated election record.
+   */
+  electionId: ClientId;
+
+  /**
+   * Votes cast by the voter.
+   */
+  castVoteRecord: CVR.CVR;
+
+  /**
+   * Date and time when the voter cast their votes.
+   */
+  createdAt: DateTime;
+}
+
+export interface PrintedBallotRow {
   id: string;
   serverId: string | null;
   clientId: string;
@@ -308,7 +367,7 @@ export interface BallotRow {
   createdAt: string;
 }
 
-export function deserializeBallot(row: BallotRow): Ballot {
+export function deserializePrintedBallot(row: PrintedBallotRow): PrintedBallot {
   return {
     id: row.id as ClientId,
     serverId: (row.serverId ?? undefined) as Optional<ServerId>,

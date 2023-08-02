@@ -14,7 +14,7 @@ create table server_sync_attempts (
   trigger text not null,
   status_message text not null,
   success boolean,
-  created_at timestamp not null default current_timestamp,
+  created_at timestamptz not null default current_timestamp,
   completed_at timestamp
 );
 
@@ -29,7 +29,7 @@ create table elections (
   -- ID of the machine this record was originally created on
   machine_id text not null,
   election json not null,
-  created_at timestamp not null default current_timestamp,
+  created_at timestamptz not null default current_timestamp,
 
   unique (client_id, machine_id)
 );
@@ -37,7 +37,7 @@ create table elections (
 create table admins (
   -- CAC ID of the admin user
   common_access_card_id uuid not null unique,
-  created_at timestamp not null default current_timestamp
+  created_at timestamptz not null default current_timestamp
 );
 
 create table registration_requests (
@@ -62,7 +62,7 @@ create table registration_requests (
   -- the state-issued id number of the person making the request,
   -- e.g. a driver's license number
   state_id text not null,
-  created_at timestamp not null default current_timestamp,
+  created_at timestamptz not null default current_timestamp,
 
   unique (client_id, machine_id)
 );
@@ -83,12 +83,12 @@ create table registrations (
   election_id uuid not null references elections(id),
   precinct_id text not null,
   ballot_style_id text not null,
-  created_at timestamp not null default current_timestamp,
+  created_at timestamptz not null default current_timestamp,
 
   unique (client_id, machine_id)
 );
 
-create table ballots (
+create table printed_ballots (
   -- generated on this machine
   id uuid primary key,
   -- generated on the server, present only if the record has been synced
@@ -102,7 +102,22 @@ create table ballots (
   common_access_card_id uuid not null unique,
   registration_id uuid not null references registrations(id),
   cast_vote_record json not null,
-  created_at timestamp not null default current_timestamp,
+  created_at timestamptz not null default current_timestamp,
+
+  unique (client_id, machine_id)
+);
+
+create table scanned_ballots (
+  id uuid primary key,
+  -- generated on the server, present only if the record has been synced
+  server_id uuid unique,
+  -- generated on a client machine
+  client_id uuid not null,
+  -- ID of the machine this record was originally created on
+  machine_id varchar(255) not null,
+  election_id uuid not null references elections(id) on update cascade on delete cascade,
+  cast_vote_record json not null,
+  created_at timestamptz not null default current_timestamp,
 
   unique (client_id, machine_id)
 );

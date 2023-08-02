@@ -38,6 +38,15 @@ export const RAVE_MARK_WORKSPACE =
 export const IS_INTEGRATION_TEST = process.env.IS_INTEGRATION_TEST === 'true';
 
 /**
+ * RAVE server URL.
+ */
+export const RAVE_URL = process.env.RAVE_URL
+  ? new URL(process.env.RAVE_URL)
+  : NODE_ENV === 'development'
+  ? new URL('http://localhost:8000')
+  : undefined;
+
+/**
  * Should we mock the RAVE server?
  */
 export const USE_MOCK_RAVE_SERVER =

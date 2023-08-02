@@ -12,9 +12,10 @@ import {
 } from '@votingworks/utils';
 import { Server } from 'http';
 import { buildApp } from './app';
-import { USE_MOCK_RAVE_SERVER } from './globals';
+import { RAVE_URL, USE_MOCK_RAVE_SERVER } from './globals';
 import {
   MockRaveServerClient,
+  RaveServerClient,
   RaveServerClientImpl,
 } from './rave_server_client';
 import { Workspace } from './workspace';
@@ -26,35 +27,45 @@ export interface StartOptions {
   port: number;
 }
 
+function getDefaultAuth(logger: Logger): InsertedSmartCardAuthApi {
+  return new InsertedSmartCardAuth({
+    card:
+      isFeatureFlagEnabled(BooleanEnvironmentVariableName.USE_MOCK_CARDS) ||
+      isIntegrationTest()
+        ? new MockFileCard()
+        : new JavaCard(),
+    config: {
+      allowCardlessVoterSessions: true,
+      allowElectionManagersToAccessMachinesConfiguredForOtherElections: true,
+    },
+    logger,
+  });
+}
+
+function getRaveServerClient(workspace: Workspace): RaveServerClient {
+  if (USE_MOCK_RAVE_SERVER) {
+    return new MockRaveServerClient(workspace.store);
+  }
+  const baseUrl = RAVE_URL;
+
+  if (!baseUrl) {
+    throw new Error('RAVE_URL is not set');
+  }
+
+  return new RaveServerClientImpl({
+    store: workspace.store,
+    baseUrl,
+  });
+}
+
 /**
  * Starts the server with all the default options.
  */
 export function start({ auth, logger, port, workspace }: StartOptions): Server {
   const app = buildApp({
-    auth:
-      auth ??
-      new InsertedSmartCardAuth({
-        card:
-          isFeatureFlagEnabled(BooleanEnvironmentVariableName.USE_MOCK_CARDS) ||
-          isIntegrationTest()
-            ? new MockFileCard()
-            : new JavaCard(),
-        config: {
-          allowCardlessVoterSessions: true,
-          allowElectionManagersToAccessMachinesConfiguredForOtherElections:
-            true,
-        },
-        logger,
-      }),
-
     workspace,
-
-    raveServerClient: USE_MOCK_RAVE_SERVER
-      ? new MockRaveServerClient(workspace.store)
-      : new RaveServerClientImpl({
-          store: workspace.store,
-          baseUrl: new URL('http://localhost:8000'),
-        }),
+    auth: auth ?? getDefaultAuth(logger),
+    raveServerClient: getRaveServerClient(workspace),
   });
 
   return app.listen(
