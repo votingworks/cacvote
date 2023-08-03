@@ -21,6 +21,10 @@
       "name": "apps/rave-scan/backend"
     },
     {
+      "path": "apps/rave-scan/frontend",
+      "name": "apps/rave-scan/frontend"
+    },
+    {
       "path": "codemods",
       "name": "codemods"
     },

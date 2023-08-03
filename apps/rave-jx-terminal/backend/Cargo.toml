@@ -1,5 +1,5 @@
 [package]
-name = "rave-jx-terminal"
+name = "rave-jx-terminal-backend"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,7 +17,7 @@ serde_json = { workspace = true }
 sqlx = { workspace = true }
 time = { workspace = true }
 tokio = { workspace = true }
-types-rs = { workspace = true }
+types-rs = { workspace = true, features = ["sqlx"] }
 uuid = { workspace = true }
 
 [dev-dependencies]

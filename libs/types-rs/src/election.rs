@@ -1,4 +1,5 @@
 use sha256::digest;
+#[cfg(feature = "sqlx")]
 use sqlx::Type;
 use std::{fmt::Display, str::FromStr};
 
@@ -37,6 +38,7 @@ impl FromStr for ElectionDefinition {
     }
 }
 
+#[cfg(feature = "sqlx")]
 impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ElectionDefinition
 where
     sqlx::types::Json<Self>: sqlx::Decode<'r, sqlx::Postgres>,
@@ -47,6 +49,7 @@ where
     }
 }
 
+#[cfg(feature = "sqlx")]
 impl<'q, DB> sqlx::Encode<'q, DB> for ElectionDefinition
 where
     String: sqlx::Encode<'q, DB>,
@@ -60,6 +63,7 @@ where
     }
 }
 
+#[cfg(feature = "sqlx")]
 impl Type<sqlx::Postgres> for ElectionDefinition {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
         sqlx::postgres::PgTypeInfo::with_name("json")

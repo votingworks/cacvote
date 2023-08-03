@@ -1,0 +1,22 @@
+{
+  "name": "@votingworks/rave-scan-frontend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "concurrently 'npm:start:*' 'build:css:watch'",
+    "start:frontend": "dx serve --port 3000",
+    "start:backend": "pnpm --dir ../backend start",
+    "build:css:watch": "tailwindcss -i input.css -o ./public/styles.css --watch",
+    "test": "cargo test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "tailwindcss": "^3.3.3"
+  },
+  "devDependencies": {
+    "concurrently": "^7.4.0"
+  }
+}

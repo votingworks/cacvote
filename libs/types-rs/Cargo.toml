@@ -9,14 +9,17 @@ edition = "2021"
 color-eyre = { workspace = true }
 lazy_static = { workspace = true }
 nanoid = { workspace = true }
-proptest = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha256 = { workspace = true }
-sqlx = { workspace = true }
+sqlx = { workspace = true, optional = true }
 time = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
+proptest = { workspace = true }
+
+[features]
+sqlx = ["dep:sqlx"]
