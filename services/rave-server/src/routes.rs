@@ -56,7 +56,7 @@ pub(crate) async fn do_sync(
         let result = db::add_printed_ballot_from_client(&mut db, printed_ballot).await;
 
         if let Err(e) = result {
-            error!("Failed to insert ballot: {}", e);
+            error!("Failed to insert printed ballot: {}", e);
         }
     }
 
@@ -64,7 +64,7 @@ pub(crate) async fn do_sync(
         let result = db::add_scanned_ballot_from_client(&mut db, scanned_ballot).await;
 
         if let Err(e) = result {
-            error!("Failed to insert ballot: {}", e);
+            error!("Failed to insert scanned ballot: {}", e);
         }
     }
 
@@ -193,7 +193,7 @@ pub(crate) async fn create_admin(
     let result = db::add_admin(&mut db, input).await;
 
     match result {
-        Ok(_) => (Status::Ok, (ContentType::JSON, json!({}).to_string())),
+        Ok(_) => (Status::Created, (ContentType::JSON, json!({}).to_string())),
         Err(e) => (
             Status::InternalServerError,
             (

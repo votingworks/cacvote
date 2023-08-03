@@ -85,7 +85,7 @@
     const pendingScannedBallotsCountSpan = document.getElementsByClassName(
       'pending-scanned-ballots-count'
     )[0];
-    const statusStream = new EventSource('/api/status');
+    const statusStream = new EventSource('/api/status-stream');
     statusStream.addEventListener('message', (event) => {
       const json = JSON.parse(event.data);
       scannedBallotStats = json.stats;

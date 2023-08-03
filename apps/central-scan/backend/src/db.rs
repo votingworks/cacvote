@@ -617,7 +617,7 @@ pub(crate) async fn get_registration_requests_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
+            client_id as "client_id: ClientId",
             machine_id,
             common_access_card_id,
             given_name,
@@ -639,7 +639,7 @@ pub(crate) async fn get_registration_requests_to_sync_to_rave_server(
     Ok(records
         .into_iter()
         .map(|r| client::input::RegistrationRequest {
-            client_id: r.id,
+            client_id: r.client_id,
             machine_id: r.machine_id,
             common_access_card_id: r.common_access_card_id,
             given_name: r.given_name,
@@ -660,7 +660,7 @@ pub(crate) async fn get_elections_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
+            client_id as "client_id: ClientId",
             machine_id,
             election as "election: String"
         FROM elections
@@ -675,7 +675,7 @@ pub(crate) async fn get_elections_to_sync_to_rave_server(
         .into_iter()
         .map(|e| {
             Ok(client::input::Election {
-                client_id: e.id,
+                client_id: e.client_id,
                 machine_id: e.machine_id,
                 election: e.election.parse()?,
             })
@@ -689,8 +689,6 @@ pub(crate) async fn get_registrations_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
-            server_id as "server_id: ServerId",
             client_id as "client_id: ClientId",
             machine_id,
             common_access_card_id,
@@ -709,7 +707,7 @@ pub(crate) async fn get_registrations_to_sync_to_rave_server(
     Ok(records
         .into_iter()
         .map(|r| client::input::Registration {
-            client_id: r.id,
+            client_id: r.client_id,
             machine_id: r.machine_id,
             election_id: r.election_id,
             registration_request_id: r.registration_request_id,
@@ -726,8 +724,6 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
-            server_id as "server_id: ServerId",
             client_id as "client_id: ClientId",
             machine_id,
             common_access_card_id,
@@ -743,13 +739,13 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
 
     records
         .into_iter()
-        .map(|b| {
+        .map(|r| {
             Ok(client::input::PrintedBallot {
-                client_id: b.id,
-                machine_id: b.machine_id,
-                common_access_card_id: b.common_access_card_id,
-                registration_id: b.registration_id,
-                cast_vote_record: serde_json::from_str(&b.cast_vote_record)?,
+                client_id: r.client_id,
+                machine_id: r.machine_id,
+                common_access_card_id: r.common_access_card_id,
+                registration_id: r.registration_id,
+                cast_vote_record: serde_json::from_str(&r.cast_vote_record)?,
             })
         })
         .collect()
@@ -761,11 +757,9 @@ pub(crate) async fn get_scanned_ballots_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
-            server_id as "server_id: ServerId",
             client_id as "client_id: ClientId",
             machine_id,
-            election_id as "election_id: ClientId",
+            (SELECT client_id FROM elections WHERE id = election_id) as "election_id!: ClientId",
             cast_vote_record as "cast_vote_record: String",
             created_at
         FROM scanned_ballots
@@ -778,12 +772,12 @@ pub(crate) async fn get_scanned_ballots_to_sync_to_rave_server(
 
     records
         .into_iter()
-        .map(|b| {
+        .map(|r| {
             Ok(client::input::ScannedBallot {
-                client_id: b.client_id,
-                machine_id: b.machine_id,
-                election_id: b.election_id,
-                cast_vote_record: serde_json::from_str(b.cast_vote_record.as_str())?,
+                client_id: r.client_id,
+                machine_id: r.machine_id,
+                election_id: r.election_id,
+                cast_vote_record: serde_json::from_str(r.cast_vote_record.as_str())?,
             })
         })
         .collect::<Result<Vec<_>, _>>()
@@ -801,7 +795,7 @@ pub(crate) async fn add_scanned_ballot(
         election_id,
         cast_vote_record,
         created_at,
-    } = dbg!(scanned_ballot);
+    } = scanned_ballot;
     sqlx::query!(
         r#"
         INSERT INTO scanned_ballots (

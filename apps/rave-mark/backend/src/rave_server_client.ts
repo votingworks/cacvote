@@ -180,7 +180,7 @@ const ElectionOutputSchema: z.ZodSchema<ElectionOutput> = z.object({
   createdAt: DateTimeSchema,
 });
 
-interface RaveMarkSyncInput {
+interface RaveServerSyncInput {
   lastSyncedRegistrationRequestId?: ServerId;
   lastSyncedRegistrationId?: ServerId;
   lastSyncedElectionId?: ServerId;
@@ -193,7 +193,7 @@ interface RaveMarkSyncInput {
   scannedBallots?: ScannedBallotInput[];
 }
 
-interface RaveMarkSyncOutput {
+interface RaveServerSyncOutput {
   admins: AdminOutput[];
   elections: ElectionOutput[];
   registrationRequests: RegistrationRequestOutput[];
@@ -202,7 +202,7 @@ interface RaveMarkSyncOutput {
   scannedBallots: ScannedBallotOutput[];
 }
 
-const RaveMarkSyncOutputSchema: z.ZodSchema<RaveMarkSyncOutput> = z.object({
+const RaveMarkSyncOutputSchema: z.ZodSchema<RaveServerSyncOutput> = z.object({
   admins: z.array(AdminOutputSchema),
   elections: z.array(ElectionOutputSchema),
   registrationRequests: z.array(RegistrationRequestOutputSchema),
@@ -212,7 +212,7 @@ const RaveMarkSyncOutputSchema: z.ZodSchema<RaveMarkSyncOutput> = z.object({
 });
 
 function describeSyncInputOrOutput(
-  data: RaveMarkSyncInput | RaveMarkSyncOutput
+  data: RaveServerSyncInput | RaveServerSyncOutput
 ): string[] {
   const parts: string[] = [];
 
@@ -312,8 +312,8 @@ export class RaveServerClientImpl {
     });
   }
 
-  private createSyncInput(): RaveMarkSyncInput {
-    const input: RaveMarkSyncInput = {
+  private createSyncInput(): RaveServerSyncInput {
+    const input: RaveServerSyncInput = {
       lastSyncedRegistrationRequestId:
         this.store.getLastSyncedRegistrationRequestId(),
       lastSyncedRegistrationId: this.store.getLastSyncedRegistrationId(),
@@ -331,8 +331,8 @@ export class RaveServerClientImpl {
   }
 
   private async performSyncRequest(
-    input: RaveMarkSyncInput
-  ): Promise<RaveMarkSyncOutput> {
+    input: RaveServerSyncInput
+  ): Promise<RaveServerSyncOutput> {
     const syncUrl = new URL('api/sync', this.baseUrl);
     const response = await fetch(syncUrl.toString(), {
       method: 'POST',
@@ -351,14 +351,14 @@ export class RaveServerClientImpl {
     return this.parseSyncOutput(await response.json());
   }
 
-  private parseSyncOutput(rawOutput: unknown): RaveMarkSyncOutput {
+  private parseSyncOutput(rawOutput: unknown): RaveServerSyncOutput {
     debug('RAVE sync raw output: %O', rawOutput);
     const output = unsafeParse(RaveMarkSyncOutputSchema, rawOutput);
     debug('RAVE sync parsed output: %O', output);
     return output;
   }
 
-  private updateLocalStoreFromSyncOutput(output: RaveMarkSyncOutput): void {
+  private updateLocalStoreFromSyncOutput(output: RaveServerSyncOutput): void {
     this.store.resetAdmins();
     for (const admin of output.admins) {
       this.store.createAdmin(admin);
@@ -454,8 +454,8 @@ export class RaveServerClientImpl {
     output,
   }: {
     syncAttemptId: ClientId;
-    input: RaveMarkSyncInput;
-    output: RaveMarkSyncOutput;
+    input: RaveServerSyncInput;
+    output: RaveServerSyncOutput;
   }): void {
     const sentParts = describeSyncInputOrOutput(input);
     const receivedParts = describeSyncInputOrOutput(output);

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "cargo build",
     "lint": "cargo clippy -- -D warnings",
-    "start": "cargo watch -x run",
+    "start": "cargo watch -i static -x run",
     "test": "cargo test"
   },
   "keywords": [],

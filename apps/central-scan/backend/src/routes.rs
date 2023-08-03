@@ -2,8 +2,6 @@ use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
-use rocket::fs::{relative, NamedFile};
-
 use central_scanner::scan;
 use rocket::http::{ContentType, Status};
 use rocket::response::stream::{Event, EventStream};
@@ -25,13 +23,13 @@ pub struct ScannedCard {
     election_hash: String,
 }
 
-#[get("/")]
-pub async fn index() -> Option<NamedFile> {
-    NamedFile::open(relative!("static/index.html")).await.ok()
+#[get("/api/status")]
+pub(crate) async fn get_status() -> Status {
+    Status::Ok
 }
 
-#[get("/api/status")]
-pub(crate) async fn get_status(mut db: Connection<db::Db>) -> EventStream![Event] {
+#[get("/api/status-stream")]
+pub(crate) async fn get_status_stream(mut db: Connection<db::Db>) -> EventStream![Event] {
     let mut last_scanned_ballot_stats = ScannedBallotStats::default();
 
     EventStream! {
@@ -66,22 +64,8 @@ pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>
     let mut cards = vec![];
     for (side_a_path, side_b_path) in rx {
         let (side_a_result, side_b_result) = rayon::join(
-            move || {
-                let start = std::time::Instant::now();
-                let side_a_image = image::open(side_a_path).unwrap().to_luma8();
-                eprintln!("A opened in {:?}", start.elapsed());
-                let decoded = decode_page_from_image(side_a_image);
-                eprintln!("A decoded in {:?}", start.elapsed());
-                decoded
-            },
-            move || {
-                let start = std::time::Instant::now();
-                let side_b_image = image::open(side_b_path).unwrap().to_luma8();
-                eprintln!("side_b opened in {:?}", start.elapsed());
-                let decoded = decode_page_from_image(side_b_image);
-                eprintln!("side_b decoded in {:?}", start.elapsed());
-                decoded
-            },
+            move || decode_page_from_image(image::open(side_a_path).unwrap().to_luma8()),
+            move || decode_page_from_image(image::open(side_b_path).unwrap().to_luma8()),
         );
 
         match (side_a_result, side_b_result) {

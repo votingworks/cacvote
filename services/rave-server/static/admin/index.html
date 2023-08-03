@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<head>
+  <link rel="stylesheet" href="/output.css" />
+  <title>RAVE Server Admin</title>
+</head>
+<body>
+  <div class="h-screen w-screen flex justify-center items-center">
+    <div class="flex-col">
+      <div class="flex-row mb-2">
+        <button
+          class="create-admin rounded-lg text-3xl bg-purple-500 active:bg-purple-700 disabled:bg-purple-300 text-white p-5 mr-2"
+        >
+          Create Admin
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script type="module">
+  const createAdminButton = document.querySelector('.create-admin');
+  createAdminButton.addEventListener('click', async () => {
+    const commonAccessCardId = prompt('Enter CAC ID');
+    const response = await fetch('/api/admins', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ commonAccessCardId }),
+    });
+
+    if (response.ok) {
+      alert('Admin created!');
+    } else {
+      alert('Admin creation failed!');
+    }
+  });
+</script>

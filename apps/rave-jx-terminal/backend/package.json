@@ -5,7 +5,7 @@
   "scripts": {
     "build": "script/build",
     "lint": "script/lint",
-    "start": "cargo watch -x run",
+    "start": "cargo watch -i static -x run",
     "test:ci": "script/ci",
     "test:dev": "cargo test",
     "test": "is-ci test:ci test:dev"

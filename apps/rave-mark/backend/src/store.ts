@@ -856,8 +856,8 @@ export class Store {
         client_id as clientId,
         machine_id as machineId,
         common_access_card_id as commonAccessCardId,
-        registration_request_id as registrationRequestId,
-        election_id as electionId,
+        (select client_id from registration_requests where id = registration_request_id) as registrationRequestId,
+        (select client_id from elections where id = election_id) as electionId,
         precinct_id as precinctId,
         ballot_style_id as ballotStyleId
       from registrations
@@ -894,7 +894,7 @@ export class Store {
         client_id as clientId,
         machine_id as machineId,
         common_access_card_id as commonAccessCardId,
-        registration_id as registrationId,
+        (select client_id from registrations where id = registration_id) as registrationId,
         cast_vote_record as castVoteRecord,
         created_at as createdAt
       from printed_ballots
@@ -913,7 +913,7 @@ export class Store {
         server_id as serverId,
         client_id as clientId,
         machine_id as machineId,
-        election_id as electionId,
+        (select client_id from elections where id = election_id) as electionId,
         cast_vote_record as castVoteRecord,
         created_at as createdAt
       from scanned_ballots

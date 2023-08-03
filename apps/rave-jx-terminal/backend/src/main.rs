@@ -2,7 +2,11 @@
 extern crate rocket;
 
 use db::run_migrations;
-use rocket::fairing;
+use env::{RAVE_URL, VX_MACHINE_ID};
+use rocket::{
+    fairing,
+    fs::{relative, FileServer},
+};
 use rocket_db_pools::Database;
 use routes::*;
 
@@ -15,6 +19,9 @@ mod sync;
 fn rocket() -> _ {
     color_eyre::install().unwrap();
 
+    assert!(!VX_MACHINE_ID.is_empty(), "VX_MACHINE_ID must be set");
+    assert!(!RAVE_URL.to_string().is_empty(), "RAVE_URL must be set");
+
     rocket::build()
         .attach(db::Db::init())
         .attach(fairing::AdHoc::try_on_ignite(
@@ -25,5 +32,6 @@ fn rocket() -> _ {
             "Sync with RAVE server periodically",
             sync::sync_periodically,
         ))
-        .mount("/", routes![index, get_status, do_sync])
+        .mount("/", FileServer::from(relative!("static")))
+        .mount("/", routes![get_status, do_sync, create_election])
 }

@@ -9,6 +9,8 @@ use types_rs::cdf::cvr::Cvr;
 use types_rs::election::ElectionDefinition;
 use types_rs::rave::{client, ClientId, ServerId};
 
+use crate::env::VX_MACHINE_ID;
+
 #[derive(Database)]
 #[database("sqlx")]
 pub(crate) struct Db(rocket_db_pools::sqlx::PgPool);
@@ -51,7 +53,7 @@ impl From<Admin> for client::output::Admin {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Election {
     pub id: ClientId,
-    pub server_id: ServerId,
+    pub server_id: Option<ServerId>,
     pub client_id: ClientId,
     pub machine_id: String,
     pub definition: ElectionDefinition,
@@ -143,7 +145,8 @@ pub(crate) async fn get_last_synced_election_id(
     )
     .fetch_optional(&mut *executor)
     .await?
-    .map(|r| r.server_id))
+    .map(|r| r.server_id)
+    .flatten())
 }
 
 pub(crate) async fn get_last_synced_registration_request_id(
@@ -220,7 +223,7 @@ pub(crate) async fn get_elections(
 
     struct ElectionRecord {
         id: ClientId,
-        server_id: ServerId,
+        server_id: Option<ServerId>,
         client_id: ClientId,
         machine_id: String,
         election: String,
@@ -234,11 +237,11 @@ pub(crate) async fn get_elections(
                 ElectionRecord,
                 r#"
                 SELECT
-                    id as "id: ClientId",
-                    server_id as "server_id: ServerId",
-                    client_id as "client_id: ClientId",
+                    id as "id: _",
+                    server_id as "server_id: _",
+                    client_id as "client_id: _",
                     machine_id,
-                    election as "election: String",
+                    election as "election: _",
                     election_hash,
                     created_at
                 FROM elections
@@ -255,11 +258,11 @@ pub(crate) async fn get_elections(
                 ElectionRecord,
                 r#"
                 SELECT
-                    id as "id: ClientId",
-                    server_id as "server_id: ServerId",
-                    client_id as "client_id: ClientId",
+                    id as "id: _",
+                    server_id as "server_id: _",
+                    client_id as "client_id: _",
                     machine_id,
-                    election as "election: String",
+                    election as "election: _",
                     election_hash,
                     created_at
                 FROM elections
@@ -285,6 +288,35 @@ pub(crate) async fn get_elections(
             })
         })
         .collect::<Result<Vec<_>, _>>()
+}
+
+pub(crate) async fn add_election(
+    executor: &mut sqlx::PgConnection,
+    election: ElectionDefinition,
+) -> color_eyre::Result<ClientId> {
+    let client_id = ClientId::new();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO elections (
+            id,
+            client_id,
+            machine_id,
+            election_hash,
+            election
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+        client_id.as_uuid(),
+        client_id.as_uuid(),
+        VX_MACHINE_ID.clone(),
+        election.election_hash,
+        election as _,
+    )
+    .execute(&mut *executor)
+    .await?;
+
+    Ok(client_id)
 }
 
 pub(crate) async fn add_election_from_rave_server(
@@ -313,7 +345,7 @@ pub(crate) async fn add_election_from_rave_server(
         record.client_id.as_uuid(),
         record.machine_id,
         record.election.election_hash,
-        Json(record.election.election) as _
+        record.election as _
     )
     .execute(&mut *executor)
     .await?;
@@ -617,7 +649,7 @@ pub(crate) async fn get_registration_requests_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
+            client_id as "client_id: ClientId",
             machine_id,
             common_access_card_id,
             given_name,
@@ -639,7 +671,7 @@ pub(crate) async fn get_registration_requests_to_sync_to_rave_server(
     Ok(records
         .into_iter()
         .map(|r| client::input::RegistrationRequest {
-            client_id: r.id,
+            client_id: r.client_id,
             machine_id: r.machine_id,
             common_access_card_id: r.common_access_card_id,
             given_name: r.given_name,
@@ -660,9 +692,9 @@ pub(crate) async fn get_elections_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
+            client_id as "client_id: ClientId",
             machine_id,
-            election as "election: String"
+            election as "election!: String"
         FROM elections
         WHERE server_id IS NULL
         ORDER BY created_at ASC
@@ -675,7 +707,7 @@ pub(crate) async fn get_elections_to_sync_to_rave_server(
         .into_iter()
         .map(|e| {
             Ok(client::input::Election {
-                client_id: e.id,
+                client_id: e.client_id,
                 machine_id: e.machine_id,
                 election: e.election.parse()?,
             })
@@ -689,13 +721,11 @@ pub(crate) async fn get_registrations_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
-            server_id as "server_id: ServerId",
             client_id as "client_id: ClientId",
             machine_id,
             common_access_card_id,
-            registration_request_id as "registration_request_id: ClientId",
-            election_id as "election_id: ClientId",
+            (SELECT client_id FROM registration_requests WHERE id = registration_request_id) as "registration_request_id!: ClientId",
+            (SELECT client_id FROM elections WHERE id = election_id) as "election_id!: ClientId",
             precinct_id,
             ballot_style_id
         FROM registrations
@@ -706,18 +736,20 @@ pub(crate) async fn get_registrations_to_sync_to_rave_server(
     .fetch_all(&mut *executor)
     .await?;
 
-    Ok(records
+    records
         .into_iter()
-        .map(|r| client::input::Registration {
-            client_id: r.id,
-            machine_id: r.machine_id,
-            election_id: r.election_id,
-            registration_request_id: r.registration_request_id,
-            common_access_card_id: r.common_access_card_id,
-            precinct_id: r.precinct_id,
-            ballot_style_id: r.ballot_style_id,
+        .map(|r| {
+            Ok(client::input::Registration {
+                client_id: r.client_id,
+                machine_id: r.machine_id,
+                election_id: r.election_id,
+                registration_request_id: r.registration_request_id,
+                common_access_card_id: r.common_access_card_id,
+                precinct_id: r.precinct_id,
+                ballot_style_id: r.ballot_style_id,
+            })
         })
-        .collect())
+        .collect()
 }
 
 pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
@@ -726,12 +758,10 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
-            server_id as "server_id: ServerId",
             client_id as "client_id: ClientId",
             machine_id,
             common_access_card_id,
-            registration_id as "registration_id: ClientId",
+            (SELECT client_id FROM registrations WHERE id = registration_id) as "registration_id!: ClientId",
             cast_vote_record as "cast_vote_record: String"
         FROM printed_ballots
         WHERE server_id IS NULL
@@ -743,13 +773,13 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
 
     records
         .into_iter()
-        .map(|b| {
+        .map(|r| {
             Ok(client::input::PrintedBallot {
-                client_id: b.id,
-                machine_id: b.machine_id,
-                common_access_card_id: b.common_access_card_id,
-                registration_id: b.registration_id,
-                cast_vote_record: serde_json::from_str(&b.cast_vote_record)?,
+                client_id: r.client_id,
+                machine_id: r.machine_id,
+                common_access_card_id: r.common_access_card_id,
+                registration_id: r.registration_id,
+                cast_vote_record: serde_json::from_str(&r.cast_vote_record)?,
             })
         })
         .collect()
@@ -761,8 +791,6 @@ pub(crate) async fn get_scanned_ballots_to_sync_to_rave_server(
     let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: ClientId",
-            server_id as "server_id: ServerId",
             client_id as "client_id: ClientId",
             machine_id,
             election_id as "election_id: ClientId",
@@ -778,15 +806,56 @@ pub(crate) async fn get_scanned_ballots_to_sync_to_rave_server(
 
     records
         .into_iter()
-        .map(|b| {
+        .map(|r| {
             Ok(client::input::ScannedBallot {
-                client_id: b.client_id,
-                machine_id: b.machine_id,
-                election_id: b.election_id,
-                cast_vote_record: serde_json::from_str(b.cast_vote_record.as_str())?,
+                client_id: r.client_id,
+                machine_id: r.machine_id,
+                election_id: r.election_id,
+                cast_vote_record: serde_json::from_str(r.cast_vote_record.as_str())?,
             })
         })
         .collect::<Result<Vec<_>, _>>()
+}
+
+#[allow(dead_code)]
+pub(crate) async fn add_scanned_ballot(
+    executor: &mut sqlx::PgConnection,
+    scanned_ballot: ScannedBallot,
+) -> Result<(), sqlx::Error> {
+    let ScannedBallot {
+        id,
+        server_id,
+        client_id,
+        machine_id,
+        election_id,
+        cast_vote_record,
+        created_at,
+    } = scanned_ballot;
+    sqlx::query!(
+        r#"
+        INSERT INTO scanned_ballots (
+            id,
+            server_id,
+            client_id,
+            machine_id,
+            election_id,
+            cast_vote_record,
+            created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        "#,
+        id.as_uuid(),
+        server_id.map(|id| id.as_uuid()),
+        client_id.as_uuid(),
+        machine_id,
+        election_id.as_uuid(),
+        Json(cast_vote_record) as _,
+        created_at
+    )
+    .execute(executor)
+    .await?;
+
+    Ok(())
 }
 
 pub(crate) async fn get_last_synced_scanned_ballot_id(
@@ -806,8 +875,35 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
     .and_then(|r| r.server_id))
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ScannedBallotStats {
+    pub total: i64,
+    pub pending: i64,
+}
+
+#[allow(dead_code)]
+pub(crate) async fn get_scanned_ballot_stats(
+    executor: &mut sqlx::PgConnection,
+) -> color_eyre::Result<ScannedBallotStats> {
+    sqlx::query_as!(
+        ScannedBallotStats,
+        r#"
+        SELECT
+            COUNT(*) as "total!: i64",
+            COUNT(*) FILTER (WHERE server_id IS NULL) as "pending!: i64"
+        FROM scanned_ballots
+        "#
+    )
+    .fetch_one(&mut *executor)
+    .await
+    .map_err(Into::into)
+}
+
 #[cfg(test)]
 mod test {
+    use std::env;
+
     use super::*;
     use pretty_assertions::assert_eq;
     use time::OffsetDateTime;
@@ -914,6 +1010,30 @@ mod test {
             .unwrap();
 
         assert_eq!(client_id, client_id2);
+
+        Ok(())
+    }
+
+    #[sqlx::test(migrations = "db/migrations")]
+    async fn test_add_election_to_be_synced(pool: sqlx::PgPool) -> sqlx::Result<()> {
+        env::set_var("VX_MACHINE_ID", "rave-jx-test");
+
+        let mut db = pool.acquire().await?;
+
+        let election_definition = load_famous_names_election();
+
+        let client_id = add_election(&mut db, election_definition.clone())
+            .await
+            .unwrap();
+
+        let elections = get_elections_to_sync_to_rave_server(&mut db).await.unwrap();
+
+        assert_eq!(elections.len(), 1);
+        assert_eq!(elections[0].client_id, client_id);
+        assert_eq!(
+            elections[0].election.election_data,
+            election_definition.election_data
+        );
 
         Ok(())
     }

@@ -1,7 +1,7 @@
 create table elections (
   id uuid primary key,
   -- generated on the server
-  server_id uuid not null,
+  server_id uuid,
   -- generated on a client machine
   client_id uuid not null,
   -- ID of the machine this record was originally created on

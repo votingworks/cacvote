@@ -288,6 +288,7 @@ pub(crate) async fn add_admin(
         r#"
         INSERT INTO admins (common_access_card_id)
         VALUES ($1)
+        ON CONFLICT (common_access_card_id) DO NOTHING
         "#,
         common_access_card_id,
     )
@@ -593,43 +594,6 @@ pub(crate) async fn add_registration_from_client(
     executor: &mut sqlx::PgConnection,
     registration: client::input::Registration,
 ) -> color_eyre::Result<ServerId> {
-    let registration_request = sqlx::query!(
-        r#"
-        SELECT
-            id as "id: ServerId"
-        FROM registration_requests
-        WHERE client_id = $1
-        AND machine_id = $2
-        AND common_access_card_id = $3
-        "#,
-        registration.registration_request_id.as_uuid(),
-        registration.machine_id,
-        registration.common_access_card_id
-    )
-    .fetch_one(&mut *executor)
-    .await
-    .map_err(|err| {
-        eprintln!("unable to find registration: {:?}", registration);
-        err
-    })?;
-    let election = sqlx::query!(
-        r#"
-        SELECT
-            id as "id: ServerId"
-        FROM elections
-        WHERE client_id = $1
-        AND machine_id = $2
-        "#,
-        registration.election_id.as_uuid(),
-        registration.machine_id,
-    )
-    .fetch_one(&mut *executor)
-    .await
-    .map_err(|err| {
-        eprintln!("unable to find election: {:?}", registration);
-        err
-    })?;
-
     let registration_id = ServerId::new();
 
     sqlx::query!(
@@ -644,14 +608,19 @@ pub(crate) async fn add_registration_from_client(
             precinct_id,
             ballot_style_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES (
+            $1, $2, $3, $4,
+            (SELECT id FROM registration_requests WHERE client_id = $5),
+            (SELECT id FROM elections WHERE client_id = $6),
+            $7, $8
+        )
         "#,
         registration_id.as_uuid(),
         registration.client_id.as_uuid(),
         registration.machine_id,
         registration.common_access_card_id,
-        registration_request.id.as_uuid(),
-        election.id.as_uuid(),
+        registration.registration_request_id.as_uuid(),
+        registration.election_id.as_uuid(),
         registration.precinct_id,
         registration.ballot_style_id
     )
@@ -665,23 +634,6 @@ pub(crate) async fn add_printed_ballot_from_client(
     executor: &mut sqlx::PgConnection,
     ballot: client::input::PrintedBallot,
 ) -> color_eyre::Result<ServerId> {
-    // we want to find the associated registration for this ballot
-    let registration = sqlx::query!(
-        r#"
-        SELECT id
-        FROM registrations
-        WHERE client_id = $1
-        AND machine_id = $2
-        AND common_access_card_id = $3
-        "#,
-        ballot.registration_id.as_uuid(),
-        ballot.machine_id,
-        ballot.common_access_card_id
-    )
-    .fetch_one(&mut *executor)
-    .await?;
-
-    // we want to insert the ballot, but use the registration id we just found
     let ballot_id = ServerId::new();
 
     sqlx::query!(
@@ -694,13 +646,17 @@ pub(crate) async fn add_printed_ballot_from_client(
             registration_id,
             cast_vote_record
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES (
+            $1, $2, $3, $4,
+            (SELECT id FROM registrations WHERE client_id = $5),
+            $6
+        )
         "#,
         ballot_id.as_uuid(),
         ballot.client_id.as_uuid(),
         ballot.machine_id,
         ballot.common_access_card_id,
-        registration.id,
+        ballot.registration_id.as_uuid(),
         Json(ballot.cast_vote_record) as _
     )
     .execute(&mut *executor)
@@ -784,13 +740,19 @@ pub(crate) async fn add_scanned_ballot_from_client(
             id,
             client_id,
             machine_id,
+            election_id,
             cast_vote_record
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES (
+            $1, $2, $3,
+            (SELECT id FROM elections WHERE client_id = $4),
+            $5
+        )
         "#,
         ballot_id.as_uuid(),
         ballot.client_id.as_uuid(),
         ballot.machine_id,
+        ballot.election_id.as_uuid(),
         Json(ballot.cast_vote_record) as _
     )
     .execute(&mut *executor)

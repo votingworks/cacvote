@@ -62,7 +62,6 @@ where
 
 impl Type<sqlx::Postgres> for ElectionDefinition {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
-        println!("TYPE INFO");
         sqlx::postgres::PgTypeInfo::with_name("json")
     }
 }
