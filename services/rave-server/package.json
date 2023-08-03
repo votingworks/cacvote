@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "VotingWorks RAVE Server",
   "scripts": {
-    "postinstall": "sudo apt-get update && sudo apt-get install -y postgresql-13",
+    "postinstall": "sudo apt-get update && sudo apt-get install -y postgresql-13 libssl-dev",
     "build": "script/build",
     "lint": "script/lint",
     "start": "cargo watch -i static -x run",
