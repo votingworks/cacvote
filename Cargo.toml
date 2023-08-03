@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "apps/central-scan/backend",
+    "apps/rave-scan/backend",
     "apps/rave-jx-terminal/backend",
     "libs/ballot-encoder-rs",
     "libs/central-scanner",
@@ -11,5 +11,33 @@ members = [
 
 [workspace.dependencies]
 ballot-encoder-rs = { path = "libs/ballot-encoder-rs" }
+base64 = "0.21.2"
+bitstream-io = "1.7.0"
 central-scanner = { path = "libs/central-scanner" }
+color-eyre = "0.6.2"
+env_logger = "0.10.0"
+hex = "0.4.3"
+image = "0.24.6"
+lazy_static = "1.4.0"
+log = "0.4.19"
+nanoid = "0.4.0"
+pretty_assertions = "1.4.0"
+proptest = "1.2.0"
+rayon = "1.7.0"
+regex = "1.9.1"
+reqwest = { version = "0.11.18", features = ["json"] }
+rocket = { version = "=0.5.0-rc.3", features = ["json"] }
+rocket_db_pools = { version = "=0.1.0-rc.3", features = ["sqlx_postgres"] }
+rqrr = "0.6.0"
+serde = { version = "1.0.175", features = ["derive"] }
+serde_json = "1.0.103"
+sha256 = "1.2.2"
+time = { version = "0.3.22", features = ["formatting", "parsing", "serde"] }
+tokio = { version = "1.29.1", features = ["full"] }
 types-rs = { path = "libs/types-rs" }
+uuid = { version = "1.4.0", features = ["serde", "v4"] }
+
+[workspace.dependencies.sqlx]
+version = "0.6.0"
+default-features = false
+features = ["macros", "offline", "migrate", "postgres", "time", "uuid", "json"]

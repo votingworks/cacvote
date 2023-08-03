@@ -6,21 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-color-eyre = "0.6.2"
-lazy_static = "1.4.0"
-nanoid = "0.4.0"
-proptest = "1.2.0"
-regex = "1.9.1"
-serde = { version = "1.0.175", features = ["derive"] }
-serde_json = "1.0.103"
-sha256 = "1.2.2"
-time = { version = "0.3.22", features = ["formatting", "parsing", "serde"] }
-uuid = { version = "1.4.0", features = ["serde", "v4"] }
+color-eyre = { workspace = true }
+lazy_static = { workspace = true }
+nanoid = { workspace = true }
+proptest = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha256 = { workspace = true }
+sqlx = { workspace = true }
+time = { workspace = true }
+uuid = { workspace = true }
 
 [dev-dependencies]
-pretty_assertions = "1.4.0"
-
-[dependencies.sqlx]
-version = "0.6.0"
-default-features = false
-features = ["macros", "offline", "migrate", "postgres", "time", "uuid", "json"]
+pretty_assertions = { workspace = true }

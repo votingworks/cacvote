@@ -1,10 +1,6 @@
 {
   "folders": [
     {
-      "path": "apps/central-scan/backend",
-      "name": "apps/central-scan/backend"
-    },
-    {
       "path": "apps/rave-jx-terminal/backend",
       "name": "apps/rave-jx-terminal/backend"
     },
@@ -19,6 +15,10 @@
     {
       "path": "apps/rave-mark/integration-testing",
       "name": "apps/rave-mark/integration-testing"
+    },
+    {
+      "path": "apps/rave-scan/backend",
+      "name": "apps/rave-scan/backend"
     },
     {
       "path": "codemods",

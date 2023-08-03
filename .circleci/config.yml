@@ -21,29 +21,6 @@ executors:
           password: $VX_DOCKER_PASSWORD
 
 jobs:
-  # @votingworks/central-scan-backend
-  test-apps-central-scan-backend:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir apps/central-scan/backend build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir apps/central-scan/backend lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir apps/central-scan/backend test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: apps/central-scan/backend/reports/
-
   # @votingworks/rave-jx-terminal-backend
   test-apps-rave-jx-terminal-backend:
     executor: nodejs
@@ -140,6 +117,29 @@ jobs:
           path: apps/rave-mark/integration-testing/cypress/screenshots/
       - store_artifacts:
           path: apps/rave-mark/integration-testing/cypress/videos/
+
+  # @votingworks/central-scan-backend
+  test-apps-rave-scan-backend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-scan/backend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-scan/backend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-scan/backend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-scan/backend/reports/
 
   # @votingworks/codemods
   test-codemods:
@@ -756,11 +756,11 @@ jobs:
 workflows:
   test:
     jobs:
-      - test-apps-central-scan-backend
       - test-apps-rave-jx-terminal-backend
       - test-apps-rave-mark-backend
       - test-apps-rave-mark-frontend
       - test-apps-rave-mark-integration-testing
+      - test-apps-rave-scan-backend
       - test-codemods
       - test-libs-auth
       - test-libs-backend

@@ -232,32 +232,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
 
 [[package]]
-name = "central-scan-backend"
-version = "0.1.0"
-dependencies = [
- "ballot-encoder-rs",
- "base64 0.21.2",
- "central-scanner",
- "color-eyre",
- "env_logger",
- "image",
- "lazy_static",
- "pretty_assertions",
- "rayon",
- "reqwest",
- "rocket",
- "rocket_db_pools",
- "rqrr",
- "serde",
- "serde_json",
- "sqlx",
- "time",
- "tokio",
- "types-rs",
- "uuid",
-]
-
-[[package]]
 name = "central-scanner"
 version = "0.1.0"
 dependencies = [
@@ -1767,6 +1741,32 @@ dependencies = [
  "reqwest",
  "rocket",
  "rocket_db_pools",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "types-rs",
+ "uuid",
+]
+
+[[package]]
+name = "rave-scan"
+version = "0.1.0"
+dependencies = [
+ "ballot-encoder-rs",
+ "base64 0.21.2",
+ "central-scanner",
+ "color-eyre",
+ "env_logger",
+ "image",
+ "lazy_static",
+ "pretty_assertions",
+ "rayon",
+ "reqwest",
+ "rocket",
+ "rocket_db_pools",
+ "rqrr",
  "serde",
  "serde_json",
  "sqlx",

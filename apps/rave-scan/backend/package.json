@@ -1,5 +1,5 @@
 {
-  "name": "@votingworks/central-scan-backend",
+  "name": "@votingworks/rave-scan-backend",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

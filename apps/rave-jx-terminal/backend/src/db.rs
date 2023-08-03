@@ -145,8 +145,7 @@ pub(crate) async fn get_last_synced_election_id(
     )
     .fetch_optional(&mut *executor)
     .await?
-    .map(|r| r.server_id)
-    .flatten())
+    .and_then(|r| r.server_id))
 }
 
 pub(crate) async fn get_last_synced_registration_request_id(

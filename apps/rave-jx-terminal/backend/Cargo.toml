@@ -6,23 +6,19 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-color-eyre = "0.6.2"
-lazy_static = "1.4.0"
-regex = "1.9.0"
-reqwest = { version = "0.11.18", features = ["json"] }
-rocket = { version = "=0.5.0-rc.3", features = ["json"] }
-rocket_db_pools = { version = "=0.1.0-rc.3", features = ["sqlx_postgres"] }
-serde = { version = "1.0.175", features = ["derive"] }
-serde_json = "1.0.103"
-time = { version = "0.3.22", features = ["serde"] }
-tokio = { version = "1.29.1", features = ["full"] }
+color-eyre = { workspace = true }
+lazy_static = { workspace = true }
+regex = { workspace = true }
+reqwest = { workspace = true }
+rocket = { workspace = true }
+rocket_db_pools = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+time = { workspace = true }
+tokio = { workspace = true }
 types-rs = { workspace = true }
-uuid = { version = "1.4.0", features = ["serde", "v4"] }
-
-[dependencies.sqlx]
-version = "0.6.0"
-default-features = false
-features = ["macros", "offline", "migrate", "postgres", "time", "uuid", "json"]
+uuid = { workspace = true }
 
 [dev-dependencies]
-pretty_assertions = "1.4.0"
+pretty_assertions = { workspace = true }
