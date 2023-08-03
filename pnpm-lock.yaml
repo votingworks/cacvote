@@ -113,6 +113,16 @@ importers:
         specifier: ^3.3.3
         version: 3.3.3
 
+  apps/rave-jx-terminal/frontend:
+    dependencies:
+      tailwindcss:
+        specifier: ^3.3.3
+        version: 3.3.3
+    devDependencies:
+      concurrently:
+        specifier: ^7.4.0
+        version: 7.4.0
+
   apps/rave-mark/backend:
     dependencies:
       '@votingworks/auth':

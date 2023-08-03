@@ -44,6 +44,29 @@ jobs:
       - store_test_results:
           path: apps/rave-jx-terminal/backend/reports/
 
+  # @votingworks/rave-jx-terminal-frontend
+  test-apps-rave-jx-terminal-frontend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-jx-terminal/frontend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-jx-terminal/frontend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-jx-terminal/frontend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-jx-terminal/frontend/reports/
+
   # @votingworks/rave-mark-backend
   test-apps-rave-mark-backend:
     executor: nodejs
@@ -140,6 +163,29 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: apps/rave-scan/backend/reports/
+
+  # @votingworks/rave-scan-frontend
+  test-apps-rave-scan-frontend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-scan/frontend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-scan/frontend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-scan/frontend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-scan/frontend/reports/
 
   # @votingworks/codemods
   test-codemods:
@@ -693,6 +739,29 @@ jobs:
       - store_test_results:
           path: libs/ui/reports/
 
+  # @votingworks/ui-rs
+  test-libs-ui-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/ui-rs build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/ui-rs lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/ui-rs test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/ui-rs/reports/
+
   # @votingworks/utils
   test-libs-utils:
     executor: nodejs
@@ -757,10 +826,12 @@ workflows:
   test:
     jobs:
       - test-apps-rave-jx-terminal-backend
+      - test-apps-rave-jx-terminal-frontend
       - test-apps-rave-mark-backend
       - test-apps-rave-mark-frontend
       - test-apps-rave-mark-integration-testing
       - test-apps-rave-scan-backend
+      - test-apps-rave-scan-frontend
       - test-codemods
       - test-libs-auth
       - test-libs-backend
@@ -785,6 +856,7 @@ workflows:
       - test-libs-types
       - test-libs-types-rs
       - test-libs-ui
+      - test-libs-ui-rs
       - test-libs-utils
       - test-services-rave-server
       - validate-monorepo

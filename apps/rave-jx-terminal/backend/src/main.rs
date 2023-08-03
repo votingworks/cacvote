@@ -3,10 +3,7 @@ extern crate rocket;
 
 use db::run_migrations;
 use env::{RAVE_URL, VX_MACHINE_ID};
-use rocket::{
-    fairing,
-    fs::{relative, FileServer},
-};
+use rocket::fairing;
 use rocket_db_pools::Database;
 use routes::*;
 
@@ -32,6 +29,5 @@ fn rocket() -> _ {
             "Sync with RAVE server periodically",
             sync::sync_periodically,
         ))
-        .mount("/", FileServer::from(relative!("static")))
         .mount("/", routes![get_status, do_sync, create_election])
 }

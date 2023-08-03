@@ -1,8 +1,6 @@
-use std::rc::Rc;
-
 use dioxus::prelude::*;
 use log::LevelFilter;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 use web_sys::MessageEvent;
 

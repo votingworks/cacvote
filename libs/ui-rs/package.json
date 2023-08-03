@@ -1,0 +1,12 @@
+{
+  "name": "@votingworks/ui-rs",
+  "version": "1.0.0",
+  "description": "Shared UI for Dioxus apps",
+  "scripts": {
+    "test": "cargo test"
+  },
+  "private": true,
+  "license": "GPL-3.0",
+  "author": "VotingWorks <eng@voting.works>",
+  "packageManager": "pnpm@8.1.0"
+}

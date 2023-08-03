@@ -1,7 +1,7 @@
 {
-  "name": "@votingworks/rave-scan-frontend",
+  "name": "@votingworks/rave-jx-terminal-frontend",
   "version": "1.0.0",
-  "description": "RAVE Scan frontend",
+  "description": "RAVE Jurisdiction frontend",
   "scripts": {
     "start": "concurrently 'npm:start:*' 'npm:build:css:watch'",
     "start:frontend": "dx serve --port 3000",

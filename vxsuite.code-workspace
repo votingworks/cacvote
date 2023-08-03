@@ -5,6 +5,10 @@
       "name": "apps/rave-jx-terminal/backend"
     },
     {
+      "path": "apps/rave-jx-terminal/frontend",
+      "name": "apps/rave-jx-terminal/frontend"
+    },
+    {
       "path": "apps/rave-mark/backend",
       "name": "apps/rave-mark/backend"
     },
@@ -123,6 +127,10 @@
     {
       "path": "libs/ui",
       "name": "libs/ui"
+    },
+    {
+      "path": "libs/ui-rs",
+      "name": "libs/ui-rs"
     },
     {
       "path": "libs/usb-mocking",
