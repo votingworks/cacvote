@@ -42,7 +42,7 @@ export const IS_INTEGRATION_TEST = process.env.IS_INTEGRATION_TEST === 'true';
  */
 export const RAVE_URL = process.env.RAVE_URL
   ? new URL(process.env.RAVE_URL)
-  : NODE_ENV === 'development'
+  : NODE_ENV === 'development' || typeof jest !== 'undefined'
   ? new URL('http://localhost:8000')
   : undefined;
 

@@ -1,5 +1,5 @@
 [default.databases.sqlx]
-url = "postgresql:rave-jx"
+url = "postgresql:rave_jx"
 
 [global]
 limits = { json = 10485760, string = 10485760 }

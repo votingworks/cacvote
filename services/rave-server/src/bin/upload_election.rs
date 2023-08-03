@@ -9,7 +9,7 @@ async fn main() -> color_eyre::Result<()> {
     let mut sync_input = RaveServerSyncInput::default();
     let sync_endpoint = rave_url.join("/api/sync")?;
 
-    let election_path = args().skip(1).next().expect("election path is required");
+    let election_path = args().nth(1).expect("election path is required");
     let election_data = std::fs::read_to_string(election_path)?;
     let election = Election {
         client_id: ClientId::new(),
