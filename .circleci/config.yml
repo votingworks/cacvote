@@ -118,7 +118,7 @@ jobs:
       - store_artifacts:
           path: apps/rave-mark/integration-testing/cypress/videos/
 
-  # @votingworks/central-scan-backend
+  # @votingworks/rave-scan-backend
   test-apps-rave-scan-backend:
     executor: nodejs
     resource_class: xlarge
