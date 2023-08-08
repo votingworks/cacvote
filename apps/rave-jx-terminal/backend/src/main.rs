@@ -29,5 +29,14 @@ fn rocket() -> _ {
             "Sync with RAVE server periodically",
             sync::sync_periodically,
         ))
-        .mount("/", routes![get_status, do_sync, create_election])
+        .mount(
+            "/",
+            routes![
+                get_status,
+                get_status_stream,
+                do_sync,
+                create_election,
+                create_registration
+            ],
+        )
 }

@@ -2,6 +2,7 @@ use crate::db;
 use rocket::http::{ContentType, Status};
 use rocket::serde::json::{json, Json};
 use rocket_db_pools::Connection;
+use sqlx::Acquire;
 use types_rs::rave::{client, RaveServerSyncInput, RaveServerSyncOutput};
 
 #[get("/api/status")]
@@ -14,6 +15,24 @@ pub(crate) async fn do_sync(
     mut db: Connection<db::Db>,
     input: Json<RaveServerSyncInput>,
 ) -> (Status, (ContentType, String)) {
+    let mut txn = match db.begin().await {
+        Ok(txn) => txn,
+        Err(e) => {
+            error!("Failed to begin transaction: {}", e);
+            return (
+                Status::InternalServerError,
+                (
+                    ContentType::JSON,
+                    json!({
+                        "success": false,
+                        "error": format!("failed to begin transaction: {}", e)
+                    })
+                    .to_string(),
+                ),
+            );
+        }
+    };
+
     let RaveServerSyncInput {
         last_synced_registration_request_id,
         last_synced_registration_id,
@@ -29,7 +48,7 @@ pub(crate) async fn do_sync(
 
     for client_request in registration_requests.into_iter() {
         let server_request: client::input::RegistrationRequest = client_request;
-        let result = db::add_registration_request_from_client(&mut db, &server_request).await;
+        let result = db::add_registration_request_from_client(&mut txn, &server_request).await;
 
         if let Err(e) = result {
             error!("Failed to insert registration request: {}", e);
@@ -37,7 +56,7 @@ pub(crate) async fn do_sync(
     }
 
     for election in elections.into_iter() {
-        let result = db::add_election(&mut db, election).await;
+        let result = db::add_election(&mut txn, election).await;
 
         if let Err(e) = result {
             error!("Failed to insert election: {}", e);
@@ -45,7 +64,7 @@ pub(crate) async fn do_sync(
     }
 
     for registration in registrations.into_iter() {
-        let result = db::add_registration_from_client(&mut db, registration).await;
+        let result = db::add_registration_from_client(&mut txn, registration).await;
 
         if let Err(e) = result {
             error!("Failed to insert registration: {}", e);
@@ -53,7 +72,7 @@ pub(crate) async fn do_sync(
     }
 
     for printed_ballot in printed_ballots.into_iter() {
-        let result = db::add_printed_ballot_from_client(&mut db, printed_ballot).await;
+        let result = db::add_printed_ballot_from_client(&mut txn, printed_ballot).await;
 
         if let Err(e) = result {
             error!("Failed to insert printed ballot: {}", e);
@@ -61,14 +80,14 @@ pub(crate) async fn do_sync(
     }
 
     for scanned_ballot in scanned_ballots.into_iter() {
-        let result = db::add_scanned_ballot_from_client(&mut db, scanned_ballot).await;
+        let result = db::add_scanned_ballot_from_client(&mut txn, scanned_ballot).await;
 
         if let Err(e) = result {
             error!("Failed to insert scanned ballot: {}", e);
         }
     }
 
-    let get_admins_result = db::get_admins(&mut db).await;
+    let get_admins_result = db::get_admins(&mut txn).await;
     let admins = match get_admins_result {
         Err(e) => {
             return (
@@ -82,7 +101,7 @@ pub(crate) async fn do_sync(
         Ok(admins) => admins,
     };
 
-    let get_elections_result = db::get_elections(&mut db, last_synced_election_id).await;
+    let get_elections_result = db::get_elections(&mut txn, last_synced_election_id).await;
     let elections = match get_elections_result {
         Err(e) => {
             return (
@@ -97,7 +116,7 @@ pub(crate) async fn do_sync(
     };
 
     let get_registration_requests_result =
-        db::get_registration_requests(&mut db, last_synced_registration_request_id).await;
+        db::get_registration_requests(&mut txn, last_synced_registration_request_id).await;
     let registration_requests = match get_registration_requests_result {
         Err(e) => {
             return (
@@ -112,7 +131,7 @@ pub(crate) async fn do_sync(
     };
 
     let get_registrations_result =
-        db::get_registrations(&mut db, last_synced_registration_id).await;
+        db::get_registrations(&mut txn, last_synced_registration_id).await;
     let registrations = match get_registrations_result {
         Err(e) => {
             return (
@@ -127,7 +146,7 @@ pub(crate) async fn do_sync(
     };
 
     let printed_ballots =
-        match db::get_printed_ballots(&mut db, last_synced_printed_ballot_id).await {
+        match db::get_printed_ballots(&mut txn, last_synced_printed_ballot_id).await {
             Err(e) => {
                 return (
                     Status::InternalServerError,
@@ -141,7 +160,7 @@ pub(crate) async fn do_sync(
         };
 
     let scanned_ballots =
-        match db::get_scanned_ballots(&mut db, last_synced_scanned_ballot_id).await {
+        match db::get_scanned_ballots(&mut txn, last_synced_scanned_ballot_id).await {
             Err(e) => {
                 return (
                     Status::InternalServerError,
@@ -177,6 +196,17 @@ pub(crate) async fn do_sync(
             .map(|ballot| ballot.into())
             .collect(),
     };
+
+    if let Err(err) = txn.commit().await {
+        error!("Failed to commit transaction: {}", err);
+        return (
+            Status::InternalServerError,
+            (
+                ContentType::JSON,
+                json!({ "error": err.to_string() }).to_string(),
+            ),
+        );
+    }
 
     (
         Status::Ok,

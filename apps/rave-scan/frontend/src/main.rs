@@ -20,6 +20,7 @@ struct ButtonProps<'a> {
     onclick: Option<EventHandler<'a, MouseEvent>>,
 }
 
+#[allow(non_snake_case)]
 fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
     render!(
         button {
@@ -84,6 +85,7 @@ fn use_scanned_ballot_stats(cx: Scope) -> &UseState<Option<ScannedBallotStats>> 
     ballot_stats
 }
 
+#[allow(non_snake_case)]
 fn App(cx: Scope) -> Element {
     let is_scanning = use_state(cx, || false);
     let ballot_stats = use_scanned_ballot_stats(cx);

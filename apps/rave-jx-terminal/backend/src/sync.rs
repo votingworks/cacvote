@@ -208,7 +208,7 @@ pub(crate) async fn request(
 ) -> color_eyre::eyre::Result<RaveServerSyncOutput> {
     let client = reqwest::Client::new();
     Ok(client
-        .post(endpoint)
+        .post(endpoint.clone())
         .json(sync_input)
         .send()
         .await?

@@ -28,7 +28,7 @@ create table elections (
   client_id uuid not null,
   -- ID of the machine this record was originally created on
   machine_id text not null,
-  election json not null,
+  election text not null,
   created_at timestamptz not null default current_timestamp,
 
   unique (client_id, machine_id)
@@ -101,7 +101,7 @@ create table printed_ballots (
   -- CAC ID of the person for this record
   common_access_card_id uuid not null unique,
   registration_id uuid not null references registrations(id),
-  cast_vote_record json not null,
+  cast_vote_record text not null,
   created_at timestamptz not null default current_timestamp,
 
   unique (client_id, machine_id)
@@ -116,7 +116,7 @@ create table scanned_ballots (
   -- ID of the machine this record was originally created on
   machine_id varchar(255) not null,
   election_id uuid not null references elections(id) on update cascade on delete cascade,
-  cast_vote_record json not null,
+  cast_vote_record text not null,
   created_at timestamptz not null default current_timestamp,
 
   unique (client_id, machine_id)

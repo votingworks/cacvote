@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 pub mod client;
 
-#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct ServerId(Uuid);
@@ -31,7 +30,32 @@ impl From<Uuid> for ServerId {
     }
 }
 
-#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg(feature = "sqlx")]
+impl sqlx::Type<sqlx::Postgres> for ServerId {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        <Uuid as sqlx::Type<sqlx::Postgres>>::type_info()
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ServerId {
+    fn decode(
+        value: sqlx::postgres::PgValueRef<'r>,
+    ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
+        <Uuid as sqlx::Decode<sqlx::Postgres>>::decode(value).map(Self)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for ServerId {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <sqlx::Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
+        <Uuid as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.0, buf)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct ClientId(Uuid);
@@ -58,6 +82,31 @@ impl From<Uuid> for ClientId {
     }
 }
 
+#[cfg(feature = "sqlx")]
+impl sqlx::Type<sqlx::Postgres> for ClientId {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        <Uuid as sqlx::Type<sqlx::Postgres>>::type_info()
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ClientId {
+    fn decode(
+        value: sqlx::postgres::PgValueRef<'r>,
+    ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
+        <Uuid as sqlx::Decode<sqlx::Postgres>>::decode(value).map(Self)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for ClientId {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <sqlx::Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
+        <Uuid as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.0, buf)
+    }
+}
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RaveServerSyncInput {

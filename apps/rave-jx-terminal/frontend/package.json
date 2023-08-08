@@ -4,7 +4,7 @@
   "description": "RAVE Jurisdiction frontend",
   "scripts": {
     "start": "concurrently 'npm:start:*' 'npm:build:css:watch'",
-    "start:frontend": "dx serve --port 3000",
+    "start:frontend": "dx serve --port 3100",
     "start:backend": "pnpm --dir ../backend start",
     "build:css:watch": "tailwindcss -i input.css -o ./public/styles.css --watch",
     "test": "cargo test"

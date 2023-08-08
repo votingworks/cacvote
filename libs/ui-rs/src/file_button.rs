@@ -8,6 +8,7 @@ use crate::button::Button;
 
 #[derive(Props)]
 pub struct FileButtonProps<'a> {
+    class: &'a str,
     children: Element<'a>,
     disabled: Option<bool>,
     #[props(into)]
@@ -64,6 +65,7 @@ pub fn FileButton<'a>(cx: Scope<'a, FileButtonProps<'a>>) -> Element {
             },
         }
         Button {
+            class: cx.props.class,
             &cx.props.children
             onclick: {
                 to_owned![id];

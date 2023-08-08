@@ -15,7 +15,7 @@ idtype!(OptionId);
 idtype!(PartyId);
 idtype!(PrecinctId);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ElectionDefinition {
     pub election: Election,
     pub election_data: String,
@@ -66,7 +66,7 @@ where
 #[cfg(feature = "sqlx")]
 impl Type<sqlx::Postgres> for ElectionDefinition {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("json")
+        sqlx::postgres::PgTypeInfo::with_name("text")
     }
 }
 
@@ -90,7 +90,7 @@ impl<'de> Deserialize<'de> for ElectionDefinition {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Election {
     pub title: String,
@@ -119,7 +119,7 @@ impl Election {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BallotStyle {
     pub id: BallotStyleId,
@@ -129,7 +129,7 @@ pub struct BallotStyle {
     pub party_id: Option<PartyId>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Precinct {
     pub id: PrecinctId,
@@ -227,7 +227,7 @@ pub struct YesNoOption {
     pub label: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GridLayout {
     pub precinct_id: PrecinctId,
@@ -247,7 +247,7 @@ impl GridLayout {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Outset<T> {
     pub top: T,
     pub right: T,
@@ -257,7 +257,7 @@ pub struct Outset<T> {
 
 /// A position on the ballot grid defined by timing marks and the contest/option
 /// for which a mark at this position is a vote for.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum GridPosition {
     /// A pre-defined labeled option on the ballot.
@@ -342,7 +342,7 @@ impl GridLocation {
 /// with the same underlying representation is not used.
 pub type UnitIntervalValue = f32;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarkThresholds {
     pub definite: UnitIntervalValue,

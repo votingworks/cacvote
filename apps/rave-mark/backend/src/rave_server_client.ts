@@ -22,7 +22,7 @@ import { ClientId, ClientIdSchema, ServerId, ServerIdSchema } from './types/db';
 const debug = makeDebug('rave-server-client');
 
 export interface RaveServerClient {
-  sync({ authStatus }: { authStatus: AuthStatus }): Promise<void>;
+  sync(options?: { authStatus: AuthStatus }): Promise<void>;
 }
 
 const DateTimeSchema = z
@@ -273,17 +273,20 @@ export class RaveServerClientImpl {
     this.baseUrl = baseUrl;
   }
 
-  async sync({ authStatus }: { authStatus: AuthStatus }): Promise<void> {
-    assert(
-      authStatus.status === 'logged_in' &&
-        authStatus.user.role === 'rave_voter' &&
-        authStatus.isRaveAdmin,
-      'not logged in as admin'
-    );
+  async sync({ authStatus }: { authStatus?: AuthStatus } = {}): Promise<void> {
+    const user =
+      authStatus?.status === 'logged_in' &&
+      authStatus.user.role === 'rave_voter'
+        ? authStatus.user
+        : null;
+    assert(!authStatus || user, 'not logged in as voter');
+    const creator = user?.commonAccessCardId ?? 'system';
 
-    const syncAttemptId = this.createServerSyncAttempt(
-      authStatus.user.commonAccessCardId
-    );
+    const syncAttemptId = this.store.createServerSyncAttempt({
+      creator,
+      trigger: user ? 'manual' : 'scheduled',
+      initialStatusMessage: 'Syncing…',
+    });
 
     try {
       const input = this.createSyncInput();
@@ -304,10 +307,13 @@ export class RaveServerClientImpl {
     }
   }
 
-  private createServerSyncAttempt(commonAccessCardId: Id): ClientId {
+  private createServerSyncAttempt(
+    creator: string,
+    trigger: 'manual' | 'scheduled'
+  ): ClientId {
     return this.store.createServerSyncAttempt({
-      creator: commonAccessCardId,
-      trigger: 'manual',
+      creator,
+      trigger,
       initialStatusMessage: 'Syncing…',
     });
   }
@@ -475,19 +481,24 @@ export class RaveServerClientImpl {
 export class MockRaveServerClient implements RaveServerClient {
   constructor(private readonly store: Store) {}
 
-  async sync({ authStatus }: { authStatus: AuthStatus }): Promise<void> {
+  async sync({
+    authStatus,
+  }: {
+    authStatus?: AuthStatus;
+  } = {}): Promise<void> {
     await Promise.resolve();
 
-    assert(
-      authStatus.status === 'logged_in' &&
-        authStatus.user.role === 'rave_voter' &&
-        authStatus.isRaveAdmin,
-      'not logged in as admin'
-    );
+    const user =
+      authStatus?.status === 'logged_in' &&
+      authStatus.user.role === 'rave_voter'
+        ? authStatus.user
+        : null;
+    assert(!authStatus || user, 'not logged in as voter');
+    const creator = user?.commonAccessCardId ?? 'system';
 
     const id = this.store.createServerSyncAttempt({
-      creator: authStatus.user.commonAccessCardId,
-      trigger: 'manual',
+      creator,
+      trigger: user ? 'manual' : 'scheduled',
       initialStatusMessage: 'Syncing…',
     });
 

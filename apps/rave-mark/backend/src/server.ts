@@ -62,11 +62,45 @@ function getRaveServerClient(workspace: Workspace): RaveServerClient {
  * Starts the server with all the default options.
  */
 export function start({ auth, logger, port, workspace }: StartOptions): Server {
+  const raveServerClient = getRaveServerClient(workspace);
+  const resolvedAuth = auth ?? getDefaultAuth(logger);
   const app = buildApp({
     workspace,
-    auth: auth ?? getDefaultAuth(logger),
-    raveServerClient: getRaveServerClient(workspace),
+    auth: resolvedAuth,
+    raveServerClient,
   });
+
+  async function doRaveServerSync() {
+    try {
+      await raveServerClient.sync();
+
+      await logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: 'RAVE server sync succeeded',
+        disposition: 'success',
+      });
+    } catch (err) {
+      await logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: `Failed to sync with RAVE server: ${err}`,
+        disposition: 'failure',
+      });
+    }
+
+    // run again in 5 seconds
+    setTimeout(doRaveServerSync, 1000 * 5);
+  }
+
+  void doRaveServerSync().then(
+    () =>
+      logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: 'Started RAVE server sync',
+        disposition: 'success',
+      }),
+    (err) =>
+      logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: `Failed to start RAVE server sync: ${err}`,
+        disposition: 'failure',
+      })
+  );
 
   return app.listen(
     port,
