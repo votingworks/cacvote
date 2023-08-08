@@ -28,7 +28,9 @@ impl std::str::FromStr for FractionalNumber {
     }
 }
 
-/// Used in SelectionPosition::IsAllocable to indicate whether the SelectionPosition::NumberVotes should be allocated to the underlying contest option counter.
+/// Used in `SelectionPosition::IsAllocable` to indicate whether the
+/// `SelectionPosition::NumberVotes` should be allocated to the underlying
+/// contest option counter.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum AllocationStatus {
     /// To not allocate votes to the contest option's accumulator.
@@ -51,12 +53,13 @@ pub enum CVRStatus {
     #[serde(rename = "needs-adjudication")]
     NeedsAdjudication,
 
-    /// Used in conjunction with CVRSnapshot::OtherStatus when no other value in this enumeration applies.
+    /// Used in conjunction with `CVRSnapshot::OtherStatus` when no other value
+    /// in this enumeration applies.
     #[serde(rename = "other")]
     Other,
 }
 
-/// Used in CVRSnapshot::Type to indicate the type of snapshot.
+/// Used in `CVRSnapshot::Type` to indicate the type of snapshot.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CVRType {
     /// Has been adjudicated.
@@ -73,7 +76,9 @@ pub enum CVRType {
     Original,
 }
 
-/// To identify the version of the CVR specification being used, i.e., version 1.0.0.  This will need to be updated for different versions of the specification.
+/// To identify the version of the CVR specification being used, i.e., version
+/// 1.0.0.  This will need to be updated for different versions of the
+/// specification.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum CastVoteRecordVersion {
     /// Fixed value for the version of this specification.
@@ -81,7 +86,8 @@ pub enum CastVoteRecordVersion {
     V1_0_0,
 }
 
-/// Used in CVRContestSelection::Status to identify the status of a contest selection in the CVR.
+/// Used in `CVRContestSelection::Status` to identify the status of a contest
+/// selection in the CVR.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum ContestSelectionStatus {
     /// To indicate that the contest selection was generated per contest rules.
@@ -96,23 +102,27 @@ pub enum ContestSelectionStatus {
     #[serde(rename = "needs-adjudication")]
     NeedsAdjudication,
 
-    /// Used in conjunction with CVRContestSelection::OtherStatus when no other value in this enumeration applies.
+    /// Used in conjunction with `CVRContestSelection::OtherStatus` when no
+    /// other value in this enumeration applies.
     #[serde(rename = "other")]
     Other,
 }
 
-/// Used in CVRContest::Status to identify the status of a contest in which contest selection(s) were made.
+/// Used in `CVRContest::Status` to identify the status of a contest in which
+/// contest selection(s) were made.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum ContestStatus {
     /// To indicate that the contest has been invalidated by the generating device because of contest rules.
     #[serde(rename = "invalidated-rules")]
     InvalidatedRules,
 
-    /// For a CVRContest with no SelectionPosition, i.e. to specify the position contains no marks or other indications.
+    /// For a `CVRContest` with no `SelectionPosition`, i.e. to specify the
+    /// position contains no marks or other indications.
     #[serde(rename = "not-indicated")]
     NotIndicated,
 
-    /// Used in conjunction with CVRContest::OtherStatus when no other value in this enumeration applies.
+    /// Used in conjunction with `CVRContest::OtherStatus` when no other value
+    /// in this enumeration applies.
     #[serde(rename = "other")]
     Other,
 
@@ -125,14 +135,16 @@ pub enum ContestStatus {
     Undervoted,
 }
 
-/// Used in Hash::Type to indicate the type of hash being used for an image file.
+/// Used in `Hash::Type` to indicate the type of hash being used for an image
+/// file.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum HashType {
     /// To indicate that the MD6 message digest algorithm is being used.
     #[serde(rename = "md6")]
     Md6,
 
-    /// Used in conjunction with Hash::OtherType when no other value in this enumeration applies.
+    /// Used in conjunction with Hash::OtherType when no other value in this
+    /// enumeration applies.
     #[serde(rename = "other")]
     Other,
 
@@ -145,18 +157,20 @@ pub enum HashType {
     Sha512,
 }
 
-/// Used in Code::Type to indicate the type of code/identifier being used.
+/// Used in `Code::Type` to indicate the type of code/identifier being used.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum IdentifierType {
     /// To indicate that the identifier is a FIPS code.
     #[serde(rename = "fips")]
     Fips,
 
-    /// To indicate that the identifier is from a local-level scheme, i.e., unique to a county or city.
+    /// To indicate that the identifier is from a local-level scheme, i.e.,
+    /// unique to a county or city.
     #[serde(rename = "local-level")]
     LocalLevel,
 
-    /// To indicate that the identifier is from a national-level scheme other than FIPS or OCD-ID.
+    /// To indicate that the identifier is from a national-level scheme other
+    /// than FIPS or OCD-ID.
     #[serde(rename = "national-level")]
     NationalLevel,
 
@@ -164,16 +178,19 @@ pub enum IdentifierType {
     #[serde(rename = "ocd-id")]
     OcdId,
 
-    /// Used in conjunction with Code::OtherType when no other value in this enumeration applies.
+    /// Used in conjunction with Code::OtherType when no other value in this
+    /// enumeration applies.
     #[serde(rename = "other")]
     Other,
 
-    /// To indicate that the identifier is from a state-level scheme, i.e., unique to a particular state.
+    /// To indicate that the identifier is from a state-level scheme, i.e.,
+    /// unique to a particular state.
     #[serde(rename = "state-level")]
     StateLevel,
 }
 
-/// Used in SelectionPosition::HasIndication to identify whether a selection indication is present.
+/// Used in SelectionPosition::HasIndication to identify whether a selection
+/// indication is present.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum IndicationStatus {
     /// There is no selection indication.
@@ -190,27 +207,30 @@ pub enum IndicationStatus {
     Yes,
 }
 
-/// Used in SelectionPosition::Status to identify the status of a selection indication.
+/// Used in `SelectionPosition::Status` to identify the status of a selection
+/// indication.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum PositionStatus {
     /// Used if the indication was adjudicated.
     #[serde(rename = "adjudicated")]
     Adjudicated,
 
-    /// Used if the indication was generated by the creating device per contest rules.
+    /// Used if the indication was generated by the creating device per contest
+    /// rules.
     #[serde(rename = "generated-rules")]
     GeneratedRules,
 
-    /// Used if the indication was invalidated by the creating device because of contest rules.
+    /// Used if the indication was invalidated by the creating device because of
+    /// contest rules.
     #[serde(rename = "invalidated-rules")]
     InvalidatedRules,
 
-    /// Used in conjunction with SelectionPosition::OtherStatus when no other value in this enumeration applies.
+    /// Used in conjunction with `SelectionPosition::OtherStatus` when no other value in this enumeration applies.
     #[serde(rename = "other")]
     Other,
 }
 
-/// Used in CastVoteRecordReport::ReportType to indicate the type of the CVR report.
+/// Used in `CastVoteRecordReport::ReportType` to indicate the type of the CVR report.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum ReportType {
     /// To indicate that the report contains adjudications.
@@ -221,27 +241,31 @@ pub enum ReportType {
     #[serde(rename = "aggregated")]
     Aggregated,
 
-    /// To indicate that the report is an export from a device such as a scanner.
+    /// To indicate that the report is an export from a device such as a
+    /// scanner.
     #[serde(rename = "originating-device-export")]
     OriginatingDeviceExport,
 
-    /// Used in conjunction with CastVoteRecordReport::OtherReportType when no other value in this enumeration applies.
+    /// Used in conjunction with `CastVoteRecordReport::OtherReportType` when no
+    /// other value in this enumeration applies.
     #[serde(rename = "other")]
     Other,
 
-    /// To indicate that the report is the result of a ranked choice voting round.
+    /// To indicate that the report is the result of a ranked choice voting
+    /// round.
     #[serde(rename = "rcv-round")]
     RcvRound,
 }
 
-/// Used in GpUnit::Type to indicate a type of political geography.
+/// Used in `GpUnit::Type` to indicate a type of political geography.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum ReportingUnitType {
     /// To indicate a combined precinct.
     #[serde(rename = "combined-precinct")]
     CombinedPrecinct,
 
-    /// Used in conjunction with GpUnit::OtherType when no other value in this enumeration applies.
+    /// Used in conjunction with `GpUnit::OtherType` when no other value in this
+    /// enumeration applies.
     #[serde(rename = "other")]
     Other,
 
@@ -262,7 +286,8 @@ pub enum ReportingUnitType {
     VoteCenter,
 }
 
-/// Used in Contest::VoteVariation to indicate the vote variation (vote method) used to tabulate the contest.
+/// Used in `Contest::VoteVariation` to indicate the vote variation (vote
+/// method) used to tabulate the contest.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum VoteVariation {
     /// To indicate approval voting.
@@ -285,7 +310,8 @@ pub enum VoteVariation {
     #[serde(rename = "n-of-m")]
     NOfM,
 
-    /// Used in conjunction with Contest::OtherVoteVariation when no other value in this enumeration applies.
+    /// Used in conjunction with `Contest::OtherVoteVariation` when no other
+    /// value in this enumeration applies.
     #[serde(rename = "other")]
     Other,
 
@@ -317,7 +343,8 @@ pub enum AnnotationObjectType {
     Annotation,
 }
 
-/// Annotation is used to record annotations made by one or more adjudicators. CVRSnapshot includes Annotation.
+/// Annotation is used to record annotations made by one or more adjudicators.
+/// `CVRSnapshot` includes `Annotation`.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Annotation {
     #[serde(rename = "@type")]
@@ -340,7 +367,9 @@ pub struct Annotation {
     pub time_stamp: Option<OffsetDateTime>,
 }
 
-/// BallotMeasureContest is a subclass of Contest and is used to identify the type of contest as involving one or more ballot measures. It inherits attributes from Contest.
+/// `BallotMeasureContest` is a subclass of `Contest` and is used to identify
+/// the type of contest as involving one or more ballot measures. It inherits
+/// attributes from `Contest`.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub struct BallotMeasureContest {
     #[serde(rename = "@id")]
@@ -362,11 +391,12 @@ pub struct BallotMeasureContest {
     #[serde(rename = "Name", skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
-    /// If VoteVariation is 'other', the vote variation for this contest.
+    /// If `VoteVariation` is 'other', the vote variation for this contest.
     #[serde(rename = "OtherVoteVariation", skip_serializing_if = "Option::is_none")]
     pub other_vote_variation: Option<String>,
 
-    /// The vote variation for this contest, from the VoteVariation enumeration.
+    /// The vote variation for this contest, from the `VoteVariation`
+    /// enumeration.
     #[serde(rename = "VoteVariation", skip_serializing_if = "Option::is_none")]
     pub vote_variation: Option<VoteVariation>,
 }
@@ -378,14 +408,18 @@ pub enum BallotMeasureSelectionObjectType {
     BallotMeasure,
 }
 
-/// BallotMeasureSelection is a subclass of ContestSelection and is used for ballot measures.  The voter's selected response to the contest selection (e.g., &quot;yes&quot; or &quot;no&quot;) may be in English or other languages as utilized on the voter's ballot.
+/// `BallotMeasureSelection` is a subclass of `ContestSelection` and is used for
+/// ballot measures.  The voter's selected response to the contest selection
+/// (e.g., "yes" or "no") may be in English or other languages as utilized on
+/// the voter's ballot.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub struct BallotMeasureSelection {
     #[serde(rename = "@id")]
     pub id: String,
 
-    // #[serde(rename = "@type")]
-    // pub object_type: BallotMeasureSelectionObjectType,
+    #[serde(rename = "@type")]
+    pub object_type: BallotMeasureSelectionObjectType,
+
     /// Code used to identify the contest selection.
     #[serde(rename = "Code", skip_serializing_if = "Option::is_none")]
     pub code: Option<Vec<Code>>,
@@ -492,7 +526,8 @@ impl Default for Cvr {
     }
 }
 
-/// Used in CVR::vxBallotType to indicate whether the ballot is an absentee or precinct ballot.
+/// Used in `CVR::vxBallotType` to indicate whether the ballot is an absentee or
+/// precinct ballot.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
 pub enum VxBallotType {
     #[serde(rename = "precinct")]
@@ -540,7 +575,18 @@ pub enum CVRContestObjectType {
     CVRContest,
 }
 
-/// CVRContest class is included by CVRSnapshot for each contest on the ballot that was voted, that is, whose contest options contain indications that may constitute a vote. CVRContest includes CVRContestSelection for each contest option in the contest containing an indication or write-in.     CVRSnapshot can also include CVRContest for every contest on the ballot regardless of whether any of the contest options contain an indication, for cases where the CVR must include all contests that appeared on the ballot.     CVRContest attributes are for including summary information about the contest.  Overvotes plus Undervotes plus TotalVotes must equal the number of votes allowable in the contest, e.g., in a &quot;chose 3 of 5&quot; contest in which the voter chooses only 2, then Overvotes = 0, Undervotes = 1, and TotalVotes = 2, which adds up to the number of votes allowable = 3.
+/// `CVRContest` class is included by `CVRSnapshot` for each contest on the
+/// ballot that was voted, that is, whose contest options contain indications
+/// that may constitute a vote. CVRContest includes CVRContestSelection for each
+/// contest option in the contest containing an indication or write-in.
+/// CVRSnapshot can also include CVRContest for every contest on the ballot
+/// regardless of whether any of the contest options contain an indication, for
+/// cases where the CVR must include all contests that appeared on the ballot.
+/// CVRContest attributes are for including summary information about the
+/// contest.  Overvotes plus Undervotes plus TotalVotes must equal the number
+/// of votes allowable in the contest, e.g., in a &quot;chose 3 of 5&quot;
+/// contest in which the voter chooses only 2, then Overvotes = 0, Undervotes =
+/// 1, and TotalVotes = 2, which adds up to the number of votes allowable = 3.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub struct CVRContest {
     #[serde(rename = "@type")]
@@ -569,7 +615,9 @@ pub struct CVRContest {
     #[serde(rename = "Selections", skip_serializing_if = "Option::is_none")]
     pub selections: Option<i64>,
 
-    /// The status of the contest, e.g., overvoted, undervoted, from the ContestStatus enumeration.  If no values apply, use 'other' and include a user-defined status in OtherStatus.
+    /// The status of the contest, e.g., overvoted, undervoted, from the
+    /// `ContestStatus` enumeration.  If no values apply, use 'other' and
+    /// include a user-defined status in `OtherStatus.`
     #[serde(rename = "Status", skip_serializing_if = "Option::is_none")]
     pub status: Option<Vec<ContestStatus>>,
 
@@ -589,17 +637,33 @@ pub enum CVRContestSelectionObjectType {
     CVRContestSelection,
 }
 
-/// CVRContestSelection is used to link a contest option containing an indication with information about the indication, such as whether a mark constitutes a countable vote, or whether a mark is determined to be marginal, etc.  CVRContest includes an instance of CVRContestSelection when an indication for the selection is present, and CVRContestSelection then includes SelectionPosition for each indication present. To tie the indication to the specific contest selection, CVRContestSelection links to an instance of ContestSelection that has previously been included by Contest.    Since multiple indications per contest option are possible for some voting methods, CVRContestSelection can include multiple instances of SelectionPosition, one per indication. CVRContestSelection can also be used for the purpose of including, in the CVR, all contest options in the contest regardless of whether indications are present.  In this case, CVRContestSelection would not include SelectionPosition if no indication is present but would link to the appropriate instance of ContestSelection.
+/// `CVRContestSelection` is used to link a contest option containing an
+/// indication with information about the indication, such as whether a mark
+/// constitutes a countable vote, or whether a mark is determined to be
+/// marginal, etc.  `CVRContest` includes an instance of `CVRContestSelection`
+/// when an indication for the selection is present, and `CVRContestSelection`
+/// then includes `SelectionPosition` for each indication present. To tie the
+/// indication to the specific contest selection, `CVRContestSelection` links to
+/// an instance of `ContestSelection` that has previously been included by
+/// `Contest.`    Since multiple indications per contest option are possible for
+/// some voting methods, `CVRContestSelection` can include multiple instances of
+/// SelectionPosition, one per indication. `CVRContestSelection` can also be
+/// used for the purpose of including, in the CVR, all contest options in the
+/// contest regardless of whether indications are present.  In this case,
+/// `CVRContestSelection` would not include `SelectionPosition` if no indication
+/// is present but would link to the appropriate instance of `ContestSelection.`
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub struct CVRContestSelection {
     #[serde(rename = "@type")]
     pub object_type: CVRContestSelectionObjectType,
 
-    /// Used to link to an instance of a contest selection that was previously included by Contest.
+    /// Used to link to an instance of a contest selection that was previously
+    /// included by Contest.
     #[serde(rename = "ContestSelectionId", skip_serializing_if = "Option::is_none")]
     pub contest_selection_id: Option<String>,
 
-    /// Used to include the ordinal position of the contest option as it appeared on the ballot.
+    /// Used to include the ordinal position of the contest option as it
+    /// appeared on the ballot.
     #[serde(rename = "OptionPosition", skip_serializing_if = "Option::is_none")]
     pub option_position: Option<i64>,
 
@@ -607,31 +671,47 @@ pub struct CVRContestSelection {
     #[serde(rename = "OtherStatus", skip_serializing_if = "Option::is_none")]
     pub other_status: Option<String>,
 
-    /// For the RCV voting variation, the rank chosen by the voter, for when a contest selection can represent a ranking.
+    /// For the RCV voting variation, the rank chosen by the voter, for when a
+    /// contest selection can represent a ranking.
     #[serde(rename = "Rank", skip_serializing_if = "Option::is_none")]
     pub rank: Option<i64>,
 
-    /// Used to include further information about the indication/mark associated with the contest selection.  Depending on the voting method, multiple indications/marks per selection may be possible.
+    /// Used to include further information about the indication/mark associated
+    /// with the contest selection.  Depending on the voting method, multiple
+    /// indications/marks per selection may be possible.
     #[serde(rename = "SelectionPosition")]
     pub selection_position: Vec<SelectionPosition>,
 
-    /// Contains the status of the contest selection, e.g., 'needs-adjudication' for a contest requiring adjudication, using values from the ContestSelectionStatus enumeration.  If no values apply, use 'other' and include a user-defined status in OtherStatus.
+    /// Contains the status of the contest selection, e.g., 'needs-adjudication'
+    /// for a contest requiring adjudication, using values from the
+    /// `ContestSelectionStatus` enumeration.  If no values apply, use 'other' and
+    /// include a user-defined status in OtherStatus.
     #[serde(rename = "Status", skip_serializing_if = "Option::is_none")]
     pub status: Option<Vec<ContestSelectionStatus>>,
 
-    /// For cumulative or range and other similar voting variations, contains the total proper fractional number of votes across all indications/marks.
+    /// For cumulative or range and other similar voting variations, contains
+    /// the total proper fractional number of votes across all
+    /// indications/marks.
     #[serde(
         rename = "TotalFractionalVotes",
         skip_serializing_if = "Option::is_none"
     )]
     pub total_fractional_votes: Option<FractionalNumber>,
 
-    /// For cumulative or range and other similar voting variations, contains the total number of votes across all indications/marks.
+    /// For cumulative or range and other similar voting variations, contains
+    /// the total number of votes across all indications/marks.
     #[serde(rename = "TotalNumberVotes", skip_serializing_if = "Option::is_none")]
     pub total_number_votes: Option<i64>,
 }
 
-/// CVRSnapshot contains a version of the contest selections for a CVR; there can be multiple versions of CVRSnapshot within the same CVR.  Type specifies the type of the snapshot, i.e., whether interpreted by the scanner according to contest rules, modified as a result of adjudication, or the original, that is, the version initially scanned before contest rules are applied.  CVR includes CVRSnapshot.Other attributes are repeated in each CVRSnapshot because they may differ across snapshots, e.g., the contests could be different as well as other status.
+/// `CVRSnapshot` contains a version of the contest selections for a CVR; there
+/// can be multiple versions of `CVRSnapshot` within the same CVR.  Type
+/// specifies the type of the snapshot, i.e., whether interpreted by the scanner
+/// according to contest rules, modified as a result of adjudication, or the
+/// original, that is, the version initially scanned before contest rules are
+/// applied.  CVR includes `CVRSnapshot.Other` attributes are repeated in each
+/// `CVRSnapshot` because they may differ across snapshots, e.g., the contests
+/// could be different as well as other status.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CVRSnapshotObjectType {
     #[serde(rename = "CVR.CVRSnapshot")]
@@ -689,22 +769,27 @@ pub enum CVRWriteInObjectType {
     CVRWriteIn,
 }
 
-/// CVRWriteIn is used when the contest selection is a write-in. It has attributes for the image or text of the write-in.
+/// `CVRWriteIn` is used when the contest selection is a write-in. It has
+/// attributes for the image or text of the write-in.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub struct CVRWriteIn {
     #[serde(rename = "@type")]
     pub object_type: CVRWriteInObjectType,
 
-    /// Used for the text of the write-in, typically present when the CVR has been created by electronic ballot marking equipment.
+    /// Used for the text of the write-in, typically present when the CVR has
+    /// been created by electronic ballot marking equipment.
     #[serde(rename = "Text", skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
 
-    /// Used for an image of the write-in, typically made by a scanner when scanning a paper ballot.
+    /// Used for an image of the write-in, typically made by a scanner when
+    /// scanning a paper ballot.
     #[serde(rename = "WriteInImage", skip_serializing_if = "Option::is_none")]
     pub write_in_image: Option<ImageData>,
 }
 
-/// Candidate identifies a candidate in a contest on the voter's ballot.  Election includes instances of Candidate for each candidate in a contest; typically, only those candidates who received votes would be included.
+/// Candidate identifies a candidate in a contest on the voter's ballot.
+/// `Election` includes instances of `Candidate` for each candidate in a contest;
+/// typically, only those candidates who received votes would be included.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CandidateObjectType {
     #[serde(rename = "CVR.Candidate")]
@@ -733,7 +818,9 @@ pub struct Candidate {
     pub party_id: Option<String>,
 }
 
-/// CandidateContest is a subclass of Contest and is used to identify the type of contest as involving one or more candidates. It inherits attributes from Contest.
+/// `CandidateContest` is a subclass of `Contest` and is used to identify the type
+/// of contest as involving one or more candidates. It inherits attributes from
+/// `Contest.`
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CandidateContestObjectType {
     #[serde(rename = "CVR.CandidateContest")]
@@ -746,8 +833,9 @@ pub struct CandidateContest {
     #[serde(rename = "@id")]
     pub id: String,
 
-    // #[serde(rename = "@type")]
-    // pub object_type: CandidateContestObjectType,
+    #[serde(rename = "@type")]
+    pub object_type: CandidateContestObjectType,
+
     /// An abbreviation associated with the contest.
     #[serde(rename = "Abbreviation", skip_serializing_if = "Option::is_none")]
     pub abbreviation: Option<String>,
@@ -785,7 +873,8 @@ pub struct CandidateContest {
     pub votes_allowed: Option<i64>,
 }
 
-/// CandidateSelection is a subclass of ContestSelection and is used for candidates, including for write-in candidates.
+/// `CandidateSelection` is a subclass of `ContestSelection` and is used for
+/// candidates, including for write-in candidates.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
 pub enum CandidateSelectionObjectType {
     #[serde(rename = "CVR.CandidateSelection")]
@@ -798,8 +887,9 @@ pub struct CandidateSelection {
     #[serde(rename = "@id")]
     pub id: String,
 
-    // #[serde(rename = "@type")]
-    // pub object_type: CandidateSelectionObjectType,
+    #[serde(rename = "@type")]
+    pub object_type: CandidateSelectionObjectType,
+
     /// The candidate associated with the contest selection. For contests involving a ticket of multiple candidates, an ordered list of candidates as they appeared on the ballot would be created.
     #[serde(rename = "CandidateIds", skip_serializing_if = "Option::is_none")]
     pub candidate_ids: Option<Vec<String>>,

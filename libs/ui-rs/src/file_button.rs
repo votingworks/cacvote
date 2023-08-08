@@ -7,7 +7,7 @@ use wasm_bindgen::JsCast;
 use crate::button::Button;
 
 #[derive(Props)]
-pub struct FileButtonProps<'a> {
+pub struct Props<'a> {
     class: &'a str,
     children: Element<'a>,
     disabled: Option<bool>,
@@ -40,8 +40,13 @@ pub struct FileButtonProps<'a> {
 ///     }
 /// }
 /// ```
+///
+/// # Panics
+///
+/// This component may panic if the `window.crypto` API is not available.
+/// ```
 #[allow(non_snake_case)]
-pub fn FileButton<'a>(cx: Scope<'a, FileButtonProps<'a>>) -> Element {
+pub fn FileButton<'a>(cx: Scope<'a, Props<'a>>) -> Element {
     let id = use_state(cx, || {
         let mut randombytes = [0u8; 32];
         getrandom::getrandom(&mut randombytes).unwrap();

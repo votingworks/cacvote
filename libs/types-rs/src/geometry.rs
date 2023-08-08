@@ -196,7 +196,6 @@ pub struct Size<T> {
 }
 
 #[cfg(test)]
-
 mod normalize_center_of_rect {
     use super::*;
     use proptest::prelude::*;

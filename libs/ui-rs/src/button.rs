@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 #[derive(Props)]
-pub struct ButtonProps<'a> {
+pub struct Props<'a> {
     class: &'a str,
     children: Element<'a>,
     disabled: Option<bool>,
@@ -9,7 +9,7 @@ pub struct ButtonProps<'a> {
 }
 
 #[allow(non_snake_case)]
-pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
+pub fn Button<'a>(cx: Scope<'a, Props<'a>>) -> Element {
     render! {
        button {
            class: "rounded-lg text-xl bg-purple-500 active:bg-purple-700 disabled:bg-purple-300 text-white p-3 mr-2 {cx.props.class}",

@@ -109,6 +109,7 @@ pub struct Registration {
 }
 
 impl Registration {
+    #[allow(clippy::too_many_arguments)]
     pub const fn new(
         id: ClientId,
         server_id: Option<ServerId>,
