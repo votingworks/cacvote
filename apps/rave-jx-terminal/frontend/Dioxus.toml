@@ -26,6 +26,10 @@ reload_html = true
 # which files or dirs will be watcher monitoring
 watch_path = ["src", "public"]
 
+# serve the root page when a route is not found
+# this is necessary when using the `Router` component
+index_on_404 = true
+
 # include `assets` in web platform
 [web.resource]
 

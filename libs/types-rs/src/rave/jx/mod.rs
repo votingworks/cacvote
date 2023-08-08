@@ -4,7 +4,7 @@ use crate::election::{BallotStyleId, ElectionHash, PrecinctId};
 
 use super::{ClientId, ServerId};
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Election {
     pub id: ClientId,
@@ -41,7 +41,7 @@ impl Election {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrationRequest {
     id: ClientId,
@@ -86,7 +86,7 @@ impl RegistrationRequest {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Registration {
     id: ClientId,

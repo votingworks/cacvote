@@ -22,6 +22,7 @@ central-scanner = { path = "libs/central-scanner" }
 color-eyre = "0.6.2"
 dioxus = { version = "0.4" }
 dioxus-logger = "0.4.1"
+dioxus-router = "0.4.1"
 dioxus-web = { version = "0.4" }
 env_logger = "0.10.0"
 hex = "0.4.3"

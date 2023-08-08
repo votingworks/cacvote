@@ -1065,12 +1065,11 @@ pub(crate) async fn get_scanned_ballot_stats(
 
 #[cfg(test)]
 mod test {
-    use std::{env, str::FromStr};
+    use std::env;
 
     use super::*;
     use pretty_assertions::assert_eq;
     use time::OffsetDateTime;
-    use types_rs::election::ElectionHash;
 
     fn load_famous_names_election() -> ElectionDefinition {
         let election_json = include_str!("../tests/fixtures/electionFamousNames2021.json");

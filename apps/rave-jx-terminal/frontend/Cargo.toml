@@ -13,6 +13,7 @@ chrono-humanize = "0.2.3"
 console_error_panic_hook = "0.1.7"
 dioxus = { workspace = true }
 dioxus-logger = { workspace = true }
+dioxus-router = { workspace = true }
 dioxus-web = { workspace = true }
 getrandom = { version = "0.2", features = ["js"] }
 log = "0.4.19"

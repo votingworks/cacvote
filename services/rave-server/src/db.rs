@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 use types_rs::{
     cdf::cvr::Cvr,
+    election::ElectionHash,
     rave::{client, ClientId, ServerId},
 };
 
@@ -54,7 +55,7 @@ pub(crate) struct Election {
     pub client_id: ClientId,
     pub machine_id: String,
     pub election: types_rs::election::ElectionDefinition,
-    pub election_hash: String,
+    pub election_hash: ElectionHash,
     pub created_at: sqlx::types::time::OffsetDateTime,
 }
 
@@ -345,7 +346,7 @@ pub(crate) async fn get_elections(
                     client_id as "client_id: ClientId",
                     machine_id,
                     election as "election: _",
-                    election_hash,
+                    election_hash as "election_hash: _",
                     created_at
                 FROM elections
                 WHERE created_at > $1
@@ -364,7 +365,7 @@ pub(crate) async fn get_elections(
                     client_id as "client_id: ClientId",
                     machine_id,
                     election as "election: _",
-                    election_hash,
+                    election_hash as "election_hash: _",
                     created_at
                 FROM elections
                 ORDER BY created_at DESC

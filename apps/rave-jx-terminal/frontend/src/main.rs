@@ -3,9 +3,10 @@
 use std::sync::Arc;
 
 use dioxus::prelude::*;
+use dioxus_router::prelude::*;
 use log::LevelFilter;
 use serde::Serialize;
-use types_rs::rave::jx::{AppData, Election};
+use types_rs::rave::jx::AppData;
 use ui_rs::FileButton;
 use wasm_bindgen::prelude::*;
 use web_sys::MessageEvent;
@@ -34,16 +35,28 @@ async fn read_file_as_bytes(file_engine: Arc<dyn FileEngine>) -> Option<Vec<u8>>
     file_engine.read_file(&file).await
 }
 
-#[derive(Debug)]
-enum Pages {
+#[derive(Clone, Debug, PartialEq, Routable)]
+enum Route {
+    #[layout(Layout)]
+    #[redirect("/", || Route::Elections)]
+    #[route("/elections")]
     Elections,
+    #[route("/voters")]
     Voters,
 }
 
-fn App(cx: Scope) -> Element {
-    let active_page = use_state(cx, || Pages::Elections);
+impl Route {
+    fn label(&self) -> &'static str {
+        match self {
+            Self::Elections => "Elections",
+            Self::Voters => "Voters",
+        }
+    }
+}
 
-    let app_data = use_state(cx, || AppData::default());
+fn App(cx: Scope) -> Element {
+    use_shared_state_provider(cx, || AppData::default());
+    let app_data = use_shared_state::<AppData>(cx).unwrap();
 
     use_coroutine(cx, {
         to_owned![app_data];
@@ -55,7 +68,7 @@ fn App(cx: Scope) -> Element {
                     match serde_json::from_str::<AppData>(data.as_str()) {
                         Ok(new_app_data) => {
                             log::info!("new app data: {:?}", new_app_data);
-                            app_data.set(new_app_data);
+                            *app_data.write() = new_app_data;
                         }
                         Err(err) => {
                             log::error!("error deserializing status event: {:?}", err);
@@ -69,66 +82,45 @@ fn App(cx: Scope) -> Element {
         }
     });
 
-    let elections_link_active_class = match active_page.get() {
-        Pages::Elections => "bg-gray-300 dark:bg-gray-800",
-        _ => "",
-    };
-    let voters_link_active_class = match active_page.get() {
-        Pages::Voters => "bg-gray-300 dark:bg-gray-800",
-        _ => "",
-    };
+    render!(Router::<Route> {})
+}
 
-    cx.render(rsx! (
+fn Layout(cx: Scope) -> Element {
+    let elections_link_active_class = "bg-gray-300 dark:bg-gray-800";
+
+    render!(
         div {
             class: "h-screen w-screen flex dark:bg-gray-800 dark:text-gray-300",
             div {
                 class: "w-1/5 bg-gray-200 dark:bg-gray-700",
                 ul {
                     class: "mt-8",
-                    li {
-                        class: "px-4 py-2 hover:bg-gray-300 dark:bg-gray-700 hover:dark:text-gray-700 hover:cursor-pointer {elections_link_active_class}",
-                        onclick: {
-                            to_owned![active_page];
-                            move |_| active_page.set(Pages::Elections)
-                        },
-                        "Elections"
-                    }
-                    li {
-                        class: "px-4 py-2 hover:bg-gray-300 dark:bg-gray-700 hover:dark:text-gray-700 hover:cursor-pointer {voters_link_active_class}",
-                        onclick: {
-                            to_owned![active_page];
-                            move |_| active_page.set(Pages::Voters)
-                        },
-                        "Voters"
+                    for route in [Route::Elections, Route::Voters] {
+                        li {
+                            Link {
+                                to: route.clone(),
+                                active_class: elections_link_active_class,
+                                class: "px-4 py-2 block hover:bg-gray-300 dark:bg-gray-700 hover:dark:text-gray-700 hover:cursor-pointer",
+                                "{route.label()}"
+                            }
+                        }
                     }
                     li {
                         class: "fixed bottom-0 w-1/5 bg-gray-300 dark:bg-gray-700 font-bold text-center py-2",
-                        "RAVE Scan"
+                        "RAVE Jurisdiction"
                     }
                 }
             }
             div { class: "w-4/5 p-8",
-                match active_page.get() {
-                    Pages::Elections =>
-                        rsx!(ElectionsPage {
-                            elections: &app_data.get().elections,
-                        }),
-                    Pages::Voters =>
-                        rsx!(VotersPage {
-                            app_data: &app_data.get(),
-                        }),
-                    }
+                Outlet::<Route> {}
             }
         }
-    ))
+    )
 }
 
-#[derive(PartialEq, Props)]
-struct ElectionsPageProps<'a> {
-    elections: &'a Vec<Election>,
-}
-
-fn ElectionsPage<'a>(cx: Scope<'a, ElectionsPageProps>) -> Element<'a> {
+fn Elections(cx: Scope) -> Element {
+    let app_data = use_shared_state::<AppData>(cx).unwrap();
+    let elections = &app_data.read().elections;
     let is_uploading = use_state(cx, || false);
     let upload_election = {
         to_owned![is_uploading];
@@ -153,7 +145,7 @@ fn ElectionsPage<'a>(cx: Scope<'a, ElectionsPageProps>) -> Element<'a> {
     cx.render(rsx! (
         div {
                 h1 { class: "text-2xl font-bold mb-4", "Elections" }
-                if cx.props.elections.is_empty() {
+                if elections.is_empty() {
                     rsx!(div { "No elections found." })
                 } else {
                     rsx!(table { class: "table-auto w-full",
@@ -166,7 +158,7 @@ fn ElectionsPage<'a>(cx: Scope<'a, ElectionsPageProps>) -> Element<'a> {
                             }
                         }
                         tbody {
-                            for election in cx.props.elections.iter() {
+                            for election in elections.iter() {
                                 tr {
                                     td {
                                         class: "border px-4 py-2",
@@ -218,11 +210,12 @@ fn ElectionsPage<'a>(cx: Scope<'a, ElectionsPageProps>) -> Element<'a> {
 }
 
 #[derive(PartialEq, Props)]
-struct VotersPageProps<'a> {
+struct VotersProps<'a> {
     app_data: &'a AppData,
 }
 
-fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
+fn Voters(cx: Scope) -> Element {
+    let app_data = use_shared_state::<AppData>(cx).unwrap();
     // let is_linking_registration_request_with_election = use_state(cx, || false);
 
     let link_voter_registration_request_and_election = {
@@ -255,9 +248,10 @@ fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
         }
     };
 
-    let elections = &cx.props.app_data.elections;
-    let registration_requests = &cx.props.app_data.registration_requests;
-    let registrations = &cx.props.app_data.registrations;
+    let app_data = app_data.read();
+    let elections = app_data.elections.clone();
+    let registration_requests = app_data.registration_requests.clone();
+    let registrations = app_data.registrations.clone();
     let pending_registration_requests = registration_requests
         .iter()
         .filter(|registration_request| {
@@ -266,6 +260,7 @@ fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
                 .find(|registration| registration.is_registration_request(registration_request))
                 .is_none()
         })
+        .map(Clone::clone)
         .collect::<Vec<_>>();
 
     cx.render(rsx! (
@@ -285,7 +280,7 @@ fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
                             }
                         }
                         tbody {
-                            for registration_request in registration_requests.iter().filter(|registration_request| registrations.iter().find(|registration| registration.is_registration_request(registration_request)).is_none()) {
+                            for registration_request in pending_registration_requests {
                                 tr {
                                     td { class: "border px-4 py-2", "{registration_request.display_name()}" }
                                     td { class: "border px-4 py-2", "{registration_request.common_access_card_id()}" }
@@ -324,7 +319,7 @@ fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
                                             option {
                                                 value: "",
                                                 disabled: true,
-                                                "Link voter with an election"
+                                                "Select election configuration…"
                                             }
                                             for election in elections.iter() {
                                                 option {
