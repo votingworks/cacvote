@@ -90,13 +90,14 @@ pub(crate) async fn do_sync(
     let get_admins_result = db::get_admins(&mut txn).await;
     let admins = match get_admins_result {
         Err(e) => {
+            error!("Failed to get admins: {}", e);
             return (
                 Status::InternalServerError,
                 (
                     ContentType::JSON,
                     json!({ "error": e.to_string() }).to_string(),
                 ),
-            )
+            );
         }
         Ok(admins) => admins,
     };
@@ -104,13 +105,14 @@ pub(crate) async fn do_sync(
     let get_elections_result = db::get_elections(&mut txn, last_synced_election_id).await;
     let elections = match get_elections_result {
         Err(e) => {
+            error!("Failed to get elections: {}", e);
             return (
                 Status::InternalServerError,
                 (
                     ContentType::JSON,
                     json!({ "error": e.to_string() }).to_string(),
                 ),
-            )
+            );
         }
         Ok(elections) => elections,
     };
@@ -119,13 +121,14 @@ pub(crate) async fn do_sync(
         db::get_registration_requests(&mut txn, last_synced_registration_request_id).await;
     let registration_requests = match get_registration_requests_result {
         Err(e) => {
+            error!("Failed to get registration requests: {}", e);
             return (
                 Status::InternalServerError,
                 (
                     ContentType::JSON,
                     json!({ "error": e.to_string() }).to_string(),
                 ),
-            )
+            );
         }
         Ok(registration_requests) => registration_requests,
     };
@@ -134,13 +137,14 @@ pub(crate) async fn do_sync(
         db::get_registrations(&mut txn, last_synced_registration_id).await;
     let registrations = match get_registrations_result {
         Err(e) => {
+            error!("Failed to get registrations: {}", e);
             return (
                 Status::InternalServerError,
                 (
                     ContentType::JSON,
                     json!({ "error": e.to_string() }).to_string(),
                 ),
-            )
+            );
         }
         Ok(registrations) => registrations,
     };
@@ -148,13 +152,14 @@ pub(crate) async fn do_sync(
     let printed_ballots =
         match db::get_printed_ballots(&mut txn, last_synced_printed_ballot_id).await {
             Err(e) => {
+                error!("Failed to get printed ballots: {}", e);
                 return (
                     Status::InternalServerError,
                     (
                         ContentType::JSON,
                         json!({ "error": e.to_string() }).to_string(),
                     ),
-                )
+                );
             }
             Ok(ballots) => ballots,
         };
@@ -162,13 +167,14 @@ pub(crate) async fn do_sync(
     let scanned_ballots =
         match db::get_scanned_ballots(&mut txn, last_synced_scanned_ballot_id).await {
             Err(e) => {
+                error!("Failed to get scanned ballots: {}", e);
                 return (
                     Status::InternalServerError,
                     (
                         ContentType::JSON,
                         json!({ "error": e.to_string() }).to_string(),
                     ),
-                )
+                );
             }
             Ok(ballots) => ballots,
         };
