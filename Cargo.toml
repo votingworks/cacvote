@@ -27,7 +27,7 @@ dioxus-web = { version = "0.4" }
 env_logger = "0.10.0"
 hex = "0.4.3"
 hmac-sha256 = "1.1.7"
-image = "0.24.6"
+image = { version = "0.24.6", default-features = false, features = ["jpeg"] }
 lazy_static = "1.4.0"
 log = "0.4.19"
 nanoid = "0.4.0"
