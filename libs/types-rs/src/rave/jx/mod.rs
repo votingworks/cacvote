@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::election::{BallotStyleId, ElectionHash, PrecinctId};
+use crate::election::{BallotStyle, BallotStyleId, ElectionHash, PrecinctId};
 
 use super::{ClientId, ServerId};
 
@@ -10,6 +10,7 @@ pub struct Election {
     pub id: ClientId,
     pub server_id: Option<ServerId>,
     pub title: String,
+    pub ballot_styles: Vec<BallotStyle>,
     pub election_hash: ElectionHash,
     #[serde(with = "time::serde::iso8601")]
     pub created_at: time::OffsetDateTime,
@@ -20,6 +21,7 @@ impl Election {
         id: ClientId,
         server_id: Option<ServerId>,
         title: String,
+        ballot_styles: Vec<BallotStyle>,
         election_hash: ElectionHash,
         created_at: time::OffsetDateTime,
     ) -> Self {
@@ -27,6 +29,7 @@ impl Election {
             id,
             server_id,
             title,
+            ballot_styles,
             election_hash,
             created_at,
         }
@@ -169,4 +172,13 @@ pub struct AppData {
     pub elections: Vec<Election>,
     pub registration_requests: Vec<RegistrationRequest>,
     pub registrations: Vec<Registration>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateRegistrationData {
+    pub election_id: ClientId,
+    pub registration_request_id: ClientId,
+    pub ballot_style_id: BallotStyleId,
+    pub precinct_id: PrecinctId,
 }

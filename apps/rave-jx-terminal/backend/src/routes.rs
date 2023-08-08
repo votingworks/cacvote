@@ -5,10 +5,8 @@ use rocket::response::stream::{Event, EventStream};
 use rocket::serde::json::json;
 use rocket::tokio::time::sleep;
 use rocket_db_pools::Connection;
-use serde::Deserialize;
 use types_rs::election::{BallotStyleId, ElectionDefinition, PrecinctId};
 use types_rs::rave::jx;
-use types_rs::rave::ClientId;
 
 use crate::db;
 use crate::sync::sync;
@@ -86,6 +84,7 @@ async fn get_app_data(executor: &mut sqlx::PgConnection) -> color_eyre::Result<j
                     e.id,
                     e.server_id,
                     e.definition.election.title,
+                    e.definition.election.ballot_styles,
                     e.definition.election_hash,
                     e.created_at,
                 )
@@ -175,50 +174,22 @@ pub(crate) async fn create_election(
     }
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct LinkVoterRegistrationRequestAndElectionRequest {
-    election_id: ClientId,
-    registration_request_id: ClientId,
-}
-
 #[post("/api/registrations", format = "json", data = "<registration>")]
 pub(crate) async fn create_registration(
     mut db: Connection<db::Db>,
     registration: String,
 ) -> (Status, (ContentType, String)) {
-    let registration: LinkVoterRegistrationRequestAndElectionRequest =
-        match serde_json::from_str(&registration) {
-            Ok(r) => r,
-            Err(e) => {
-                error!("failed to parse registration: {}", e);
-                return (
-                    Status::BadRequest,
-                    (
-                        ContentType::JSON,
-                        json!({
-                            "success": false,
-                            "error": format!("failed to parse registration: {}", e)
-                        })
-                        .to_string(),
-                    ),
-                );
-            }
-        };
-
-    let election = match db::get_elections(&mut db, None).await {
-        Ok(elections) => elections
-            .into_iter()
-            .find(|e| e.id == registration.election_id),
+    let registration: jx::CreateRegistrationData = match serde_json::from_str(&registration) {
+        Ok(r) => r,
         Err(e) => {
-            error!("failed to get elections: {}", e);
+            error!("failed to parse registration: {}", e);
             return (
-                Status::InternalServerError,
+                Status::BadRequest,
                 (
                     ContentType::JSON,
                     json!({
                         "success": false,
-                        "error": format!("failed to get elections: {}", e)
+                        "error": format!("failed to parse registration: {}", e)
                     })
                     .to_string(),
                 ),
@@ -226,31 +197,15 @@ pub(crate) async fn create_registration(
         }
     };
 
-    let Some(election) = election else {
-        error!("election not found");
-        return (
-            Status::BadRequest,
-            (
-                ContentType::JSON,
-                json!({
-                    "success": false,
-                    "error": "election not found"
-                })
-                .to_string(),
-            ),
-        );
-    };
-
-    // TODO: support choosing a ballot style and precinct
-    let ballot_style = &election.definition.election.ballot_styles[0];
-    let precinct_id = &ballot_style.precincts[0];
+    let ballot_style_id = registration.ballot_style_id;
+    let precinct_id = registration.precinct_id;
 
     match db::create_registration(
         &mut db,
         registration.registration_request_id,
         registration.election_id,
-        precinct_id,
-        &ballot_style.id,
+        &precinct_id,
+        &ballot_style_id,
     )
     .await
     {

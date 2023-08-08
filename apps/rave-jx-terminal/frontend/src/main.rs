@@ -5,8 +5,7 @@ use std::sync::Arc;
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 use log::LevelFilter;
-use serde::Serialize;
-use types_rs::rave::jx::AppData;
+use types_rs::rave::jx;
 use ui_rs::FileButton;
 use wasm_bindgen::prelude::*;
 use web_sys::MessageEvent;
@@ -55,8 +54,8 @@ impl Route {
 }
 
 fn App(cx: Scope) -> Element {
-    use_shared_state_provider(cx, || AppData::default());
-    let app_data = use_shared_state::<AppData>(cx).unwrap();
+    use_shared_state_provider(cx, || jx::AppData::default());
+    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
 
     use_coroutine(cx, {
         to_owned![app_data];
@@ -65,7 +64,7 @@ fn App(cx: Scope) -> Element {
 
             let callback = Closure::wrap(Box::new(move |event: MessageEvent| {
                 if let Some(data) = event.data().as_string() {
-                    match serde_json::from_str::<AppData>(data.as_str()) {
+                    match serde_json::from_str::<jx::AppData>(data.as_str()) {
                         Ok(new_app_data) => {
                             log::info!("new app data: {:?}", new_app_data);
                             *app_data.write() = new_app_data;
@@ -119,7 +118,7 @@ fn Layout(cx: Scope) -> Element {
 }
 
 fn Elections(cx: Scope) -> Element {
-    let app_data = use_shared_state::<AppData>(cx).unwrap();
+    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
     let elections = &app_data.read().elections;
     let is_uploading = use_state(cx, || false);
     let upload_election = {
@@ -211,34 +210,24 @@ fn Elections(cx: Scope) -> Element {
 
 #[derive(PartialEq, Props)]
 struct VotersProps<'a> {
-    app_data: &'a AppData,
+    app_data: &'a jx::AppData,
 }
 
 fn Voters(cx: Scope) -> Element {
-    let app_data = use_shared_state::<AppData>(cx).unwrap();
+    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
     // let is_linking_registration_request_with_election = use_state(cx, || false);
 
     let link_voter_registration_request_and_election = {
         // TODO: make this work
         // to_owned![is_linking_registration_request_with_election];
-        |election_id: String, registration_request_id: String| async move {
-            #[derive(Serialize)]
-            #[serde(rename_all = "camelCase")]
-            struct LinkVoterRegistrationRequestAndElectionRequest {
-                election_id: String,
-                registration_request_id: String,
-            }
-
+        |create_registration_data: jx::CreateRegistrationData| async move {
             // is_linking_registration_request_with_election.set(true);
 
             let url = get_url("/api/registrations");
             let client = reqwest::Client::new();
             let res = client
                 .post(url)
-                .json(&LinkVoterRegistrationRequestAndElectionRequest {
-                    election_id,
-                    registration_request_id,
-                })
+                .json(&create_registration_data)
                 .send()
                 .await;
 
@@ -287,14 +276,14 @@ fn Voters(cx: Scope) -> Element {
                                     td {
                                         class: "border px-4 py-2 text-center",
                                         select {
+                                            class: "dark:bg-gray-800 dark:text-white dark:border-gray-600 border-2 rounded-md p-2 focus:outline-none focus:border-blue-500",
                                             oninput: move |event| {
-                                                let election_id = &event.inner().value;
-                                                let registration_request_id = &registration_request.id().to_string();
+                                                let create_registration_data = serde_json::from_str::<jx::CreateRegistrationData>(event.inner().value.as_str()).expect("parse succeeded");
                                                 cx.spawn({
-                                                    to_owned![link_voter_registration_request_and_election, election_id, registration_request_id];
+                                                    to_owned![link_voter_registration_request_and_election, create_registration_data];
                                                     async move {
-                                                        log::info!("linking registration request {} to election {}", registration_request_id, election_id);
-                                                        match link_voter_registration_request_and_election(election_id.to_string(), registration_request_id).await {
+                                                        log::info!("linking registration request: {create_registration_data:?}");
+                                                        match link_voter_registration_request_and_election(create_registration_data).await {
                                                             Ok(response) => {
                                                                 if !response.status().is_success() {
                                                                     web_sys::window()
@@ -322,9 +311,28 @@ fn Voters(cx: Scope) -> Element {
                                                 "Select election configuration…"
                                             }
                                             for election in elections.iter() {
-                                                option {
-                                                    value: "{election.id}",
-                                                    "{election.title} ({election.election_hash.as_str()})"
+                                                optgroup {
+                                                    label: "{election.title} ({election.election_hash})",
+                                                    for ballot_style in election.ballot_styles.iter() {
+                                                        for precinct_id in ballot_style.precincts.iter() {
+                                                            {
+                                                                let create_registration_data = jx::CreateRegistrationData {
+                                                                    election_id: election.id,
+                                                                    registration_request_id: *registration_request.id(),
+                                                                    ballot_style_id: ballot_style.id.clone(),
+                                                                    precinct_id: precinct_id.clone(),
+                                                                };
+                                                                let value = serde_json::to_string(&create_registration_data)
+                                                                    .expect("serialization succeeds");
+                                                                rsx!(
+                                                                    option {
+                                                                        value: "{value}",
+                                                                        "{ballot_style.id} / {precinct_id}"
+                                                                    }
+                                                                )
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
