@@ -16,6 +16,7 @@ dioxus-logger = { workspace = true }
 dioxus-router = { workspace = true }
 dioxus-web = { workspace = true }
 getrandom = { version = "0.2", features = ["js"] }
+js-sys = "0.3.64"
 log = "0.4.19"
 reqwest = { workspace = true }
 serde = { workspace = true }

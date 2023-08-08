@@ -91,13 +91,35 @@ impl<'de> Deserialize<'de> for ElectionDefinition {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[repr(transparent)]
 pub struct ElectionHash(String);
 
 impl ElectionHash {
+    pub const EXPECTED_BYTE_LENGTH: usize = 32;
+    pub const EXPECTED_STRING_LENGTH: usize = Self::EXPECTED_BYTE_LENGTH * 2;
+
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        match hex::decode(&self.0) {
+            Ok(bytes) => bytes,
+            Err(_) => unreachable!("ElectionHash is always a valid hex string"),
+        }
+    }
+
+    pub fn to_partial(&self) -> PartialElectionHash {
+        PartialElectionHash(self.0[..PartialElectionHash::EXPECTED_STRING_LENGTH].to_string())
+    }
+}
+
+impl TryFrom<[u8; Self::EXPECTED_BYTE_LENGTH]> for ElectionHash {
+    type Error = hex::FromHexError;
+
+    fn try_from(value: [u8; Self::EXPECTED_BYTE_LENGTH]) -> Result<Self, Self::Error> {
+        Ok(Self(hex::encode(value)))
     }
 }
 
@@ -105,6 +127,10 @@ impl FromStr for ElectionHash {
     type Err = hex::FromHexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != Self::EXPECTED_STRING_LENGTH {
+            return Err(hex::FromHexError::InvalidStringLength);
+        }
+
         let hex = hex::decode(s)?;
         Ok(Self(hex::encode(hex)))
     }
@@ -112,7 +138,7 @@ impl FromStr for ElectionHash {
 
 impl std::fmt::Display for ElectionHash {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0[..8])
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -144,10 +170,89 @@ impl Type<sqlx::Postgres> for ElectionHash {
     }
 }
 
+impl<'de> Deserialize<'de> for ElectionHash {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let election_hash = String::deserialize(deserializer)?;
+        Self::from_str(&election_hash).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for ElectionHash {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PartialElectionHash(String);
+
+impl PartialElectionHash {
+    pub const EXPECTED_BYTE_LENGTH: usize = 10;
+    pub const EXPECTED_STRING_LENGTH: usize = Self::EXPECTED_BYTE_LENGTH * 2;
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        match hex::decode(self.0.as_str()) {
+            Ok(bytes) => bytes,
+            Err(_) => unreachable!("PartialElectionHash is always a valid hex string"),
+        }
+    }
+
+    pub fn matches_election_hash(&self, election_hash: &ElectionHash) -> bool {
+        election_hash.as_str().starts_with(self.as_str())
+    }
+}
+
+impl TryFrom<[u8; Self::EXPECTED_BYTE_LENGTH]> for PartialElectionHash {
+    type Error = hex::FromHexError;
+
+    fn try_from(value: [u8; Self::EXPECTED_BYTE_LENGTH]) -> Result<Self, Self::Error> {
+        Ok(Self(hex::encode(value)))
+    }
+}
+
+impl FromStr for PartialElectionHash {
+    type Err = hex::FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != PartialElectionHash::EXPECTED_STRING_LENGTH {
+            return Err(hex::FromHexError::InvalidStringLength);
+        }
+
+        let hex = hex::decode(s)?;
+        assert_eq!(hex.len(), PartialElectionHash::EXPECTED_BYTE_LENGTH);
+        Ok(Self(hex::encode(hex)))
+    }
+}
+
+impl std::fmt::Display for PartialElectionHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}…", &self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for PartialElectionHash {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let election_hash = String::deserialize(deserializer)?;
+        Self::from_str(&election_hash).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for PartialElectionHash {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Election {
     pub title: String,
+    #[serde(with = "time::serde::iso8601")]
+    pub date: time::OffsetDateTime,
     pub ballot_styles: Vec<BallotStyle>,
     pub precincts: Vec<Precinct>,
     pub contests: Vec<Contest>,

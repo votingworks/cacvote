@@ -2299,6 +2299,7 @@ dependencies = [
  "dioxus-router",
  "dioxus-web",
  "getrandom",
+ "js-sys",
  "log",
  "reqwest",
  "serde",

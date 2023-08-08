@@ -10,6 +10,7 @@ pub struct Election {
     pub id: ClientId,
     pub server_id: Option<ServerId>,
     pub title: String,
+    pub date: time::Date,
     pub ballot_styles: Vec<BallotStyle>,
     pub election_hash: ElectionHash,
     #[serde(with = "time::serde::iso8601")]
@@ -21,6 +22,7 @@ impl Election {
         id: ClientId,
         server_id: Option<ServerId>,
         title: String,
+        date: time::Date,
         ballot_styles: Vec<BallotStyle>,
         election_hash: ElectionHash,
         created_at: time::OffsetDateTime,
@@ -29,6 +31,7 @@ impl Election {
             id,
             server_id,
             title,
+            date,
             ballot_styles,
             election_hash,
             created_at,
@@ -97,6 +100,7 @@ pub struct Registration {
     display_name: String,
     common_access_card_id: String,
     registration_request_id: ClientId,
+    election_title: String,
     election_hash: ElectionHash,
     precinct_id: PrecinctId,
     ballot_style_id: BallotStyleId,
@@ -111,6 +115,7 @@ impl Registration {
         display_name: String,
         common_access_card_id: String,
         registration_request_id: ClientId,
+        election_title: String,
         election_hash: ElectionHash,
         precinct_id: PrecinctId,
         ballot_style_id: BallotStyleId,
@@ -122,6 +127,7 @@ impl Registration {
             display_name,
             common_access_card_id,
             registration_request_id,
+            election_title,
             election_hash,
             precinct_id,
             ballot_style_id,
@@ -139,6 +145,10 @@ impl Registration {
 
     pub fn display_name(&self) -> &str {
         self.common_access_card_id()
+    }
+
+    pub fn election_title(&self) -> &str {
+        &self.election_title
     }
 
     pub fn election_hash(&self) -> &ElectionHash {
