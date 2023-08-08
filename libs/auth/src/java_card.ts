@@ -1,4 +1,3 @@
-import { randomBytes } from 'crypto';
 import { Buffer } from 'buffer';
 import fs from 'fs/promises';
 import { sha256 } from 'js-sha256';
@@ -450,10 +449,7 @@ export class JavaCard implements Card {
 
     const cardDetails = await parseCardDetailsFromCert(cardVxAdminCert);
     const jurisdiction = getUserJurisdiction(cardDetails.user);
-    assert(
-      !jurisdiction ||
-        jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction
-    );
+    assert(jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction);
 
     /**
      * If the card doesn't have a PIN:
@@ -497,7 +493,7 @@ export class JavaCard implements Card {
   /**
    * Retrieves a cert in PEM format
    */
-  private async retrieveCert(certObjectId: Buffer): Promise<Buffer> {
+  async retrieveCert(certObjectId: Buffer): Promise<Buffer> {
     const data = await this.getData(certObjectId);
     const certTlv = data.subarray(0, -5); // Trim metadata
     const [, , certInDerFormat] = parseTlv(PUT_DATA.CERT_TAG, certTlv);
@@ -569,6 +565,7 @@ export class JavaCard implements Card {
       asn1Sha256MagicValue,
       challengeHash,
     ]);
+    assert(paddedMessage.length === 256);
 
     const generalAuthenticateResponse = await this.cardReader.transmit(
       new CardCommand({
