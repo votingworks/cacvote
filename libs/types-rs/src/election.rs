@@ -140,7 +140,7 @@ where
 #[cfg(feature = "sqlx")]
 impl Type<sqlx::Postgres> for ElectionHash {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("text")
+        sqlx::postgres::PgTypeInfo::with_name("varchar")
     }
 }
 
