@@ -1292,6 +1292,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hmac-sha256"
+version = "1.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3688e69b38018fec1557254f64c8dc2cc8ec502890182f395dbb0aa997aa5735"
+
+[[package]]
 name = "http"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2221,6 +2227,7 @@ dependencies = [
  "serde",
  "serde_json",
  "time 0.3.23",
+ "types-rs",
  "ui-rs",
  "wasm-bindgen",
  "wasm-logger",
@@ -2818,19 +2825,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha256"
-version = "1.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "386f700b0c798d92ac20a53342c240ff9d58030c3b845fbaeb92eead3a774792"
-dependencies = [
- "async-trait",
- "bytes",
- "hex",
- "sha2",
- "tokio",
-]
-
-[[package]]
 name = "sharded-slab"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3422,6 +3416,8 @@ name = "types-rs"
 version = "0.1.0"
 dependencies = [
  "color-eyre",
+ "hex",
+ "hmac-sha256",
  "lazy_static",
  "nanoid",
  "pretty_assertions",
@@ -3429,7 +3425,6 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "sha256",
  "sqlx",
  "time 0.3.23",
  "uuid",

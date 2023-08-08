@@ -25,6 +25,7 @@ dioxus-logger = "0.4.1"
 dioxus-web = { version = "0.4" }
 env_logger = "0.10.0"
 hex = "0.4.3"
+hmac-sha256 = "1.1.7"
 image = "0.24.6"
 lazy_static = "1.4.0"
 log = "0.4.19"
@@ -41,7 +42,10 @@ serde = { version = "1.0.175", features = ["derive"] }
 serde_json = "1.0.103"
 sha256 = "1.2.2"
 time = { version = "0.3.22", features = ["formatting", "parsing", "serde"] }
-tokio = { version = "1.29.1", features = [] }
+tokio = { version = "1.29.1", default-features = false, features = [
+    "sync",
+    "macros",
+] }
 types-rs = { path = "libs/types-rs" }
 ui-rs = { path = "libs/ui-rs" }
 uuid = { version = "1.4.0", features = ["serde", "v4", "js"] }

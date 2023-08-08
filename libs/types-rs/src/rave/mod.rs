@@ -3,6 +3,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 pub mod client;
+pub mod jx;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[repr(transparent)]
@@ -27,6 +28,12 @@ impl Default for ServerId {
 impl From<Uuid> for ServerId {
     fn from(uuid: Uuid) -> Self {
         Self(uuid)
+    }
+}
+
+impl std::fmt::Display for ServerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -79,6 +86,12 @@ impl Default for ClientId {
 impl From<Uuid> for ClientId {
     fn from(uuid: Uuid) -> Self {
         Self(uuid)
+    }
+}
+
+impl std::fmt::Display for ClientId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

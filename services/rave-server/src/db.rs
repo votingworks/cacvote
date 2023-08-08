@@ -580,7 +580,7 @@ pub(crate) async fn add_election(
         election_id.as_uuid(),
         election.client_id.as_uuid(),
         election.machine_id,
-        election_definition.election_hash,
+        election_definition.election_hash.as_str(),
         // TODO: just use `election_definition` given the right trait impls
         Json(election_definition.election_data) as _
     )

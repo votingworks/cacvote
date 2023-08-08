@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::cdf::cvr;
-use crate::election::ElectionDefinition;
+use crate::election::{ElectionDefinition, ElectionHash};
 use crate::rave::{ClientId, ServerId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,7 +54,7 @@ pub struct Election {
     pub client_id: ClientId,
     pub machine_id: String,
     pub election: ElectionDefinition,
-    pub election_hash: String,
+    pub election_hash: ElectionHash,
     #[serde(with = "time::serde::iso8601")]
     pub created_at: time::OffsetDateTime,
 }

@@ -1,4 +1,4 @@
-use sha256::digest;
+use hmac_sha256::Hash;
 #[cfg(feature = "sqlx")]
 use sqlx::Type;
 use std::{fmt::Display, str::FromStr};
@@ -19,7 +19,7 @@ idtype!(PrecinctId);
 pub struct ElectionDefinition {
     pub election: Election,
     pub election_data: String,
-    pub election_hash: String,
+    pub election_hash: ElectionHash,
 }
 
 impl FromStr for ElectionDefinition {
@@ -28,12 +28,13 @@ impl FromStr for ElectionDefinition {
     fn from_str(election_data: &str) -> Result<Self, Self::Err> {
         let election: Election = serde_json::from_str(election_data)?;
 
-        let election_hash = digest(election_data);
+        let mut hasher = Hash::new();
+        hasher.update(election_data.as_bytes());
 
         Ok(Self {
             election,
             election_data: election_data.to_string(),
-            election_hash,
+            election_hash: ElectionHash(hex::encode(hasher.finalize())),
         })
     }
 }
@@ -87,6 +88,59 @@ impl<'de> Deserialize<'de> for ElectionDefinition {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let election_data = String::deserialize(deserializer)?;
         Self::from_str(&election_data).map_err(serde::de::Error::custom)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[repr(transparent)]
+pub struct ElectionHash(String);
+
+impl ElectionHash {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl FromStr for ElectionHash {
+    type Err = hex::FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let hex = hex::decode(s)?;
+        Ok(Self(hex::encode(hex)))
+    }
+}
+
+impl std::fmt::Display for ElectionHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.0[..8])
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ElectionHash {
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        Ok(Self(value.as_str()?.to_string()))
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'q, DB> sqlx::Encode<'q, DB> for ElectionHash
+where
+    String: sqlx::Encode<'q, DB>,
+    DB: sqlx::Database,
+{
+    fn encode_by_ref(
+        &self,
+        buf: &mut <DB as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
+        self.0.encode_by_ref(buf)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl Type<sqlx::Postgres> for ElectionHash {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("text")
     }
 }
 

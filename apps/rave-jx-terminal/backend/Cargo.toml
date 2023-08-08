@@ -17,7 +17,7 @@ serde_json = { workspace = true }
 sqlx = { workspace = true }
 time = { workspace = true }
 tokio = { workspace = true }
-types-rs = { workspace = true, features = ["sqlx"] }
+types-rs = { workspace = true, features = ["backend"] }
 uuid = { workspace = true }
 
 [dev-dependencies]

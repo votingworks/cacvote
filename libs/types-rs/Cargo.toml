@@ -7,12 +7,13 @@ edition = "2021"
 
 [dependencies]
 color-eyre = { workspace = true }
+hex = { workspace = true }
+hmac-sha256 = { workspace = true }
 lazy_static = { workspace = true }
 nanoid = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sha256 = { workspace = true }
 sqlx = { workspace = true, optional = true }
 time = { workspace = true }
 uuid = { workspace = true }
@@ -22,4 +23,5 @@ pretty_assertions = { workspace = true }
 proptest = { workspace = true }
 
 [features]
+backend = ["sqlx"]
 sqlx = ["dep:sqlx"]

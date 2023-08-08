@@ -2,10 +2,10 @@
 
 use std::sync::Arc;
 
-use chrono::Utc;
-use dioxus::{html::link, prelude::*};
+use dioxus::prelude::*;
 use log::LevelFilter;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use types_rs::rave::jx::{AppData, Election};
 use ui_rs::FileButton;
 use wasm_bindgen::prelude::*;
 use web_sys::MessageEvent;
@@ -40,133 +40,6 @@ enum Pages {
     Voters,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-struct Election {
-    title: String,
-}
-
-#[derive(Debug, PartialEq)]
-struct ElectionDefinition {
-    election: Election,
-    election_data: String,
-}
-
-impl<'de> Deserialize<'de> for ElectionDefinition {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let election_data = String::deserialize(deserializer)?;
-        Ok(Self {
-            election: serde_json::from_str(&election_data).map_err(serde::de::Error::custom)?,
-            election_data,
-        })
-    }
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-#[repr(transparent)]
-struct ElectionHash(String);
-
-impl std::fmt::Display for ElectionHash {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0[..8])
-    }
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-struct ElectionRecord {
-    pub id: String,
-    pub server_id: Option<String>,
-    pub client_id: String,
-    pub machine_id: String,
-    pub definition: ElectionDefinition,
-    pub election_hash: ElectionHash,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl ElectionRecord {
-    fn title(&self) -> &str {
-        &self.definition.election.title
-    }
-
-    fn relative_time(&self) -> chrono_humanize::HumanTime {
-        self.created_at.signed_duration_since(Utc::now()).into()
-    }
-
-    fn synced(&self) -> bool {
-        self.server_id.is_some()
-    }
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-struct RegistrationRequest {
-    id: String,
-    server_id: String,
-    client_id: String,
-    machine_id: String,
-    common_access_card_id: String,
-    given_name: String,
-    family_name: String,
-    address_line_1: String,
-    address_line_2: Option<String>,
-    city: String,
-    state: String,
-    postal_code: String,
-    state_id: String,
-    created_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl RegistrationRequest {
-    fn full_name(&self) -> String {
-        format!("{} {}", self.given_name, self.family_name)
-    }
-
-    fn relative_time(&self) -> chrono_humanize::HumanTime {
-        self.created_at.signed_duration_since(Utc::now()).into()
-    }
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-struct Registration {
-    pub id: String,
-    pub server_id: Option<String>,
-    pub client_id: String,
-    pub machine_id: String,
-    pub common_access_card_id: String,
-    pub registration_request_id: String,
-    pub election_id: String,
-    pub precinct_id: String,
-    pub ballot_style_id: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl Registration {
-    fn full_name(&self) -> String {
-        self.registration_request_id.to_string()
-    }
-
-    fn relative_time(&self) -> chrono_humanize::HumanTime {
-        self.created_at.signed_duration_since(Utc::now()).into()
-    }
-
-    fn synced(&self) -> bool {
-        self.server_id.is_some()
-    }
-}
-
-#[derive(Debug, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-struct AppData {
-    elections: Vec<ElectionRecord>,
-    registration_requests: Vec<RegistrationRequest>,
-    registrations: Vec<Registration>,
-}
-
 fn App(cx: Scope) -> Element {
     let active_page = use_state(cx, || Pages::Elections);
 
@@ -197,23 +70,23 @@ fn App(cx: Scope) -> Element {
     });
 
     let elections_link_active_class = match active_page.get() {
-        Pages::Elections => "bg-gray-300",
+        Pages::Elections => "bg-gray-300 dark:bg-gray-800",
         _ => "",
     };
     let voters_link_active_class = match active_page.get() {
-        Pages::Voters => "bg-gray-300",
+        Pages::Voters => "bg-gray-300 dark:bg-gray-800",
         _ => "",
     };
 
     cx.render(rsx! (
         div {
-            class: "h-screen w-screen flex dark:bg-slate-800",
+            class: "h-screen w-screen flex dark:bg-gray-800 dark:text-gray-300",
             div {
-                class: "w-1/5 bg-gray-200",
+                class: "w-1/5 bg-gray-200 dark:bg-gray-700",
                 ul {
                     class: "mt-8",
                     li {
-                        class: "px-4 py-2 hover:bg-gray-300 hover:cursor-pointer {elections_link_active_class}",
+                        class: "px-4 py-2 hover:bg-gray-300 dark:bg-gray-700 hover:dark:text-gray-700 hover:cursor-pointer {elections_link_active_class}",
                         onclick: {
                             to_owned![active_page];
                             move |_| active_page.set(Pages::Elections)
@@ -221,7 +94,7 @@ fn App(cx: Scope) -> Element {
                         "Elections"
                     }
                     li {
-                        class: "px-4 py-2 hover:bg-gray-300 hover:cursor-pointer {voters_link_active_class}",
+                        class: "px-4 py-2 hover:bg-gray-300 dark:bg-gray-700 hover:dark:text-gray-700 hover:cursor-pointer {voters_link_active_class}",
                         onclick: {
                             to_owned![active_page];
                             move |_| active_page.set(Pages::Voters)
@@ -229,7 +102,7 @@ fn App(cx: Scope) -> Element {
                         "Voters"
                     }
                     li {
-                        class: "fixed bottom-0 w-1/5 bg-gray-300 font-bold text-center py-2",
+                        class: "fixed bottom-0 w-1/5 bg-gray-300 dark:bg-gray-700 font-bold text-center py-2",
                         "RAVE Scan"
                     }
                 }
@@ -242,9 +115,7 @@ fn App(cx: Scope) -> Element {
                         }),
                     Pages::Voters =>
                         rsx!(VotersPage {
-                            elections: &app_data.get().elections,
-                            registration_requests: &app_data.get().registration_requests,
-                            registrations: &app_data.get().registrations,
+                            app_data: &app_data.get(),
                         }),
                     }
             }
@@ -254,7 +125,7 @@ fn App(cx: Scope) -> Element {
 
 #[derive(PartialEq, Props)]
 struct ElectionsPageProps<'a> {
-    elections: &'a Vec<ElectionRecord>,
+    elections: &'a Vec<Election>,
 }
 
 fn ElectionsPage<'a>(cx: Scope<'a, ElectionsPageProps>) -> Element<'a> {
@@ -300,11 +171,11 @@ fn ElectionsPage<'a>(cx: Scope<'a, ElectionsPageProps>) -> Element<'a> {
                                     td {
                                         class: "border px-4 py-2",
                                         title: "Database ID: {election.id}",
-                                        election.election_hash.to_string()
+                                        "{election.election_hash}"
                                     }
-                                    td { class: "border px-4 py-2", "{election.title()}" }
-                                    td { class: "border px-4 py-2", if election.synced() { "Yes" } else { "No" } }
-                                    td { class: "border px-4 py-2", "{election.relative_time()}" }
+                                    td { class: "border px-4 py-2", "{election.title}" }
+                                    td { class: "border px-4 py-2", if election.is_synced() { "Yes" } else { "No" } }
+                                    td { class: "border px-4 py-2", "{election.created_at}" }
                                 }
                             }
                         }
@@ -348,9 +219,7 @@ fn ElectionsPage<'a>(cx: Scope<'a, ElectionsPageProps>) -> Element<'a> {
 
 #[derive(PartialEq, Props)]
 struct VotersPageProps<'a> {
-    elections: &'a Vec<ElectionRecord>,
-    registration_requests: &'a Vec<RegistrationRequest>,
-    registrations: &'a Vec<Registration>,
+    app_data: &'a AppData,
 }
 
 fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
@@ -386,17 +255,15 @@ fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
         }
     };
 
-    let elections = cx.props.elections;
-    let registration_requests = cx.props.registration_requests;
-    let registrations = cx.props.registrations;
+    let elections = &cx.props.app_data.elections;
+    let registration_requests = &cx.props.app_data.registration_requests;
+    let registrations = &cx.props.app_data.registrations;
     let pending_registration_requests = registration_requests
         .iter()
         .filter(|registration_request| {
             registrations
                 .iter()
-                .find(|registration| {
-                    registration.registration_request_id == registration_request.id
-                })
+                .find(|registration| registration.is_registration_request(registration_request))
                 .is_none()
         })
         .collect::<Vec<_>>();
@@ -418,21 +285,21 @@ fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
                             }
                         }
                         tbody {
-                            for registration_request in registration_requests.iter().filter(|registration_request| registrations.iter().find(|registration| registration.registration_request_id == registration_request.id).is_none()) {
+                            for registration_request in registration_requests.iter().filter(|registration_request| registrations.iter().find(|registration| registration.is_registration_request(registration_request)).is_none()) {
                                 tr {
-                                    td { class: "border px-4 py-2", "{registration_request.full_name()}" }
-                                    td { class: "border px-4 py-2", "{registration_request.common_access_card_id}" }
+                                    td { class: "border px-4 py-2", "{registration_request.display_name()}" }
+                                    td { class: "border px-4 py-2", "{registration_request.common_access_card_id()}" }
                                     td {
                                         class: "border px-4 py-2 text-center",
                                         select {
                                             oninput: move |event| {
                                                 let election_id = &event.inner().value;
-                                                let registration_request_id = &registration_request.id;
+                                                let registration_request_id = &registration_request.id().to_string();
                                                 cx.spawn({
                                                     to_owned![link_voter_registration_request_and_election, election_id, registration_request_id];
                                                     async move {
                                                         log::info!("linking registration request {} to election {}", registration_request_id, election_id);
-                                                        match link_voter_registration_request_and_election(election_id.to_string(), registration_request_id.to_string()).await {
+                                                        match link_voter_registration_request_and_election(election_id.to_string(), registration_request_id).await {
                                                             Ok(response) => {
                                                                 if !response.status().is_success() {
                                                                     web_sys::window()
@@ -462,12 +329,12 @@ fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
                                             for election in elections.iter() {
                                                 option {
                                                     value: "{election.id}",
-                                                    "{election.title()} ({election.election_hash.to_string()})"
+                                                    "{election.title} ({election.election_hash.as_str()})"
                                                 }
                                             }
                                         }
                                     }
-                                    td { class: "border px-4 py-2", "{registration_request.relative_time()}" }
+                                    td { class: "border px-4 py-2", "{registration_request.created_at()}" }
                                 }
                             }
                         }
@@ -493,11 +360,11 @@ fn VotersPage<'a>(cx: Scope<'a, VotersPageProps>) -> Element<'a> {
                         tbody {
                             for registration in registrations.iter() {
                                 tr {
-                                    td { class: "border px-4 py-2", "{registration.full_name()}" }
-                                    td { class: "border px-4 py-2", "{registration.common_access_card_id}" }
-                                    td { class: "border px-4 py-2", "TODO" }
-                                    td { class: "border px-4 py-2", if registration.synced() { "Yes" } else { "No" } }
-                                    td { class: "border px-4 py-2", "{registration.relative_time()}" }
+                                    td { class: "border px-4 py-2", "{registration.display_name()}" }
+                                    td { class: "border px-4 py-2", "{registration.common_access_card_id()}" }
+                                    td { class: "border px-4 py-2", "{registration.election_hash()}" }
+                                    td { class: "border px-4 py-2", if registration.is_synced() { "Yes" } else { "No" } }
+                                    td { class: "border px-4 py-2", "{registration.created_at()}" }
                                 }
                             }
                         }
