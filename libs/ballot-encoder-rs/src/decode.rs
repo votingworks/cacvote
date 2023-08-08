@@ -13,7 +13,7 @@ use types_rs::{
         CVRContest, CVRContestSelection, CVRSnapshot, CVRWriteIn, Cvr, IndicationStatus,
         SelectionPosition, VxBallotType,
     },
-    election::{BallotStyleId, Contest, Election, PrecinctId},
+    election::{BallotStyleId, Contest, Election, PartialElectionHash, PrecinctId},
 };
 
 /// Decodes a CVR from data encoded in a BMD ballot card.
@@ -46,10 +46,10 @@ pub fn decode(election: &Election, data: &[u8]) -> std::io::Result<EncodableCvr>
 /// Decodes the encoded header from data encoded in a BMD ballot card. This
 /// should be used to validate the version & election hash before decoding the
 /// rest of the CVR.
-pub fn decode_header(data: &[u8]) -> std::io::Result<(u8, String)> {
+pub fn decode_header(data: &[u8]) -> std::io::Result<(u8, PartialElectionHash)> {
     let mut reader = bitstream_io::BitReader::endian(data, BigEndian);
     let version = decode_prelude_from(&mut reader)?;
-    let election_hash = decode_election_hash_from(&mut reader)?;
+    let election_hash = decode_partial_election_hash_from(&mut reader)?;
 
     Ok((version, election_hash))
 }
@@ -68,7 +68,7 @@ pub fn decode_from<E: Endianness>(
         ));
     }
 
-    let election_hash = decode_election_hash_from(reader)?;
+    let partial_election_hash = decode_partial_election_hash_from(reader)?;
     let (precinct_count, ballot_style_count, contest_count) = decode_check_data_from(reader)?;
 
     if precinct_count as usize != election.precincts.len() {
@@ -143,7 +143,7 @@ pub fn decode_from<E: Endianness>(
     let ballot_votes = decode_ballot_votes_from(contests, &ballot_style.id, &precinct.id, reader)?;
 
     Ok(EncodableCvr::new(
-        election_hash,
+        partial_election_hash,
         ballot_votes,
         ballot_config.ballot_mode,
     ))
@@ -164,13 +164,18 @@ pub fn decode_prelude_from<E: Endianness>(reader: &mut BitReader<&[u8], E>) -> s
     Ok(version)
 }
 
-pub fn decode_election_hash_from<E: Endianness>(
+pub fn decode_partial_election_hash_from<E: Endianness>(
     reader: &mut BitReader<&[u8], E>,
-) -> std::io::Result<String> {
-    let mut election_hash = [0u8; ELECTION_HASH_BYTE_LENGTH];
-    reader.read_bytes(&mut election_hash)?;
+) -> std::io::Result<PartialElectionHash> {
+    let mut election_hash_bytes = [0u8; ELECTION_HASH_BYTE_LENGTH];
+    reader.read_bytes(&mut election_hash_bytes)?;
 
-    Ok(hex::encode(election_hash))
+    election_hash_bytes.try_into().map_err(|err| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("invalid election hash: {}", err),
+        )
+    })
 }
 
 pub fn decode_check_data_from<E: Endianness>(

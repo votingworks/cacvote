@@ -1,12 +1,14 @@
 extern crate time;
 
+use std::str::FromStr;
+
 use rocket::{fairing, Build, Rocket};
 use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 use sqlx::Acquire;
 use types_rs::cdf::cvr::Cvr;
-use types_rs::election::ElectionDefinition;
+use types_rs::election::{ElectionDefinition, ElectionHash};
 use types_rs::rave::{client, ClientId, ServerId};
 
 #[derive(Database)]
@@ -55,7 +57,7 @@ pub(crate) struct Election {
     pub client_id: ClientId,
     pub machine_id: String,
     pub definition: ElectionDefinition,
-    pub election_hash: String,
+    pub election_hash: ElectionHash,
     pub created_at: sqlx::types::time::OffsetDateTime,
 }
 
@@ -280,7 +282,7 @@ pub(crate) async fn get_elections(
                 client_id: record.client_id,
                 machine_id: record.machine_id,
                 definition: record.election.parse()?,
-                election_hash: record.election_hash,
+                election_hash: ElectionHash::from_str(&record.election_hash)?,
                 created_at: record.created_at,
             })
         })
@@ -312,7 +314,7 @@ pub(crate) async fn add_election_from_rave_server(
         record.server_id.as_uuid(),
         record.client_id.as_uuid(),
         record.machine_id,
-        record.election.election_hash,
+        record.election.election_hash.as_str(),
         Json(record.election.election) as _
     )
     .execute(&mut *executor)

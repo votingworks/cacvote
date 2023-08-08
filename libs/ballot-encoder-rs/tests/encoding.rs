@@ -32,24 +32,14 @@ fn test_compare_to_manually_encoded_empty_votes() {
     writer.write_bytes(b"VX").unwrap();
     writer.write(8, 2).unwrap();
     // election hash
-    let truncated_election_hash = election_hash
-        .get(0..20)
-        .ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("election_hash is too short: {election_hash}"),
-            )
-        })
+    let partial_election_hash = election_hash.to_partial();
+    dbg!(
+        partial_election_hash.to_bytes(),
+        partial_election_hash.to_bytes().len()
+    );
+    writer
+        .write_bytes(&partial_election_hash.to_bytes())
         .unwrap();
-    let truncated_election_hash_bytes = hex::decode(truncated_election_hash)
-        .map_err(|_| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("election_hash is not a valid hex string: {election_hash}"),
-            )
-        })
-        .unwrap();
-    writer.write_bytes(&truncated_election_hash_bytes).unwrap();
     // check data
     writer.write(8, election.precincts.len() as u8).unwrap();
     writer.write(8, election.ballot_styles.len() as u8).unwrap();
@@ -86,7 +76,7 @@ fn test_compare_to_manually_encoded_empty_votes() {
         |_, _| (None, IndicationStatus::No),
     );
     let encodable_cvr = EncodableCvr::new(
-        election_definition.election_hash,
+        election_definition.election_hash.to_partial(),
         cvr_with_no_votes,
         TestMode::Test,
     );
@@ -119,7 +109,7 @@ fn test_empty_votes_from_machine_encoded() {
         |_, _| (None, IndicationStatus::No),
     );
     let encodable_cvr = EncodableCvr::new(
-        election_definition.election_hash,
+        election_definition.election_hash.to_partial(),
         cvr_with_no_votes,
         TestMode::Test,
     );
@@ -156,7 +146,7 @@ fn test_votes_from_machine_encoded() {
         },
     );
     let encodable_cvr = EncodableCvr::new(
-        election_definition.election_hash,
+        election_definition.election_hash.to_partial(),
         cvr_with_votes,
         TestMode::Test,
     );
@@ -209,7 +199,7 @@ fn test_votes_from_machine_encoded_with_write_ins() {
         },
     );
     let encodable_cvr = EncodableCvr::new(
-        election_definition.election_hash,
+        election_definition.election_hash.to_partial(),
         cvr_with_votes,
         TestMode::Test,
     );

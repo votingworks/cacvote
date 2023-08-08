@@ -1,6 +1,9 @@
-use types_rs::cdf::cvr::{Cvr, VxBallotType};
+use std::str::FromStr;
 
-use crate::consts::ELECTION_HASH_HEX_LENGTH;
+use types_rs::{
+    cdf::cvr::{Cvr, VxBallotType},
+    election::PartialElectionHash,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TestMode {
@@ -10,7 +13,7 @@ pub enum TestMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EncodableCvr {
-    pub partial_election_hash: String,
+    pub partial_election_hash: PartialElectionHash,
     pub cvr: Cvr,
     pub test_mode: TestMode,
 }
@@ -25,12 +28,10 @@ pub struct BallotConfig {
 }
 
 impl EncodableCvr {
-    pub fn new(partial_election_hash: String, cvr: Cvr, test_mode: TestMode) -> Self {
+    pub fn new(partial_election_hash: PartialElectionHash, cvr: Cvr, test_mode: TestMode) -> Self {
         Self {
-            partial_election_hash: partial_election_hash
-                .get(0..ELECTION_HASH_HEX_LENGTH)
-                .unwrap_or(&partial_election_hash)
-                .to_lowercase(),
+            partial_election_hash: PartialElectionHash::from_str(partial_election_hash.as_str())
+                .unwrap_or(partial_election_hash),
             cvr,
             test_mode,
         }

@@ -1,7 +1,6 @@
 use crate::{
     consts::{
-        BITS_PER_WRITE_IN_CHAR, ELECTION_HASH_HEX_LENGTH, ENCODING_VERSION,
-        MAXIMUM_WRITE_IN_NAME_LENGTH, WRITE_IN_CHARS,
+        BITS_PER_WRITE_IN_CHAR, ENCODING_VERSION, MAXIMUM_WRITE_IN_NAME_LENGTH, WRITE_IN_CHARS,
     },
     types::{EncodableCvr, TestMode},
     util::sizeof,
@@ -9,7 +8,10 @@ use crate::{
 use bitstream_io::{BigEndian, BitWrite, BitWriter, Endianness};
 use types_rs::{
     cdf::cvr::{CVRContestSelection, Cvr, IndicationStatus, VxBallotType},
-    election::{BallotStyleId, CandidateContest, Contest, Election, PrecinctId, YesNoContest},
+    election::{
+        BallotStyleId, CandidateContest, Contest, Election, PartialElectionHash, PrecinctId,
+        YesNoContest,
+    },
 };
 
 pub fn encode(election: &Election, encodable_cvr: &EncodableCvr) -> std::io::Result<Vec<u8>> {
@@ -82,25 +84,10 @@ pub fn encode_prelude_into<E: Endianness>(
 }
 
 pub fn encode_election_hash_into<E: Endianness>(
-    election_hash: &str,
+    partial_election_hash: &PartialElectionHash,
     writer: &mut BitWriter<&mut Vec<u8>, E>,
 ) -> std::io::Result<()> {
-    let truncated_election_hash =
-        election_hash
-            .get(0..ELECTION_HASH_HEX_LENGTH)
-            .ok_or_else(|| {
-                std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    format!("election_hash is too short: {election_hash}"),
-                )
-            })?;
-    let truncated_election_hash_bytes = hex::decode(truncated_election_hash).map_err(|_| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            format!("election_hash is not a valid hex string: {election_hash}"),
-        )
-    })?;
-    writer.write_bytes(&truncated_election_hash_bytes)?;
+    writer.write_bytes(&partial_election_hash.to_bytes())?;
 
     Ok(())
 }

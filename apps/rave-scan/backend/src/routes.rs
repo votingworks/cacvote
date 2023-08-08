@@ -10,6 +10,7 @@ use rocket::serde::Serialize;
 use rocket::tokio::time::sleep;
 use rocket_db_pools::Connection;
 use time::OffsetDateTime;
+use types_rs::election::PartialElectionHash;
 use types_rs::rave::ClientId;
 
 use crate::cards::decode_page_from_image;
@@ -20,7 +21,7 @@ use crate::sync::sync;
 #[derive(Debug, Serialize)]
 pub struct ScannedCard {
     cvr_data: Vec<u8>,
-    election_hash: String,
+    election_hash: PartialElectionHash,
 }
 
 #[get("/api/status")]
@@ -84,10 +85,10 @@ pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>
     }
 
     for card in cards.iter() {
-        if let Some(election) = elections
-            .iter()
-            .find(|election| election.election_hash.starts_with(&card.election_hash))
-        {
+        if let Some(election) = elections.iter().find(|election| {
+            card.election_hash
+                .matches_election_hash(&election.election_hash)
+        }) {
             let decoded_cvr =
                 ballot_encoder_rs::decode(&election.definition.election, card.cvr_data.as_slice())
                     .unwrap();
