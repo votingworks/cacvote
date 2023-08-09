@@ -687,10 +687,21 @@ pub(crate) async fn get_printed_ballots(
         None => None,
     };
 
-    match since_ballot {
-        Some(ballot) => sqlx::query_as!(
-            PrintedBallot,
-            r#"
+    struct PrintedBallotRecord {
+        id: ServerId,
+        client_id: ClientId,
+        machine_id: String,
+        common_access_card_id: String,
+        registration_id: ServerId,
+        cast_vote_record: String,
+        created_at: time::OffsetDateTime,
+    }
+
+    let records = match since_ballot {
+        Some(ballot) => {
+            sqlx::query_as!(
+                PrintedBallotRecord,
+                r#"
                 SELECT
                     id as "id: ServerId",
                     client_id as "client_id: ClientId",
@@ -703,14 +714,15 @@ pub(crate) async fn get_printed_ballots(
                 WHERE created_at > $1
                 ORDER BY created_at DESC
                 "#,
-            ballot.created_at
-        )
-        .fetch_all(&mut *executor)
-        .await
-        .map_err(Into::into),
-        None => sqlx::query_as!(
-            PrintedBallot,
-            r#"
+                ballot.created_at
+            )
+            .fetch_all(&mut *executor)
+            .await?
+        }
+        None => {
+            sqlx::query_as!(
+                PrintedBallotRecord,
+                r#"
                 SELECT
                     id as "id: ServerId",
                     client_id as "client_id: ClientId",
@@ -722,11 +734,26 @@ pub(crate) async fn get_printed_ballots(
                 FROM printed_ballots
                 ORDER BY created_at DESC
                 "#,
-        )
-        .fetch_all(&mut *executor)
-        .await
-        .map_err(Into::into),
-    }
+            )
+            .fetch_all(&mut *executor)
+            .await?
+        }
+    };
+
+    records
+        .into_iter()
+        .map(|r| {
+            Ok(PrintedBallot {
+                id: r.id,
+                client_id: r.client_id,
+                machine_id: r.machine_id,
+                common_access_card_id: r.common_access_card_id,
+                registration_id: r.registration_id,
+                cast_vote_record: serde_json::from_str(&r.cast_vote_record)?,
+                created_at: r.created_at,
+            })
+        })
+        .collect::<color_eyre::Result<Vec<_>>>()
 }
 
 pub(crate) async fn add_scanned_ballot_from_client(
