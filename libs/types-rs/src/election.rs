@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use hmac_sha256::Hash;
 #[cfg(feature = "sqlx")]
 use sqlx::Type;
@@ -18,7 +19,7 @@ idtype!(PrecinctId);
 #[derive(Debug, Clone, PartialEq)]
 pub struct ElectionDefinition {
     pub election: Election,
-    pub election_data: String,
+    pub election_data: Vec<u8>,
     pub election_hash: ElectionHash,
 }
 
@@ -26,15 +27,24 @@ impl FromStr for ElectionDefinition {
     type Err = serde_json::Error;
 
     fn from_str(election_data: &str) -> Result<Self, Self::Err> {
-        let election: Election = serde_json::from_str(election_data)?;
+        election_data.as_bytes().try_into()
+    }
+}
+
+impl TryFrom<&[u8]> for ElectionDefinition {
+    type Error = serde_json::Error;
+
+    fn try_from(election_data: &[u8]) -> Result<Self, Self::Error> {
+        let election: Election = serde_json::from_slice(election_data)?;
 
         let mut hasher = Hash::new();
-        hasher.update(election_data.as_bytes());
+        hasher.update(election_data);
+        let election_hash = ElectionHash(hex::encode(hasher.finalize()));
 
         Ok(Self {
             election,
-            election_data: election_data.to_string(),
-            election_hash: ElectionHash(hex::encode(hasher.finalize())),
+            election_data: election_data.to_vec(),
+            election_hash,
         })
     }
 }
@@ -53,7 +63,7 @@ where
 #[cfg(feature = "sqlx")]
 impl<'q, DB> sqlx::Encode<'q, DB> for ElectionDefinition
 where
-    String: sqlx::Encode<'q, DB>,
+    Vec<u8>: sqlx::Encode<'q, DB>,
     DB: sqlx::Database,
 {
     fn encode_by_ref(
@@ -67,7 +77,7 @@ where
 #[cfg(feature = "sqlx")]
 impl Type<sqlx::Postgres> for ElectionDefinition {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("text")
+        sqlx::postgres::PgTypeInfo::with_name("bytea")
     }
 }
 
@@ -80,14 +90,21 @@ impl ElectionDefinition {
 
 impl Serialize for ElectionDefinition {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.election_data.serialize(serializer)
+        let election_data = STANDARD.encode(&self.election_data);
+        election_data.serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for ElectionDefinition {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let election_data = String::deserialize(deserializer)?;
-        Self::from_str(&election_data).map_err(serde::de::Error::custom)
+        let election_data = STANDARD
+            .decode(election_data.as_str())
+            .map_err(serde::de::Error::custom)?;
+        election_data
+            .as_slice()
+            .try_into()
+            .map_err(serde::de::Error::custom)
     }
 }
 

@@ -1,0 +1,225 @@
+import { Buffer } from 'buffer';
+import { z } from 'zod';
+import {
+  BallotStyleId,
+  BallotStyleIdSchema,
+  Id,
+  NewType,
+  PrecinctId,
+  PrecinctIdSchema,
+} from '@votingworks/types';
+import { DateTime } from 'luxon';
+import { ClientId, ClientIdSchema, ServerId, ServerIdSchema } from './db';
+
+export type Base64String = NewType<string, 'Base64String'>;
+export const Base64StringSchema = z.string().superRefine((value, ctx) => {
+  try {
+    Buffer.from(value, 'base64');
+    return true;
+  } catch (error) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ctx.path,
+      message: `invalid base64 string: ${(error as Error).message}`,
+    });
+  }
+}) as unknown as z.ZodSchema<Base64String>;
+
+export const Base64Buffer = z
+  .string()
+  .transform((value) =>
+    Buffer.from(value, 'base64')
+  ) as unknown as z.ZodSchema<Buffer>;
+
+export const DateTimeSchema = z
+  .string()
+  .transform((value) =>
+    DateTime.fromISO(value)
+  ) as unknown as z.ZodSchema<DateTime>;
+
+export interface RegistrationRequestInput {
+  clientId: ClientId;
+  machineId: Id;
+  commonAccessCardId: string;
+  givenName: string;
+  familyName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  stateId: string;
+}
+
+export type RegistrationRequestOutput = RegistrationRequestInput & {
+  serverId: ServerId;
+  createdAt: DateTime;
+};
+
+export const RegistrationRequestOutputSchema: z.ZodSchema<RegistrationRequestOutput> =
+  z.object({
+    serverId: ServerIdSchema,
+    clientId: ClientIdSchema,
+    machineId: z.string(),
+    commonAccessCardId: z.string(),
+    givenName: z.string(),
+    familyName: z.string(),
+    addressLine1: z.string(),
+    addressLine2: z.string().optional(),
+    city: z.string(),
+    state: z.string(),
+    postalCode: z.string(),
+    stateId: z.string(),
+    createdAt: DateTimeSchema,
+  });
+
+export interface RegistrationInput {
+  clientId: ClientId;
+  machineId: Id;
+  commonAccessCardId: Id;
+  registrationRequestId: ClientId;
+  electionId: ClientId;
+  precinctId: PrecinctId;
+  ballotStyleId: BallotStyleId;
+}
+
+export interface RegistrationOutput {
+  serverId: ServerId;
+  clientId: ClientId;
+  machineId: Id;
+  commonAccessCardId: Id;
+  registrationRequestId: ServerId;
+  electionId: ServerId;
+  precinctId: PrecinctId;
+  ballotStyleId: BallotStyleId;
+  createdAt: DateTime;
+}
+
+export const RegistrationOutputSchema: z.ZodSchema<RegistrationOutput> =
+  z.object({
+    serverId: ServerIdSchema,
+    clientId: ClientIdSchema,
+    machineId: z.string(),
+    commonAccessCardId: z.string(),
+    registrationRequestId: ServerIdSchema,
+    electionId: ServerIdSchema,
+    precinctId: PrecinctIdSchema,
+    ballotStyleId: BallotStyleIdSchema,
+    createdAt: DateTimeSchema,
+  });
+
+export interface PrintedBallotInput {
+  clientId: ClientId;
+  machineId: Id;
+  commonAccessCardId: string;
+  registrationId: ClientId;
+  castVoteRecord: Base64String;
+}
+
+export interface ScannedBallotInput {
+  clientId: ClientId;
+  machineId: Id;
+  electionId: ClientId;
+  castVoteRecord: Base64String;
+}
+
+export interface PrintedBallotOutput {
+  serverId: ServerId;
+  clientId: ClientId;
+  machineId: Id;
+  commonAccessCardId: string;
+  registrationId: ServerId;
+  castVoteRecord: Base64String;
+  castVoteRecordSignature: Base64String;
+}
+
+export const PrintedBallotOutputSchema: z.ZodSchema<PrintedBallotOutput> =
+  z.object({
+    serverId: ServerIdSchema,
+    clientId: ClientIdSchema,
+    machineId: z.string(),
+    commonAccessCardId: z.string(),
+    registrationId: ServerIdSchema,
+    castVoteRecord: Base64StringSchema,
+    castVoteRecordSignature: Base64StringSchema,
+  });
+
+export interface ScannedBallotOutput {
+  serverId: ServerId;
+  clientId: ClientId;
+  machineId: Id;
+  electionId: ServerId;
+  castVoteRecord: Buffer;
+}
+
+export const ScannedBallotOutputSchema: z.ZodSchema<ScannedBallotOutput> =
+  z.object({
+    serverId: ServerIdSchema,
+    clientId: ClientIdSchema,
+    machineId: z.string(),
+    electionId: ServerIdSchema,
+    castVoteRecord: Base64Buffer,
+  });
+
+export interface AdminInput {
+  commonAccessCardId: string;
+  createdAt: DateTime;
+}
+
+export type AdminOutput = AdminInput;
+
+export const AdminOutputSchema: z.ZodSchema<AdminOutput> = z.object({
+  commonAccessCardId: z.string(),
+  createdAt: DateTimeSchema,
+});
+
+export interface ElectionInput {
+  clientId: ClientId;
+  machineId: Id;
+  definition: Base64String;
+}
+
+export type ElectionOutput = ElectionInput & {
+  serverId: ServerId;
+  createdAt: DateTime;
+};
+
+export const ElectionOutputSchema: z.ZodSchema<ElectionOutput> = z.object({
+  serverId: ServerIdSchema,
+  clientId: ClientIdSchema,
+  machineId: z.string(),
+  definition: Base64StringSchema,
+  createdAt: DateTimeSchema,
+});
+
+export interface RaveServerSyncInput {
+  lastSyncedRegistrationRequestId?: ServerId;
+  lastSyncedRegistrationId?: ServerId;
+  lastSyncedElectionId?: ServerId;
+  lastSyncedPrintedBallotId?: ServerId;
+  lastSyncedScannedBallotId?: ServerId;
+  registrationRequests?: RegistrationRequestInput[];
+  elections?: ElectionInput[];
+  registrations?: RegistrationInput[];
+  printedBallots?: PrintedBallotInput[];
+  scannedBallots?: ScannedBallotInput[];
+}
+
+export interface RaveServerSyncOutput {
+  admins: AdminOutput[];
+  elections: ElectionOutput[];
+  registrationRequests: RegistrationRequestOutput[];
+  registrations: RegistrationOutput[];
+  printedBallots: PrintedBallotOutput[];
+  scannedBallots: ScannedBallotOutput[];
+}
+
+export const RaveMarkSyncOutputSchema: z.ZodSchema<RaveServerSyncOutput> =
+  z.object({
+    admins: z.array(AdminOutputSchema),
+    elections: z.array(ElectionOutputSchema),
+    registrationRequests: z.array(RegistrationRequestOutputSchema),
+    registrations: z.array(RegistrationOutputSchema),
+    printedBallots: z.array(PrintedBallotOutputSchema),
+    scannedBallots: z.array(ScannedBallotOutputSchema),
+  });

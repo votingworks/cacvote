@@ -474,14 +474,32 @@ export class JavaCard implements Card {
     cert: Buffer,
     pin?: string
   ): Promise<void> {
+    // Have the private key sign a "challenge"
+    const challenge = this.generateChallenge();
+    const challengeBuffer = Buffer.from(challenge, 'utf-8');
+    const challengeSignature = await this.generateSignature(challengeBuffer, {
+      privateKeyId,
+      pin,
+    });
+
+    // Use the cert's public key to verify the generated signature
+    const certPublicKey = await extractPublicKeyFromCert(cert);
+    await verifySignature({
+      message: challengeBuffer,
+      messageSignature: challengeSignature,
+      publicKey: certPublicKey,
+    });
+  }
+
+  async generateSignature(
+    message: Buffer,
+    { privateKeyId, pin }: { privateKeyId: Byte; pin?: string }
+  ): Promise<Buffer> {
     if (pin) {
       await this.checkPinInternal(pin);
     }
 
-    // Have the private key sign a "challenge"
-    const challenge = this.generateChallenge();
-    const challengeHash = Buffer.from(sha256(challenge), 'hex');
-
+    const challengeHash = Buffer.from(sha256(message), 'hex');
     const asn1Sha256MagicValue = Buffer.from([
       0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
       0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
@@ -518,15 +536,7 @@ export class JavaCard implements Card {
     );
 
     // why are we trimming 8 here instead of 4, and why were we trimming 4 before? Is this an ECC vs. RSA formatting?
-    const challengeSignature = generalAuthenticateResponse.subarray(8); // Trim metadata
-
-    // Use the cert's public key to verify the generated signature
-    const certPublicKey = await extractPublicKeyFromCert(cert);
-    await verifySignature({
-      message: Buffer.from(challenge, 'utf-8'),
-      messageSignature: challengeSignature,
-      publicKey: certPublicKey,
-    });
+    return generalAuthenticateResponse.subarray(8); // Trim metadata
   }
 
   /**

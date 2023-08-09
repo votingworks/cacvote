@@ -1,8 +1,10 @@
+use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
-use crate::cdf::cvr;
 use crate::election::ElectionDefinition;
 use crate::rave::ClientId;
+
+base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,7 +34,7 @@ pub struct RegistrationRequest {
 pub struct Election {
     pub client_id: ClientId,
     pub machine_id: String,
-    pub election: ElectionDefinition,
+    pub definition: ElectionDefinition,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,7 +56,10 @@ pub struct PrintedBallot {
     pub machine_id: String,
     pub common_access_card_id: String,
     pub registration_id: ClientId,
-    pub cast_vote_record: cvr::Cvr,
+    #[serde(with = "Base64Standard")]
+    pub cast_vote_record: Vec<u8>,
+    #[serde(with = "Base64Standard")]
+    pub cast_vote_record_signature: Vec<u8>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -63,5 +68,6 @@ pub struct ScannedBallot {
     pub client_id: ClientId,
     pub machine_id: String,
     pub election_id: ClientId,
-    pub cast_vote_record: cvr::Cvr,
+    #[serde(with = "Base64Standard")]
+    pub cast_vote_record: Vec<u8>,
 }

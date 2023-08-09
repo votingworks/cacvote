@@ -17,6 +17,7 @@ import {
 } from '@votingworks/logging';
 import {
   BallotStyleId,
+  Byte,
   CardlessVoterUser,
   InsertedSmartCardAuth as InsertedSmartCardAuthTypes,
   PrecinctId,
@@ -223,6 +224,13 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
       type: 'check_pin',
       checkPinResponse,
     });
+  }
+
+  async generateSignature(
+    message: Buffer,
+    options: { privateKeyId: Byte; pin?: string }
+  ): Promise<Buffer> {
+    return this.card.generateSignature(message, options);
   }
 
   async logOut(machineState: InsertedSmartCardAuthMachineState): Promise<void> {

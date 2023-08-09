@@ -3,20 +3,19 @@ import { assert, Optional } from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
 import {
   BallotStyleId,
-  CVR,
   ElectionDefinition,
   Id,
   PrecinctId,
   safeParseElectionDefinition,
   SystemSettings,
   SystemSettingsDbRow,
+  unsafeParse,
   VotesDict,
 } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
 import { join } from 'path';
 import {
-  PrintedBallot,
   PrintedBallotRow,
   ClientId,
   deserializePrintedBallot,
@@ -33,10 +32,15 @@ import {
   ServerId,
   ServerSyncAttempt,
   ServerSyncAttemptRow,
-  ScannedBallot,
   ScannedBallotRow,
   deserializeScannedBallot,
 } from './types/db';
+import {
+  Base64StringSchema,
+  ElectionInput,
+  PrintedBallotInput,
+  ScannedBallotInput,
+} from './types/sync';
 
 const SchemaPath = join(__dirname, '../schema.sql');
 
@@ -91,7 +95,7 @@ export class Store {
         server_id as serverId,
         client_id as clientId,
         machine_id as machineId,
-        election
+        definition
       from elections
       where ${clientId ? 'client_id' : 'server_id'} = ?
       `,
@@ -109,13 +113,13 @@ export class Store {
     serverId,
     clientId,
     machineId = VX_MACHINE_ID,
-    election,
+    definition,
   }: {
     id: ClientId;
     serverId?: ServerId;
     clientId?: ClientId;
     machineId?: Id;
-    election: string;
+    definition: Buffer;
   }): ClientId {
     assert(
       (serverId === undefined) === (clientId === undefined),
@@ -126,8 +130,9 @@ export class Store {
       'election machineId must be VX_MACHINE_ID if and only if ID equals clientId'
     );
 
-    safeParseElectionDefinition(election).assertOk(
-      `Unable to parse election data: ${election}`
+    const electionData = definition.toString('utf-8');
+    safeParseElectionDefinition(electionData).assertOk(
+      `Unable to parse election data: ${electionData}`
     );
 
     this.client.run(
@@ -137,7 +142,7 @@ export class Store {
         server_id,
         client_id,
         machine_id,
-        election
+        definition
       ) values (
         ?, ?, ?, ?, ?
       )
@@ -146,7 +151,7 @@ export class Store {
       serverId ?? null,
       clientId ?? id,
       machineId,
-      election
+      definition
     );
 
     return id;
@@ -323,20 +328,20 @@ export class Store {
     const result = this.client.one(
       `
       select
-        election
+        definition
       from registrations
       inner join elections on elections.id = registrations.election_id
       where registrations.id = ?
       `,
       registrationId
-    ) as Optional<{ election: string | Buffer }>;
+    ) as Optional<{ definition: string | Buffer }>;
 
     if (!result) {
       return undefined;
     }
 
     const electionDefinitionParseResult = safeParseElectionDefinition(
-      result.election.toString()
+      result.definition.toString()
     );
 
     if (electionDefinitionParseResult.isErr()) {
@@ -550,13 +555,15 @@ export class Store {
     machineId = VX_MACHINE_ID,
     registrationId,
     castVoteRecord,
+    castVoteRecordSignature,
   }: {
     id: ClientId;
     serverId?: ServerId;
     clientId?: ClientId;
     machineId?: Id;
     registrationId: ClientId;
-    castVoteRecord: CVR.CVR;
+    castVoteRecord: Buffer;
+    castVoteRecordSignature: Buffer;
   }): ClientId {
     assert(
       (serverId === undefined) === (clientId === undefined),
@@ -583,9 +590,10 @@ export class Store {
         machine_id,
         common_access_card_id,
         registration_id,
-        cast_vote_record
+        cast_vote_record,
+        cast_vote_record_signature
       ) values (
-        ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
       id,
@@ -594,7 +602,8 @@ export class Store {
       machineId,
       registration.commonAccessCardId,
       registration.id,
-      JSON.stringify(castVoteRecord)
+      castVoteRecord,
+      castVoteRecordSignature
     );
 
     return id;
@@ -868,7 +877,7 @@ export class Store {
     return result.map(deserializeRegistration);
   }
 
-  getElectionsToSync(): Election[] {
+  getElectionsToSync(): ElectionInput[] {
     const result = this.client.all(
       `
       select
@@ -876,16 +885,25 @@ export class Store {
         server_id as serverId,
         client_id as clientId,
         machine_id as machineId,
-        election
+        definition
       from elections
       where server_id is null
       `
     ) as ElectionRow[];
 
-    return result.map(deserializeElection);
+    return result.map((row) => {
+      const record = deserializeElection(row);
+      return {
+        ...record,
+        definition: unsafeParse(
+          Base64StringSchema,
+          record.definition.toString('base64')
+        ),
+      };
+    });
   }
 
-  getPrintedBallotsToSync(): PrintedBallot[] {
+  getPrintedBallotsToSync(): PrintedBallotInput[] {
     const result = this.client.all(
       `
       select
@@ -896,16 +914,30 @@ export class Store {
         common_access_card_id as commonAccessCardId,
         (select client_id from registrations where id = registration_id) as registrationId,
         cast_vote_record as castVoteRecord,
+        cast_vote_record_signature as castVoteRecordSignature,
         created_at as createdAt
       from printed_ballots
       where server_id is null
       `
     ) as PrintedBallotRow[];
 
-    return result.map(deserializePrintedBallot);
+    return result.map((row) => {
+      const record = deserializePrintedBallot(row);
+      return {
+        ...record,
+        castVoteRecord: unsafeParse(
+          Base64StringSchema,
+          record.castVoteRecord.toString('base64')
+        ),
+        castVoteRecordSignature: unsafeParse(
+          Base64StringSchema,
+          record.castVoteRecordSignature.toString('base64')
+        ),
+      };
+    });
   }
 
-  getScannedBallotsToSync(): ScannedBallot[] | undefined {
+  getScannedBallotsToSync(): ScannedBallotInput[] {
     const result = this.client.all(
       `
       select
@@ -921,6 +953,15 @@ export class Store {
       `
     ) as ScannedBallotRow[];
 
-    return result.map(deserializeScannedBallot);
+    return result.map((row) => {
+      const record = deserializeScannedBallot(row);
+      return {
+        ...record,
+        castVoteRecord: unsafeParse(
+          Base64StringSchema,
+          record.castVoteRecord.toString('base64')
+        ),
+      };
+    });
   }
 }

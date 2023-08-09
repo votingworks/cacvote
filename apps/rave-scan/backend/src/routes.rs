@@ -92,6 +92,7 @@ pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>
             let decoded_cvr =
                 ballot_encoder_rs::decode(&election.definition.election, card.cvr_data.as_slice())
                     .unwrap();
+            let cast_vote_record = serde_json::to_string(&decoded_cvr.cvr).unwrap();
 
             let scanned_ballot_id = ClientId::new();
             let scanned_ballot = ScannedBallot {
@@ -100,7 +101,7 @@ pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>
                 client_id: scanned_ballot_id,
                 machine_id: VX_MACHINE_ID.to_string(),
                 election_id: election.id,
-                cast_vote_record: decoded_cvr.cvr,
+                cast_vote_record: cast_vote_record.into_bytes(),
                 created_at: OffsetDateTime::now_utc(),
             };
 

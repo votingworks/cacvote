@@ -1,7 +1,9 @@
+import { Buffer } from 'buffer';
 import { z } from 'zod';
 import { Optional, Result } from '@votingworks/basics';
 import {
   BallotStyleId,
+  Byte,
   InsertedSmartCardAuth,
   NumIncorrectPinAttemptsAllowedBeforeCardLockout,
   OverallSessionTimeLimitHours,
@@ -22,6 +24,11 @@ export interface InsertedSmartCardAuthApi {
     machineState: InsertedSmartCardAuthMachineState,
     input: { pin: string }
   ): Promise<void>;
+  generateSignature(
+    message: Buffer,
+    options: { privateKeyId: Byte; pin?: string }
+  ): Promise<Buffer>;
+
   /**
    * Though logout is typically accomplished by removing the inserted card when using inserted
    * smart card auth, this method is still useful for clearing the session and re-requiring PIN

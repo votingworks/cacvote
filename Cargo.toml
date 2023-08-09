@@ -17,6 +17,7 @@ members = [
 [workspace.dependencies]
 ballot-encoder-rs = { path = "libs/ballot-encoder-rs" }
 base64 = "0.21.2"
+base64-serde = "0.7.0"
 bitstream-io = "1.7.0"
 central-scanner = { path = "libs/central-scanner" }
 color-eyre = "0.6.2"

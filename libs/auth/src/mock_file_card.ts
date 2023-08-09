@@ -2,6 +2,7 @@ import { Buffer } from 'buffer';
 import fs from 'fs';
 import { assert, Optional, throwIllegalValue } from '@votingworks/basics';
 import {
+  Byte,
   ElectionManagerUser,
   PollWorkerUser,
   SystemAdministratorUser,
@@ -152,6 +153,15 @@ export class MockFileCard implements Card {
       (cardStatus.cardDetails.numIncorrectPinAttempts ?? 0) + 1;
     updateNumIncorrectPinAttempts(mockFileContents, numIncorrectPinAttempts);
     return Promise.resolve({ response: 'incorrect', numIncorrectPinAttempts });
+  }
+
+  generateSignature(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    message: Buffer,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    options: { privateKeyId: Byte; pin?: string }
+  ): Promise<Buffer> {
+    throw new Error('Method not implemented.');
   }
 
   program(

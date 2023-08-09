@@ -1,7 +1,7 @@
+import { Buffer } from 'buffer';
 import { Optional } from '@votingworks/basics';
 import {
   BallotStyleId,
-  CVR,
   ElectionDefinition,
   Id,
   IdSchema,
@@ -160,7 +160,7 @@ export interface Election {
   /**
    * Election data.
    */
-  election: string;
+  definition: Buffer;
 
   /**
    * Election definition.
@@ -173,7 +173,7 @@ export interface ElectionRow {
   serverId: string | null;
   clientId: string;
   machineId: string;
-  election: string;
+  definition: Buffer;
 }
 
 export function deserializeElection(row: ElectionRow): Election {
@@ -182,9 +182,9 @@ export function deserializeElection(row: ElectionRow): Election {
     serverId: row.serverId ? (row.serverId as ServerId) : undefined,
     clientId: row.clientId as ClientId,
     machineId: row.machineId,
-    election: row.election,
+    definition: row.definition,
     electionDefinition: safeParseElectionDefinition(
-      row.election
+      row.definition.toString('utf-8')
     ).unsafeUnwrap(),
   };
 }
@@ -289,7 +289,12 @@ export interface PrintedBallot {
   /**
    * Votes cast by the voter.
    */
-  castVoteRecord: CVR.CVR;
+  castVoteRecord: Buffer;
+
+  /**
+   * Signature of the cast vote record.
+   */
+  castVoteRecordSignature: Buffer;
 
   /**
    * Date and time when the voter cast their votes.
@@ -303,7 +308,7 @@ export interface ScannedBallotRow {
   clientId: string;
   machineId: string;
   electionId: string;
-  castVoteRecord: string;
+  castVoteRecord: Buffer;
   createdAt: string;
 }
 
@@ -314,7 +319,7 @@ export function deserializeScannedBallot(row: ScannedBallotRow): ScannedBallot {
     clientId: row.clientId as ClientId,
     machineId: row.machineId,
     electionId: row.electionId as ClientId,
-    castVoteRecord: JSON.parse(row.castVoteRecord),
+    castVoteRecord: row.castVoteRecord,
     createdAt: DateTime.fromSQL(row.createdAt),
   };
 }
@@ -348,7 +353,7 @@ export interface ScannedBallot {
   /**
    * Votes cast by the voter.
    */
-  castVoteRecord: CVR.CVR;
+  castVoteRecord: Buffer;
 
   /**
    * Date and time when the voter cast their votes.
@@ -363,7 +368,8 @@ export interface PrintedBallotRow {
   machineId: string;
   commonAccessCardId: string;
   registrationId: string;
-  castVoteRecord: string;
+  castVoteRecord: Buffer;
+  castVoteRecordSignature: Buffer;
   createdAt: string;
 }
 
@@ -377,7 +383,8 @@ export function deserializePrintedBallot(row: PrintedBallotRow): PrintedBallot {
     // numbers, so we have to convert them back to strings
     commonAccessCardId: row.commonAccessCardId.toString(),
     registrationId: row.registrationId as ClientId,
-    castVoteRecord: JSON.parse(row.castVoteRecord),
+    castVoteRecord: row.castVoteRecord,
+    castVoteRecordSignature: row.castVoteRecordSignature,
     createdAt: DateTime.fromSQL(row.createdAt),
   };
 }

@@ -2,12 +2,11 @@ extern crate time;
 
 use std::str::FromStr;
 
+use base64_serde::base64_serde_type;
 use rocket::{fairing, Build, Rocket};
 use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
-use sqlx::types::Json;
 use sqlx::Acquire;
-use types_rs::cdf::cvr::Cvr;
 use types_rs::election::{BallotStyleId, ElectionDefinition, ElectionHash, PrecinctId};
 use types_rs::rave::{client, ClientId, ServerId};
 use uuid::Uuid;
@@ -17,6 +16,8 @@ use crate::env::VX_MACHINE_ID;
 #[derive(Database)]
 #[database("sqlx")]
 pub(crate) struct Db(rocket_db_pools::sqlx::PgPool);
+
+base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
 pub(crate) async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
     match Db::fetch(&rocket) {
@@ -109,7 +110,8 @@ pub(crate) struct ScannedBallot {
     pub client_id: ClientId,
     pub machine_id: String,
     pub election_id: ClientId,
-    pub cast_vote_record: Cvr,
+    #[serde(with = "Base64Standard")]
+    pub cast_vote_record: Vec<u8>,
     #[serde(with = "time::serde::iso8601")]
     pub created_at: sqlx::types::time::OffsetDateTime,
 }
@@ -267,7 +269,7 @@ pub(crate) async fn get_elections(
         server_id: Option<Uuid>,
         client_id: Uuid,
         machine_id: String,
-        election: String,
+        definition: Vec<u8>,
         election_hash: String,
         created_at: sqlx::types::time::OffsetDateTime,
     }
@@ -282,7 +284,7 @@ pub(crate) async fn get_elections(
                     server_id as "server_id: _",
                     client_id as "client_id: _",
                     machine_id,
-                    election,
+                    definition,
                     election_hash,
                     created_at
                 FROM elections
@@ -303,7 +305,7 @@ pub(crate) async fn get_elections(
                     server_id as "server_id: _",
                     client_id as "client_id: _",
                     machine_id,
-                    election,
+                    definition,
                     election_hash,
                     created_at
                 FROM elections
@@ -323,7 +325,7 @@ pub(crate) async fn get_elections(
                 server_id: record.server_id.map(Into::into),
                 client_id: record.client_id.into(),
                 machine_id: record.machine_id,
-                definition: record.election.parse()?,
+                definition: String::from_utf8(record.definition)?.parse()?,
                 election_hash: ElectionHash::from_str(record.election_hash.as_str())?,
                 created_at: record.created_at,
             })
@@ -344,7 +346,7 @@ pub(crate) async fn add_election(
             client_id,
             machine_id,
             election_hash,
-            election
+            definition
         )
         VALUES ($1, $2, $3, $4, $5)
         "#,
@@ -352,7 +354,7 @@ pub(crate) async fn add_election(
         client_id.as_uuid(),
         VX_MACHINE_ID.clone(),
         election.election_hash.as_str(),
-        election as _,
+        election.election_data,
     )
     .execute(&mut *executor)
     .await?;
@@ -494,21 +496,21 @@ pub(crate) async fn add_election_from_rave_server(
             client_id,
             machine_id,
             election_hash,
-            election
+            definition
         )
         VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (machine_id, client_id)
         DO UPDATE SET
             server_id = $2,
             election_hash = $5,
-            election = $6
+            definition = $6
         "#,
         ClientId::new().as_uuid(),
         record.server_id.as_uuid(),
         record.client_id.as_uuid(),
         record.machine_id,
-        record.election.election_hash.as_str(),
-        record.election as _
+        record.definition.election_hash.as_str(),
+        record.definition as _
     )
     .execute(&mut *executor)
     .await?;
@@ -638,14 +640,16 @@ pub(crate) async fn add_or_update_printed_ballot_from_rave_server(
             common_access_card_id,
             registration_id,
             cast_vote_record,
+            cast_vote_record_signature,
             created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (client_id, machine_id)
         DO UPDATE SET
             server_id = $2,
             cast_vote_record = $7,
-            created_at = $8
+            cast_vote_record_signature = $8,
+            created_at = $9
         "#,
         ClientId::new().as_uuid(),
         printed_ballot.server_id.as_uuid(),
@@ -653,7 +657,8 @@ pub(crate) async fn add_or_update_printed_ballot_from_rave_server(
         printed_ballot.machine_id,
         printed_ballot.common_access_card_id,
         registration_client_id.as_uuid(),
-        Json(printed_ballot.cast_vote_record) as _,
+        printed_ballot.cast_vote_record,
+        printed_ballot.cast_vote_record_signature,
         printed_ballot.created_at
     )
     .execute(&mut *executor)
@@ -715,7 +720,7 @@ pub(crate) async fn add_or_update_scanned_ballot_from_rave_server(
         scanned_ballot.client_id.as_uuid(),
         scanned_ballot.machine_id,
         election_id.as_uuid(),
-        Json(scanned_ballot.cast_vote_record) as _,
+        scanned_ballot.cast_vote_record,
         scanned_ballot.created_at
     )
     .execute(&mut *executor)
@@ -857,7 +862,7 @@ pub(crate) async fn get_elections_to_sync_to_rave_server(
         SELECT
             client_id as "client_id: ClientId",
             machine_id,
-            election as "election!: String"
+            definition
         FROM elections
         WHERE server_id IS NULL
         ORDER BY created_at ASC
@@ -872,7 +877,7 @@ pub(crate) async fn get_elections_to_sync_to_rave_server(
             Ok(client::input::Election {
                 client_id: e.client_id,
                 machine_id: e.machine_id,
-                election: e.election.parse()?,
+                definition: String::from_utf8(e.definition)?.parse()?,
             })
         })
         .collect()
@@ -925,7 +930,8 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
             machine_id,
             common_access_card_id,
             (SELECT client_id FROM registrations WHERE id = registration_id) as "registration_id!: ClientId",
-            cast_vote_record as "cast_vote_record: String"
+            cast_vote_record,
+            cast_vote_record_signature
         FROM printed_ballots
         WHERE server_id IS NULL
         ORDER BY created_at ASC
@@ -942,7 +948,8 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
                 machine_id: r.machine_id,
                 common_access_card_id: r.common_access_card_id,
                 registration_id: r.registration_id,
-                cast_vote_record: serde_json::from_str(&r.cast_vote_record)?,
+                cast_vote_record: r.cast_vote_record,
+                cast_vote_record_signature: r.cast_vote_record_signature,
             })
         })
         .collect()
@@ -957,7 +964,7 @@ pub(crate) async fn get_scanned_ballots_to_sync_to_rave_server(
             client_id as "client_id: ClientId",
             machine_id,
             election_id as "election_id: ClientId",
-            cast_vote_record as "cast_vote_record: String",
+            cast_vote_record,
             created_at
         FROM scanned_ballots
         WHERE server_id IS NULL
@@ -967,17 +974,15 @@ pub(crate) async fn get_scanned_ballots_to_sync_to_rave_server(
     .fetch_all(&mut *executor)
     .await?;
 
-    records
+    Ok(records
         .into_iter()
-        .map(|r| {
-            Ok(client::input::ScannedBallot {
-                client_id: r.client_id,
-                machine_id: r.machine_id,
-                election_id: r.election_id,
-                cast_vote_record: serde_json::from_str(r.cast_vote_record.as_str())?,
-            })
+        .map(|r| client::input::ScannedBallot {
+            client_id: r.client_id,
+            machine_id: r.machine_id,
+            election_id: r.election_id,
+            cast_vote_record: r.cast_vote_record,
         })
-        .collect::<Result<Vec<_>, _>>()
+        .collect::<Vec<_>>())
 }
 
 #[allow(dead_code)]
@@ -1012,7 +1017,7 @@ pub(crate) async fn add_scanned_ballot(
         client_id.as_uuid(),
         machine_id,
         election_id.as_uuid(),
-        Json(cast_vote_record) as _,
+        cast_vote_record,
         created_at
     )
     .execute(executor)
@@ -1070,6 +1075,7 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
     use time::OffsetDateTime;
+    use types_rs::cdf::cvr::Cvr;
 
     fn load_famous_names_election() -> ElectionDefinition {
         let election_json = include_str!("../tests/fixtures/electionFamousNames2021.json");
@@ -1102,7 +1108,7 @@ mod test {
             client_id: ClientId::new(),
             machine_id: "mark-terminal-001".to_owned(),
             election_hash: election_definition.election_hash.clone(),
-            election: election_definition,
+            definition: election_definition,
             created_at: OffsetDateTime::now_utc(),
         }
     }
@@ -1137,7 +1143,8 @@ mod test {
             machine_id: registration.machine_id.clone(),
             common_access_card_id: registration.common_access_card_id.clone(),
             registration_id: registration.registration_request_id,
-            cast_vote_record,
+            cast_vote_record: serde_json::to_vec(&cast_vote_record).unwrap(),
+            cast_vote_record_signature: vec![],
             created_at: OffsetDateTime::now_utc(),
         }
     }
@@ -1150,7 +1157,7 @@ mod test {
             server_id: election.server_id,
             client_id: election.client_id,
             machine_id: election.machine_id.clone(),
-            cast_vote_record,
+            cast_vote_record: serde_json::to_vec(&cast_vote_record).unwrap(),
             election_id: election.server_id,
             created_at: OffsetDateTime::now_utc(),
         }
@@ -1194,7 +1201,7 @@ mod test {
         assert_eq!(elections.len(), 1);
         assert_eq!(elections[0].client_id, client_id);
         assert_eq!(
-            elections[0].election.election_data,
+            elections[0].definition.election_data,
             election_definition.election_data
         );
 

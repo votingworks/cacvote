@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
 import {
+  Byte,
   ElectionManagerUser,
   PollWorkerUser,
   RaveVoterUser,
@@ -136,6 +137,10 @@ export interface Card {
   getCardStatus(): Promise<CardStatus>;
 
   checkPin(pin: string): Promise<CheckPinResponse>;
+  generateSignature(
+    message: Buffer,
+    options: { privateKeyId: Byte; pin?: string }
+  ): Promise<Buffer>;
 
   program(
     input:

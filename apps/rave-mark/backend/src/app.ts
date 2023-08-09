@@ -1,4 +1,6 @@
+import { Buffer } from 'buffer';
 import {
+  CARD_VX_ADMIN_CERT,
   InsertedSmartCardAuthApi,
   InsertedSmartCardAuthMachineState,
 } from '@votingworks/auth';
@@ -320,10 +322,17 @@ function buildApi({
         ballotMarkingMode: 'machine',
       });
 
+      const castVoteRecordJson = JSON.stringify(castVoteRecord);
+      const signature = await auth.generateSignature(
+        Buffer.from(castVoteRecordJson, 'utf-8'),
+        { privateKeyId: CARD_VX_ADMIN_CERT.PRIVATE_KEY_ID, pin: '77777777' }
+      );
+
       workspace.store.createPrintedBallot({
         id: ballotId,
         registrationId: registration.clientId,
-        castVoteRecord,
+        castVoteRecord: Buffer.from(castVoteRecordJson),
+        castVoteRecordSignature: signature,
       });
     },
 
@@ -381,7 +390,7 @@ function buildApi({
           const electionId = ClientId();
           workspace.store.createElection({
             id: electionId,
-            election: input.registration.electionData.toString(),
+            definition: Buffer.from(input.registration.electionData),
           });
           const electionRecord = workspace.store.getElection({
             clientId: electionId,

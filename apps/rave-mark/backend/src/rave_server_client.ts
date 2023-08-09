@@ -1,215 +1,26 @@
-// eslint-disable-next-line max-classes-per-file
-import { z } from 'zod';
+/* eslint-disable max-classes-per-file */
+
+import { Buffer } from 'buffer';
 import { assert } from '@votingworks/basics';
 import fetch from 'cross-fetch';
 import makeDebug from 'debug';
-import {
-  BallotStyleId,
-  BallotStyleIdSchema,
-  CVR,
-  Id,
-  PrecinctId,
-  PrecinctIdSchema,
-  unsafeParse,
-} from '@votingworks/types';
-import { DateTime } from 'luxon';
+import { unsafeParse } from '@votingworks/types';
 import { format } from '@votingworks/utils';
 import { VX_MACHINE_ID } from '@votingworks/backend';
 import { Store } from './store';
 import { AuthStatus } from './types/auth';
-import { ClientId, ClientIdSchema, ServerId, ServerIdSchema } from './types/db';
+import { ClientId } from './types/db';
+import {
+  RaveMarkSyncOutputSchema,
+  RaveServerSyncInput,
+  RaveServerSyncOutput,
+} from './types/sync';
 
 const debug = makeDebug('rave-server-client');
 
 export interface RaveServerClient {
   sync(options?: { authStatus: AuthStatus }): Promise<void>;
 }
-
-const DateTimeSchema = z
-  .string()
-  .transform((value) =>
-    DateTime.fromISO(value)
-  ) as unknown as z.ZodSchema<DateTime>;
-
-interface RegistrationRequestInput {
-  clientId: ClientId;
-  machineId: Id;
-  commonAccessCardId: string;
-  givenName: string;
-  familyName: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  stateId: string;
-}
-
-type RegistrationRequestOutput = RegistrationRequestInput & {
-  serverId: ServerId;
-  createdAt: DateTime;
-};
-
-const RegistrationRequestOutputSchema: z.ZodSchema<RegistrationRequestOutput> =
-  z.object({
-    serverId: ServerIdSchema,
-    clientId: ClientIdSchema,
-    machineId: z.string(),
-    commonAccessCardId: z.string(),
-    givenName: z.string(),
-    familyName: z.string(),
-    addressLine1: z.string(),
-    addressLine2: z.string().optional(),
-    city: z.string(),
-    state: z.string(),
-    postalCode: z.string(),
-    stateId: z.string(),
-    createdAt: DateTimeSchema,
-  });
-
-interface RegistrationInput {
-  clientId: ClientId;
-  machineId: Id;
-  commonAccessCardId: Id;
-  registrationRequestId: ClientId;
-  electionId: ClientId;
-  precinctId: PrecinctId;
-  ballotStyleId: BallotStyleId;
-}
-
-interface RegistrationOutput {
-  serverId: ServerId;
-  clientId: ClientId;
-  machineId: Id;
-  commonAccessCardId: Id;
-  registrationRequestId: ServerId;
-  electionId: ServerId;
-  precinctId: PrecinctId;
-  ballotStyleId: BallotStyleId;
-  createdAt: DateTime;
-}
-
-const RegistrationOutputSchema: z.ZodSchema<RegistrationOutput> = z.object({
-  serverId: ServerIdSchema,
-  clientId: ClientIdSchema,
-  machineId: z.string(),
-  commonAccessCardId: z.string(),
-  registrationRequestId: ServerIdSchema,
-  electionId: ServerIdSchema,
-  precinctId: PrecinctIdSchema,
-  ballotStyleId: BallotStyleIdSchema,
-  createdAt: DateTimeSchema,
-});
-
-interface PrintedBallotInput {
-  clientId: ClientId;
-  machineId: Id;
-  commonAccessCardId: string;
-  registrationId: ClientId;
-  castVoteRecord: CVR.CVR;
-}
-
-interface ScannedBallotInput {
-  clientId: ClientId;
-  machineId: Id;
-  electionId: ClientId;
-  castVoteRecord: CVR.CVR;
-}
-
-interface PrintedBallotOutput {
-  serverId: ServerId;
-  clientId: ClientId;
-  machineId: Id;
-  commonAccessCardId: string;
-  registrationId: ServerId;
-  castVoteRecord: CVR.CVR;
-}
-
-const PrintedBallotOutputSchema: z.ZodSchema<PrintedBallotOutput> = z.object({
-  serverId: ServerIdSchema,
-  clientId: ClientIdSchema,
-  machineId: z.string(),
-  commonAccessCardId: z.string(),
-  registrationId: ServerIdSchema,
-  castVoteRecord: CVR.CVRSchema,
-});
-
-interface ScannedBallotOutput {
-  serverId: ServerId;
-  clientId: ClientId;
-  machineId: Id;
-  electionId: ServerId;
-  castVoteRecord: CVR.CVR;
-}
-
-const ScannedBallotOutputSchema: z.ZodSchema<ScannedBallotOutput> = z.object({
-  serverId: ServerIdSchema,
-  clientId: ClientIdSchema,
-  machineId: z.string(),
-  electionId: ServerIdSchema,
-  castVoteRecord: CVR.CVRSchema,
-});
-
-interface AdminInput {
-  commonAccessCardId: string;
-  createdAt: DateTime;
-}
-
-type AdminOutput = AdminInput;
-
-const AdminOutputSchema: z.ZodSchema<AdminOutput> = z.object({
-  commonAccessCardId: z.string(),
-  createdAt: DateTimeSchema,
-});
-
-interface ElectionInput {
-  clientId: ClientId;
-  machineId: Id;
-  election: string;
-}
-
-type ElectionOutput = ElectionInput & {
-  serverId: ServerId;
-};
-
-const ElectionOutputSchema: z.ZodSchema<ElectionOutput> = z.object({
-  serverId: ServerIdSchema,
-  clientId: ClientIdSchema,
-  machineId: z.string(),
-  election: z.string(),
-  createdAt: DateTimeSchema,
-});
-
-interface RaveServerSyncInput {
-  lastSyncedRegistrationRequestId?: ServerId;
-  lastSyncedRegistrationId?: ServerId;
-  lastSyncedElectionId?: ServerId;
-  lastSyncedPrintedBallotId?: ServerId;
-  lastSyncedScannedBallotId?: ServerId;
-  registrationRequests?: RegistrationRequestInput[];
-  elections?: ElectionInput[];
-  registrations?: RegistrationInput[];
-  printedBallots?: PrintedBallotInput[];
-  scannedBallots?: ScannedBallotInput[];
-}
-
-interface RaveServerSyncOutput {
-  admins: AdminOutput[];
-  elections: ElectionOutput[];
-  registrationRequests: RegistrationRequestOutput[];
-  registrations: RegistrationOutput[];
-  printedBallots: PrintedBallotOutput[];
-  scannedBallots: ScannedBallotOutput[];
-}
-
-const RaveMarkSyncOutputSchema: z.ZodSchema<RaveServerSyncOutput> = z.object({
-  admins: z.array(AdminOutputSchema),
-  elections: z.array(ElectionOutputSchema),
-  registrationRequests: z.array(RegistrationRequestOutputSchema),
-  registrations: z.array(RegistrationOutputSchema),
-  printedBallots: z.array(PrintedBallotOutputSchema),
-  scannedBallots: z.array(ScannedBallotOutputSchema),
-});
 
 function describeSyncInputOrOutput(
   data: RaveServerSyncInput | RaveServerSyncOutput
@@ -307,17 +118,6 @@ export class RaveServerClientImpl {
     }
   }
 
-  private createServerSyncAttempt(
-    creator: string,
-    trigger: 'manual' | 'scheduled'
-  ): ClientId {
-    return this.store.createServerSyncAttempt({
-      creator,
-      trigger,
-      initialStatusMessage: 'Syncing…',
-    });
-  }
-
   private createSyncInput(): RaveServerSyncInput {
     const input: RaveServerSyncInput = {
       lastSyncedRegistrationRequestId:
@@ -376,6 +176,7 @@ export class RaveServerClientImpl {
         id:
           election.machineId === VX_MACHINE_ID ? election.clientId : ClientId(),
         ...election,
+        definition: Buffer.from(election.definition, 'base64'),
       });
       debug('created or replaced election %s', electionId);
     }
@@ -447,7 +248,11 @@ export class RaveServerClientImpl {
         clientId: printedBallot.clientId,
         machineId: printedBallot.machineId,
         registrationId: localRegistration.clientId,
-        castVoteRecord: printedBallot.castVoteRecord,
+        castVoteRecord: Buffer.from(printedBallot.castVoteRecord, 'base64'),
+        castVoteRecordSignature: Buffer.from(
+          printedBallot.castVoteRecordSignature,
+          'base64'
+        ),
       });
 
       debug('created or replaced ballot %s', ballotId);
