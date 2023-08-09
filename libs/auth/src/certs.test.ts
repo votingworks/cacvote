@@ -178,7 +178,13 @@ test.each<{
       '1.3.6.1.4.1.59817.3 = rave-voter, ' +
       '1.3.6.1.4.1.59817.99 = 12345',
     expectedCardDetails: {
-      user: { role: 'rave_voter', commonAccessCardId: '12345' },
+      user: {
+        role: 'rave_voter',
+        commonAccessCardId: '12345',
+        givenName: 'John',
+        familyName: 'Doe',
+        jurisdiction,
+      },
     },
   },
 ])('parseUserDataFromCert', async ({ subject, expectedCardDetails }) => {
@@ -269,7 +275,13 @@ test.each<{
   },
   {
     cardDetails: {
-      user: { role: 'rave_voter', commonAccessCardId: '12345' },
+      user: {
+        role: 'rave_voter',
+        commonAccessCardId: '12345',
+        givenName: 'John',
+        familyName: 'Doe',
+        jurisdiction,
+      },
       hasPin: true,
     },
     expectedSubject:

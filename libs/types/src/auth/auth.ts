@@ -29,6 +29,10 @@ export interface CardlessVoterUser {
 export interface RaveVoterUser {
   readonly role: 'rave_voter';
   readonly commonAccessCardId: Id;
+  readonly givenName: string;
+  readonly middleName?: string;
+  readonly familyName: string;
+  readonly jurisdiction: string;
 }
 
 export type User =

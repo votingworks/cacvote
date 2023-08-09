@@ -32,6 +32,9 @@ export function mockRaveMarkVoterCardInsertion({
         user: {
           role: 'rave_voter',
           commonAccessCardId,
+          givenName: 'John',
+          familyName: 'Doe',
+          jurisdiction: 'USA',
         },
       },
     },

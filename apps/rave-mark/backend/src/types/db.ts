@@ -435,7 +435,9 @@ export function deserializeRegistrationRequest(
     serverId: (row.serverId ?? undefined) as Optional<ServerId>,
     clientId: row.clientId as ClientId,
     machineId: row.machineId,
-    commonAccessCardId: row.commonAccessCardId,
+    // because these are just strings of digits, sqlite may return them as
+    // numbers, so we have to convert them back to strings
+    commonAccessCardId: row.commonAccessCardId.toString(),
     givenName: row.givenName,
     familyName: row.familyName,
     addressLine1: row.addressLine1,

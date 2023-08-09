@@ -73,6 +73,9 @@ interface RaveVoterCardCustomCertFields {
   component: 'card';
   jurisdiction: string;
   cardType: 'rave-voter';
+  givenName: string;
+  middleName?: string;
+  familyName: string;
   commonAccessCardId: string;
 }
 
@@ -151,6 +154,9 @@ const RaveVoterCardCustomCertFieldsSchema: z.ZodSchema<RaveVoterCardCustomCertFi
     component: z.literal('card'),
     jurisdiction: z.string(),
     cardType: z.literal('rave-voter'),
+    givenName: z.string(),
+    middleName: z.string().optional(),
+    familyName: z.string(),
     commonAccessCardId: z.string(),
   });
 
@@ -163,7 +169,7 @@ const CardCustomCertFieldsSchema: z.ZodSchema<CardCustomCertFields> = z.union([
 /**
  * A schema to facilitate parsing custom cert fields
  */
-const CustomCertFieldsSchema: z.ZodSchema<CustomCertFields> = z.union([
+export const CustomCertFieldsSchema: z.ZodSchema<CustomCertFields> = z.union([
   VxAdminCustomCertFieldsSchema,
   VxCentralScanCustomCertFieldsSchema,
   VxMarkCustomCertFieldsSchema,
@@ -182,6 +188,60 @@ export const CERT_EXPIRY_IN_DAYS = {
   /** Used by dev/test cert-generation scripts */
   DEV: 365 * 100, // 100 years
 } as const;
+
+/**
+ * Parses the fields from a Common Access Card cert. For example:
+ *
+ * ```js
+ * {
+ *   C: 'US',
+ *   O: 'U.S. Government',
+ *   OU: 'USA',
+ *   CN: 'AIKINS.ROBERT.EDDIE.1404922102'
+ * }
+ * ```
+ *
+ * Should be parsed into:
+ *
+ * ```js
+ * {
+ *   id: '1404922102',
+ *   givenName: 'ROBERT',
+ *   surname: 'AIKINS',
+ *   middleName: 'EDDIE',
+ *   jurisdiction: 'USA'
+ * }
+ */
+export function parseCommonAccessCardFields(certFields: {
+  [fieldName: string]: string;
+}): {
+  id: string;
+  jurisdiction: string;
+  givenName: string;
+  middleName?: string;
+  familyName: string;
+} {
+  const { C, O, OU, CN } = certFields;
+  assert(C === 'US');
+  assert(O === 'U.S. Government');
+  assert(typeof OU === 'string');
+  assert(typeof CN === 'string');
+
+  const [surname, givenName, middleName, id] = CN.split('.');
+  assert(
+    typeof surname === 'string' &&
+      typeof givenName === 'string' &&
+      typeof id === 'string'
+  );
+
+  return {
+    id,
+    jurisdiction: OU,
+    givenName,
+    middleName,
+    familyName: surname,
+  };
+}
 
 /**
  * Parses the provided cert and returns the custom cert fields. Throws an error if the cert doesn't
@@ -205,15 +265,17 @@ export async function parseCert(cert: Buffer): Promise<CustomCertFields> {
     }
   }
 
-  const certDetails = CustomCertFieldsSchema.parse({
-    component: certFields[VX_CUSTOM_CERT_FIELD.COMPONENT],
-    jurisdiction: certFields[VX_CUSTOM_CERT_FIELD.JURISDICTION],
-    cardType: certFields[VX_CUSTOM_CERT_FIELD.CARD_TYPE],
-    electionHash: certFields[VX_CUSTOM_CERT_FIELD.ELECTION_HASH],
-    commonAccessCardId: certFields[VX_CUSTOM_CERT_FIELD.COMMON_ACCESS_CARD_ID],
-  });
+  const commonAccessCardInfo = parseCommonAccessCardFields(certFields);
 
-  return certDetails;
+  return {
+    cardType: 'rave-voter',
+    component: 'card',
+    jurisdiction: commonAccessCardInfo.jurisdiction,
+    givenName: commonAccessCardInfo.givenName,
+    middleName: commonAccessCardInfo.middleName,
+    familyName: commonAccessCardInfo.familyName,
+    commonAccessCardId: commonAccessCardInfo.id,
+  };
 }
 
 /**
@@ -254,11 +316,16 @@ export async function parseCardDetailsFromCert(
       };
     }
     case 'rave-voter': {
-      const { commonAccessCardId } = certDetails;
+      const { commonAccessCardId, givenName, middleName, familyName } =
+        certDetails;
       return {
         user: {
           role: 'rave_voter',
           commonAccessCardId,
+          givenName,
+          middleName,
+          familyName,
+          jurisdiction,
         },
       };
     }

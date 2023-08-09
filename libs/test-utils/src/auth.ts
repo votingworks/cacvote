@@ -58,6 +58,9 @@ export function fakeRaveVoterUser(
   return {
     role: 'rave_voter',
     commonAccessCardId: 'test-common-access-card-id',
+    givenName: 'Bob',
+    familyName: 'Smith',
+    jurisdiction: 'USA',
     ...props,
   };
 }

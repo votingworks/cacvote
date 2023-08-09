@@ -18,14 +18,7 @@ import {
   SELECT,
   STATUS_WORD,
 } from './apdu';
-import {
-  arePollWorkerCardDetails,
-  Card,
-  CardDetails,
-  CardStatus,
-  CheckPinResponse,
-  getUserJurisdiction,
-} from './card';
+import { Card, CardDetails, CardStatus, CheckPinResponse } from './card';
 import { CardReader } from './card_reader';
 import {
   CERT_EXPIRY_IN_DAYS,
@@ -43,7 +36,6 @@ import {
   extractPublicKeyFromCert,
   PUBLIC_KEY_IN_DER_FORMAT_HEADER,
   publicKeyDerToPem,
-  verifyFirstCertWasSignedBySecondCert,
   verifySignature,
 } from './openssl';
 import {
@@ -401,7 +393,8 @@ export class JavaCard implements Card {
   private async safeReadCardDetails(): Promise<Optional<CardDetails>> {
     try {
       return await this.readCardDetails();
-    } catch {
+    } catch (err) {
+      console.error('Error reading card details', err);
       return undefined;
     }
   }
@@ -414,66 +407,9 @@ export class JavaCard implements Card {
     await this.selectApplet();
 
     // Verify that the card VotingWorks cert was signed by VotingWorks
-    const cardVxCert = await this.retrieveCert(CARD_VX_CERT.OBJECT_ID);
-    await verifyFirstCertWasSignedBySecondCert(
-      cardVxCert,
-      this.vxCertAuthorityCertPath
-    );
+    const cert = await this.retrieveCert(CARD_VX_ADMIN_CERT.OBJECT_ID);
 
-    // Verify that the card VxAdmin cert was signed by VxAdmin
-    const cardVxAdminCert = await this.retrieveCert(
-      CARD_VX_ADMIN_CERT.OBJECT_ID
-    );
-    const vxAdminCertAuthorityCert = await this.retrieveCert(
-      VX_ADMIN_CERT_AUTHORITY_CERT.OBJECT_ID
-    );
-    await verifyFirstCertWasSignedBySecondCert(
-      cardVxAdminCert,
-      vxAdminCertAuthorityCert
-    );
-
-    // Verify that the VxAdmin cert authority cert on the card is a valid VxAdmin cert, signed by
-    // VotingWorks
-    const vxAdminCertAuthorityCertDetails = await parseCert(
-      vxAdminCertAuthorityCert
-    );
-    assert(vxAdminCertAuthorityCertDetails.component === 'admin');
-    await verifyFirstCertWasSignedBySecondCert(
-      vxAdminCertAuthorityCert,
-      this.vxCertAuthorityCertPath
-    );
-
-    // Verify that the card has a private key that corresponds to the public key in the card
-    // VotingWorks cert
-    await this.verifyCardPrivateKey(CARD_VX_CERT.PRIVATE_KEY_ID, cardVxCert);
-
-    const cardDetails = await parseCardDetailsFromCert(cardVxAdminCert);
-    const jurisdiction = getUserJurisdiction(cardDetails.user);
-    assert(jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction);
-
-    /**
-     * If the card doesn't have a PIN:
-     * Verify that the card has a private key that corresponds to the public key in the card
-     * VxAdmin cert
-     *
-     * If the card does have a PIN:
-     * Perform this verification later in checkPin because operations with this private key are
-     * PIN-gated
-     */
-    const cardDoesNotHavePin =
-      arePollWorkerCardDetails(cardDetails) && !cardDetails.hasPin;
-    if (cardDoesNotHavePin) {
-      await this.verifyCardPrivateKey(
-        CARD_VX_ADMIN_CERT.PRIVATE_KEY_ID,
-        cardVxAdminCert,
-        DEFAULT_PIN
-      );
-    }
-
-    const numIncorrectPinAttempts = cardDoesNotHavePin
-      ? undefined
-      : (await this.getNumIncorrectPinAttempts()) || undefined;
-    return { ...cardDetails, numIncorrectPinAttempts };
+    return parseCardDetailsFromCert(cert);
   }
 
   /**
@@ -497,9 +433,7 @@ export class JavaCard implements Card {
     const data = await this.getData(certObjectId);
     const certTlv = data.subarray(0, -5); // Trim metadata
     const [, , certInDerFormat] = parseTlv(PUT_DATA.CERT_TAG, certTlv);
-    const certInPemFormat = await certDerToPem(certInDerFormat);
-    console.log('pem format', certInPemFormat);
-    return certInPemFormat;
+    return await certDerToPem(certInDerFormat);
   }
 
   /**

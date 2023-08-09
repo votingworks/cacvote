@@ -79,7 +79,6 @@ export async function openssl(
 
   let stdout: Buffer;
   try {
-    console.log("OPENSSL >>", ['openssl', ...processedParams, stdin]);
     stdout = await runCommand(['openssl', ...processedParams], { stdin });
   } finally {
     await Promise.all(
@@ -98,9 +97,6 @@ type FilePathOrBuffer = string | Buffer;
  * Converts a cert in DER format to PEM format
  */
 export function certDerToPem(cert: FilePathOrBuffer): Promise<Buffer> {
-  (async () => {
-    console.log("in txt", (await openssl(['x509', '-inform', 'DER', '-text', '-in', cert])).toString());
-  })();
   return openssl(['x509', '-inform', 'DER', '-outform', 'PEM', '-in', cert]);
 }
 
@@ -196,7 +192,7 @@ export async function verifySignature({
       '-pubin',
       '-in',
       messageSignature,
-    ]);*/
+    ]); */
 
   const params = [
     'dgst',
@@ -207,7 +203,6 @@ export async function verifySignature({
     messageSignature,
   ];
   if (typeof message === 'string' || Buffer.isBuffer(message)) {
-    console.log("OPENSSL ==> ", [...params, message]);
     await openssl([...params, message]);
     return;
   }
@@ -342,8 +337,8 @@ export interface CreateCertInput {
    * key is also acceptable. We set the cert key using -force_pubkey in this case.
    */
   certKeyInput:
-  | { type: 'private'; key: FileKey }
-  | { type: 'public'; key: InlineKey };
+    | { type: 'private'; key: FileKey }
+    | { type: 'public'; key: InlineKey };
   certSubject: string;
   certType?: CertType;
   expiryInDays: number;

@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { Button, H1, Main, P, Screen } from '@votingworks/ui';
 import { InlineForm, TextInput } from '../../components/text_input';
-import { createVoterRegistration } from '../../api';
+import { createVoterRegistration, getAuthStatus } from '../../api';
 
 export function StartScreen(): JSX.Element {
-  const [givenName, setGivenName] = useState('');
-  const [familyName, setFamilyName] = useState('');
+  const authStatusQuery = getAuthStatus.useQuery();
+  const raveVoter =
+    authStatusQuery.data?.status === 'logged_in' &&
+    authStatusQuery.data.user.role === 'rave_voter'
+      ? authStatusQuery.data.user
+      : undefined;
+  const [givenName, setGivenName] = useState(raveVoter?.givenName ?? '');
+  const [familyName, setFamilyName] = useState(raveVoter?.familyName ?? '');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
   const [city, setCity] = useState('');
