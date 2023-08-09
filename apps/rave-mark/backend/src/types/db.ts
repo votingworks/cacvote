@@ -373,7 +373,9 @@ export function deserializePrintedBallot(row: PrintedBallotRow): PrintedBallot {
     serverId: (row.serverId ?? undefined) as Optional<ServerId>,
     clientId: row.clientId as ClientId,
     machineId: row.machineId,
-    commonAccessCardId: row.commonAccessCardId,
+    // because these are just strings of digits, sqlite may return them as
+    // numbers, so we have to convert them back to strings
+    commonAccessCardId: row.commonAccessCardId.toString(),
     registrationId: row.registrationId as ClientId,
     castVoteRecord: JSON.parse(row.castVoteRecord),
     createdAt: DateTime.fromSQL(row.createdAt),
@@ -456,7 +458,9 @@ export function deserializeRegistration(row: RegistrationRow): Registration {
     serverId: (row.serverId ?? undefined) as Optional<ServerId>,
     clientId: row.clientId as ClientId,
     machineId: row.machineId,
-    commonAccessCardId: row.commonAccessCardId,
+    // because these are just strings of digits, sqlite may return them as
+    // numbers, so we have to convert them back to strings
+    commonAccessCardId: row.commonAccessCardId.toString(),
     registrationRequestId: row.registrationRequestId as ClientId,
     electionId: row.electionId as ClientId,
     precinctId: row.precinctId,

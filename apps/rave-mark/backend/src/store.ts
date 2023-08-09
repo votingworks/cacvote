@@ -576,7 +576,7 @@ export class Store {
     // TODO: validate votes against election definition
     this.client.run(
       `
-      insert or replace into ballots (
+      insert or replace into printed_ballots (
         id,
         server_id,
         client_id,
@@ -593,7 +593,7 @@ export class Store {
       clientId ?? id,
       machineId,
       registration.commonAccessCardId,
-      registrationId,
+      registration.id,
       JSON.stringify(castVoteRecord)
     );
 

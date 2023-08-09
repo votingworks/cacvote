@@ -322,7 +322,7 @@ function buildApi({
 
       workspace.store.createPrintedBallot({
         id: ballotId,
-        registrationId: registration.id,
+        registrationId: registration.clientId,
         castVoteRecord,
       });
     },

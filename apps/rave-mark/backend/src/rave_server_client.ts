@@ -446,7 +446,7 @@ export class RaveServerClientImpl {
         serverId: printedBallot.serverId,
         clientId: printedBallot.clientId,
         machineId: printedBallot.machineId,
-        registrationId: localRegistration.id,
+        registrationId: localRegistration.clientId,
         castVoteRecord: printedBallot.castVoteRecord,
       });
 
