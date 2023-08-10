@@ -554,6 +554,7 @@ export class Store {
     clientId,
     machineId = VX_MACHINE_ID,
     registrationId,
+    commonAccessCardCertificate,
     castVoteRecord,
     castVoteRecordSignature,
   }: {
@@ -562,6 +563,7 @@ export class Store {
     clientId?: ClientId;
     machineId?: Id;
     registrationId: ClientId;
+    commonAccessCardCertificate: Buffer;
     castVoteRecord: Buffer;
     castVoteRecordSignature: Buffer;
   }): ClientId {
@@ -589,11 +591,12 @@ export class Store {
         client_id,
         machine_id,
         common_access_card_id,
+        common_access_card_certificate,
         registration_id,
         cast_vote_record,
         cast_vote_record_signature
       ) values (
-        ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
       id,
@@ -601,6 +604,7 @@ export class Store {
       clientId ?? id,
       machineId,
       registration.commonAccessCardId,
+      commonAccessCardCertificate,
       registration.id,
       castVoteRecord,
       castVoteRecordSignature
@@ -912,6 +916,7 @@ export class Store {
         client_id as clientId,
         machine_id as machineId,
         common_access_card_id as commonAccessCardId,
+        common_access_card_certificate as commonAccessCardCertificate,
         (select client_id from registrations where id = registration_id) as registrationId,
         cast_vote_record as castVoteRecord,
         cast_vote_record_signature as castVoteRecordSignature,
@@ -925,6 +930,10 @@ export class Store {
       const record = deserializePrintedBallot(row);
       return {
         ...record,
+        commonAccessCardCertificate: unsafeParse(
+          Base64StringSchema,
+          record.commonAccessCardCertificate.toString('base64')
+        ),
         castVoteRecord: unsafeParse(
           Base64StringSchema,
           record.castVoteRecord.toString('base64')

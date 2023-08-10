@@ -539,6 +539,10 @@ export class JavaCard implements Card {
     return generalAuthenticateResponse.subarray(8); // Trim metadata
   }
 
+  async getCertificate(options: { objectId: Buffer }): Promise<Buffer> {
+    return await this.retrieveCert(options.objectId);
+  }
+
   /**
    * Generates an asymmetric key pair on the card. The public key is exported, and the private key
    * never leaves the card. The returned public key will be in PEM format.

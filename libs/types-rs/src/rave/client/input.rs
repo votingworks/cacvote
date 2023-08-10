@@ -55,6 +55,8 @@ pub struct PrintedBallot {
     pub client_id: ClientId,
     pub machine_id: String,
     pub common_access_card_id: String,
+    #[serde(with = "Base64Standard")]
+    pub common_access_card_certificate: Vec<u8>,
     pub registration_id: ClientId,
     #[serde(with = "Base64Standard")]
     pub cast_vote_record: Vec<u8>,

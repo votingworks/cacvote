@@ -100,6 +100,7 @@ create table printed_ballots (
   machine_id text not null,
   -- CAC ID of the person for this record
   common_access_card_id uuid not null unique,
+  common_access_card_certificate bytea not null,
   registration_id uuid not null references registrations(id),
   cast_vote_record bytea not null,
   cast_vote_record_signature bytea not null,

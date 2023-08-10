@@ -7,11 +7,13 @@ use rocket::{fairing, Build, Rocket};
 use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
 use sqlx::Acquire;
+use types_rs::cdf::cvr::Cvr;
 use types_rs::election::{BallotStyleId, ElectionDefinition, ElectionHash, PrecinctId};
 use types_rs::rave::jx;
 use types_rs::rave::{client, ClientId, ServerId};
 use uuid::Uuid;
 
+use crate::cac::verify_cast_vote_record;
 use crate::env::VX_MACHINE_ID;
 
 #[derive(Database)]
@@ -189,7 +191,8 @@ pub(crate) async fn get_last_synced_election_id(
     )
     .fetch_optional(&mut *executor)
     .await?
-    .and_then(|r| r.server_id))
+    .map(|r| r.server_id)
+    .flatten())
 }
 
 pub(crate) async fn get_last_synced_registration_request_id(
@@ -428,6 +431,7 @@ pub(crate) async fn get_printed_ballots(
             id,
             server_id,
             registration_id,
+            common_access_card_certificate,
             (
                 SELECT election_id
                 FROM registrations
@@ -456,6 +460,12 @@ pub(crate) async fn get_printed_ballots(
     records
         .into_iter()
         .map(|record| {
+            let verification_status = verify_cast_vote_record(
+                &record.common_access_card_certificate,
+                &record.cast_vote_record,
+                &record.cast_vote_record_signature,
+            );
+
             Ok(jx::PrintedBallot {
                 id: record.id.into(),
                 server_id: ServerId::from(record.server_id),
@@ -482,6 +492,7 @@ pub(crate) async fn get_printed_ballots(
                 )?,
                 cast_vote_record: record.cast_vote_record,
                 cast_vote_record_signature: record.cast_vote_record_signature,
+                verification_status,
                 created_at: record.created_at,
             })
         })
@@ -491,13 +502,12 @@ pub(crate) async fn get_printed_ballots(
 pub(crate) async fn get_scanned_ballots(
     executor: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<Vec<jx::ScannedBallot>> {
-    sqlx::query_as!(
-        jx::ScannedBallot,
+    let records = sqlx::query!(
         r#"
         SELECT
-            id as "id: _",
-            server_id as "server_id: _",
-            election_id as "election_id: _",
+            id as "id: ClientId",
+            server_id as "server_id: ServerId",
+            election_id as "election_id: ClientId",
             cast_vote_record,
             created_at
         FROM scanned_ballots
@@ -505,8 +515,24 @@ pub(crate) async fn get_scanned_ballots(
         "#
     )
     .fetch_all(&mut *executor)
-    .await
-    .map_err(Into::into)
+    .await?;
+
+    records
+        .into_iter()
+        .map(|record| {
+            let cast_vote_record: Cvr = serde_json::from_slice(&record.cast_vote_record)?;
+
+            Ok(jx::ScannedBallot {
+                id: record.id,
+                server_id: record.server_id,
+                election_id: record.election_id,
+                precinct_id: PrecinctId::from(cast_vote_record.ballot_style_unit_id.unwrap()),
+                ballot_style_id: BallotStyleId::from(cast_vote_record.ballot_style_id.unwrap()),
+                cast_vote_record: record.cast_vote_record,
+                created_at: record.created_at,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()
 }
 
 pub(crate) async fn create_registration(
@@ -729,24 +755,28 @@ pub(crate) async fn add_or_update_printed_ballot_from_rave_server(
             client_id,
             machine_id,
             common_access_card_id,
+            common_access_card_certificate,
             registration_id,
             cast_vote_record,
             cast_vote_record_signature,
             created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (client_id, machine_id)
         DO UPDATE SET
             server_id = $2,
-            cast_vote_record = $7,
-            cast_vote_record_signature = $8,
-            created_at = $9
+            common_access_card_id = $5,
+            common_access_card_certificate = $6,
+            cast_vote_record = $8,
+            cast_vote_record_signature = $9,
+            created_at = $10
         "#,
         ClientId::new().as_uuid(),
         printed_ballot.server_id.as_uuid(),
         printed_ballot.client_id.as_uuid(),
         printed_ballot.machine_id,
         printed_ballot.common_access_card_id,
+        printed_ballot.common_access_card_certificate,
         registration_client_id.as_uuid(),
         printed_ballot.cast_vote_record,
         printed_ballot.cast_vote_record_signature,
@@ -1020,6 +1050,7 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
             client_id as "client_id: ClientId",
             machine_id,
             common_access_card_id,
+            common_access_card_certificate,
             (SELECT client_id FROM registrations WHERE id = registration_id) as "registration_id!: ClientId",
             cast_vote_record,
             cast_vote_record_signature
@@ -1038,6 +1069,7 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
                 client_id: r.client_id,
                 machine_id: r.machine_id,
                 common_access_card_id: r.common_access_card_id,
+                common_access_card_certificate: r.common_access_card_certificate,
                 registration_id: r.registration_id,
                 cast_vote_record: r.cast_vote_record,
                 cast_vote_record_signature: r.cast_vote_record_signature,
@@ -1134,31 +1166,6 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
     .map(|r| r.server_id))
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ScannedBallotStats {
-    pub total: i64,
-    pub pending: i64,
-}
-
-#[allow(dead_code)]
-pub(crate) async fn get_scanned_ballot_stats(
-    executor: &mut sqlx::PgConnection,
-) -> color_eyre::Result<ScannedBallotStats> {
-    sqlx::query_as!(
-        ScannedBallotStats,
-        r#"
-        SELECT
-            COUNT(*) as "total!: i64",
-            COUNT(*) FILTER (WHERE server_id IS NULL) as "pending!: i64"
-        FROM scanned_ballots
-        "#
-    )
-    .fetch_one(&mut *executor)
-    .await
-    .map_err(Into::into)
-}
-
 #[cfg(test)]
 mod test {
     use std::env;
@@ -1233,6 +1240,7 @@ mod test {
             client_id: registration.client_id,
             machine_id: registration.machine_id.clone(),
             common_access_card_id: registration.common_access_card_id.clone(),
+            common_access_card_certificate: vec![],
             registration_id: registration.registration_request_id,
             cast_vote_record: serde_json::to_vec(&cast_vote_record).unwrap(),
             cast_vote_record_signature: vec![],

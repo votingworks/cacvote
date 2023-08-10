@@ -68,6 +68,8 @@ pub struct PrintedBallot {
     pub client_id: ClientId,
     pub machine_id: String,
     pub common_access_card_id: String,
+    #[serde(with = "Base64Standard")]
+    pub common_access_card_certificate: Vec<u8>,
     pub registration_id: ServerId,
     #[serde(with = "Base64Standard")]
     pub cast_vote_record: Vec<u8>,
@@ -103,6 +105,7 @@ mod tests {
             client_id: ClientId::new(),
             machine_id: "machine-1".to_string(),
             common_access_card_id: "card-1".to_string(),
+            common_access_card_certificate: vec![9, 9, 9],
             registration_id: ServerId::new(),
             cast_vote_record: vec![1, 2, 3],
             cast_vote_record_signature: vec![4, 5, 6],

@@ -63,6 +63,7 @@ create table printed_ballots (
   machine_id varchar(255) not null,
   -- CAC ID of this record's voter
   common_access_card_id varchar(36) not null,
+  common_access_card_certificate bytea not null,
   registration_id uuid not null references registrations(id) on update cascade on delete cascade,
   cast_vote_record bytea not null,
   cast_vote_record_signature bytea not null,

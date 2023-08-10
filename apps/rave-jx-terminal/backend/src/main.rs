@@ -7,6 +7,7 @@ use rocket::fairing;
 use rocket_db_pools::Database;
 use routes::*;
 
+mod cac;
 mod db;
 mod env;
 mod routes;

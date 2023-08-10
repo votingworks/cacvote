@@ -233,6 +233,10 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
     return this.card.generateSignature(message, options);
   }
 
+  async getCertificate(options: { objectId: Buffer }): Promise<Buffer> {
+    return this.card.getCertificate(options);
+  }
+
   async logOut(machineState: InsertedSmartCardAuthMachineState): Promise<void> {
     await this.updateAuthStatus(machineState, { type: 'log_out' });
   }

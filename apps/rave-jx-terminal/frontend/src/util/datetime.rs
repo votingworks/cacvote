@@ -127,12 +127,12 @@ pub fn format(date_or_datetime: &DateOrDateTime, options: &DateFormatOptions) ->
     match date_or_datetime {
         DateOrDateTime::Date(date) => {
             js_date.set_utc_full_year(date.year() as u32);
-            js_date.set_utc_month(date.month() as u32);
+            js_date.set_utc_month(date.month() as u32 - 1);
             js_date.set_utc_date(date.day() as u32);
         }
         DateOrDateTime::DateTime(datetime) => {
             js_date.set_utc_full_year(datetime.year() as u32);
-            js_date.set_utc_month(datetime.month() as u32);
+            js_date.set_utc_month(datetime.month() as u32 - 1);
             js_date.set_utc_date(datetime.day() as u32);
             js_date.set_utc_hours(datetime.hour() as u32);
             js_date.set_utc_minutes(datetime.minute() as u32);

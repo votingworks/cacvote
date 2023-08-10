@@ -248,6 +248,10 @@ export class RaveServerClientImpl {
         clientId: printedBallot.clientId,
         machineId: printedBallot.machineId,
         registrationId: localRegistration.clientId,
+        commonAccessCardCertificate: Buffer.from(
+          printedBallot.commonAccessCardCertificate,
+          'base64'
+        ),
         castVoteRecord: Buffer.from(printedBallot.castVoteRecord, 'base64'),
         castVoteRecordSignature: Buffer.from(
           printedBallot.castVoteRecordSignature,

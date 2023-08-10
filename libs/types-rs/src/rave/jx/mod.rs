@@ -155,7 +155,7 @@ impl Registration {
     }
 
     pub fn display_name(&self) -> &str {
-        self.common_access_card_id()
+        self.display_name.as_str()
     }
 
     pub fn election_title(&self) -> &str {
@@ -187,6 +187,18 @@ impl Registration {
     }
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub enum VerificationStatus {
+    Success {
+        common_access_card_id: String,
+        display_name: String,
+    },
+    Failure,
+    Error(String),
+    #[default]
+    Unknown,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PrintedBallot {
     pub id: ClientId,
@@ -199,6 +211,7 @@ pub struct PrintedBallot {
     pub cast_vote_record: Vec<u8>,
     #[serde(with = "Base64Standard")]
     pub cast_vote_record_signature: Vec<u8>,
+    pub verification_status: VerificationStatus,
     #[serde(with = "time::serde::iso8601")]
     pub created_at: time::OffsetDateTime,
 }
@@ -231,6 +244,8 @@ pub struct ScannedBallot {
     pub id: ClientId,
     pub server_id: ServerId,
     pub election_id: ClientId,
+    pub precinct_id: PrecinctId,
+    pub ballot_style_id: BallotStyleId,
     #[serde(with = "Base64Standard")]
     pub cast_vote_record: Vec<u8>,
     #[serde(with = "time::serde::iso8601")]

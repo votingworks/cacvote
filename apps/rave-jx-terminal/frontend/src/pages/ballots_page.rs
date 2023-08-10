@@ -1,4 +1,4 @@
-use dioxus::{html::span, prelude::*};
+use dioxus::prelude::*;
 use types_rs::{cdf::cvr::Cvr, rave::jx};
 
 use crate::components::{DateOrDateTimeColumn, ElectionConfigurationColumn};
@@ -20,6 +20,7 @@ pub fn BallotsPage(cx: Scope) -> Element {
         if printed_ballots.is_empty() {
             rsx!("No printed ballots")
         } else {
+            to_owned![elections, printed_ballots];
             rsx!(PrintedBallotsTable {
                 elections: elections,
                 printed_ballots: printed_ballots,
@@ -30,7 +31,9 @@ pub fn BallotsPage(cx: Scope) -> Element {
         if scanned_ballots.is_empty() {
             rsx!("No scanned ballots")
         } else {
+            to_owned![elections, scanned_ballots];
             rsx!(ScannedBallotsTable {
+                elections: elections,
                 scanned_ballots: scanned_ballots,
             })
         }
@@ -90,6 +93,7 @@ fn PrintedBallotsTable(cx: Scope<PendingRegistrationsTableProps>) -> Element {
                         for printed_ballot in cx.props.printed_ballots.iter() {
                             {
                                 let election = get_election_by_id(printed_ballot.election_id()).unwrap();
+
                                 rsx!(tr {
                                     ElectionConfigurationColumn {
                                         election_title: election.title.clone(),
@@ -102,13 +106,66 @@ fn PrintedBallotsTable(cx: Scope<PendingRegistrationsTableProps>) -> Element {
                                         match printed_ballot.cast_vote_record() {
                                             Ok(cvr) => {
                                                 rsx!(
-                                                    p {
-                                                        class: "text-sm text-green-500",
-                                                        "Cast vote record is valid"
+                                                    match &printed_ballot.verification_status {
+                                                        jx::VerificationStatus::Success { common_access_card_id, display_name } => {
+                                                            rsx!(span {
+                                                                class: "text-sm p-1 ps-0 pe-2 text-green-800 bg-green-300 font-semibold rounded-xl",
+                                                                title: "{display_name}",
+                                                                span {
+                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-xl",
+                                                                    "CAC #{common_access_card_id}"
+                                                                }
+                                                                span {
+                                                                    class: "ps-1",
+                                                                    "Verified"
+                                                                }
+                                                            })
+                                                        }
+                                                        jx::VerificationStatus::Failure => {
+                                                            rsx!(span {
+                                                                class: "text-sm p-1 ps-0 pe-2 text-red-800 bg-red-300 font-semibold rounded-xl",
+                                                                span {
+                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-xl",
+                                                                    "CAC"
+                                                                }
+                                                                span {
+                                                                    class: "ps-1",
+                                                                    "Unverified"
+                                                                }
+                                                            })
+                                                        }
+                                                        jx::VerificationStatus::Error(err) => {
+                                                            rsx!(span {
+                                                                class: "text-sm p-1 ps-0 pe-2 text-orange-800 bg-orange-300 font-semibold rounded-xl",
+                                                                span {
+                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-xl",
+                                                                    "CAC"
+                                                                }
+                                                                span {
+                                                                    class: "ps-1",
+                                                                    title: "{err}",
+                                                                    "Error"
+                                                                }
+                                                            })
+                                                        }
+                                                        jx::VerificationStatus::Unknown => {
+                                                            rsx!(span {
+                                                                class: "text-sm p-1 ps-0 pe-2 text-yellow-800 bg-yellow-300 font-semibold rounded-xl",
+                                                                span {
+                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-xl",
+                                                                    "CAC"
+                                                                }
+                                                                span {
+                                                                    class: "ps-1",
+                                                                    "Unknown"
+                                                                }
+                                                            })
+                                                        }
                                                     }
                                                     details {
                                                         rsx!(summary {
-                                                            "Click to view"
+                                                            class: "text-gray-200",
+                                                            "DEBUG"
                                                         })
                                                         {
                                                             let summary = summarize_cast_vote_record(cvr);
@@ -143,6 +200,7 @@ fn PrintedBallotsTable(cx: Scope<PendingRegistrationsTableProps>) -> Element {
 
 #[derive(Debug, PartialEq, Props)]
 struct RegistrationsTableProps {
+    elections: Vec<jx::Election>,
     scanned_ballots: Vec<jx::ScannedBallot>,
 }
 
@@ -158,7 +216,20 @@ fn ScannedBallotsTable(cx: Scope<RegistrationsTableProps>) -> Element {
             tbody {
                 for scanned_ballot in cx.props.scanned_ballots.iter() {
                     tr {
-                        td { class: "border px-4 py-2", "TODO" }
+                        {
+                            let election = cx
+                                .props
+                                .elections
+                                .iter()
+                                .find(|election| *election.id() == scanned_ballot.election_id)
+                                .unwrap();
+                            rsx!(ElectionConfigurationColumn {
+                                election_title: election.title.clone(),
+                                election_hash: election.election_hash.clone(),
+                                precinct_id: scanned_ballot.precinct_id.clone(),
+                                ballot_style_id: scanned_ballot.ballot_style_id.clone(),
+                            })
+                        }
                         DateOrDateTimeColumn {
                             date_or_datetime: scanned_ballot.created_at()
                         }

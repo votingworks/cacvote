@@ -322,6 +322,9 @@ function buildApi({
         ballotMarkingMode: 'machine',
       });
 
+      const commonAccessCardCertificate = await auth.getCertificate({
+        objectId: CARD_VX_ADMIN_CERT.OBJECT_ID,
+      });
       const castVoteRecordJson = JSON.stringify(castVoteRecord);
       const signature = await auth.generateSignature(
         Buffer.from(castVoteRecordJson, 'utf-8'),
@@ -331,6 +334,7 @@ function buildApi({
       workspace.store.createPrintedBallot({
         id: ballotId,
         registrationId: registration.clientId,
+        commonAccessCardCertificate,
         castVoteRecord: Buffer.from(castVoteRecordJson),
         castVoteRecordSignature: signature,
       });

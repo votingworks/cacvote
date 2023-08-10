@@ -28,6 +28,7 @@ export interface InsertedSmartCardAuthApi {
     message: Buffer,
     options: { privateKeyId: Byte; pin?: string }
   ): Promise<Buffer>;
+  getCertificate(options: { objectId: Buffer }): Promise<Buffer>;
 
   /**
    * Though logout is typically accomplished by removing the inserted card when using inserted

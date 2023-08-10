@@ -164,6 +164,11 @@ export class MockFileCard implements Card {
     throw new Error('Method not implemented.');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getCertificate(options: { objectId: Buffer }): Promise<Buffer> {
+    throw new Error('Method not implemented.');
+  }
+
   program(
     input:
       | { user: SystemAdministratorUser; pin: string }

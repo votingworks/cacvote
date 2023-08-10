@@ -34,6 +34,7 @@ export function buildMockInsertedSmartCardAuth(): jest.Mocked<InsertedSmartCardA
       .mockResolvedValue(InsertedSmartCardAuthTypes.DEFAULT_AUTH_STATUS),
     checkPin: jest.fn(),
     generateSignature: jest.fn(),
+    getCertificate: jest.fn(),
     logOut: jest.fn(),
     updateSessionExpiry: jest.fn(),
     startCardlessVoterSession: jest.fn(),

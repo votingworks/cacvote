@@ -219,6 +219,8 @@ pub(crate) struct PrintedBallot {
     pub client_id: ClientId,
     pub machine_id: String,
     pub common_access_card_id: String,
+    #[serde(with = "Base64Standard")]
+    pub common_access_card_certificate: Vec<u8>,
     pub registration_id: ServerId,
     #[serde(with = "Base64Standard")]
     pub cast_vote_record: Vec<u8>,
@@ -234,6 +236,7 @@ impl From<PrintedBallot> for client::output::PrintedBallot {
             client_id,
             machine_id,
             common_access_card_id,
+            common_access_card_certificate,
             registration_id,
             cast_vote_record,
             cast_vote_record_signature,
@@ -245,6 +248,7 @@ impl From<PrintedBallot> for client::output::PrintedBallot {
             client_id,
             machine_id,
             common_access_card_id,
+            common_access_card_certificate,
             registration_id,
             cast_vote_record,
             cast_vote_record_signature,
@@ -677,20 +681,22 @@ pub(crate) async fn add_printed_ballot_from_client(
             client_id,
             machine_id,
             common_access_card_id,
+            common_access_card_certificate,
             registration_id,
             cast_vote_record,
             cast_vote_record_signature
         )
         VALUES (
-            $1, $2, $3, $4,
-            (SELECT id FROM registrations WHERE client_id = $5),
-            $6, $7
+            $1, $2, $3, $4, $5,
+            (SELECT id FROM registrations WHERE client_id = $6),
+            $7, $8
         )
         "#,
         ballot_id.as_uuid(),
         ballot.client_id.as_uuid(),
         ballot.machine_id,
         ballot.common_access_card_id,
+        ballot.common_access_card_certificate,
         ballot.registration_id.as_uuid(),
         ballot.cast_vote_record,
         ballot.cast_vote_record_signature
@@ -727,6 +733,7 @@ pub(crate) async fn get_printed_ballots(
         client_id: ClientId,
         machine_id: String,
         common_access_card_id: String,
+        common_access_card_certificate: Vec<u8>,
         registration_id: ServerId,
         cast_vote_record: Vec<u8>,
         cast_vote_record_signature: Vec<u8>,
@@ -743,6 +750,7 @@ pub(crate) async fn get_printed_ballots(
                     client_id as "client_id: ClientId",
                     machine_id,
                     common_access_card_id,
+                    common_access_card_certificate,
                     registration_id as "registration_id: ServerId",
                     cast_vote_record,
                     cast_vote_record_signature,
@@ -765,6 +773,7 @@ pub(crate) async fn get_printed_ballots(
                     client_id as "client_id: ClientId",
                     machine_id,
                     common_access_card_id,
+                    common_access_card_certificate,
                     registration_id as "registration_id: ServerId",
                     cast_vote_record,
                     cast_vote_record_signature,
@@ -786,6 +795,7 @@ pub(crate) async fn get_printed_ballots(
                 client_id: r.client_id,
                 machine_id: r.machine_id,
                 common_access_card_id: r.common_access_card_id,
+                common_access_card_certificate: r.common_access_card_certificate,
                 registration_id: r.registration_id,
                 cast_vote_record: r.cast_vote_record,
                 cast_vote_record_signature: r.cast_vote_record_signature,

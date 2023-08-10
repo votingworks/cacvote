@@ -441,24 +441,26 @@ pub(crate) async fn add_or_update_printed_ballot_from_rave_server(
             client_id,
             machine_id,
             common_access_card_id,
+            common_access_card_certificate,
             registration_id,
             cast_vote_record,
             cast_vote_record_signature,
             created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (client_id, machine_id)
         DO UPDATE SET
             server_id = $2,
-            cast_vote_record = $7,
-            cast_vote_record_signature = $8,
-            created_at = $9
+            cast_vote_record = $8,
+            cast_vote_record_signature = $9,
+            created_at = $10
         "#,
         ClientId::new().as_uuid(),
         printed_ballot.server_id.as_uuid(),
         printed_ballot.client_id.as_uuid(),
         printed_ballot.machine_id,
         printed_ballot.common_access_card_id,
+        printed_ballot.common_access_card_certificate,
         registration_client_id.as_uuid(),
         printed_ballot.cast_vote_record,
         printed_ballot.cast_vote_record_signature,
@@ -730,6 +732,7 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
             client_id as "client_id: ClientId",
             machine_id,
             common_access_card_id,
+            common_access_card_certificate,
             registration_id as "registration_id: ClientId",
             cast_vote_record,
             cast_vote_record_signature
@@ -748,6 +751,7 @@ pub(crate) async fn get_printed_ballots_to_sync_to_rave_server(
                 client_id: r.client_id,
                 machine_id: r.machine_id,
                 common_access_card_id: r.common_access_card_id,
+                common_access_card_certificate: r.common_access_card_certificate,
                 registration_id: r.registration_id,
                 cast_vote_record: r.cast_vote_record,
                 cast_vote_record_signature: r.cast_vote_record_signature,
@@ -840,7 +844,8 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
     )
     .fetch_optional(&mut *executor)
     .await?
-    .and_then(|r| r.server_id))
+    .map(|r| r.server_id)
+    .flatten())
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
@@ -939,6 +944,7 @@ mod test {
             client_id: registration.client_id,
             machine_id: registration.machine_id.clone(),
             common_access_card_id: registration.common_access_card_id.clone(),
+            common_access_card_certificate: vec![],
             registration_id: registration.registration_request_id,
             cast_vote_record: serde_json::to_vec(&cast_vote_record).unwrap(),
             cast_vote_record_signature: vec![],

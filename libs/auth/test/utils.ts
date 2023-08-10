@@ -44,6 +44,7 @@ export class MockCardReader implements Pick<CardReader, 'transmit'> {
 export interface MockCard {
   getCardStatus: MockFunction<Card['getCardStatus']>;
   checkPin: MockFunction<Card['checkPin']>;
+  generateSignature: MockFunction<Card['generateSignature']>;
   program: MockFunction<Card['program']>;
   readData: MockFunction<Card['readData']>;
   writeData: MockFunction<Card['writeData']>;
@@ -58,6 +59,8 @@ export function buildMockCard(): MockCard {
   return {
     getCardStatus: mockFunction<Card['getCardStatus']>('getCardStatus'),
     checkPin: mockFunction<Card['checkPin']>('checkPin'),
+    generateSignature:
+      mockFunction<Card['generateSignature']>('generateSignature'),
     program: mockFunction<Card['program']>('program'),
     readData: mockFunction<Card['readData']>('readData'),
     writeData: mockFunction<Card['writeData']>('writeData'),

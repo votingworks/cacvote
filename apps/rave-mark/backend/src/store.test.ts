@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import { safeParseSystemSettings } from '@votingworks/utils';
 import { electionMinimalExhaustiveSampleFixtures } from '@votingworks/fixtures';
 import { DEFAULT_SYSTEM_SETTINGS, SystemSettings } from '@votingworks/types';
@@ -55,7 +56,7 @@ test('reset clears the database', () => {
   const electionId = ClientId();
   store.createElection({
     id: electionId,
-    election: electionDefinition.electionData,
+    definition: Buffer.from(electionDefinition.electionData),
   });
   expect(store.getElection({ clientId: electionId })).toBeTruthy();
   store.reset();

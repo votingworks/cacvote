@@ -112,6 +112,7 @@ export interface PrintedBallotInput {
   clientId: ClientId;
   machineId: Id;
   commonAccessCardId: string;
+  commonAccessCardCertificate: Base64String;
   registrationId: ClientId;
   castVoteRecord: Base64String;
 }
@@ -128,6 +129,7 @@ export interface PrintedBallotOutput {
   clientId: ClientId;
   machineId: Id;
   commonAccessCardId: string;
+  commonAccessCardCertificate: Base64String;
   registrationId: ServerId;
   castVoteRecord: Base64String;
   castVoteRecordSignature: Base64String;
@@ -139,6 +141,7 @@ export const PrintedBallotOutputSchema: z.ZodSchema<PrintedBallotOutput> =
     clientId: ClientIdSchema,
     machineId: z.string(),
     commonAccessCardId: z.string(),
+    commonAccessCardCertificate: Base64StringSchema,
     registrationId: ServerIdSchema,
     castVoteRecord: Base64StringSchema,
     castVoteRecordSignature: Base64StringSchema,

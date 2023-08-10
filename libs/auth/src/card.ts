@@ -141,6 +141,7 @@ export interface Card {
     message: Buffer,
     options: { privateKeyId: Byte; pin?: string }
   ): Promise<Buffer>;
+  getCertificate(options: { objectId: Buffer }): Promise<Buffer>;
 
   program(
     input:

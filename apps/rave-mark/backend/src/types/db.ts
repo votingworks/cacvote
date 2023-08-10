@@ -282,6 +282,11 @@ export interface PrintedBallot {
   commonAccessCardId: Id;
 
   /**
+   * Common Access Card X509 certificate.
+   */
+  commonAccessCardCertificate: Buffer;
+
+  /**
    * Database ID for the associated registration record.
    */
   registrationId: ClientId;
@@ -367,6 +372,7 @@ export interface PrintedBallotRow {
   clientId: string;
   machineId: string;
   commonAccessCardId: string;
+  commonAccessCardCertificate: Buffer;
   registrationId: string;
   castVoteRecord: Buffer;
   castVoteRecordSignature: Buffer;
@@ -382,6 +388,7 @@ export function deserializePrintedBallot(row: PrintedBallotRow): PrintedBallot {
     // because these are just strings of digits, sqlite may return them as
     // numbers, so we have to convert them back to strings
     commonAccessCardId: row.commonAccessCardId.toString(),
+    commonAccessCardCertificate: row.commonAccessCardCertificate,
     registrationId: row.registrationId as ClientId,
     castVoteRecord: row.castVoteRecord,
     castVoteRecordSignature: row.castVoteRecordSignature,
