@@ -2,10 +2,7 @@
 extern crate rocket;
 
 use db::run_migrations;
-use rocket::{
-    fairing,
-    fs::{relative, FileServer},
-};
+use rocket::fairing;
 use rocket_db_pools::Database;
 use routes::*;
 
@@ -22,6 +19,5 @@ fn rocket() -> _ {
             "Run Migrations",
             run_migrations,
         ))
-        .mount("/", FileServer::from(relative!("static")))
         .mount("/", routes![get_status, do_sync, create_admin])
 }

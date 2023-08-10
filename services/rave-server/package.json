@@ -6,7 +6,7 @@
     "postinstall": "sudo apt-get update && sudo apt-get install -y postgresql-13 libssl-dev",
     "build": "script/build",
     "lint": "script/lint",
-    "start": "cargo watch -i static -x run",
+    "start": "cargo watch -x run",
     "test:ci": "script/ci",
     "test:dev": "cargo test",
     "test": "is-ci test:ci test:dev"
