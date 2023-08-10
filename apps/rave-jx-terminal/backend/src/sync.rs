@@ -29,7 +29,7 @@ pub(crate) async fn sync_periodically(
                             error!("Failed to sync with RAVE server: {}", e);
                         }
                     }
-                    sleep(Duration::from_secs(10)).await;
+                    sleep(Duration::from_secs(5)).await;
                 }
             });
             Ok(rocket)
