@@ -11,7 +11,9 @@
    - `cargo install --locked cargo-watch`
    - `npm install -g pnpm@8.1.0`
 6. Clone this repo, `cd` to it.
-7. Install monorepo dependencies: a. `pnpm install` b. `cargo build`
+7. Install monorepo dependencies:
+   - `pnpm install`
+   - `cargo build`
 8. Run `script/reset-db.sh` to setup the databases.
 9. Run all the services in development mode with `mprocs`.
 10. Run a specific service, e.g. `rave-scan`, by running
