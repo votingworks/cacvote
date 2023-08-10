@@ -18,7 +18,7 @@ procs:
 
   rave-jx-backend:
     cwd: "apps/rave-jx-terminal/backend"
-    shell: "cargo run --release"
+    shell: "cargo watch -x run"
     env:
       RAVE_URL: "http://localhost:8000/"
       VX_MACHINE_ID: "rave-jx-dev"
