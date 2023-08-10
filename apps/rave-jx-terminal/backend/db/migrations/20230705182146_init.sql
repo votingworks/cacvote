@@ -82,7 +82,7 @@ create table printed_ballots (
 create table scanned_ballots (
   id uuid primary key,
   -- generated on the server, present only if the record has been synced
-  server_id uuid unique,
+  server_id uuid unique not null,
   -- generated on a client machine
   client_id uuid not null,
   -- ID of the machine this record was originally created on

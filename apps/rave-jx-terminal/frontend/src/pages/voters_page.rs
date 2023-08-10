@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 use types_rs::rave::jx;
 
-use crate::{components::DateOrDateTimeColumn, util::url::get_url};
+use crate::{
+    components::{DateOrDateTimeColumn, ElectionConfigurationColumn},
+    util::url::get_url,
+};
 
 #[derive(PartialEq, Props)]
 struct VotersProps<'a> {
@@ -194,22 +197,11 @@ fn RegistrationsTable(cx: Scope<RegistrationsTableProps>) -> Element {
                     tr {
                         td { class: "border px-4 py-2", "{registration.display_name()}" }
                         td { class: "border px-4 py-2", "{registration.common_access_card_id()}" }
-                        td {
-                            class: "border px-4 py-2",
-                            p {
-                                "{registration.election_title()}"
-                                span {
-                                    class: "italic text-gray-400",
-                                    " ({registration.election_hash().to_partial()})"
-                                }
-                            }
-                            p {
-                                "{registration.ballot_style_id()} / {registration.precinct_id()}"
-                                span {
-                                    class: "italic text-gray-400",
-                                    " (Ballot Style / Precinct)"
-                                }
-                            }
+                        ElectionConfigurationColumn {
+                            election_title: registration.election_title(),
+                            election_hash: registration.election_hash().clone(),
+                            precinct_id: registration.precinct_id().clone(),
+                            ballot_style_id: registration.ballot_style_id().clone(),
                         }
                         td { class: "border px-4 py-2", if registration.is_synced() { "Yes" } else { "No" } }
                         DateOrDateTimeColumn {

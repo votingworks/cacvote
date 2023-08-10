@@ -41,6 +41,8 @@ async fn get_app_data(executor: &mut sqlx::PgConnection) -> color_eyre::Result<j
     let elections = db::get_elections(executor, None).await?;
     let registration_requests = db::get_registration_requests(executor).await?;
     let registrations = db::get_registrations(executor).await?;
+    let printed_ballots = db::get_printed_ballots(executor).await?;
+    let scanned_ballots = db::get_scanned_ballots(executor).await?;
 
     Ok(jx::AppData {
         registrations: registrations
@@ -104,6 +106,8 @@ async fn get_app_data(executor: &mut sqlx::PgConnection) -> color_eyre::Result<j
                 )
             })
             .collect(),
+        printed_ballots,
+        scanned_ballots,
     })
 }
 

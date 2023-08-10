@@ -1,8 +1,14 @@
+use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
-use crate::election::{BallotStyle, BallotStyleId, ElectionHash, PrecinctId};
+use crate::{
+    cdf::cvr::Cvr,
+    election::{BallotStyle, BallotStyleId, ElectionHash, PrecinctId},
+};
 
 use super::{ClientId, ServerId};
+
+base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -36,6 +42,10 @@ impl Election {
             election_hash,
             created_at,
         }
+    }
+
+    pub fn id(&self) -> &ClientId {
+        &self.id
     }
 
     pub fn is_synced(&self) -> bool {
@@ -177,12 +187,70 @@ impl Registration {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PrintedBallot {
+    pub id: ClientId,
+    pub server_id: ServerId,
+    pub registration_id: ClientId,
+    pub election_id: ClientId,
+    pub ballot_style_id: BallotStyleId,
+    pub precinct_id: PrecinctId,
+    #[serde(with = "Base64Standard")]
+    pub cast_vote_record: Vec<u8>,
+    #[serde(with = "Base64Standard")]
+    pub cast_vote_record_signature: Vec<u8>,
+    #[serde(with = "time::serde::iso8601")]
+    pub created_at: time::OffsetDateTime,
+}
+
+impl PrintedBallot {
+    pub fn election_id(&self) -> &ClientId {
+        &self.election_id
+    }
+
+    pub fn ballot_style_id(&self) -> &BallotStyleId {
+        &self.ballot_style_id
+    }
+
+    pub fn precinct_id(&self) -> &PrecinctId {
+        &self.precinct_id
+    }
+
+    pub fn created_at(&self) -> &time::OffsetDateTime {
+        &self.created_at
+    }
+
+    pub fn cast_vote_record(&self) -> color_eyre::Result<Cvr> {
+        let cast_vote_record_json = serde_json::from_slice(&self.cast_vote_record)?;
+        Ok(cast_vote_record_json)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ScannedBallot {
+    pub id: ClientId,
+    pub server_id: ServerId,
+    pub election_id: ClientId,
+    #[serde(with = "Base64Standard")]
+    pub cast_vote_record: Vec<u8>,
+    #[serde(with = "time::serde::iso8601")]
+    pub created_at: time::OffsetDateTime,
+}
+
+impl ScannedBallot {
+    pub fn created_at(&self) -> &time::OffsetDateTime {
+        &self.created_at
+    }
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AppData {
     pub elections: Vec<Election>,
     pub registration_requests: Vec<RegistrationRequest>,
     pub registrations: Vec<Registration>,
+    pub printed_ballots: Vec<PrintedBallot>,
+    pub scanned_ballots: Vec<ScannedBallot>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

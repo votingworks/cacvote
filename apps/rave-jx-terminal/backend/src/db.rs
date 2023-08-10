@@ -8,6 +8,7 @@ use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
 use sqlx::Acquire;
 use types_rs::election::{BallotStyleId, ElectionDefinition, ElectionHash, PrecinctId};
+use types_rs::rave::jx;
 use types_rs::rave::{client, ClientId, ServerId};
 use uuid::Uuid;
 
@@ -410,6 +411,96 @@ pub(crate) async fn get_registrations(
             ballot_style_id,
             created_at
         FROM registrations
+        ORDER BY created_at DESC
+        "#
+    )
+    .fetch_all(&mut *executor)
+    .await
+    .map_err(Into::into)
+}
+
+pub(crate) async fn get_printed_ballots(
+    executor: &mut sqlx::PgConnection,
+) -> color_eyre::Result<Vec<jx::PrintedBallot>> {
+    let records = sqlx::query!(
+        r#"
+        SELECT
+            id,
+            server_id,
+            registration_id,
+            (
+                SELECT election_id
+                FROM registrations
+                WHERE registrations.id = registration_id
+            ),
+            (
+                SELECT precinct_id
+                FROM registrations
+                WHERE registrations.id = registration_id
+            ),
+            (
+                SELECT ballot_style_id
+                FROM registrations
+                WHERE registrations.id = registration_id
+            ),
+            cast_vote_record,
+            cast_vote_record_signature,
+            created_at
+        FROM printed_ballots
+        ORDER BY created_at DESC
+        "#
+    )
+    .fetch_all(&mut *executor)
+    .await?;
+
+    records
+        .into_iter()
+        .map(|record| {
+            Ok(jx::PrintedBallot {
+                id: record.id.into(),
+                server_id: ServerId::from(record.server_id),
+                registration_id: record.registration_id.into(),
+                election_id: record.election_id.map(Into::into).ok_or_else(|| {
+                    color_eyre::eyre::eyre!(
+                        "election_id is null for registration_id {}",
+                        record.registration_id
+                    )
+                })?,
+                precinct_id: record.precinct_id.map(PrecinctId::from).ok_or_else(|| {
+                    color_eyre::eyre::eyre!(
+                        "precinct_id is null for registration_id {}",
+                        record.registration_id
+                    )
+                })?,
+                ballot_style_id: record.ballot_style_id.map(BallotStyleId::from).ok_or_else(
+                    || {
+                        color_eyre::eyre::eyre!(
+                            "ballot_style_id is null for registration_id {}",
+                            record.registration_id
+                        )
+                    },
+                )?,
+                cast_vote_record: record.cast_vote_record,
+                cast_vote_record_signature: record.cast_vote_record_signature,
+                created_at: record.created_at,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()
+}
+
+pub(crate) async fn get_scanned_ballots(
+    executor: &mut sqlx::PgConnection,
+) -> color_eyre::Result<Vec<jx::ScannedBallot>> {
+    sqlx::query_as!(
+        jx::ScannedBallot,
+        r#"
+        SELECT
+            id as "id: _",
+            server_id as "server_id: _",
+            election_id as "election_id: _",
+            cast_vote_record,
+            created_at
+        FROM scanned_ballots
         ORDER BY created_at DESC
         "#
     )
@@ -1040,7 +1131,7 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
     )
     .fetch_optional(&mut *executor)
     .await?
-    .and_then(|r| r.server_id))
+    .map(|r| r.server_id))
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
