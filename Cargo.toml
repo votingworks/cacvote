@@ -15,6 +15,7 @@ members = [
 ]
 
 [workspace.dependencies]
+axum = { version = "0.6.20" }
 ballot-encoder-rs = { path = "libs/ballot-encoder-rs" }
 base64 = "0.21.2"
 base64-serde = "0.7.0"

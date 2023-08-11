@@ -3,31 +3,17 @@ extern crate time;
 use std::str::FromStr;
 
 use base64_serde::base64_serde_type;
-use rocket::{fairing, Build, Rocket};
-use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
+use sqlx::{self, PgPool};
 use types_rs::{
     election::ElectionHash,
     rave::{client, ClientId, ServerId},
 };
 
-#[derive(Database)]
-#[database("sqlx")]
-pub(crate) struct Db(sqlx::PgPool);
-
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
-pub(crate) async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
-    match Db::fetch(&rocket) {
-        Some(db) => match sqlx::migrate!("db/migrations").run(&**db).await {
-            Ok(_) => Ok(rocket),
-            Err(e) => {
-                error!("Failed to initialize SQLx database: {}", e);
-                Err(rocket)
-            }
-        },
-        None => Err(rocket),
-    }
+pub(crate) async fn run_migrations(pool: &PgPool) -> color_eyre::Result<()> {
+    Ok(sqlx::migrate!("db/migrations").run(pool).await?)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -896,5 +882,35 @@ pub(crate) async fn get_scanned_ballots(
         .fetch_all(&mut *executor)
         .await
         .map_err(Into::into),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[sqlx::test(migrations = "db/migrations")]
+    async fn test_admins(pool: sqlx::PgPool) -> color_eyre::Result<()> {
+        let mut db = pool.acquire().await?;
+
+        add_admin(
+            &mut db,
+            client::input::Admin {
+                common_access_card_id: "1234567890".to_string(),
+            },
+        )
+        .await?;
+
+        let admins = get_admins(&mut db).await?;
+
+        assert_eq!(
+            admins
+                .into_iter()
+                .map(|a| a.common_access_card_id)
+                .collect::<Vec<_>>(),
+            vec!["1234567890".to_string()]
+        );
+
+        Ok(())
     }
 }
