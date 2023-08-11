@@ -4,9 +4,12 @@
 
 1. Set up a Debian 11 machine (Debian 12 or Ubuntu may work).
 2. Install postgresql and make your user's PG role a superuser.
-3. Install Rust > v1.70.0 via `rustup`.
+3. Install Rust > v1.70.0 and WASM support via `rustup`.
+   - Install from here: https://rustup.rs/
+   - `rustup target add wasm32-unknown-unknown`
 4. Install NodeJS v16.19.1 (other v16.x may work).
 5. Install some dev tools:
+   - `cargo install --locked dioxus-cli`
    - `cargo install --locked mprocs`
    - `cargo install --locked cargo-watch`
    - `npm install -g pnpm@8.1.0`
