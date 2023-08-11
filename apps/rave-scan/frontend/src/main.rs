@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use log::LevelFilter;
 use serde::Deserialize;
+use ui_rs::Button;
 use wasm_bindgen::prelude::*;
 use web_sys::MessageEvent;
 
@@ -11,29 +12,6 @@ fn main() {
 
     log::info!("starting app");
     dioxus_web::launch(App);
-}
-
-#[derive(Props)]
-struct ButtonProps<'a> {
-    children: Element<'a>,
-    disabled: Option<bool>,
-    onclick: Option<EventHandler<'a, MouseEvent>>,
-}
-
-#[allow(non_snake_case)]
-fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
-    render!(
-        button {
-            class: "rounded-lg text-3xl bg-purple-500 active:bg-purple-700 disabled:bg-purple-300 text-white p-5 mr-2",
-            disabled: cx.props.disabled,
-            onclick: |e| {
-                if let Some(onclick) = &cx.props.onclick {
-                    onclick.call(e);
-                }
-            },
-            &cx.props.children
-        }
-    )
 }
 
 fn get_root_url() -> reqwest::Url {
@@ -131,13 +109,13 @@ fn App(cx: Scope) -> Element {
                div {
                    class: "flex-row mb-2",
                    Button {
+                       onclick: scan_ballots,
+                       disabled: is_scanning,
                        if is_scanning {
                            "Scanning…"
                        } else {
                            "Scan Ballots"
                        },
-                       onclick: scan_ballots,
-                       disabled: is_scanning,
                    }
                }
                div {
