@@ -10,14 +10,15 @@
 4. Install NodeJS v16.19.1 (other v16.x may work).
 5. Install some dev tools:
    - `cargo install --locked dioxus-cli`
+   - `cargo install --locked sqlx-cli`
    - `cargo install --locked mprocs`
    - `cargo install --locked cargo-watch`
    - `npm install -g pnpm@8.1.0`
 6. Clone this repo, `cd` to it.
-7. Install monorepo dependencies:
+7. Run `script/reset-db.sh` to setup the databases.
+8. Install monorepo dependencies:
    - `pnpm install`
    - `cargo build`
-8. Run `script/reset-db.sh` to setup the databases.
 9. Run all the services in development mode with `mprocs`.
 10. Run a specific service, e.g. `rave-scan`, by running
     `RAVE_URL=https://rave.example.com/ VX_MACHINE_ID=rave-scan-000 pnpm --dir apps/rave-scan/frontend start`,
