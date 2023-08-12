@@ -29,7 +29,7 @@ export async function main(): Promise<void> {
     const card = new JavaCard();
     await waitForReadyCardStatus(card);
     console.log('CERT', await card.retrieveCert(CARD_VX_ADMIN_CERT.OBJECT_ID));
-    const result = await card.checkPin('77777777');
+    const result = await card.checkPin('777777');
     // const result = await card.checkPin('757287');
     console.log(`PIN? ${JSON.stringify(result)}`);
   } catch (error) {

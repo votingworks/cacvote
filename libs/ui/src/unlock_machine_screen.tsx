@@ -13,6 +13,7 @@ import { useNow } from './hooks/use_now';
 import { Timer } from './timer';
 import { P } from './typography';
 import { Icons } from './icons';
+import { Button } from './button';
 
 const NumberPadWrapper = styled.div`
   display: flex;
@@ -54,18 +55,22 @@ export function UnlockMachineScreen({
   const [isCheckingPin, setIsCheckingPin] = useState(false);
   const now = useNow().toJSDate();
 
+  const submitPin = useCallback(async () => {
+    setIsCheckingPin(true);
+    await checkPin(currentPin);
+    setCurrentPin('');
+    setIsCheckingPin(false);
+  }, [checkPin, currentPin]);
+
   const handleNumberEntry = useCallback(
     async (digit: number) => {
       const pin = `${currentPin}${digit}`.slice(0, SECURITY_PIN_LENGTH);
       setCurrentPin(pin);
       if (pin.length === SECURITY_PIN_LENGTH) {
-        setIsCheckingPin(true);
-        await checkPin(pin);
-        setCurrentPin('');
-        setIsCheckingPin(false);
+        await submitPin();
       }
     },
-    [checkPin, currentPin]
+    [currentPin, submitPin]
   );
 
   const handleBackspace = useCallback(() => {
@@ -127,6 +132,9 @@ export function UnlockMachineScreen({
               onClear={handleClear}
             />
           </NumberPadWrapper>
+          <Button onPress={submitPin} disabled={isCheckingPin || isLockedOut}>
+            Enter
+          </Button>
         </Prose>
       </Main>
     </Screen>
