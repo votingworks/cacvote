@@ -19,10 +19,20 @@
 8. Install monorepo dependencies:
    - `pnpm install`
    - `cargo build`
-9. Run all the services in development mode with `mprocs`.
-10. Run a specific service, e.g. `rave-scan`, by running
-    `RAVE_URL=https://rave.example.com/ VX_MACHINE_ID=rave-scan-000 pnpm --dir apps/rave-scan/frontend start`,
-    replacing the URL and machine ID as appropriate.
+
+## Running
+
+The easiest way to run the services is with `mprocs`.
+
+> Tip: stop and restart the services in `mprocs` with `x` and `r` respectively.
+
+### Development
+
+Run all the services in development mode with `mprocs`.
+
+### Release
+
+Run all the services in production mode with `mprocs -c mprocs-release.yaml`.
 
 ## License
 
