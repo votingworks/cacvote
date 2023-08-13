@@ -26,6 +26,18 @@ The easiest way to run the services is with `mprocs`.
 
 > Tip: stop and restart the services in `mprocs` with `x` and `r` respectively.
 
+### Logging
+
+Logging for everything but `rave-mark` is configured with the `RUST_LOG`
+environment variable. For example:
+
+```sh
+RUST_LOG=info mprocs
+```
+
+See the [`env_logger` docs](https://docs.rs/env_logger/0.10.0/env_logger/) for
+more info.
+
 ### Development
 
 Run all the services in development mode with `mprocs`.

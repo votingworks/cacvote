@@ -53,6 +53,9 @@ tokio = { version = "1.29.1", default-features = false, features = [
     "macros",
 ] }
 tokio-stream = "0.1.14"
+tower-http = { version = "0.4.3", features = ["fs"] }
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
 types-rs = { path = "libs/types-rs" }
 ui-rs = { path = "libs/ui-rs" }
 uuid = { version = "1.4.0", features = ["serde", "v4", "js"] }

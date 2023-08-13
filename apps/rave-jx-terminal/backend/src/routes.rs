@@ -84,7 +84,7 @@ pub(crate) async fn create_registration(
 }
 
 fn into_internal_error(e: impl std::fmt::Display) -> Response {
-    eprintln!("internal error: {e}");
+    tracing::error!("internal error: {e}");
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         Json(json!({

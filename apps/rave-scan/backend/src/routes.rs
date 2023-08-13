@@ -1,22 +1,27 @@
+use std::convert::Infallible;
 use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
+use async_stream::try_stream;
+use axum::extract::State;
+use axum::response::sse::{Event, KeepAlive};
+use axum::response::{IntoResponse, Sse};
+use axum::Json;
 use central_scanner::scan;
-use rocket::http::{ContentType, Status};
-use rocket::response::stream::{Event, EventStream};
-use rocket::serde::json::{json, Json};
-use rocket::serde::Serialize;
-use rocket::tokio::time::sleep;
-use rocket_db_pools::Connection;
+use futures_core::Stream;
+use reqwest::StatusCode;
+use serde::Serialize;
+use serde_json::json;
+use sqlx::PgPool;
 use time::OffsetDateTime;
+use tokio::time::sleep;
 use types_rs::election::PartialElectionHash;
 use types_rs::rave::ClientId;
 
 use crate::cards::decode_page_from_image;
+use crate::config::VX_MACHINE_ID;
 use crate::db::{self, ScannedBallot, ScannedBallotStats};
-use crate::env::VX_MACHINE_ID;
-use crate::sync::sync;
 
 #[derive(Debug, Serialize)]
 pub struct ScannedCard {
@@ -24,33 +29,35 @@ pub struct ScannedCard {
     election_hash: PartialElectionHash,
 }
 
-#[get("/api/status")]
-pub(crate) async fn get_status() -> Status {
-    Status::Ok
+pub(crate) async fn get_status() -> impl IntoResponse {
+    StatusCode::OK
 }
 
-#[get("/api/status-stream")]
-pub(crate) async fn get_status_stream(mut db: Connection<db::Db>) -> EventStream![Event] {
+pub(crate) async fn get_status_stream(
+    State(pool): State<PgPool>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let mut last_scanned_ballot_stats = ScannedBallotStats::default();
 
-    EventStream! {
+    Sse::new(try_stream! {
         loop {
-            if let Ok(scanned_ballot_stats) = db::get_scanned_ballot_stats(&mut db).await {
+            let mut connection = pool.acquire().await.unwrap();
+            if let Ok(scanned_ballot_stats) = db::get_scanned_ballot_stats(&mut connection).await {
                 if scanned_ballot_stats != last_scanned_ballot_stats {
                     last_scanned_ballot_stats = scanned_ballot_stats.clone();
-                    yield Event::json(&json!({
+                    yield Event::default().json_data(&json!({
                         "status": "ok",
                         "stats": scanned_ballot_stats,
-                    }));
+                    })).unwrap();
                 }
-                sleep(Duration::from_millis(100)).await;
             }
+            sleep(Duration::from_millis(100)).await;
         }
-    }
+    })
+    .keep_alive(KeepAlive::default())
 }
 
-#[post("/api/scan")]
-pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>> {
+pub(crate) async fn do_scan(State(pool): State<PgPool>) -> Json<Vec<ScannedCard>> {
+    let mut connection = pool.acquire().await.unwrap();
     let (tx, rx) = channel();
 
     let handle = std::thread::spawn(move || {
@@ -60,7 +67,7 @@ pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>
         }
     });
 
-    let elections = db::get_elections(&mut db, None).await.unwrap();
+    let elections = db::get_elections(&mut connection, None).await.unwrap();
 
     let mut cards = vec![];
     for (side_a_path, side_b_path) in rx {
@@ -71,7 +78,7 @@ pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>
 
         match (side_a_result, side_b_result) {
             (Err(side_a_err), Err(side_b_err)) => {
-                eprintln!("Both sides failed: {:?}, {:?}", side_a_err, side_b_err);
+                tracing::error!("Both sides failed: {side_a_err:?}, {side_b_err:?}");
                 break;
             }
             (Ok(cvr_data), _) | (_, Ok(cvr_data)) => {
@@ -105,14 +112,14 @@ pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>
                 created_at: OffsetDateTime::now_utc(),
             };
 
-            match db::add_scanned_ballot(&mut db, scanned_ballot).await {
+            match db::add_scanned_ballot(&mut connection, scanned_ballot).await {
                 Ok(_) => {}
                 Err(e) => {
-                    error!("Failed to insert scanned ballot: {}", e);
+                    tracing::error!("Failed to insert scanned ballot: {e}");
                 }
             }
         } else {
-            error!(
+            tracing::error!(
                 "No election found for card with hash {}",
                 card.election_hash
             );
@@ -122,25 +129,4 @@ pub(crate) async fn do_scan(mut db: Connection<db::Db>) -> Json<Vec<ScannedCard>
     handle.join().unwrap();
 
     Json(cards)
-}
-
-#[post("/api/sync")]
-pub(crate) async fn do_sync(mut db: Connection<db::Db>) -> (Status, (ContentType, String)) {
-    match sync(&mut db).await {
-        Ok(_) => (
-            Status::Ok,
-            (ContentType::JSON, json!({ "success": true }).to_string()),
-        ),
-        Err(e) => (
-            Status::InternalServerError,
-            (
-                ContentType::JSON,
-                json!({
-                    "success": false,
-                    "error": format!("failed to sync with RAVE server: {}", e)
-                })
-                .to_string(),
-            ),
-        ),
-    }
 }

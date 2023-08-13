@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use sqlx::PgPool;
 use tokio::time::sleep;
+use tracing::Level;
 use types_rs::rave::{RaveServerSyncInput, RaveServerSyncOutput};
 
 use crate::{config::RAVE_URL, db};
@@ -16,10 +17,10 @@ pub(crate) async fn sync_periodically(pool: &PgPool) {
         loop {
             match sync(&mut connection).await {
                 Ok(_) => {
-                    println!("Successfully synced with RAVE server");
+                    tracing::info!("Successfully synced with RAVE server");
                 }
                 Err(e) => {
-                    eprintln!("Failed to sync with RAVE server: {}", e);
+                    tracing::error!("Failed to sync with RAVE server: {}", e);
                 }
             }
             sleep(Duration::from_secs(5)).await;
@@ -28,7 +29,8 @@ pub(crate) async fn sync_periodically(pool: &PgPool) {
 }
 
 pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre::Result<()> {
-    println!("Syncing with RAVE server");
+    let span = tracing::span!(Level::DEBUG, "Syncing with RAVE server");
+    let _enter = span.enter();
 
     check_status(RAVE_URL.join("/api/status")?).await?;
 
@@ -124,14 +126,14 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
     } = sync_output.clone();
 
     if let Err(e) = db::replace_admins_with_list_from_rave_server(executor, admins).await {
-        eprintln!("Failed to replace admins: {}", e);
+        tracing::error!("Failed to replace admins: {}", e);
     }
 
     for election in elections.into_iter() {
         let result = db::add_election_from_rave_server(executor, election).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert election: {}", e);
+            tracing::error!("Failed to insert election: {}", e);
         }
     }
 
@@ -141,7 +143,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
                 .await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert or update registration request: {}", e);
+            tracing::error!("Failed to insert or update registration request: {}", e);
         }
     }
 
@@ -149,7 +151,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
         let result = db::add_or_update_registration_from_rave_server(executor, registration).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert or update registration: {}", e);
+            tracing::error!("Failed to insert or update registration: {}", e);
         }
     }
 
@@ -158,7 +160,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
             db::add_or_update_printed_ballot_from_rave_server(executor, printed_ballot).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert or update printed ballot: {}", e);
+            tracing::error!("Failed to insert or update printed ballot: {}", e);
         }
     }
 
@@ -167,7 +169,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
             db::add_or_update_scanned_ballot_from_rave_server(executor, scanned_ballot).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert or update scanned ballot: {}", e);
+            tracing::error!("Failed to insert or update scanned ballot: {}", e);
         }
     }
 

@@ -2,28 +2,14 @@ extern crate time;
 
 use std::str::FromStr;
 
-use rocket::{fairing, Build, Rocket};
-use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
-use sqlx::Acquire;
+use sqlx::{Acquire, PgPool};
 use types_rs::election::{ElectionDefinition, ElectionHash};
 use types_rs::rave::{client, ClientId, ServerId};
 
-#[derive(Database)]
-#[database("sqlx")]
-pub(crate) struct Db(rocket_db_pools::sqlx::PgPool);
-
-pub(crate) async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
-    match Db::fetch(&rocket) {
-        Some(db) => match ::sqlx::migrate!("db/migrations").run(&**db).await {
-            Ok(_) => Ok(rocket),
-            Err(e) => {
-                error!("Failed to initialize SQLx database: {}", e);
-                Err(rocket)
-            }
-        },
-        None => Err(rocket),
-    }
+pub(crate) async fn run_migrations(pool: &PgPool) -> color_eyre::Result<()> {
+    tracing::debug!("Running database migrations");
+    Ok(sqlx::migrate!("db/migrations").run(pool).await?)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

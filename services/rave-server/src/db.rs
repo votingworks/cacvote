@@ -13,6 +13,7 @@ use types_rs::{
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
 pub(crate) async fn run_migrations(pool: &PgPool) -> color_eyre::Result<()> {
+    tracing::debug!("Running database migrations");
     Ok(sqlx::migrate!("db/migrations").run(pool).await?)
 }
 

@@ -16,7 +16,7 @@ pub(crate) async fn do_sync(
     let mut txn = match pool.begin().await {
         Ok(txn) => txn,
         Err(e) => {
-            eprintln!("Failed to begin transaction: {}", e);
+            tracing::error!("Failed to begin transaction: {}", e);
             return Err(Json(json!({
                 "success": false,
                 "error": format!("failed to begin transaction: {}", e)
@@ -42,7 +42,7 @@ pub(crate) async fn do_sync(
         let result = db::add_registration_request_from_client(&mut txn, &server_request).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert registration request: {}", e);
+            tracing::error!("Failed to insert registration request: {}", e);
         }
     }
 
@@ -50,7 +50,7 @@ pub(crate) async fn do_sync(
         let result = db::add_election(&mut txn, election).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert election: {}", e);
+            tracing::error!("Failed to insert election: {}", e);
         }
     }
 
@@ -58,7 +58,7 @@ pub(crate) async fn do_sync(
         let result = db::add_registration_from_client(&mut txn, registration).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert registration: {}", e);
+            tracing::error!("Failed to insert registration: {}", e);
         }
     }
 
@@ -66,7 +66,7 @@ pub(crate) async fn do_sync(
         let result = db::add_printed_ballot_from_client(&mut txn, printed_ballot).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert printed ballot: {}", e);
+            tracing::error!("Failed to insert printed ballot: {}", e);
         }
     }
 
@@ -74,14 +74,14 @@ pub(crate) async fn do_sync(
         let result = db::add_scanned_ballot_from_client(&mut txn, scanned_ballot).await;
 
         if let Err(e) = result {
-            eprintln!("Failed to insert scanned ballot: {}", e);
+            tracing::error!("Failed to insert scanned ballot: {}", e);
         }
     }
 
     let get_admins_result = db::get_admins(&mut txn).await;
     let admins = match get_admins_result {
         Err(e) => {
-            eprintln!("Failed to get admins: {}", e);
+            tracing::error!("Failed to get admins: {}", e);
             return Err(Json(json!({ "error": e.to_string() })));
         }
         Ok(admins) => admins,
@@ -90,7 +90,7 @@ pub(crate) async fn do_sync(
     let get_elections_result = db::get_elections(&mut txn, last_synced_election_id).await;
     let elections = match get_elections_result {
         Err(e) => {
-            eprintln!("Failed to get elections: {}", e);
+            tracing::error!("Failed to get elections: {}", e);
             return Err(Json(json!({ "error": e.to_string() })));
         }
         Ok(elections) => elections,
@@ -100,7 +100,7 @@ pub(crate) async fn do_sync(
         db::get_registration_requests(&mut txn, last_synced_registration_request_id).await;
     let registration_requests = match get_registration_requests_result {
         Err(e) => {
-            eprintln!("Failed to get registration requests: {}", e);
+            tracing::error!("Failed to get registration requests: {}", e);
             return Err(Json(json!({ "error": e.to_string() })));
         }
         Ok(registration_requests) => registration_requests,
@@ -110,7 +110,7 @@ pub(crate) async fn do_sync(
         db::get_registrations(&mut txn, last_synced_registration_id).await;
     let registrations = match get_registrations_result {
         Err(e) => {
-            eprintln!("Failed to get registrations: {}", e);
+            tracing::error!("Failed to get registrations: {}", e);
             return Err(Json(json!({ "error": e.to_string() })));
         }
         Ok(registrations) => registrations,
@@ -119,7 +119,7 @@ pub(crate) async fn do_sync(
     let printed_ballots =
         match db::get_printed_ballots(&mut txn, last_synced_printed_ballot_id).await {
             Err(e) => {
-                eprintln!("Failed to get printed ballots: {}", e);
+                tracing::error!("Failed to get printed ballots: {}", e);
                 return Err(Json(json!({ "error": e.to_string() })));
             }
             Ok(ballots) => ballots,
@@ -128,7 +128,7 @@ pub(crate) async fn do_sync(
     let scanned_ballots =
         match db::get_scanned_ballots(&mut txn, last_synced_scanned_ballot_id).await {
             Err(e) => {
-                eprintln!("Failed to get scanned ballots: {}", e);
+                tracing::error!("Failed to get scanned ballots: {}", e);
                 return Err(Json(json!({ "error": e.to_string() })));
             }
             Ok(ballots) => ballots,
@@ -159,7 +159,7 @@ pub(crate) async fn do_sync(
     };
 
     if let Err(err) = txn.commit().await {
-        eprintln!("Failed to commit transaction: {}", err);
+        tracing::error!("Failed to commit transaction: {}", err);
         return Err(Json(json!({ "error": err.to_string() })));
     }
 
@@ -174,6 +174,7 @@ pub(crate) async fn create_admin(
     let mut connection = match pool.acquire().await {
         Ok(connection) => connection,
         Err(err) => {
+            tracing::error!("Failed to acquire connection: {}", err);
             return Err(Json(json!({ "error": err.to_string() })));
         }
     };
@@ -181,9 +182,8 @@ pub(crate) async fn create_admin(
 
     result.map_or_else(
         |err| {
-            Err(Json(json!({
-                "error": err.to_string()
-            })))
+            tracing::error!("Failed to create admin: {}", err);
+            Err(Json(json!({ "error": err.to_string() })))
         },
         |_| Ok(StatusCode::CREATED),
     )

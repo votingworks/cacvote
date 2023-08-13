@@ -1,3 +1,11 @@
+use std::time::Duration;
+
+const TEN_MB: usize = 10 * 1024 * 1024;
+
+pub const DEFAULT_PORT: u16 = 4001;
+pub const MAX_REQUEST_SIZE: usize = TEN_MB;
+pub const SYNC_INTERVAL: Duration = Duration::from_secs(5);
+
 lazy_static::lazy_static! {
     pub static ref RAVE_URL: reqwest::Url = reqwest::Url::parse(
         std::env::var("RAVE_URL")
@@ -10,6 +18,19 @@ lazy_static::lazy_static! {
 lazy_static::lazy_static! {
     pub static ref VX_MACHINE_ID: String = std::env::var("VX_MACHINE_ID")
         .expect("VX_MACHINE_ID must be set");
+}
+
+lazy_static::lazy_static! {
+    pub static ref DATABASE_URL: String = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set");
+}
+
+lazy_static::lazy_static! {
+    pub static ref PORT: u16 =
+        match std::env::var("PORT").ok() {
+            Some(port) => port.parse().expect("PORT must be a valid port number"),
+            None => DEFAULT_PORT,
+        };
 }
 
 impl PartialEq<String> for VX_MACHINE_ID {
@@ -33,5 +54,11 @@ impl PartialEq<VX_MACHINE_ID> for String {
 impl PartialEq<VX_MACHINE_ID> for &str {
     fn eq(&self, other: &VX_MACHINE_ID) -> bool {
         *self == other.as_str()
+    }
+}
+
+impl std::fmt::Display for PORT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&(*self).to_string())
     }
 }
