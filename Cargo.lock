@@ -2270,6 +2270,7 @@ dependencies = [
  "lazy_static",
  "openssl",
  "pretty_assertions",
+ "proptest",
  "regex",
  "reqwest",
  "serde",

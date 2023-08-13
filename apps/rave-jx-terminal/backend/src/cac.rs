@@ -73,6 +73,7 @@ fn verify_signature(
     Ok(verifier.verify(signature_buffer)?)
 }
 
+#[derive(Debug, PartialEq)]
 struct CommonNameMetadata {
     common_access_card_id: String,
     surname: String,
@@ -106,4 +107,84 @@ fn extract_common_name_metadata(x509: &X509) -> Option<CommonNameMetadata> {
         given_name: common_name_parts[1].trim().to_owned(),
         middle_name: common_name_parts[2].trim().to_owned(),
     })
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use openssl::x509::{X509Builder, X509NameBuilder};
+    use pretty_assertions::assert_eq;
+    use proptest::{prop_assert_eq, proptest};
+
+    #[test]
+    fn extract_metadata_from_sample_cac_cert() {
+        let cert_bytes = include_bytes!("../tests/fixtures/robert_aikins_sample_cert.pem");
+        let x509 = X509::from_pem(cert_bytes).unwrap();
+        assert_eq!(
+            extract_common_name_metadata(&x509),
+            Some(CommonNameMetadata {
+                common_access_card_id: "1404922102".to_owned(),
+                surname: "AIKINS".to_owned(),
+                given_name: "ROBERT".to_owned(),
+                middle_name: "EDDIE".to_owned(),
+            }),
+        );
+    }
+
+    proptest! {
+        #[test]
+        /// Generate a random X509 certificate and verify that the common name
+        /// metadata can be extracted from it. The names are limited to 17
+        /// characters because the maximum length of the CN field is 64 bytes,
+        /// the Common Access Card ID is 10 digits, and the separators are 3
+        /// characters. 64 - 10 - 3 = 51 available bytes → 51 / 3 = 17
+        /// characters each.
+        fn test_generated_x509(
+            common_access_card_id in "\\d{10}",
+            given_name in "[A-Z]{1,17}",
+            surname in "[A-Z]{1,17}",
+            middle_name in "[A-Z]{0,17}",
+        ) {
+            let mut subject_name = X509NameBuilder::new().unwrap();
+            subject_name.append_entry_by_nid(
+                openssl::nid::Nid::COMMONNAME,
+                format!("{surname}.{given_name}.{middle_name}.{common_access_card_id}").as_str(),
+            ).unwrap();
+            let mut x509_builder = X509Builder::new().unwrap();
+            x509_builder.set_subject_name(&subject_name.build()).unwrap();
+            let x509 = x509_builder.build();
+
+            prop_assert_eq!(
+                extract_common_name_metadata(&x509),
+                Some(CommonNameMetadata {
+                    common_access_card_id,
+                    surname,
+                    given_name,
+                    middle_name,
+                })
+            );
+        }
+
+        #[test]
+        /// Generate a random X509 certificate and verify that the common name
+        /// metadata cannot be extracted from it because the CN field is
+        /// invalid.
+        fn test_invalid_common_names(
+            common_name in "[^\\.]{1,64}",
+        ) {
+            let mut subject_name = X509NameBuilder::new().unwrap();
+            subject_name.append_entry_by_nid(
+                openssl::nid::Nid::COMMONNAME,
+                common_name.as_str(),
+            ).unwrap();
+            let mut x509_builder = X509Builder::new().unwrap();
+            x509_builder.set_subject_name(&subject_name.build()).unwrap();
+            let x509 = x509_builder.build();
+
+            prop_assert_eq!(
+                extract_common_name_metadata(&x509),
+                None
+            );
+        }
+    }
 }
