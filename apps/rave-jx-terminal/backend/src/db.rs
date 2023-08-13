@@ -1,10 +1,13 @@
 extern crate time;
 
 use std::str::FromStr;
+use std::time::Duration;
 
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgPoolOptions;
 use sqlx::{Acquire, PgPool};
+use tracing::Level;
 use types_rs::cdf::cvr::Cvr;
 use types_rs::election::{BallotStyleId, ElectionDefinition, ElectionHash, PrecinctId};
 use types_rs::rave::jx;
@@ -12,13 +15,22 @@ use types_rs::rave::{client, ClientId, ServerId};
 use uuid::Uuid;
 
 use crate::cac::verify_cast_vote_record;
-use crate::config::VX_MACHINE_ID;
+use crate::config::{DATABASE_URL, VX_MACHINE_ID};
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
-pub(crate) async fn run_migrations(pool: &PgPool) -> color_eyre::Result<()> {
+/// Sets up the database pool and runs any pending migrations, returning the
+/// pool to be used by the app.
+pub(crate) async fn setup() -> color_eyre::Result<PgPool> {
+    let _entered = tracing::span!(Level::DEBUG, "Setting up database").entered();
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(3))
+        .connect(&DATABASE_URL)
+        .await?;
     tracing::debug!("Running database migrations");
-    Ok(sqlx::migrate!("db/migrations").run(pool).await?)
+    sqlx::migrate!("db/migrations").run(&pool).await?;
+    Ok(pool)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -244,7 +256,7 @@ pub(crate) async fn get_last_synced_election_id(
 ) -> color_eyre::Result<Option<ServerId>> {
     Ok(sqlx::query!(
         r#"
-        SELECT server_id as "server_id: ServerId"
+        SELECT server_id as "server_id!: ServerId"
         FROM elections
         WHERE server_id IS NOT NULL
         ORDER BY created_at DESC
@@ -253,7 +265,7 @@ pub(crate) async fn get_last_synced_election_id(
     )
     .fetch_optional(&mut *executor)
     .await?
-    .and_then(|r| r.server_id))
+    .map(|r| r.server_id))
 }
 
 pub(crate) async fn get_last_synced_registration_request_id(
@@ -261,7 +273,7 @@ pub(crate) async fn get_last_synced_registration_request_id(
 ) -> color_eyre::Result<Option<ServerId>> {
     Ok(sqlx::query!(
         r#"
-        SELECT server_id as "server_id: ServerId"
+        SELECT server_id as "server_id!: ServerId"
         FROM registration_requests
         WHERE server_id IS NOT NULL
         ORDER BY created_at DESC
@@ -295,7 +307,7 @@ pub(crate) async fn get_last_synced_printed_ballot_id(
 ) -> color_eyre::Result<Option<ServerId>> {
     Ok(sqlx::query!(
         r#"
-        SELECT server_id as "server_id: ServerId"
+        SELECT server_id as "server_id!: ServerId"
         FROM printed_ballots
         WHERE server_id IS NOT NULL
         ORDER BY created_at DESC
@@ -1215,7 +1227,7 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
 ) -> color_eyre::Result<Option<ServerId>> {
     Ok(sqlx::query!(
         r#"
-        SELECT server_id as "server_id: ServerId"
+        SELECT server_id as "server_id!: ServerId"
         FROM scanned_ballots
         WHERE server_id IS NOT NULL
         ORDER BY created_at DESC

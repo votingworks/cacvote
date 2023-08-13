@@ -1,13 +1,19 @@
 use std::convert::Infallible;
-use std::path::PathBuf;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use async_stream::try_stream;
-use axum::extract::State;
-use axum::response::sse::{Event, KeepAlive};
-use axum::response::{IntoResponse, Sse};
-use axum::Json;
+use axum::{
+    extract::{DefaultBodyLimit, State},
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse,
+    },
+    routing::{get, post},
+    Json, Router,
+};
 use central_scanner::scan;
 use futures_core::Stream;
 use reqwest::StatusCode;
@@ -16,12 +22,47 @@ use serde_json::json;
 use sqlx::PgPool;
 use time::OffsetDateTime;
 use tokio::time::sleep;
+use tower_http::services::{ServeDir, ServeFile};
+use tower_http::trace::TraceLayer;
+use tracing::Level;
 use types_rs::election::PartialElectionHash;
 use types_rs::rave::ClientId;
 
 use crate::cards::decode_page_from_image;
-use crate::config::VX_MACHINE_ID;
+use crate::config::{MAX_REQUEST_SIZE, PORT, VX_MACHINE_ID};
 use crate::db::{self, ScannedBallot, ScannedBallotStats};
+
+/// Prepares the application with all the routes. Run the application with
+/// `app::run(…)` once you have it.
+pub(crate) async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
+    let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
+
+    let dist_path = Path::new("../frontend/dist");
+    let _ = std::fs::create_dir_all(dist_path);
+
+    Ok(Router::new()
+        .fallback_service(
+            ServeDir::new(dist_path)
+                .append_index_html_on_directories(true)
+                .fallback(ServeFile::new(dist_path.join("index.html"))),
+        )
+        .route("/api/status", get(get_status))
+        .route("/api/status-stream", get(get_status_stream))
+        .route("/api/scan", post(do_scan))
+        .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
+        .layer(TraceLayer::new_for_http())
+        .with_state(pool))
+}
+
+/// Runs an application built by `app::setup(…)`.
+pub(crate) async fn run(app: Router) -> color_eyre::Result<()> {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT);
+    tracing::info!("Server listening at http://{addr}/");
+    axum::Server::bind(&SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT))
+        .serve(app.into_make_service())
+        .await?;
+    Ok(())
+}
 
 #[derive(Debug, Serialize)]
 pub struct ScannedCard {

@@ -1,9 +1,45 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+use axum::{
+    extract::{DefaultBodyLimit, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
 use serde_json::json;
 use sqlx::PgPool;
+use tower_http::trace::TraceLayer;
+use tracing::Level;
 use types_rs::rave::{client, RaveServerSyncInput, RaveServerSyncOutput};
 
-use crate::db;
+use crate::{
+    config::{MAX_REQUEST_SIZE, PORT},
+    db,
+};
+
+/// Prepares the application with all the routes. Run the application with
+/// `app::run(…)` once you have it.
+pub(crate) async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
+    let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
+    Ok(Router::new()
+        .route("/api/status", get(get_status))
+        .route("/api/admins", post(create_admin))
+        .route("/api/sync", post(do_sync))
+        .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
+        .layer(TraceLayer::new_for_http())
+        .with_state(pool))
+}
+
+/// Runs an application built by `app::setup(…)`.
+pub(crate) async fn run(app: Router) -> color_eyre::Result<()> {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT);
+    tracing::info!("Server listening at http://{addr}/");
+    axum::Server::bind(&SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT))
+        .serve(app.into_make_service())
+        .await?;
+    Ok(())
+}
 
 pub(crate) async fn get_status() -> impl IntoResponse {
     StatusCode::OK

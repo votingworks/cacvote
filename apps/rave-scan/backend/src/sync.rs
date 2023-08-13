@@ -8,6 +8,8 @@ use crate::{
     db,
 };
 
+/// Spawns an async loop that synchronizes with the RAVE server on a fixed
+/// schedule.
 pub(crate) async fn sync_periodically(pool: &PgPool) {
     tracing::debug!(
         "Starting sync loop, syncing every {} seconds",

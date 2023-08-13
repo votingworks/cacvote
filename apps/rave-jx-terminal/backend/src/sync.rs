@@ -1,12 +1,15 @@
-use std::time::Duration;
-
 use sqlx::PgPool;
 use tokio::time::sleep;
 use tracing::Level;
 use types_rs::rave::{RaveServerSyncInput, RaveServerSyncOutput};
 
-use crate::{config::RAVE_URL, db};
+use crate::{
+    config::{RAVE_URL, SYNC_INTERVAL},
+    db,
+};
 
+/// Spawns an async loop that synchronizes with the RAVE server on a fixed
+/// schedule.
 pub(crate) async fn sync_periodically(pool: &PgPool) {
     let mut connection = pool
         .acquire()
@@ -23,7 +26,7 @@ pub(crate) async fn sync_periodically(pool: &PgPool) {
                     tracing::error!("Failed to sync with RAVE server: {}", e);
                 }
             }
-            sleep(Duration::from_secs(5)).await;
+            sleep(SYNC_INTERVAL).await;
         }
     });
 }

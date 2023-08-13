@@ -1,20 +1,31 @@
 extern crate time;
 
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
-use sqlx::{self, PgPool};
+use sqlx::{self, postgres::PgPoolOptions, PgPool};
+use tracing::Level;
 use types_rs::{
     election::ElectionHash,
     rave::{client, ClientId, ServerId},
 };
 
+use crate::config::DATABASE_URL;
+
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
-pub(crate) async fn run_migrations(pool: &PgPool) -> color_eyre::Result<()> {
-    tracing::debug!("Running database migrations");
-    Ok(sqlx::migrate!("db/migrations").run(pool).await?)
+/// Sets up the database pool and runs any pending migrations, returning the
+/// pool to be used by the app.
+pub(crate) async fn setup() -> color_eyre::Result<PgPool> {
+    let _entered = tracing::span!(Level::DEBUG, "Setting up database").entered();
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(3))
+        .connect(&DATABASE_URL)
+        .await?;
+    sqlx::migrate!("db/migrations").run(&pool).await?;
+    Ok(pool)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

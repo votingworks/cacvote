@@ -1,7 +1,22 @@
+use std::time::Duration;
+
 const TEN_MB: usize = 10 * 1024 * 1024;
 
 pub const DEFAULT_PORT: u16 = 5001;
 pub const MAX_REQUEST_SIZE: usize = TEN_MB;
+pub const SYNC_INTERVAL: Duration = Duration::from_secs(5);
+
+/// Checks that all required configuration is present.
+///
+/// # Panics
+///
+/// This function will panic if any required configuration is not present.
+pub(crate) fn check() {
+    let _ = *RAVE_URL;
+    let _ = *DATABASE_URL;
+    let _ = *VX_MACHINE_ID;
+    let _ = *PORT;
+}
 
 lazy_static::lazy_static! {
     pub static ref RAVE_URL: reqwest::Url = reqwest::Url::parse(
