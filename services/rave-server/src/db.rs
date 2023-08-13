@@ -1,4 +1,11 @@
-extern crate time;
+//! Database access for the application.
+//!
+//! All direct use of [SQLx][`sqlx`] queries should be in this module. When
+//! modifying this file, be sure to run `cargo sqlx prepare` in the application
+//! root to regenerate the query metadata for offline builds.
+//!
+//! To enable `cargo sqlx prepare`, install it via `cargo install --locked
+//! sqlx-cli`.
 
 use std::{str::FromStr, time::Duration};
 
@@ -908,7 +915,7 @@ mod test {
         add_admin(
             &mut db,
             client::input::Admin {
-                common_access_card_id: "1234567890".to_string(),
+                common_access_card_id: "1234567890".to_owned(),
             },
         )
         .await?;
@@ -920,7 +927,7 @@ mod test {
                 .into_iter()
                 .map(|a| a.common_access_card_id)
                 .collect::<Vec<_>>(),
-            vec!["1234567890".to_string()]
+            vec!["1234567890".to_owned()]
         );
 
         Ok(())

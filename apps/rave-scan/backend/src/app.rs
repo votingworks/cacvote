@@ -1,3 +1,8 @@
+//! Application definition, including all HTTP route handlers.
+//!
+//! Route handlers are bundled via [`setup`] into an [`axum::Router`], which can then be run
+//! using [`run`] at the configured port (see [`config`][`super::config`]).
+
 use std::convert::Infallible;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::{Path, PathBuf};
@@ -28,9 +33,9 @@ use tracing::Level;
 use types_rs::election::PartialElectionHash;
 use types_rs::rave::ClientId;
 
-use crate::cards::decode_page_from_image;
 use crate::config::{MAX_REQUEST_SIZE, PORT, VX_MACHINE_ID};
 use crate::db::{self, ScannedBallot, ScannedBallotStats};
+use crate::sheets::decode_page_from_image;
 
 /// Prepares the application with all the routes. Run the application with
 /// `app::run(…)` once you have it.
@@ -65,7 +70,7 @@ pub(crate) async fn run(app: Router) -> color_eyre::Result<()> {
 }
 
 #[derive(Debug, Serialize)]
-pub struct ScannedCard {
+pub(crate) struct ScannedCard {
     cvr_data: Vec<u8>,
     election_hash: PartialElectionHash,
 }

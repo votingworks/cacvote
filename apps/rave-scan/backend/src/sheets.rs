@@ -1,8 +1,10 @@
+//! Utilities for extracting data from scanned ballot sheets.
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use color_eyre::eyre::eyre;
 use rqrr::PreparedImage;
 
-pub fn decode_page_from_image(image: image::GrayImage) -> color_eyre::Result<Vec<u8>> {
+pub(crate) fn decode_page_from_image(image: image::GrayImage) -> color_eyre::Result<Vec<u8>> {
     let mut prepared_image = PreparedImage::prepare(image);
 
     prepared_image

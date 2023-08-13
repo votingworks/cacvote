@@ -1,3 +1,12 @@
+//! Logging for RAVE Server.
+//!
+//! RAVE Server uses the `tracing` library for logging. After calling [`setup`],
+//! you'll be able to call [`tracing::info!`], [`tracing::span!`], and others to
+//! print log messages to `stdout` in a flexible and configurable way.
+//!
+//! You may use the `RUST_LOG` environment variable to configure logging at
+//! runtime (see [`EnvFilter`][`tracing_subscriber::EnvFilter`]).
+
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
 /// Sets up logging for the application. Call this early in the process

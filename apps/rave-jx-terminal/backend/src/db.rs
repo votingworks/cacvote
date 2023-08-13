@@ -1,5 +1,3 @@
-extern crate time;
-
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -57,64 +55,64 @@ impl From<Admin> for client::output::Admin {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Election {
-    pub id: ClientId,
-    pub server_id: Option<ServerId>,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub definition: ElectionDefinition,
-    pub election_hash: ElectionHash,
+    pub(crate) id: ClientId,
+    pub(crate) server_id: Option<ServerId>,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) definition: ElectionDefinition,
+    pub(crate) election_hash: ElectionHash,
     #[serde(with = "time::serde::iso8601")]
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RegistrationRequest {
-    pub id: ClientId,
-    pub server_id: ServerId,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub common_access_card_id: String,
-    pub given_name: String,
-    pub family_name: String,
-    pub address_line_1: String,
-    pub address_line_2: Option<String>,
-    pub city: String,
-    pub state: String,
-    pub postal_code: String,
-    pub state_id: String,
+    pub(crate) id: ClientId,
+    pub(crate) server_id: ServerId,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) common_access_card_id: String,
+    pub(crate) given_name: String,
+    pub(crate) family_name: String,
+    pub(crate) address_line_1: String,
+    pub(crate) address_line_2: Option<String>,
+    pub(crate) city: String,
+    pub(crate) state: String,
+    pub(crate) postal_code: String,
+    pub(crate) state_id: String,
     #[serde(with = "time::serde::iso8601")]
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Registration {
-    pub id: ClientId,
-    pub server_id: Option<ServerId>,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub common_access_card_id: String,
-    pub registration_request_id: ClientId,
-    pub election_id: ClientId,
-    pub precinct_id: String,
-    pub ballot_style_id: String,
+    pub(crate) id: ClientId,
+    pub(crate) server_id: Option<ServerId>,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) common_access_card_id: String,
+    pub(crate) registration_request_id: ClientId,
+    pub(crate) election_id: ClientId,
+    pub(crate) precinct_id: String,
+    pub(crate) ballot_style_id: String,
     #[serde(with = "time::serde::iso8601")]
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ScannedBallot {
-    pub id: ClientId,
-    pub server_id: Option<ServerId>,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub election_id: ClientId,
+    pub(crate) id: ClientId,
+    pub(crate) server_id: Option<ServerId>,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) election_id: ClientId,
     #[serde(with = "Base64Standard")]
-    pub cast_vote_record: Vec<u8>,
+    pub(crate) cast_vote_record: Vec<u8>,
     #[serde(with = "time::serde::iso8601")]
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 pub(crate) async fn get_app_data(

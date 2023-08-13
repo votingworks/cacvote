@@ -1,3 +1,8 @@
+//! Application definition, including all HTTP route handlers.
+//!
+//! Route handlers are bundled via [`setup`] into an [`axum::Router`], which can then be run
+//! using [`run`] at the configured port (see [`config`][`super::config`]).
+
 use std::convert::Infallible;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::Path;

@@ -1,3 +1,5 @@
+//! RAVE Server synchronization utilities.
+
 use sqlx::PgPool;
 use tokio::time::sleep;
 use tracing::Level;
@@ -8,7 +10,7 @@ use crate::{
     db,
 };
 
-/// Spawns an async loop that synchronizes with the RAVE server on a fixed
+/// Spawns an async loop that synchronizes with the RAVE Server on a fixed
 /// schedule.
 pub(crate) async fn sync_periodically(pool: &PgPool) {
     tracing::debug!(
@@ -24,10 +26,10 @@ pub(crate) async fn sync_periodically(pool: &PgPool) {
         loop {
             match sync(&mut connection).await {
                 Ok(_) => {
-                    tracing::info!("Successfully synced with RAVE server");
+                    tracing::info!("Successfully synced with RAVE Server");
                 }
                 Err(e) => {
-                    tracing::error!("Failed to sync with RAVE server: {e}");
+                    tracing::error!("Failed to sync with RAVE Server: {e}");
                 }
             }
 
@@ -37,7 +39,7 @@ pub(crate) async fn sync_periodically(pool: &PgPool) {
 }
 
 pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre::Result<()> {
-    let span = tracing::span!(Level::DEBUG, "Syncing with RAVE server");
+    let span = tracing::span!(Level::DEBUG, "Syncing with RAVE Server");
     let _enter = span.enter();
 
     check_status(RAVE_URL.join("/api/status")?).await?;
@@ -81,7 +83,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get elections to sync to RAVE server: {}",
+                    "failed to get elections to sync to RAVE Server: {}",
                     e
                 ))
             })?,
@@ -89,7 +91,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get registration requests to sync to RAVE server: {}",
+                    "failed to get registration requests to sync to RAVE Server: {}",
                     e
                 ))
             })?,
@@ -97,7 +99,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get registrations to sync to RAVE server: {}",
+                    "failed to get registrations to sync to RAVE Server: {}",
                     e
                 ))
             })?,
@@ -105,7 +107,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get printed ballots to sync to RAVE server: {}",
+                    "failed to get printed ballots to sync to RAVE Server: {}",
                     e
                 ))
             })?,
@@ -113,7 +115,7 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get scanned ballots to sync to RAVE server: {}",
+                    "failed to get scanned ballots to sync to RAVE Server: {}",
                     e
                 ))
             })?,
@@ -193,7 +195,7 @@ pub(crate) async fn check_status(endpoint: reqwest::Url) -> color_eyre::eyre::Re
         .error_for_status()
         .map_err(|e| {
             color_eyre::eyre::eyre!(
-                "RAVE server responded with an error (status URL={}): {}",
+                "RAVE Server responded with an error (status URL={}): {}",
                 endpoint,
                 e
             )

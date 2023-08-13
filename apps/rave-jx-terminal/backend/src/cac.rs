@@ -46,12 +46,12 @@ pub(crate) fn verify_cast_vote_record(
         middle_name,
     }) = extract_common_name_metadata(&x509) else {
         return VerificationStatus::Error(
-            "could not extract and parse CN field from X509 certificate".to_string()
+            "could not extract and parse CN field from X509 certificate".to_owned()
         );
     };
     let display_name = format!("{surname}, {given_name} {middle_name}")
         .trim()
-        .to_string();
+        .to_owned();
 
     VerificationStatus::Success {
         common_access_card_id,
@@ -101,9 +101,9 @@ fn extract_common_name_metadata(x509: &X509) -> Option<CommonNameMetadata> {
     }
 
     Some(CommonNameMetadata {
-        common_access_card_id: common_name_parts[3].trim().to_string(),
-        surname: common_name_parts[0].trim().to_string(),
-        given_name: common_name_parts[1].trim().to_string(),
-        middle_name: common_name_parts[2].trim().to_string(),
+        common_access_card_id: common_name_parts[3].trim().to_owned(),
+        surname: common_name_parts[0].trim().to_owned(),
+        given_name: common_name_parts[1].trim().to_owned(),
+        middle_name: common_name_parts[2].trim().to_owned(),
     })
 }

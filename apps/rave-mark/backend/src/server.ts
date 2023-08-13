@@ -75,12 +75,12 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
       await raveServerClient.sync();
 
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: 'RAVE server sync succeeded',
+        message: 'RAVE Server sync succeeded',
         disposition: 'success',
       });
     } catch (err) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Failed to sync with RAVE server: ${err}`,
+        message: `Failed to sync with RAVE Server: ${err}`,
         disposition: 'failure',
       });
     }
@@ -92,12 +92,12 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
   void doRaveServerSync().then(
     () =>
       logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: 'Started RAVE server sync',
+        message: 'Started RAVE Server sync',
         disposition: 'success',
       }),
     (err) =>
       logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Failed to start RAVE server sync: ${err}`,
+        message: `Failed to start RAVE Server sync: ${err}`,
         disposition: 'failure',
       })
   );

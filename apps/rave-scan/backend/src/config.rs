@@ -1,10 +1,12 @@
+//! Application configuration, e.g. `PORT` and `DATABASE_URL`.
+
 use std::time::Duration;
 
 const TEN_MB: usize = 10 * 1024 * 1024;
 
-pub const DEFAULT_PORT: u16 = 4001;
-pub const MAX_REQUEST_SIZE: usize = TEN_MB;
-pub const SYNC_INTERVAL: Duration = Duration::from_secs(5);
+pub(crate) const DEFAULT_PORT: u16 = 4001;
+pub(crate) const MAX_REQUEST_SIZE: usize = TEN_MB;
+pub(crate) const SYNC_INTERVAL: Duration = Duration::from_secs(5);
 
 /// Checks that all required configuration is present.
 ///

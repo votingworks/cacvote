@@ -106,7 +106,7 @@ export class RaveServerClientImpl {
       this.updateServerSyncAttempt({ syncAttemptId, input, output });
     } catch (error) {
       debug(
-        'RAVE server sync failed: %s',
+        'RAVE Server sync failed: %s',
         error instanceof Error ? error.stack : error
       );
       this.store.updateServerSyncAttempt({

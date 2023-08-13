@@ -38,7 +38,7 @@ export const RAVE_MARK_WORKSPACE =
 export const IS_INTEGRATION_TEST = process.env.IS_INTEGRATION_TEST === 'true';
 
 /**
- * RAVE server URL.
+ * RAVE Server URL.
  */
 export const RAVE_URL = process.env.RAVE_URL
   ? new URL(process.env.RAVE_URL)
@@ -47,7 +47,7 @@ export const RAVE_URL = process.env.RAVE_URL
   : undefined;
 
 /**
- * Should we mock the RAVE server?
+ * Should we mock the RAVE Server?
  */
 export const USE_MOCK_RAVE_SERVER =
   (process.env.USE_MOCK_RAVE_SERVER === 'true' || IS_INTEGRATION_TEST) &&

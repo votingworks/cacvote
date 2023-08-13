@@ -14,7 +14,7 @@ import { DateTime } from 'luxon';
 import { z } from 'zod';
 
 /**
- * `ServerId` is the ID on the RAVE server, not the ID in this backend.
+ * `ServerId` is the ID on the RAVE Server, not the ID in this backend.
  */
 export type ServerId = NewType<Id, 'ServerId'>;
 
@@ -26,7 +26,7 @@ export function ServerId(): ServerId {
 }
 
 /**
- * `ClientId` is the ID on this backend, not the ID on the RAVE server.
+ * `ClientId` is the ID on this backend, not the ID on the RAVE Server.
  */
 export type ClientId = NewType<Id, 'ClientId'>;
 

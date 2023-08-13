@@ -1,4 +1,11 @@
-extern crate time;
+//! Database access for the application.
+//!
+//! All direct use of [SQLx][`sqlx`] queries should be in this module. When
+//! modifying this file, be sure to run `cargo sqlx prepare` in the application
+//! root to regenerate the query metadata for offline builds.
+//!
+//! To enable `cargo sqlx prepare`, install it via `cargo install --locked
+//! sqlx-cli`.
 
 use std::str::FromStr;
 use std::time::Duration;
@@ -49,25 +56,25 @@ impl From<Admin> for client::output::Admin {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Election {
-    pub id: ClientId,
-    pub server_id: ServerId,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub definition: ElectionDefinition,
-    pub election_hash: ElectionHash,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) id: ClientId,
+    pub(crate) server_id: ServerId,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) definition: ElectionDefinition,
+    pub(crate) election_hash: ElectionHash,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ScannedBallot {
-    pub id: ClientId,
-    pub server_id: Option<ServerId>,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub election_id: ClientId,
-    pub cast_vote_record: Vec<u8>,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) id: ClientId,
+    pub(crate) server_id: Option<ServerId>,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) election_id: ClientId,
+    pub(crate) cast_vote_record: Vec<u8>,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 pub(crate) async fn replace_admins_with_list_from_rave_server(
@@ -849,8 +856,8 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ScannedBallotStats {
-    pub total: i64,
-    pub pending: i64,
+    pub(crate) total: i64,
+    pub(crate) pending: i64,
 }
 
 pub(crate) async fn get_scanned_ballot_stats(
