@@ -41,8 +41,6 @@ proptest = "1.2.0"
 rayon = "1.7.0"
 regex = "1.9.1"
 reqwest = { version = "0.11.18", features = ["json"] }
-rocket = { version = "=0.5.0-rc.3", features = ["json"] }
-rocket_db_pools = { version = "=0.1.0-rc.3", features = ["sqlx_postgres"] }
 rqrr = "0.6.0"
 serde = { version = "1.0.175", features = ["derive"] }
 serde_json = "1.0.103"
@@ -61,11 +59,10 @@ ui-rs = { path = "libs/ui-rs" }
 uuid = { version = "1.4.0", features = ["serde", "v4", "js"] }
 
 [workspace.dependencies.sqlx]
-version = "0.6.0"
+version = "0.7.1"
 default-features = false
 features = [
     "macros",
-    "offline",
     "migrate",
     "postgres",
     "time",

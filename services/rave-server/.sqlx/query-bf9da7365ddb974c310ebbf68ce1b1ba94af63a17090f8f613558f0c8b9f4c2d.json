@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO admins (common_access_card_id)\n        VALUES ($1)\n        ON CONFLICT (common_access_card_id) DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bf9da7365ddb974c310ebbf68ce1b1ba94af63a17090f8f613558f0c8b9f4c2d"
+}
