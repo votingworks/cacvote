@@ -15,6 +15,7 @@ members = [
 ]
 
 [workspace.dependencies]
+async-stream = "0.3.5"
 axum = { version = "0.6.20" }
 ballot-encoder-rs = { path = "libs/ballot-encoder-rs" }
 base64 = "0.21.2"
@@ -27,6 +28,7 @@ dioxus-logger = "0.4.1"
 dioxus-router = "0.4.1"
 dioxus-web = { version = "0.4" }
 env_logger = "0.10.0"
+futures-core = "0.3.28"
 hex = "0.4.3"
 hmac-sha256 = "1.1.7"
 image = { version = "0.24.6", default-features = false, features = ["jpeg"] }
@@ -50,6 +52,7 @@ tokio = { version = "1.29.1", default-features = false, features = [
     "sync",
     "macros",
 ] }
+tokio-stream = "0.1.14"
 types-rs = { path = "libs/types-rs" }
 ui-rs = { path = "libs/ui-rs" }
 uuid = { version = "1.4.0", features = ["serde", "v4", "js"] }

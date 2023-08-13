@@ -2335,21 +2335,23 @@ dependencies = [
 name = "rave-jx-terminal-backend"
 version = "0.1.0"
 dependencies = [
+ "async-stream",
+ "axum",
  "base64 0.21.2",
  "base64-serde",
  "color-eyre",
+ "futures-core",
  "lazy_static",
  "openssl",
  "pretty_assertions",
  "regex",
  "reqwest",
- "rocket",
- "rocket_db_pools",
  "serde",
  "serde_json",
  "sqlx",
  "time 0.3.23",
  "tokio",
+ "tokio-stream",
  "types-rs",
  "uuid",
 ]

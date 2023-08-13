@@ -3,10 +3,8 @@ extern crate time;
 use std::str::FromStr;
 
 use base64_serde::base64_serde_type;
-use rocket::{fairing, Build, Rocket};
-use rocket_db_pools::{sqlx, Database};
 use serde::{Deserialize, Serialize};
-use sqlx::Acquire;
+use sqlx::{Acquire, PgPool};
 use types_rs::cdf::cvr::Cvr;
 use types_rs::election::{BallotStyleId, ElectionDefinition, ElectionHash, PrecinctId};
 use types_rs::rave::jx;
@@ -14,25 +12,12 @@ use types_rs::rave::{client, ClientId, ServerId};
 use uuid::Uuid;
 
 use crate::cac::verify_cast_vote_record;
-use crate::env::VX_MACHINE_ID;
-
-#[derive(Database)]
-#[database("sqlx")]
-pub(crate) struct Db(rocket_db_pools::sqlx::PgPool);
+use crate::config::VX_MACHINE_ID;
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
-pub(crate) async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
-    match Db::fetch(&rocket) {
-        Some(db) => match ::sqlx::migrate!("db/migrations").run(&**db).await {
-            Ok(_) => Ok(rocket),
-            Err(e) => {
-                error!("Failed to initialize SQLx database: {}", e);
-                Err(rocket)
-            }
-        },
-        None => Err(rocket),
-    }
+pub(crate) async fn run_migrations(pool: &PgPool) -> color_eyre::Result<()> {
+    Ok(sqlx::migrate!("db/migrations").run(pool).await?)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -119,6 +104,82 @@ pub(crate) struct ScannedBallot {
     pub created_at: sqlx::types::time::OffsetDateTime,
 }
 
+pub(crate) async fn get_app_data(
+    executor: &mut sqlx::PgConnection,
+) -> color_eyre::Result<jx::AppData> {
+    let elections = get_elections(executor, None).await?;
+    let registration_requests = get_registration_requests(executor).await?;
+    let registrations = get_registrations(executor).await?;
+    let printed_ballots = get_printed_ballots(executor).await?;
+    let scanned_ballots = get_scanned_ballots(executor).await?;
+
+    Ok(jx::AppData {
+        registrations: registrations
+            .into_iter()
+            .map(|r| {
+                let registration_request = registration_requests
+                    .iter()
+                    .find(|rr| rr.id == r.registration_request_id)
+                    .ok_or_else(|| {
+                        color_eyre::eyre::eyre!(
+                            "registration request not found for registration {}",
+                            r.id
+                        )
+                    })?;
+                let election = elections
+                    .iter()
+                    .find(|e| e.id == r.election_id)
+                    .ok_or_else(|| {
+                        color_eyre::eyre::eyre!("election not found for registration {}", r.id)
+                    })?;
+                Ok(jx::Registration::new(
+                    r.id,
+                    r.server_id,
+                    format!(
+                        "{} {}",
+                        registration_request.given_name, registration_request.family_name
+                    ),
+                    registration_request.common_access_card_id.clone(),
+                    r.registration_request_id,
+                    election.definition.election.title.clone(),
+                    election.election_hash.clone(),
+                    PrecinctId::from(r.precinct_id),
+                    BallotStyleId::from(r.ballot_style_id),
+                    r.created_at,
+                ))
+            })
+            .collect::<color_eyre::Result<Vec<_>>>()?,
+        elections: elections
+            .into_iter()
+            .map(|e| {
+                jx::Election::new(
+                    e.id,
+                    e.server_id,
+                    e.definition.election.title,
+                    e.definition.election.date.date(),
+                    e.definition.election.ballot_styles,
+                    e.definition.election_hash,
+                    e.created_at,
+                )
+            })
+            .collect(),
+        registration_requests: registration_requests
+            .into_iter()
+            .map(|rr| {
+                jx::RegistrationRequest::new(
+                    rr.id,
+                    rr.server_id,
+                    rr.common_access_card_id,
+                    format!("{} {}", rr.given_name, rr.family_name),
+                    rr.created_at,
+                )
+            })
+            .collect(),
+        printed_ballots,
+        scanned_ballots,
+    })
+}
+
 pub(crate) async fn replace_admins_with_list_from_rave_server(
     executor: &mut sqlx::PgConnection,
     admins: Vec<client::output::Admin>,
@@ -191,8 +252,7 @@ pub(crate) async fn get_last_synced_election_id(
     )
     .fetch_optional(&mut *executor)
     .await?
-    .map(|r| r.server_id)
-    .flatten())
+    .and_then(|r| r.server_id))
 }
 
 pub(crate) async fn get_last_synced_registration_request_id(

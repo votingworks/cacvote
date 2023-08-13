@@ -1,37 +1,41 @@
 procs:
   rave-server:
-    cwd: "services/rave-server"
-    shell: "cargo watch -x run"
+    cwd: 'services/rave-server'
+    shell: 'cargo watch -x run'
+    env:
+      DATABASE_URL: 'postgres:rave'
 
   rave-scan-backend:
-    cwd: "apps/rave-scan/backend"
-    shell: "cargo watch -x run"
+    cwd: 'apps/rave-scan/backend'
+    shell: 'cargo watch -x run'
     env:
-      RAVE_URL: "http://localhost:8000/"
-      VX_MACHINE_ID: "rave-scan-dev"
+      DATABASE_URL: 'postgres:rave_scan'
+      RAVE_URL: 'http://localhost:8000/'
+      VX_MACHINE_ID: 'rave-scan-dev'
   rave-scan-frontend:
-    cwd: "apps/rave-scan/frontend"
-    shell: "dx serve --port 4000"
+    cwd: 'apps/rave-scan/frontend'
+    shell: 'dx serve --port 4000'
   rave-scan-frontend-css:
-    cwd: "apps/rave-scan/frontend"
-    shell: "pnpm tailwindcss -i input.css -o ./public/styles.css --watch"
+    cwd: 'apps/rave-scan/frontend'
+    shell: 'pnpm tailwindcss -i input.css -o ./public/styles.css --watch'
 
   rave-jx-backend:
-    cwd: "apps/rave-jx-terminal/backend"
-    shell: "cargo watch -x run"
+    cwd: 'apps/rave-jx-terminal/backend'
+    shell: 'cargo watch -x run'
     env:
-      RAVE_URL: "http://localhost:8000/"
-      VX_MACHINE_ID: "rave-jx-dev"
+      DATABASE_URL: 'postgres:rave_jx'
+      RAVE_URL: 'http://localhost:8000/'
+      VX_MACHINE_ID: 'rave-jx-dev'
   rave-jx-frontend:
-    cwd: "apps/rave-jx-terminal/frontend"
-    shell: "dx serve --port 5000"
+    cwd: 'apps/rave-jx-terminal/frontend'
+    shell: 'dx serve --port 5000'
   rave-jx-frontend-css:
-    cwd: "apps/rave-jx-terminal/frontend"
-    shell: "pnpm tailwindcss -i input.css -o ./public/styles.css --watch"
+    cwd: 'apps/rave-jx-terminal/frontend'
+    shell: 'pnpm tailwindcss -i input.css -o ./public/styles.css --watch'
 
   rave-mark:
-    cwd: "apps/rave-mark/frontend"
-    shell: "pnpm start"
+    cwd: 'apps/rave-mark/frontend'
+    shell: 'pnpm start'
     env:
-      RAVE_URL: "http://localhost:8000/"
-      VX_MACHINE_ID: "rave-mark-dev"
+      RAVE_URL: 'http://localhost:8000/'
+      VX_MACHINE_ID: 'rave-mark-dev'

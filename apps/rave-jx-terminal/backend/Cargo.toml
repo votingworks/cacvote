@@ -6,20 +6,22 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-stream = { workspace = true }
+axum = { workspace = true }
 base64 = { workspace = true }
 base64-serde = { workspace = true }
 color-eyre = { workspace = true }
+futures-core = { workspace = true }
 lazy_static = { workspace = true }
 openssl = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
-rocket = { workspace = true }
-rocket_db_pools = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
 time = { workspace = true }
 tokio = { workspace = true }
+tokio-stream = { workspace = true }
 types-rs = { workspace = true, features = ["backend"] }
 uuid = { workspace = true }
 
