@@ -1,11 +1,15 @@
-use std::{env, time::Duration};
+use std::{
+    env,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    time::Duration,
+};
 
 use axum::{
     extract::DefaultBodyLimit,
     routing::{get, post},
     Router,
 };
-use config::{DEFAULT_PORT, MAX_REQUEST_SIZE};
+use config::{MAX_REQUEST_SIZE, PORT};
 use db::run_migrations;
 use routes::*;
 use sqlx::postgres::PgPoolOptions;
@@ -16,6 +20,8 @@ mod routes;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
+    color_eyre::install().unwrap();
+
     // database setup
     let db_connection_string = env::var("DATABASE_URL")?;
     let pool = PgPoolOptions::new()
@@ -26,7 +32,6 @@ async fn main() -> color_eyre::Result<()> {
     run_migrations(&pool).await?;
 
     // application setup
-    let port: u32 = env::var("PORT").map_or_else(|_| Ok(DEFAULT_PORT), |port| port.parse())?;
     let app = Router::new()
         .route("/api/status", get(get_status))
         .route("/api/admins", post(create_admin))
@@ -35,7 +40,7 @@ async fn main() -> color_eyre::Result<()> {
         .with_state(pool);
 
     // run the server
-    axum::Server::bind(&format!("0.0.0.0:{port}").parse()?)
+    axum::Server::bind(&SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT))
         .serve(app.into_make_service())
         .await?;
 
