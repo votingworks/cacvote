@@ -35,8 +35,8 @@ pub(crate) async fn setup() -> color_eyre::Result<PgPool> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Admin {
-    pub common_access_card_id: String,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) common_access_card_id: String,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 impl From<Admin> for client::output::Admin {

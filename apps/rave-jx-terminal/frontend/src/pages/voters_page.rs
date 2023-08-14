@@ -20,10 +20,9 @@ pub fn VotersPage(cx: Scope) -> Element {
     let pending_registration_requests = registration_requests
         .iter()
         .filter(|registration_request| {
-            registrations
+            !registrations
                 .iter()
-                .find(|registration| registration.is_registration_request(registration_request))
-                .is_none()
+                .any(|registration| registration.is_registration_request(registration_request))
         })
         .map(Clone::clone)
         .collect::<Vec<_>>();
@@ -70,15 +69,12 @@ fn PendingRegistrationsTable(cx: Scope<PendingRegistrationsTableProps>) -> Eleme
 
             let url = get_url("/api/registrations");
             let client = reqwest::Client::new();
-            let res = client
+            client
                 .post(url)
                 .json(&create_registration_data)
                 .send()
-                .await;
-
+                .await
             // is_linking_registration_request_with_election.set(false);
-
-            res
         }
     };
 

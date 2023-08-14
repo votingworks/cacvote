@@ -7,6 +7,7 @@ use crate::pages::ElectionsPage;
 use crate::pages::VotersPage;
 
 #[derive(Clone, Debug, PartialEq, Routable)]
+#[allow(clippy::enum_variant_names)]
 pub enum Route {
     #[layout(Layout)]
     #[redirect("/", || Route::ElectionsPage)]
