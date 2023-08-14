@@ -11,6 +11,7 @@ import { act } from '@testing-library/react-hooks';
 import { deferred } from '@votingworks/basics';
 import { render, screen, waitFor } from '../test/react_testing_library';
 import { UnlockMachineScreen } from './unlock_machine_screen';
+import { PinLength } from './utils/pin_length';
 
 beforeEach(() => {
   MockDate.set('2000-01-01T00:00:00Z');
@@ -28,7 +29,7 @@ test('PIN submission', async () => {
     <UnlockMachineScreen
       auth={checkingPinAuthStatus}
       checkPin={checkPin}
-      pinLength={6}
+      pinLength={PinLength.exactly(6)}
     />
   );
 
@@ -76,7 +77,7 @@ test('Incorrect PIN', () => {
         wrongPinEnteredAt: new Date(),
       }}
       checkPin={checkPin}
-      pinLength={6}
+      pinLength={PinLength.exactly(6)}
     />
   );
 
@@ -110,7 +111,7 @@ test.each<{
           wrongPinEnteredAt: isWrongPinEnteredAtSet ? new Date() : undefined,
         }}
         checkPin={checkPin}
-        pinLength={6}
+        pinLength={PinLength.exactly(6)}
       />
     );
 
@@ -149,7 +150,7 @@ test('Error checking PIN', () => {
         wrongPinEnteredAt: new Date(),
       }}
       checkPin={checkPin}
-      pinLength={6}
+      pinLength={PinLength.exactly(6)}
     />
   );
 
@@ -165,7 +166,7 @@ test('PIN submission disabled when checking PIN', async () => {
         status: 'checking_pin',
       }}
       checkPin={checkPin}
-      pinLength={6}
+      pinLength={PinLength.exactly(6)}
     />
   );
 
@@ -190,7 +191,7 @@ test('range of acceptable PIN lengths', async () => {
     <UnlockMachineScreen
       auth={checkingPinAuthStatus}
       checkPin={checkPin}
-      pinLength={{ min: 4, max: 6 }}
+      pinLength={PinLength.range(4, 6)}
     />
   );
 
