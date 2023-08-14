@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "RAVE Scan frontend",
   "scripts": {
-    "build": "dx build",
+    "build": "script/build",
     "lint": "cargo fmt -- --check && cargo clippy -- -D warnings",
     "start": "concurrently 'npm:start:*' 'npm:build:css:watch'",
     "start:frontend": "dx serve --port 3000",
