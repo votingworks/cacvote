@@ -8,7 +8,7 @@ use crate::button::Button;
 
 #[derive(Props)]
 pub struct Props<'a> {
-    class: &'a str,
+    class: Option<&'a str>,
     children: Element<'a>,
     disabled: Option<bool>,
     #[props(into)]
@@ -20,19 +20,22 @@ pub struct Props<'a> {
 /// # Example
 ///
 /// ```rust,no_run
+/// use std::sync::Arc;
 /// use dioxus::prelude::*;
+/// use ui_rs::FileButton;
 ///
 /// fn app(cx: Scope) -> Element {
 ///     render! {
 ///         FileButton {
 ///             "Click me",
 ///             onfile: {
-///                 move |file_engine| {
+///                 move |file_engine: Arc<dyn FileEngine>| {
 ///                     // read the first file, assuming there is at least one
 ///                     cx.spawn(async move {
-///                         let file = file_engine.files().unwrap()[0].clone();
+///                         let files = file_engine.files();
+///                         let file = files.first().unwrap();
 ///                         let content = file_engine.read_file(&file).await.unwrap();
-///                         log::info!("file content: {}", content);
+///                         log::info!("file content: {:?}", content);
 ///                     });
 ///                 }
 ///             }
@@ -70,7 +73,7 @@ pub fn FileButton<'a>(cx: Scope<'a, Props<'a>>) -> Element {
             },
         }
         Button {
-            class: cx.props.class,
+            class: cx.props.class.unwrap_or(""),
             &cx.props.children
             onclick: {
                 to_owned![id];

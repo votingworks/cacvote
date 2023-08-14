@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Shared UI for Dioxus apps",
   "scripts": {
+    "build": "cargo build",
+    "lint": "cargo clippy -- -D warnings",
+    "start": "cargo watch -x run",
     "test": "cargo test"
   },
   "private": true,
