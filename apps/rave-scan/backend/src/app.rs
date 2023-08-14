@@ -12,6 +12,7 @@ use std::time::Duration;
 use async_stream::try_stream;
 use axum::{
     extract::{DefaultBodyLimit, State},
+    http::StatusCode,
     response::{
         sse::{Event, KeepAlive, Sse},
         IntoResponse,
@@ -21,7 +22,6 @@ use axum::{
 };
 use central_scanner::scan;
 use futures_core::Stream;
-use reqwest::StatusCode;
 use serde::Serialize;
 use serde_json::json;
 use sqlx::PgPool;
