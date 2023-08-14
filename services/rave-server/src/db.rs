@@ -38,8 +38,8 @@ pub(crate) async fn setup() -> color_eyre::Result<PgPool> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Admin {
-    pub common_access_card_id: String,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) common_access_card_id: String,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 impl From<Admin> for client::output::Admin {
@@ -59,12 +59,12 @@ impl From<Admin> for client::output::Admin {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Election {
-    pub id: ServerId,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub definition: types_rs::election::ElectionDefinition,
-    pub election_hash: ElectionHash,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) id: ServerId,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) definition: types_rs::election::ElectionDefinition,
+    pub(crate) election_hash: ElectionHash,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 impl From<Election> for client::output::Election {
@@ -92,19 +92,19 @@ impl From<Election> for client::output::Election {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RegistrationRequest {
-    pub id: ServerId,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub common_access_card_id: String,
-    pub given_name: String,
-    pub family_name: String,
-    pub address_line_1: String,
-    pub address_line_2: Option<String>,
-    pub city: String,
-    pub state: String,
-    pub postal_code: String,
-    pub state_id: String,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) id: ServerId,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) common_access_card_id: String,
+    pub(crate) given_name: String,
+    pub(crate) family_name: String,
+    pub(crate) address_line_1: String,
+    pub(crate) address_line_2: Option<String>,
+    pub(crate) city: String,
+    pub(crate) state: String,
+    pub(crate) postal_code: String,
+    pub(crate) state_id: String,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 impl From<client::input::RegistrationRequest> for RegistrationRequest {
@@ -179,15 +179,15 @@ impl From<RegistrationRequest> for client::output::RegistrationRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Registration {
-    pub id: ServerId,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub common_access_card_id: String,
-    pub registration_request_id: ServerId,
-    pub election_id: ServerId,
-    pub precinct_id: String,
-    pub ballot_style_id: String,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) id: ServerId,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) common_access_card_id: String,
+    pub(crate) registration_request_id: ServerId,
+    pub(crate) election_id: ServerId,
+    pub(crate) precinct_id: String,
+    pub(crate) ballot_style_id: String,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 impl From<Registration> for client::output::Registration {
@@ -220,18 +220,18 @@ impl From<Registration> for client::output::Registration {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct PrintedBallot {
-    pub id: ServerId,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub common_access_card_id: String,
+    pub(crate) id: ServerId,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) common_access_card_id: String,
     #[serde(with = "Base64Standard")]
-    pub common_access_card_certificate: Vec<u8>,
-    pub registration_id: ServerId,
+    pub(crate) common_access_card_certificate: Vec<u8>,
+    pub(crate) registration_id: ServerId,
     #[serde(with = "Base64Standard")]
-    pub cast_vote_record: Vec<u8>,
+    pub(crate) cast_vote_record: Vec<u8>,
     #[serde(with = "Base64Standard")]
-    pub cast_vote_record_signature: Vec<u8>,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) cast_vote_record_signature: Vec<u8>,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 impl From<PrintedBallot> for client::output::PrintedBallot {
@@ -264,13 +264,13 @@ impl From<PrintedBallot> for client::output::PrintedBallot {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct ScannedBallot {
-    pub id: ServerId,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub election_id: ServerId,
+    pub(crate) id: ServerId,
+    pub(crate) client_id: ClientId,
+    pub(crate) machine_id: String,
+    pub(crate) election_id: ServerId,
     #[serde(with = "Base64Standard")]
-    pub cast_vote_record: Vec<u8>,
-    pub created_at: sqlx::types::time::OffsetDateTime,
+    pub(crate) cast_vote_record: Vec<u8>,
+    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
 impl From<ScannedBallot> for client::output::ScannedBallot {
