@@ -8,6 +8,7 @@ import {
 import { DippedSmartCardAuth } from '@votingworks/types';
 import { act } from '@testing-library/react-hooks';
 
+import { deferred } from '@votingworks/basics';
 import { render, screen, waitFor } from '../test/react_testing_library';
 import { UnlockMachineScreen } from './unlock_machine_screen';
 
@@ -24,10 +25,15 @@ const checkingPinAuthStatus: DippedSmartCardAuth.CheckingPin = {
 test('PIN submission', async () => {
   const checkPin = jest.fn();
   render(
-    <UnlockMachineScreen auth={checkingPinAuthStatus} checkPin={checkPin} />
+    <UnlockMachineScreen
+      auth={checkingPinAuthStatus}
+      checkPin={checkPin}
+      pinLength={6}
+    />
   );
 
   screen.getByText('- - - - - -');
+  expect(screen.queryByText('Enter')).not.toBeInTheDocument();
 
   userEvent.click(screen.getButton('0'));
   screen.getByText('• - - - - -');
@@ -70,6 +76,7 @@ test('Incorrect PIN', () => {
         wrongPinEnteredAt: new Date(),
       }}
       checkPin={checkPin}
+      pinLength={6}
     />
   );
 
@@ -103,6 +110,7 @@ test.each<{
           wrongPinEnteredAt: isWrongPinEnteredAtSet ? new Date() : undefined,
         }}
         checkPin={checkPin}
+        pinLength={6}
       />
     );
 
@@ -141,8 +149,82 @@ test('Error checking PIN', () => {
         wrongPinEnteredAt: new Date(),
       }}
       checkPin={checkPin}
+      pinLength={6}
     />
   );
 
   screen.getByText('Error checking PIN. Please try again.');
+});
+
+test('PIN submission disabled when checking PIN', async () => {
+  const checkPin = jest.fn();
+  render(
+    <UnlockMachineScreen
+      auth={{
+        ...checkingPinAuthStatus,
+        status: 'checking_pin',
+      }}
+      checkPin={checkPin}
+      pinLength={6}
+    />
+  );
+
+  const checkPinDeferred = deferred<void>();
+  checkPin.mockReturnValueOnce(checkPinDeferred.promise);
+
+  for (let i = 0; i < 6; i += 1) {
+    userEvent.click(await screen.findButton('0'));
+  }
+
+  expect(checkPin).toHaveBeenCalledWith('000000');
+  expect(await screen.findButton('0')).toBeDisabled();
+  act(() => {
+    checkPinDeferred.resolve();
+  });
+  expect(await screen.findButton('0')).toBeEnabled();
+});
+
+test('range of acceptable PIN lengths', async () => {
+  const checkPin = jest.fn();
+  render(
+    <UnlockMachineScreen
+      auth={checkingPinAuthStatus}
+      checkPin={checkPin}
+      pinLength={{ min: 4, max: 6 }}
+    />
+  );
+
+  await screen.findByText('- - - - - -');
+  userEvent.click(await screen.findButton('0'));
+
+  await screen.findByText('• - - - - -');
+  userEvent.click(await screen.findButton('1'));
+
+  await screen.findByText('• • - - - -');
+  userEvent.click(await screen.findButton('2'));
+
+  await screen.findByText('• • • - - -');
+  userEvent.click(await screen.findButton('3'));
+
+  // submit early by pressing Enter
+  await screen.findByText('• • • • - -');
+  await act(async () => {
+    userEvent.click(await screen.findButton('Enter'));
+  });
+  expect(checkPin).toHaveBeenCalledWith('0123');
+
+  // re-enter PIN since it gets cleared
+  userEvent.click(await screen.findButton('0'));
+  userEvent.click(await screen.findButton('1'));
+  userEvent.click(await screen.findButton('2'));
+  userEvent.click(await screen.findButton('3'));
+  userEvent.click(await screen.findButton('4'));
+
+  await screen.findByText('• • • • • -');
+
+  // submit automatically by entering the max number of digits
+  await act(async () => {
+    userEvent.click(await screen.findButton('5'));
+  });
+  expect(checkPin).toHaveBeenCalledWith('012345');
 });

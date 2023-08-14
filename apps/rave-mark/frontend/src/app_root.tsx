@@ -4,6 +4,7 @@ import { InsertedSmartCardAuth } from '@votingworks/types';
 import { checkPin, getAuthStatus } from './api';
 import { IdleScreen } from './screens/idle_screen';
 import { LoggedInScreen } from './screens/logged_in_screen';
+import { COMMON_ACCESS_CARD_PIN_LENGTH } from './globals';
 
 export function AppRoot(): JSX.Element {
   const authStatusQuery = getAuthStatus.useQuery();
@@ -34,6 +35,7 @@ export function AppRoot(): JSX.Element {
               // Handled by default query client error handling
             }
           }}
+          pinLength={COMMON_ACCESS_CARD_PIN_LENGTH}
         />
       );
 

@@ -8,12 +8,12 @@ import { Main } from './main';
 import { Prose } from './prose';
 import { fontSizeTheme } from './themes';
 import { NumberPad } from './number_pad';
-import { SECURITY_PIN_LENGTH } from './globals';
 import { useNow } from './hooks/use_now';
 import { Timer } from './timer';
 import { P } from './typography';
 import { Icons } from './icons';
 import { Button } from './button';
+import { PinLength } from './utils/pin_length';
 
 const NumberPadWrapper = styled.div`
   display: flex;
@@ -43,34 +43,39 @@ type CheckingPinAuth =
 interface Props {
   auth: CheckingPinAuth;
   checkPin: (pin: string) => Promise<void>;
+  pinLength: PinLength;
   grayBackground?: boolean;
 }
 
 export function UnlockMachineScreen({
   auth,
   checkPin,
+  pinLength,
   grayBackground,
 }: Props): JSX.Element {
   const [currentPin, setCurrentPin] = useState('');
   const [isCheckingPin, setIsCheckingPin] = useState(false);
   const now = useNow().toJSDate();
 
-  const submitPin = useCallback(async () => {
-    setIsCheckingPin(true);
-    await checkPin(currentPin);
-    setCurrentPin('');
-    setIsCheckingPin(false);
-  }, [checkPin, currentPin]);
+  const submitPin = useCallback(
+    async (pin) => {
+      setIsCheckingPin(true);
+      await checkPin(pin);
+      setCurrentPin('');
+      setIsCheckingPin(false);
+    },
+    [checkPin]
+  );
 
   const handleNumberEntry = useCallback(
     async (digit: number) => {
-      const pin = `${currentPin}${digit}`.slice(0, SECURITY_PIN_LENGTH);
+      const pin = `${currentPin}${digit}`.slice(0, pinLength.max);
       setCurrentPin(pin);
-      if (pin.length === SECURITY_PIN_LENGTH) {
-        await submitPin();
+      if (pin.length === pinLength.max) {
+        await submitPin(pin);
       }
     },
-    [currentPin, submitPin]
+    [currentPin, pinLength.max, submitPin]
   );
 
   const handleBackspace = useCallback(() => {
@@ -83,7 +88,7 @@ export function UnlockMachineScreen({
 
   const currentPinDisplayString = '•'
     .repeat(currentPin.length)
-    .padEnd(SECURITY_PIN_LENGTH, '-')
+    .padEnd(pinLength.max, '-')
     .split('')
     .join(' ');
 
@@ -131,10 +136,16 @@ export function UnlockMachineScreen({
               onBackspace={handleBackspace}
               onClear={handleClear}
             />
+            {!pinLength.isFixed && (
+              <Button
+                onPress={submitPin}
+                disabled={isCheckingPin || isLockedOut}
+                value={currentPin}
+              >
+                Enter
+              </Button>
+            )}
           </NumberPadWrapper>
-          <Button onPress={submitPin} disabled={isCheckingPin || isLockedOut}>
-            Enter
-          </Button>
         </Prose>
       </Main>
     </Screen>
