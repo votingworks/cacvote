@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if ! command dx --version &> /dev/null; then
+  cargo install dioxus-cli
+fi
+
+dx build
