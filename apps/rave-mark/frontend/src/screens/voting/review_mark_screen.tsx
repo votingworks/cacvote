@@ -1,4 +1,4 @@
-import { assert, throwIllegalValue } from '@votingworks/basics';
+import { assert } from '@votingworks/basics';
 import { Contest as MarkFlowContest } from '@votingworks/mark-flow-ui';
 import {
   ContestId,
@@ -10,37 +10,25 @@ import {
 import { Button, Screen } from '@votingworks/ui';
 import { ButtonFooter } from '../../components/button_footer';
 
-export interface MarkScreenProps {
+export interface ReviewMarkScreenProps {
   electionDefinition: ElectionDefinition;
   contests: Contests;
   contestIndex: number;
   votes: VotesDict;
   updateVote: (contestId: ContestId, vote: OptionalVote) => void;
-  goNext?: () => void;
-  goPrevious?: () => void;
+  onReturnToReview: () => void;
 }
 
-function noop(): void {
-  // Do nothing
-}
-
-export function MarkScreen({
+export function ReviewMarkScreen({
   electionDefinition,
   contests,
   contestIndex,
   votes,
   updateVote,
-  goNext,
-  goPrevious,
-}: MarkScreenProps): JSX.Element | null {
+  onReturnToReview,
+}: ReviewMarkScreenProps): JSX.Element | null {
   assert(contestIndex >= 0 && contestIndex < contests.length);
   const contest = contests[contestIndex];
-  const hasFinishedVotingInThisContest =
-    contest.type === 'candidate'
-      ? (votes[contest.id]?.length ?? 0) === contest.seats
-      : contest.type === 'yesno'
-      ? votes[contest.id] !== undefined
-      : throwIllegalValue(contest);
 
   return (
     <Screen>
@@ -51,19 +39,8 @@ export function MarkScreen({
         updateVote={updateVote}
       />
       <ButtonFooter>
-        <Button
-          onPress={goPrevious ?? noop}
-          disabled={!goPrevious}
-          variant="previous"
-        >
-          Previous
-        </Button>
-        <Button
-          onPress={goNext ?? noop}
-          disabled={!goNext}
-          variant={hasFinishedVotingInThisContest ? 'next' : 'nextSecondary'}
-        >
-          Next
+        <Button onPress={onReturnToReview} variant="next">
+          Return to Review
         </Button>
       </ButtonFooter>
     </Screen>

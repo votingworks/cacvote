@@ -1,53 +1,112 @@
-import { throwIllegalValue } from '@votingworks/basics';
-import { ContestId, OptionalVote, VotesDict } from '@votingworks/types';
+import { assert, find, throwIllegalValue } from '@votingworks/basics';
+import {
+  ContestId,
+  OptionalVote,
+  VotesDict,
+  getContests,
+} from '@votingworks/types';
 import { useState } from 'react';
-import { getVoterStatus } from '../api';
+import { getElectionConfiguration, getVoterStatus } from '../api';
 import * as Registration from './registration';
 import * as Voting from './voting';
 
-interface VoterFlowState {
+interface InitState {
+  type: 'init';
+}
+
+interface MarkState {
+  type: 'mark';
   contestIndex: number;
   votes: VotesDict;
 }
 
-export function VoterFlowScreen(): JSX.Element | null {
-  const getVoterStatusQuery = getVoterStatus.useQuery();
-  const voterStatus = getVoterStatusQuery.data;
+interface ReviewState {
+  type: 'review';
+  votes: VotesDict;
+  contestIndex?: number;
+}
+
+interface PrintState {
+  type: 'print';
+  votes: VotesDict;
+}
+
+type VoterFlowState = InitState | MarkState | ReviewState | PrintState;
+
+function RegisteredStateScreen(): JSX.Element | null {
+  const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
+  const electionConfiguration = getElectionConfigurationQuery.data;
   const [voterFlowState, setVoterFlowState] = useState<VoterFlowState>({
-    contestIndex: -1,
-    votes: {},
+    type: 'init',
   });
 
-  if (!voterStatus) {
+  if (!electionConfiguration) {
     return null;
   }
 
+  const { electionDefinition, ballotStyleId, precinctId } =
+    electionConfiguration;
+  const ballotStyle = find(
+    electionDefinition.election.ballotStyles,
+    (bs) => bs.id === ballotStyleId
+  );
+  const contests = getContests({
+    election: electionDefinition.election,
+    ballotStyle,
+  });
+
   function onStartVoting() {
     setVoterFlowState((prev) => {
+      assert(prev?.type === 'init');
       return {
+        type: 'mark',
         contestIndex: 0,
-        votes: prev?.votes ?? {},
+        votes: {},
       };
     });
   }
 
-  function goPrevious() {
+  function onReviewContestAtIndex(contestIndex: number) {
     setVoterFlowState((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
+      assert(prev?.type === 'review');
       return {
         ...prev,
-        contestIndex: prev.contestIndex - 1,
+        contestIndex,
       };
     });
   }
 
-  function goNext() {
+  function onReviewConfirm() {
     setVoterFlowState((prev) => {
-      if (!prev) {
-        return prev;
+      assert(prev?.type === 'review');
+      return {
+        type: 'print',
+        votes: prev.votes,
+      };
+    });
+  }
+
+  function updateVote(contestId: ContestId, vote: OptionalVote) {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'mark' || prev?.type === 'review');
+      return {
+        ...prev,
+        votes: {
+          ...prev.votes,
+          [contestId]: vote,
+        },
+      };
+    });
+  }
+
+  function goMarkNext() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'mark');
+      if (prev.contestIndex === contests.length - 1) {
+        return {
+          type: 'review',
+          votes: prev.votes,
+        };
       }
 
       return {
@@ -57,27 +116,97 @@ export function VoterFlowScreen(): JSX.Element | null {
     });
   }
 
-  function goToIndex(contestIndex: number) {
+  function onReturnToReview() {
     setVoterFlowState((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
+      assert(prev?.type === 'review');
       return {
-        ...prev,
-        contestIndex,
+        type: 'review',
+        votes: prev.votes,
       };
     });
   }
 
-  function updateVote(contestId: ContestId, vote: OptionalVote) {
-    setVoterFlowState((prev = { contestIndex: 0, votes: {} }) => ({
-      ...prev,
-      votes: {
-        ...prev.votes,
-        [contestId]: vote,
-      },
-    }));
+  function goMarkPrevious() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'mark');
+      return {
+        ...prev,
+        contestIndex: Math.max(0, prev.contestIndex - 1),
+      };
+    });
+  }
+
+  switch (voterFlowState.type) {
+    case 'init':
+      return (
+        <Voting.StartScreen
+          electionDefinition={electionDefinition}
+          onStartVoting={onStartVoting}
+        />
+      );
+
+    case 'mark':
+      return (
+        <Voting.MarkScreen
+          electionDefinition={electionDefinition}
+          contests={contests}
+          contestIndex={voterFlowState.contestIndex}
+          votes={voterFlowState.votes}
+          updateVote={updateVote}
+          goNext={goMarkNext}
+          goPrevious={goMarkPrevious}
+        />
+      );
+
+    case 'review':
+      if (typeof voterFlowState.contestIndex === 'number') {
+        return (
+          <Voting.ReviewMarkScreen
+            electionDefinition={electionDefinition}
+            contests={contests}
+            contestIndex={voterFlowState.contestIndex}
+            votes={voterFlowState.votes}
+            updateVote={updateVote}
+            onReturnToReview={onReturnToReview}
+          />
+        );
+      }
+
+      return (
+        <Voting.ReviewScreen
+          electionDefinition={electionDefinition}
+          contests={contests}
+          precinctId={precinctId}
+          votes={voterFlowState.votes}
+          goToIndex={onReviewContestAtIndex}
+          onConfirm={onReviewConfirm}
+        />
+      );
+
+    case 'print':
+      return (
+        <Voting.PrintScreen
+          electionDefinition={electionDefinition}
+          ballotStyleId={ballotStyleId}
+          precinctId={precinctId}
+          votes={voterFlowState.votes}
+          generateBallotId={() => ''}
+          // TODO: use live vs test mode?
+          isLiveMode={false}
+        />
+      );
+
+    default:
+      throwIllegalValue(voterFlowState);
+  }
+}
+
+export function VoterFlowScreen(): JSX.Element | null {
+  const getVoterStatusQuery = getVoterStatus.useQuery();
+  const voterStatus = getVoterStatusQuery.data;
+
+  if (!voterStatus) {
+    return null;
   }
 
   switch (voterStatus.status) {
@@ -88,20 +217,7 @@ export function VoterFlowScreen(): JSX.Element | null {
       return <Registration.StatusScreen />;
 
     case 'registered': {
-      if (voterFlowState.contestIndex < 0) {
-        return <Voting.StartScreen onStartVoting={onStartVoting} />;
-      }
-
-      return (
-        <Voting.MarkScreen
-          contestIndex={voterFlowState.contestIndex}
-          votes={voterFlowState.votes}
-          updateVote={updateVote}
-          goPrevious={goPrevious}
-          goNext={goNext}
-          goToIndex={goToIndex}
-        />
-      );
+      return <RegisteredStateScreen />;
     }
 
     case 'voted':
