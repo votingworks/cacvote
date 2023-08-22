@@ -1,8 +1,10 @@
 import {
   assert,
+  asyncResultBlock,
   err,
   extractErrorMessage,
   ok,
+  Optional,
   Result,
   throwIllegalValue,
 } from '@votingworks/basics';
@@ -33,6 +35,7 @@ import {
 } from './dipped_smart_card_auth_api';
 import { computeCardLockoutEndTime } from './lockout';
 import { computeSessionEndTime } from './sessions';
+import { SmartCardError, SmartCardErrorCode } from './error';
 
 type CheckPinResponseExtended = CheckPinResponse | { response: 'error' };
 
@@ -194,35 +197,43 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
 
   async getAuthStatus(
     machineState: DippedSmartCardAuthMachineState
-  ): Promise<DippedSmartCardAuthTypes.AuthStatus> {
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
-    return this.authStatus;
+  ): Promise<Result<DippedSmartCardAuthTypes.AuthStatus, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
+      return this.authStatus;
+    });
   }
 
   async checkPin(
     machineState: DippedSmartCardAuthMachineState,
     input: { pin: string }
-  ): Promise<void> {
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
-    if (this.isLockedOut()) {
-      return;
-    }
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
+      if (this.isLockedOut()) {
+        return;
+      }
 
-    let checkPinResponse: CheckPinResponseExtended;
-    try {
-      checkPinResponse = await this.card.checkPin(input.pin);
-    } catch (error) {
-      const userRole =
-        'user' in this.authStatus ? this.authStatus.user.role : 'unknown';
-      await this.logger.log(LogEventId.AuthPinEntry, userRole, {
-        disposition: LogDispositionStandardTypes.Failure,
-        message: `Error checking PIN: ${extractErrorMessage(error)}`,
+      let checkPinResult: Result<CheckPinResponseExtended, SmartCardError> =
+        await this.card.checkPin(input.pin);
+      if (checkPinResult.isErr()) {
+        const error = checkPinResult.err();
+        const userRole =
+          'user' in this.authStatus ? this.authStatus.user.role : 'unknown';
+        await this.logger.log(LogEventId.AuthPinEntry, userRole, {
+          disposition: LogDispositionStandardTypes.Failure,
+          message: `Error checking PIN: ${extractErrorMessage(error)}`,
+        });
+        checkPinResult = ok({ response: 'error' });
+      }
+      await this.updateAuthStatus(machineState, {
+        type: 'check_pin',
+        checkPinResponse: checkPinResult.okOrElse(ret),
       });
-      checkPinResponse = { response: 'error' };
-    }
-    await this.updateAuthStatus(machineState, {
-      type: 'check_pin',
-      checkPinResponse,
     });
   }
 
@@ -233,11 +244,15 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
   async updateSessionExpiry(
     machineState: DippedSmartCardAuthMachineState,
     input: { sessionExpiresAt: Date }
-  ): Promise<void> {
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
-    await this.updateAuthStatus(machineState, {
-      type: 'update_session_expiry',
-      sessionExpiresAt: input.sessionExpiresAt,
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
+      await this.updateAuthStatus(machineState, {
+        type: 'update_session_expiry',
+        sessionExpiresAt: input.sessionExpiresAt,
+      });
     });
   }
 
@@ -247,7 +262,7 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
       | { userRole: 'system_administrator' }
       | { userRole: 'election_manager' }
       | { userRole: 'poll_worker' }
-  ): Promise<Result<{ pin?: string }, Error>> {
+  ): Promise<Result<{ pin?: string }, SmartCardError>> {
     await this.logger.log(
       LogEventId.SmartCardProgramInit,
       'system_administrator',
@@ -256,10 +271,10 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
         programmedUserRole: input.userRole,
       }
     );
-    let pin: string | undefined;
-    try {
-      pin = await this.programCardBase(machineState, input);
-    } catch (error) {
+    const programResult = await this.programCardBase(machineState, input);
+
+    if (programResult.isErr()) {
+      const error = programResult.err();
       await this.logger.log(
         LogEventId.SmartCardProgramComplete,
         'system_administrator',
@@ -271,23 +286,20 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
           programmedUserRole: input.userRole,
         }
       );
-      return err(new Error('Error programming card'));
+      return err(
+        SmartCardError(
+          SmartCardErrorCode.UnknownError,
+          'Error programming card'
+        )
+      );
     }
-    await this.logger.log(
-      LogEventId.SmartCardProgramComplete,
-      'system_administrator',
-      {
-        disposition: LogDispositionStandardTypes.Success,
-        message: 'Successfully programmed smart card.',
-        programmedUserRole: input.userRole,
-      }
-    );
-    return ok({ pin });
+
+    return ok({ pin: programResult.ok() });
   }
 
   async unprogramCard(
     machineState: DippedSmartCardAuthMachineState
-  ): Promise<Result<void, Error>> {
+  ): Promise<Result<void, SmartCardError>> {
     const programmedUserRole =
       ('programmableCard' in this.authStatus &&
         'programmedUser' in this.authStatus.programmableCard &&
@@ -302,9 +314,11 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
         programmedUserRole,
       }
     );
-    try {
-      await this.unprogramCardBase(machineState);
-    } catch (error) {
+
+    const unprogramResult = await this.unprogramCardBase(machineState);
+
+    if (unprogramResult.isErr()) {
+      const error = unprogramResult.err();
       await this.logger.log(
         LogEventId.SmartCardUnprogramComplete,
         'system_administrator',
@@ -316,8 +330,14 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
           programmedUserRole,
         }
       );
-      return err(new Error('Error unprogramming card'));
+      return err(
+        SmartCardError(
+          SmartCardErrorCode.UnknownError,
+          'Error unprogramming card'
+        )
+      );
     }
+
     await this.logger.log(
       LogEventId.SmartCardUnprogramComplete,
       'system_administrator',
@@ -336,77 +356,115 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
       | { userRole: 'system_administrator' }
       | { userRole: 'election_manager' }
       | { userRole: 'poll_worker' }
-  ): Promise<string | undefined> {
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
-    if (this.authStatus.status !== 'logged_in') {
-      throw new Error('User is not logged in');
-    }
-    if (this.authStatus.user.role !== 'system_administrator') {
-      throw new Error('User is not a system administrator');
-    }
+  ): Promise<Result<Optional<string>, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
+      if (this.authStatus.status !== 'logged_in') {
+        return err(
+          SmartCardError(
+            SmartCardErrorCode.AuthenticationError,
+            'User is not logged in'
+          )
+        );
+      }
+      if (this.authStatus.user.role !== 'system_administrator') {
+        return err(
+          SmartCardError(
+            SmartCardErrorCode.AuthorizationError,
+            'User is not a system administrator'
+          )
+        );
+      }
 
-    const { arePollWorkerCardPinsEnabled, electionHash, jurisdiction } =
-      machineState;
-    assert(jurisdiction !== undefined);
-    const pin = generatePin();
-    switch (input.userRole) {
-      case 'system_administrator': {
-        await this.card.program({
-          user: { role: 'system_administrator', jurisdiction },
-          pin,
-        });
-        return pin;
-      }
-      case 'election_manager': {
-        assert(electionHash !== undefined);
-        await this.card.program({
-          user: { role: 'election_manager', jurisdiction, electionHash },
-          pin,
-        });
-        return pin;
-      }
-      case 'poll_worker': {
-        assert(electionHash !== undefined);
-        if (arePollWorkerCardPinsEnabled) {
-          await this.card.program({
-            user: { role: 'poll_worker', jurisdiction, electionHash },
-            pin,
-          });
+      const { arePollWorkerCardPinsEnabled, electionHash, jurisdiction } =
+        machineState;
+      assert(jurisdiction !== undefined);
+      const pin = generatePin();
+      switch (input.userRole) {
+        case 'system_administrator': {
+          (
+            await this.card.program({
+              user: { role: 'system_administrator', jurisdiction },
+              pin,
+            })
+          ).okOrElse(ret);
           return pin;
         }
-        await this.card.program({
-          user: { role: 'poll_worker', jurisdiction, electionHash },
-        });
-        return undefined;
+        case 'election_manager': {
+          assert(electionHash !== undefined);
+          (
+            await this.card.program({
+              user: { role: 'election_manager', jurisdiction, electionHash },
+              pin,
+            })
+          ).okOrElse(ret);
+          return pin;
+        }
+        case 'poll_worker': {
+          assert(electionHash !== undefined);
+          if (arePollWorkerCardPinsEnabled) {
+            (
+              await this.card.program({
+                user: { role: 'poll_worker', jurisdiction, electionHash },
+                pin,
+              })
+            ).okOrElse(ret);
+            return pin;
+          }
+          (
+            await this.card.program({
+              user: { role: 'poll_worker', jurisdiction, electionHash },
+            })
+          ).okOrElse(ret);
+          return undefined;
+        }
+        /* istanbul ignore next: Compile-time check for completeness */
+        default: {
+          throwIllegalValue(input, 'userRole');
+        }
       }
-      /* istanbul ignore next: Compile-time check for completeness */
-      default: {
-        throwIllegalValue(input, 'userRole');
-      }
-    }
+    });
   }
 
   private async unprogramCardBase(
     machineState: DippedSmartCardAuthMachineState
-  ): Promise<void> {
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
-    if (this.authStatus.status !== 'logged_in') {
-      throw new Error('User is not logged in');
-    }
-    if (this.authStatus.user.role !== 'system_administrator') {
-      throw new Error('User is not a system administrator');
-    }
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
+      if (this.authStatus.status !== 'logged_in') {
+        return err(
+          SmartCardError(
+            SmartCardErrorCode.AuthenticationError,
+            'User is not logged in'
+          )
+        );
+      }
+      if (this.authStatus.user.role !== 'system_administrator') {
+        return err(
+          SmartCardError(
+            SmartCardErrorCode.AuthorizationError,
+            'User is not a system administrator'
+          )
+        );
+      }
 
-    await this.card.unprogram();
+      (await this.card.unprogram()).okOrElse(ret);
+    });
   }
 
   private async checkCardReaderAndUpdateAuthStatus(
     machineState: DippedSmartCardAuthMachineState
-  ): Promise<void> {
-    const cardStatus = await this.card.getCardStatus();
-    await this.updateAuthStatus(machineState, {
-      type: 'check_card_reader',
-      cardStatus,
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      const cardStatus = (await this.card.getCardStatus()).okOrElse(ret);
+      await this.updateAuthStatus(machineState, {
+        type: 'check_card_reader',
+        cardStatus,
+      });
     });
   }
 

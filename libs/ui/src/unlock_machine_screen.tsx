@@ -14,6 +14,7 @@ import { P } from './typography';
 import { Icons } from './icons';
 import { Button } from './button';
 import { PinLength } from './utils/pin_length';
+import { usePinEntry } from './hooks/use_pin_entry';
 
 const NumberPadWrapper = styled.div`
   display: flex;
@@ -53,48 +54,38 @@ export function UnlockMachineScreen({
   pinLength,
   grayBackground,
 }: Props): JSX.Element {
-  const [currentPin, setCurrentPin] = useState('');
+  const pinEntry = usePinEntry({ pinLength });
   const [isCheckingPin, setIsCheckingPin] = useState(false);
   const now = useNow().toJSDate();
 
   const submitPin = useCallback(
-    async (pin) => {
+    async (pin: string) => {
       setIsCheckingPin(true);
       await checkPin(pin);
-      setCurrentPin('');
+      pinEntry.reset();
       setIsCheckingPin(false);
     },
-    [checkPin]
+    [checkPin, pinEntry]
   );
 
   const handleNumberEntry = useCallback(
     async (digit: number) => {
-      const pin = `${currentPin}${digit}`.slice(0, pinLength.max);
-      setCurrentPin(pin);
+      const pin = pinEntry.handleDigit(digit);
       if (pin.length === pinLength.max) {
         await submitPin(pin);
       }
     },
-    [currentPin, pinLength.max, submitPin]
+    [pinEntry, pinLength.max, submitPin]
   );
 
-  const handleBackspace = useCallback(() => {
-    setCurrentPin((prev) => prev.slice(0, -1));
-  }, []);
-
-  const handleClear = useCallback(() => {
-    setCurrentPin('');
-  }, []);
-
-  const currentPinDisplayString = '•'
-    .repeat(currentPin.length)
-    .padEnd(pinLength.max, '-')
-    .split('')
-    .join(' ');
+  const handleEnter = useCallback(async () => {
+    await submitPin(pinEntry.current);
+  }, [pinEntry, submitPin]);
 
   const isLockedOut = Boolean(
     auth.lockedOutUntil && now < new Date(auth.lockedOutUntil)
   );
+  const pinEntryDisabled = isCheckingPin || isLockedOut;
 
   let primarySentence: JSX.Element = <P>Enter the card PIN to unlock.</P>;
   if (auth.error) {
@@ -128,20 +119,17 @@ export function UnlockMachineScreen({
           maxWidth={false}
         >
           {primarySentence}
-          <EnteredCode>{currentPinDisplayString}</EnteredCode>
+          <EnteredCode>{pinEntry.display}</EnteredCode>
           <NumberPadWrapper>
             <NumberPad
-              disabled={isCheckingPin || isLockedOut}
+              disabled={pinEntryDisabled}
               onButtonPress={handleNumberEntry}
-              onBackspace={handleBackspace}
-              onClear={handleClear}
+              onBackspace={pinEntry.handleBackspace}
+              onEnter={handleEnter}
+              onClear={pinEntry.reset}
             />
             {!pinLength.isFixed && (
-              <Button
-                onPress={submitPin}
-                disabled={isCheckingPin || isLockedOut}
-                value={currentPin}
-              >
+              <Button onPress={handleEnter} disabled={pinEntryDisabled}>
                 Enter
               </Button>
             )}

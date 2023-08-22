@@ -1,6 +1,12 @@
 import { Buffer } from 'buffer';
 import fs from 'fs';
-import { assert, Optional, throwIllegalValue } from '@votingworks/basics';
+import {
+  assert,
+  ok,
+  Optional,
+  Result,
+  throwIllegalValue,
+} from '@votingworks/basics';
 import {
   Byte,
   ElectionManagerUser,
@@ -9,6 +15,7 @@ import {
 } from '@votingworks/types';
 
 import { Card, CardStatus, CheckPinResponse } from './card';
+import { SmartCardError } from './error';
 
 type WriteFileFn = (filePath: string, fileContents: Buffer) => void;
 
@@ -134,12 +141,12 @@ export class MockFileCard implements Card {
     initializeMockFile();
   }
 
-  getCardStatus(): Promise<CardStatus> {
+  getCardStatus(): Promise<Result<CardStatus, SmartCardError>> {
     const { cardStatus } = readFromMockFile();
-    return Promise.resolve(cardStatus);
+    return Promise.resolve(ok(cardStatus));
   }
 
-  checkPin(pin: string): Promise<CheckPinResponse> {
+  checkPin(pin: string): Promise<Result<CheckPinResponse, SmartCardError>> {
     const mockFileContents = readFromMockFile();
     const { cardStatus } = mockFileContents;
     assert(
@@ -147,12 +154,14 @@ export class MockFileCard implements Card {
     );
     if (pin === mockFileContents.pin) {
       updateNumIncorrectPinAttempts(mockFileContents, undefined);
-      return Promise.resolve({ response: 'correct' });
+      return Promise.resolve(ok({ response: 'correct' }));
     }
     const numIncorrectPinAttempts =
       (cardStatus.cardDetails.numIncorrectPinAttempts ?? 0) + 1;
     updateNumIncorrectPinAttempts(mockFileContents, numIncorrectPinAttempts);
-    return Promise.resolve({ response: 'incorrect', numIncorrectPinAttempts });
+    return Promise.resolve(
+      ok({ response: 'incorrect', numIncorrectPinAttempts })
+    );
   }
 
   generateSignature(
@@ -160,12 +169,14 @@ export class MockFileCard implements Card {
     message: Buffer,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     options: { privateKeyId: Byte; pin?: string }
-  ): Promise<Buffer> {
+  ): Promise<Result<Buffer, SmartCardError>> {
     throw new Error('Method not implemented.');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getCertificate(options: { objectId: Buffer }): Promise<Buffer> {
+  getCertificate(options: {
+    objectId: Buffer;
+  }): Promise<Result<Buffer, SmartCardError>> {
     throw new Error('Method not implemented.');
   }
 
@@ -174,7 +185,7 @@ export class MockFileCard implements Card {
       | { user: SystemAdministratorUser; pin: string }
       | { user: ElectionManagerUser; pin: string }
       | { user: PollWorkerUser; pin?: string }
-  ): Promise<void> {
+  ): Promise<Result<void, SmartCardError>> {
     const { user, pin } = input;
     const hasPin = pin !== undefined;
 
@@ -213,40 +224,40 @@ export class MockFileCard implements Card {
       default:
         throwIllegalValue(user, 'role');
     }
-    return Promise.resolve();
+    return Promise.resolve(ok());
   }
 
-  unprogram(): Promise<void> {
+  unprogram(): Promise<Result<void, SmartCardError>> {
     writeToMockFile({
       cardStatus: {
         status: 'ready',
         cardDetails: undefined,
       },
     });
-    return Promise.resolve();
+    return Promise.resolve(ok());
   }
 
-  readData(): Promise<Buffer> {
+  readData(): Promise<Result<Buffer, SmartCardError>> {
     const { data } = readFromMockFile();
-    return Promise.resolve(data ?? Buffer.from([]));
+    return Promise.resolve(ok(data ?? Buffer.from([])));
   }
 
-  writeData(data: Buffer): Promise<void> {
+  writeData(data: Buffer): Promise<Result<void, SmartCardError>> {
     const { cardStatus, pin } = readFromMockFile();
     writeToMockFile({
       cardStatus,
       data,
       pin,
     });
-    return Promise.resolve();
+    return Promise.resolve(ok());
   }
 
-  clearData(): Promise<void> {
+  clearData(): Promise<Result<void, SmartCardError>> {
     const { cardStatus, pin } = readFromMockFile();
     writeToMockFile({
       cardStatus,
       pin,
     });
-    return Promise.resolve();
+    return Promise.resolve(ok());
   }
 }

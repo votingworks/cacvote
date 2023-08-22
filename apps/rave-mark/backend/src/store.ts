@@ -613,6 +613,110 @@ export class Store {
     return id;
   }
 
+  /**
+   * Migrates a pending ballot print to a printed ballot.
+   */
+  markBallotPrinted({
+    ballotPendingPrintId,
+  }: {
+    ballotPendingPrintId: ClientId;
+  }): ClientId {
+    const id = ClientId();
+    const row = this.client.one(
+      `
+      select
+        common_access_card_id as commonAccessCardId,
+        common_access_card_certificate as commonAccessCardCertificate,
+        (select client_id from registrations where registrations.id = ballots_pending_print.registration_id) as registrationId,
+        cast_vote_record as castVoteRecord,
+        cast_vote_record_signature as castVoteRecordSignature
+      from ballots_pending_print
+      where id = ?
+      `,
+      ballotPendingPrintId
+    ) as Optional<{
+      commonAccessCardId: string;
+      commonAccessCardCertificate: Buffer;
+      registrationId: ClientId;
+      castVoteRecord: Buffer;
+      castVoteRecordSignature: Buffer;
+    }>;
+    assert(
+      row,
+      `no ballot pending print found with ID ${ballotPendingPrintId}`
+    );
+
+    const registration = this.getRegistration({ clientId: row.registrationId });
+    assert(
+      registration,
+      `no registration found with client ID ${row.registrationId}`
+    );
+
+    this.client.transaction(() => {
+      this.client.run(
+        `delete from ballots_pending_print where id = ?`,
+        ballotPendingPrintId
+      );
+
+      this.createPrintedBallot({
+        id,
+        registrationId: row.registrationId,
+        castVoteRecord: row.castVoteRecord,
+        castVoteRecordSignature: row.castVoteRecordSignature,
+        commonAccessCardCertificate: row.commonAccessCardCertificate,
+      });
+    });
+
+    return id;
+  }
+
+  /**
+   * Records a cast ballot for a voter registration to be printed.
+   */
+  createBallotPendingPrint({
+    id,
+    registrationId,
+    commonAccessCardCertificate,
+    castVoteRecord,
+    castVoteRecordSignature,
+  }: {
+    id: ClientId;
+    registrationId: ClientId;
+    commonAccessCardCertificate: Buffer;
+    castVoteRecord: Buffer;
+    castVoteRecordSignature: Buffer;
+  }): ClientId {
+    const registration = this.getRegistration({ clientId: registrationId });
+    assert(
+      registration,
+      `no registration found with client ID ${registrationId}`
+    );
+
+    // TODO: validate votes against election definition
+    this.client.run(
+      `
+      insert or replace into ballots_pending_print (
+        id,
+        common_access_card_id,
+        common_access_card_certificate,
+        registration_id,
+        cast_vote_record,
+        cast_vote_record_signature
+      ) values (
+        ?, ?, ?, ?, ?, ?
+      )
+      `,
+      id,
+      registration.commonAccessCardId,
+      commonAccessCardCertificate,
+      registration.id,
+      castVoteRecord,
+      castVoteRecordSignature
+    );
+
+    return id;
+  }
+
   getRegistration({
     clientId,
   }: {

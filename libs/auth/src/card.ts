@@ -6,7 +6,8 @@ import {
   RaveVoterUser,
   SystemAdministratorUser,
 } from '@votingworks/types';
-import { throwIllegalValue } from '@votingworks/basics';
+import { Result, throwIllegalValue } from '@votingworks/basics';
+import { SmartCardError } from './error';
 
 interface SystemAdministratorCardDetails {
   user: SystemAdministratorUser;
@@ -134,24 +135,26 @@ export type CheckPinResponse =
  * The API for a smart card
  */
 export interface Card {
-  getCardStatus(): Promise<CardStatus>;
+  getCardStatus(): Promise<Result<CardStatus, SmartCardError>>;
 
-  checkPin(pin: string): Promise<CheckPinResponse>;
+  checkPin(pin: string): Promise<Result<CheckPinResponse, SmartCardError>>;
   generateSignature(
     message: Buffer,
     options: { privateKeyId: Byte; pin?: string }
-  ): Promise<Buffer>;
-  getCertificate(options: { objectId: Buffer }): Promise<Buffer>;
+  ): Promise<Result<Buffer, SmartCardError>>;
+  getCertificate(options: {
+    objectId: Buffer;
+  }): Promise<Result<Buffer, SmartCardError>>;
 
   program(
     input:
       | { user: SystemAdministratorUser; pin: string }
       | { user: ElectionManagerUser; pin: string }
       | { user: PollWorkerUser; pin?: string }
-  ): Promise<void>;
-  unprogram(): Promise<void>;
+  ): Promise<Result<void, SmartCardError>>;
+  unprogram(): Promise<Result<void, SmartCardError>>;
 
-  readData(): Promise<Buffer>;
-  writeData(data: Buffer): Promise<void>;
-  clearData(): Promise<void>;
+  readData(): Promise<Result<Buffer, SmartCardError>>;
+  writeData(data: Buffer): Promise<Result<void, SmartCardError>>;
+  clearData(): Promise<Result<void, SmartCardError>>;
 }

@@ -1,11 +1,11 @@
 import { assert, extractErrorMessage } from '@votingworks/basics';
 import { generatePin, hyphenatePin } from '@votingworks/utils';
 
-import { ResponseApduError } from '../src/apdu';
 import { getRequiredEnvVar } from '../src/env_vars';
 import { JavaCard } from '../src/java_card';
 import { DEV_JURISDICTION } from '../src/jurisdictions';
 import { waitForReadyCardStatus } from './utils';
+import { SmartCardErrorCode } from '../src';
 
 const nodeEnv = getRequiredEnvVar('NODE_ENV');
 assert(
@@ -32,18 +32,17 @@ async function programSystemAdministratorJavaCard(): Promise<string> {
   await waitForReadyCardStatus(card);
 
   const pin = isProduction ? generatePin() : '000000';
-  try {
-    await card.program({
-      user: { role: 'system_administrator', jurisdiction },
-      pin,
-    });
-  } catch (error) {
-    if (error instanceof ResponseApduError) {
-      throw new Error(
-        `${error.message}\n${initialJavaCardConfigurationScriptReminder}`
-      );
-    }
-    throw error;
+  const programResult = await card.program({
+    user: { role: 'system_administrator', jurisdiction },
+    pin,
+  });
+  if (programResult.isErr()) {
+    const error = programResult.err();
+    throw error.code === SmartCardErrorCode.ResponseError
+      ? new Error(
+          `${error.error.message}\n${initialJavaCardConfigurationScriptReminder}`
+        )
+      : error;
   }
   return pin;
 }

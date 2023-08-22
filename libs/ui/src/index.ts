@@ -23,6 +23,7 @@ export * from './hooks/use_devices';
 export * from './hooks/use_lock';
 export * from './hooks/use_mounted_state';
 export * from './hooks/use_now';
+export * from './hooks/use_pin_entry';
 export * from './hooks/use_previous';
 export * from './hooks/use_screen_info';
 export * from './hooks/use_stored_state';

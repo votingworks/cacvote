@@ -23,7 +23,7 @@ import { isDeepStrictEqual } from 'util';
 import { IS_INTEGRATION_TEST } from './globals';
 import { RaveServerClient } from './rave_server_client';
 import { AuthStatus } from './types/auth';
-import { ClientId, RegistrationRequest } from './types/db';
+import { ClientId, ClientIdSchema, RegistrationRequest } from './types/db';
 import { Workspace } from './workspace';
 
 function constructAuthMachineState(
@@ -115,9 +115,9 @@ function buildApi({
   raveServerClient: RaveServerClient;
 }) {
   async function getAuthStatus(): Promise<AuthStatus> {
-    const authStatus = await auth.getAuthStatus(
-      constructAuthMachineState(workspace)
-    );
+    const authStatus = (
+      await auth.getAuthStatus(constructAuthMachineState(workspace))
+    ).unsafeUnwrap();
     const isRaveAdmin =
       authStatus.status === 'logged_in' &&
       authStatus.user.role === 'rave_voter' &&
@@ -270,7 +270,7 @@ function buildApi({
       };
     },
 
-    async saveVotes(input: { votes: VotesDict }) {
+    async createBallotPendingPrint(input: { votes: VotesDict; pin: string }) {
       const authStatus = await getAuthStatus();
 
       if (
@@ -322,21 +322,43 @@ function buildApi({
         ballotMarkingMode: 'machine',
       });
 
-      const commonAccessCardCertificate = await auth.getCertificate({
-        objectId: CARD_VX_ADMIN_CERT.OBJECT_ID,
-      });
+      const commonAccessCardCertificate = (
+        await auth.getCertificate({
+          objectId: CARD_VX_ADMIN_CERT.OBJECT_ID,
+        })
+      ).unsafeUnwrap();
       const castVoteRecordJson = JSON.stringify(castVoteRecord);
-      const signature = await auth.generateSignature(
-        Buffer.from(castVoteRecordJson, 'utf-8'),
-        { privateKeyId: CARD_VX_ADMIN_CERT.PRIVATE_KEY_ID, pin: '77777777' }
-      );
+      const signature = (
+        await auth.generateSignature(Buffer.from(castVoteRecordJson, 'utf-8'), {
+          privateKeyId: CARD_VX_ADMIN_CERT.PRIVATE_KEY_ID,
+          pin: input.pin,
+        })
+      ).unsafeUnwrap();
 
-      workspace.store.createPrintedBallot({
+      return workspace.store.createBallotPendingPrint({
         id: ballotId,
         registrationId: registration.clientId,
         commonAccessCardCertificate,
         castVoteRecord: Buffer.from(castVoteRecordJson),
         castVoteRecordSignature: signature,
+      });
+    },
+
+    async markBallotPrinted(input: { ballotPendingPrintId: Id }) {
+      const authStatus = await getAuthStatus();
+
+      if (
+        authStatus.status !== 'logged_in' ||
+        authStatus.user.role !== 'rave_voter'
+      ) {
+        throw new Error('Not logged in');
+      }
+
+      workspace.store.markBallotPrinted({
+        ballotPendingPrintId: unsafeParse(
+          ClientIdSchema,
+          input.ballotPendingPrintId
+        ),
       });
     },
 

@@ -50,7 +50,7 @@ export function ReviewScreen({
       </Main>
       <ButtonFooter>
         <Button onPress={onConfirm} variant="primary">
-          Print My Ballot
+          Cast My Ballot
         </Button>
       </ButtonFooter>
     </Screen>

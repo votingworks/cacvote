@@ -101,7 +101,6 @@ export class CommandApdu {
   /** Raw Data */
   private readonly rawData: Buffer;
 
-
   constructor(input: {
     cla?: { chained?: boolean; secure?: boolean };
     ins: Byte;
@@ -134,12 +133,11 @@ export class CommandApdu {
         Buffer.from([this.cla, this.ins, this.p1, this.p2]),
         this.rawData,
       ]);
-    } else {
-      return Buffer.concat([
-        Buffer.from([this.cla, this.ins, this.p1, this.p2, this.lc]),
-        this.data,
-      ]);
     }
+    return Buffer.concat([
+      Buffer.from([this.cla, this.ins, this.p1, this.p2, this.lc]),
+      this.data,
+    ]);
   }
 
   asHexString(separator?: string): string {
@@ -292,7 +290,7 @@ export class ResponseApduError extends Error {
     const [sw1, sw2] = statusWord;
     super(
       'Received response APDU with error status word: ' +
-      `${asHexString(sw1)} ${asHexString(sw2)}`
+        `${asHexString(sw1)} ${asHexString(sw2)}`
     );
     this.sw1 = sw1;
     this.sw2 = sw2;

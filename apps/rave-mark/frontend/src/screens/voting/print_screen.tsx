@@ -3,10 +3,12 @@ import { PrintPage as MarkFlowPrintPage } from '@votingworks/mark-flow-ui';
 import {
   BallotStyleId,
   ElectionDefinition,
+  Id,
   PrecinctId,
   VotesDict,
 } from '@votingworks/types';
-import { saveVotes } from '../../api';
+import { sleep } from '@votingworks/basics';
+import { markBallotPrinted } from '../../api';
 
 export interface PrintScreenProps {
   electionDefinition: ElectionDefinition;
@@ -15,6 +17,7 @@ export interface PrintScreenProps {
   votes: VotesDict;
   generateBallotId: () => string;
   isLiveMode: boolean;
+  ballotPendingPrintId: Id;
 }
 
 export function PrintScreen({
@@ -24,15 +27,21 @@ export function PrintScreen({
   votes,
   generateBallotId,
   isLiveMode,
+  ballotPendingPrintId,
 }: PrintScreenProps): JSX.Element {
   const printTimer = useRef<number>();
-  const saveVotesMutation = saveVotes.useMutation();
+  const markBallotPrintedMutation = markBallotPrinted.useMutation();
 
   useEffect(() => {
     return () => {
       window.clearTimeout(printTimer.current);
     };
   }, []);
+
+  async function onPrintStarted() {
+    await sleep(process.env.IS_INTEGRATION_TEST === 'true' ? 500 : 5000);
+    markBallotPrintedMutation.mutate({ ballotPendingPrintId });
+  }
 
   return (
     <MarkFlowPrintPage
@@ -44,9 +53,7 @@ export function PrintScreen({
       votes={votes}
       onPrintStarted={() => {
         printTimer.current = window.setTimeout(
-          () => {
-            saveVotesMutation.mutate({ votes });
-          },
+          onPrintStarted,
           process.env.IS_INTEGRATION_TEST === 'true' ? 500 : 5000
         );
       }}

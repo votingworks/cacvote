@@ -8,6 +8,7 @@ import {
   StartingCardLockoutDurationSeconds,
   SystemAdministratorUser,
 } from '@votingworks/types';
+import { SmartCardError } from './error';
 
 /**
  * The API for a dipped smart card auth instance, "dipped" meaning that the card needs to be
@@ -16,17 +17,17 @@ import {
 export interface DippedSmartCardAuthApi {
   getAuthStatus(
     machineState: DippedSmartCardAuthMachineState
-  ): Promise<DippedSmartCardAuth.AuthStatus>;
+  ): Promise<Result<DippedSmartCardAuth.AuthStatus, SmartCardError>>;
 
   checkPin(
     machineState: DippedSmartCardAuthMachineState,
     input: { pin: string }
-  ): Promise<void>;
+  ): Promise<Result<void, SmartCardError>>;
   logOut(machineState: DippedSmartCardAuthMachineState): Promise<void>;
   updateSessionExpiry(
     machineState: DippedSmartCardAuthMachineState,
     input: { sessionExpiresAt: Date }
-  ): Promise<void>;
+  ): Promise<Result<void, SmartCardError>>;
 
   programCard(
     machineState: DippedSmartCardAuthMachineState,
@@ -34,10 +35,10 @@ export interface DippedSmartCardAuthApi {
       | { userRole: SystemAdministratorUser['role'] }
       | { userRole: ElectionManagerUser['role'] }
       | { userRole: PollWorkerUser['role'] }
-  ): Promise<Result<{ pin?: string }, Error>>;
+  ): Promise<Result<{ pin?: string }, SmartCardError>>;
   unprogramCard(
     machineState: DippedSmartCardAuthMachineState
-  ): Promise<Result<void, Error>>;
+  ): Promise<Result<void, SmartCardError>>;
 }
 
 /**

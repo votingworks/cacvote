@@ -82,7 +82,7 @@ const electionManagerUser = fakeElectionManagerUser({
 const pollWorkerUser = fakePollWorkerUser({ jurisdiction, electionHash });
 
 function mockCardStatus(cardStatus: CardStatus) {
-  mockCard.getCardStatus.expectRepeatedCallsWith().resolves(cardStatus);
+  mockCard.getCardStatus.expectRepeatedCallsWith().resolves(ok(cardStatus));
 }
 
 async function logInAsSystemAdministrator(
@@ -99,8 +99,8 @@ async function logInAsSystemAdministrator(
     status: 'checking_pin',
     user: systemAdministratorUser,
   });
-  mockCard.checkPin.expectCallWith(pin).resolves({ response: 'correct' });
-  await auth.checkPin(machineState, { pin });
+  mockCard.checkPin.expectCallWith(pin).resolves(ok({ response: 'correct' }));
+  (await auth.checkPin(machineState, { pin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(machineState)).toEqual({
     status: 'remove_card',
     user: systemAdministratorUser,
@@ -130,8 +130,8 @@ async function logInAsElectionManager(
     status: 'checking_pin',
     user: electionManagerUser,
   });
-  mockCard.checkPin.expectCallWith(pin).resolves({ response: 'correct' });
-  await auth.checkPin(machineState, { pin });
+  mockCard.checkPin.expectCallWith(pin).resolves(ok({ response: 'correct' }));
+  (await auth.checkPin(machineState, { pin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(machineState)).toEqual({
     status: 'remove_card',
     user: electionManagerUser,
@@ -287,8 +287,10 @@ test.each<{
 
     mockCard.checkPin
       .expectCallWith(wrongPin)
-      .resolves({ response: 'incorrect', numIncorrectPinAttempts: 1 });
-    await auth.checkPin(defaultMachineState, { pin: wrongPin });
+      .resolves(ok({ response: 'incorrect', numIncorrectPinAttempts: 1 }));
+    (
+      await auth.checkPin(defaultMachineState, { pin: wrongPin })
+    ).unsafeUnwrap();
     expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
       status: 'checking_pin',
       user,
@@ -305,8 +307,8 @@ test.each<{
       }
     );
 
-    mockCard.checkPin.expectCallWith(pin).resolves({ response: 'correct' });
-    await auth.checkPin(defaultMachineState, { pin });
+    mockCard.checkPin.expectCallWith(pin).resolves(ok({ response: 'correct' }));
+    (await auth.checkPin(defaultMachineState, { pin })).unsafeUnwrap();
     expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
       status: 'remove_card',
       user,
@@ -383,8 +385,8 @@ test('Card lockout', async () => {
 
   mockCard.checkPin
     .expectCallWith(wrongPin)
-    .resolves({ response: 'incorrect', numIncorrectPinAttempts: 3 });
-  await auth.checkPin(machineState, { pin: wrongPin });
+    .resolves(ok({ response: 'incorrect', numIncorrectPinAttempts: 3 }));
+  (await auth.checkPin(machineState, { pin: wrongPin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(machineState)).toEqual({
     status: 'checking_pin',
     user: electionManagerUser,
@@ -416,7 +418,7 @@ test('Card lockout', async () => {
   });
 
   // Expect checkPin call to be ignored when locked out
-  await auth.checkPin(machineState, { pin });
+  (await auth.checkPin(machineState, { pin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(machineState)).toEqual({
     status: 'checking_pin',
     user: electionManagerUser,
@@ -430,8 +432,8 @@ test('Card lockout', async () => {
   // subsequent incorrect PIN attempts
   mockCard.checkPin
     .expectCallWith(wrongPin)
-    .resolves({ response: 'incorrect', numIncorrectPinAttempts: 4 });
-  await auth.checkPin(machineState, { pin: wrongPin });
+    .resolves(ok({ response: 'incorrect', numIncorrectPinAttempts: 4 }));
+  (await auth.checkPin(machineState, { pin: wrongPin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(machineState)).toEqual({
     status: 'checking_pin',
     user: electionManagerUser,
@@ -484,9 +486,11 @@ test('Updating session expiry', async () => {
     sessionExpiresAt: mockTime.plus({ hours: 12 }).toJSDate(),
   });
 
-  await auth.updateSessionExpiry(defaultMachineState, {
-    sessionExpiresAt: mockTime.plus({ seconds: 60 }).toJSDate(),
-  });
+  (
+    await auth.updateSessionExpiry(defaultMachineState, {
+      sessionExpiresAt: mockTime.plus({ seconds: 60 }).toJSDate(),
+    })
+  ).unsafeUnwrap();
   expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
     status: 'logged_in',
     user: electionManagerUser,
@@ -753,7 +757,7 @@ test.each<{
       programmableCard: { status: 'ready', programmedUser: undefined },
     });
 
-    mockCard.program.expectCallWith(expectedCardProgramInput).resolves();
+    mockCard.program.expectCallWith(expectedCardProgramInput).resolves(ok());
     expect(await auth.programCard(machineState, input)).toEqual(
       expectedProgramResult
     );
@@ -790,7 +794,7 @@ test.each<{
       programmableCard: { status: 'ready', programmedUser },
     });
 
-    mockCard.unprogram.expectCallWith().resolves();
+    mockCard.unprogram.expectCallWith().resolves(ok());
     expect(await auth.unprogramCard(machineState)).toEqual(ok());
     expect(mockLogger.log).toHaveBeenCalledTimes(4);
     expect(mockLogger.log).toHaveBeenNthCalledWith(
@@ -896,7 +900,7 @@ test('Checking PIN error handling', async () => {
   });
 
   mockCard.checkPin.expectCallWith(pin).throws(new Error('Whoa!'));
-  await auth.checkPin(defaultMachineState, { pin });
+  (await auth.checkPin(defaultMachineState, { pin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
     status: 'checking_pin',
     user: electionManagerUser,
@@ -916,8 +920,8 @@ test('Checking PIN error handling', async () => {
   // Check that "successfully" entering an incorrect PIN clears the error state
   mockCard.checkPin
     .expectCallWith(wrongPin)
-    .resolves({ response: 'incorrect', numIncorrectPinAttempts: 1 });
-  await auth.checkPin(defaultMachineState, { pin: wrongPin });
+    .resolves(ok({ response: 'incorrect', numIncorrectPinAttempts: 1 }));
+  (await auth.checkPin(defaultMachineState, { pin: wrongPin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
     status: 'checking_pin',
     user: electionManagerUser,
@@ -936,7 +940,7 @@ test('Checking PIN error handling', async () => {
 
   // Check that wrong PIN entry state is maintained after an error
   mockCard.checkPin.expectCallWith(pin).throws(new Error('Whoa!'));
-  await auth.checkPin(defaultMachineState, { pin });
+  (await auth.checkPin(defaultMachineState, { pin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
     status: 'checking_pin',
     user: electionManagerUser,
@@ -954,8 +958,8 @@ test('Checking PIN error handling', async () => {
     }
   );
 
-  mockCard.checkPin.expectCallWith(pin).resolves({ response: 'correct' });
-  await auth.checkPin(defaultMachineState, { pin });
+  mockCard.checkPin.expectCallWith(pin).resolves(ok({ response: 'correct' }));
+  (await auth.checkPin(defaultMachineState, { pin })).unsafeUnwrap();
   expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
     status: 'remove_card',
     user: electionManagerUser,
@@ -977,7 +981,7 @@ test(
     mockCard.checkPin
       .expectCallWith(pin)
       .throws(new Error('Whoa! Card no longer in reader'));
-    await auth.checkPin(defaultMachineState, { pin });
+    (await auth.checkPin(defaultMachineState, { pin })).unsafeUnwrap();
     expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
       status: 'logged_out',
       reason: 'machine_locked',
@@ -1008,9 +1012,11 @@ test('Attempting to update session expiry when not logged in', async () => {
     reason: 'machine_locked',
   });
 
-  await auth.updateSessionExpiry(defaultMachineState, {
-    sessionExpiresAt: new Date(),
-  });
+  (
+    await auth.updateSessionExpiry(defaultMachineState, {
+      sessionExpiresAt: new Date(),
+    })
+  ).unsafeUnwrap();
   expect(await auth.getAuthStatus(defaultMachineState)).toEqual({
     status: 'logged_out',
     reason: 'machine_locked',

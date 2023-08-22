@@ -10,6 +10,7 @@ import {
   PrecinctId,
   StartingCardLockoutDurationSeconds,
 } from '@votingworks/types';
+import { SmartCardError } from './error';
 
 /**
  * The API for an inserted smart card auth instance, "inserted" meaning that the card needs to be
@@ -18,17 +19,19 @@ import {
 export interface InsertedSmartCardAuthApi {
   getAuthStatus(
     machineState: InsertedSmartCardAuthMachineState
-  ): Promise<InsertedSmartCardAuth.AuthStatus>;
+  ): Promise<Result<InsertedSmartCardAuth.AuthStatus, SmartCardError>>;
 
   checkPin(
     machineState: InsertedSmartCardAuthMachineState,
     input: { pin: string }
-  ): Promise<void>;
+  ): Promise<Result<void, SmartCardError>>;
   generateSignature(
     message: Buffer,
     options: { privateKeyId: Byte; pin?: string }
-  ): Promise<Buffer>;
-  getCertificate(options: { objectId: Buffer }): Promise<Buffer>;
+  ): Promise<Result<Buffer, SmartCardError>>;
+  getCertificate(options: {
+    objectId: Buffer;
+  }): Promise<Result<Buffer, SmartCardError>>;
 
   /**
    * Though logout is typically accomplished by removing the inserted card when using inserted
@@ -39,12 +42,12 @@ export interface InsertedSmartCardAuthApi {
   updateSessionExpiry(
     machineState: InsertedSmartCardAuthMachineState,
     input: { sessionExpiresAt: Date }
-  ): Promise<void>;
+  ): Promise<Result<void, SmartCardError>>;
 
   startCardlessVoterSession(
     machineState: InsertedSmartCardAuthMachineState,
     input: { ballotStyleId: BallotStyleId; precinctId: PrecinctId }
-  ): Promise<void>;
+  ): Promise<Result<void, SmartCardError>>;
   endCardlessVoterSession(
     machineState: InsertedSmartCardAuthMachineState
   ): Promise<void>;
@@ -52,17 +55,17 @@ export interface InsertedSmartCardAuthApi {
   readCardData<T>(
     machineState: InsertedSmartCardAuthMachineState,
     input: { schema: z.ZodSchema<T> }
-  ): Promise<Result<Optional<T>, SyntaxError | z.ZodError | Error>>;
+  ): Promise<Result<Optional<T>, SyntaxError | z.ZodError | SmartCardError>>;
   readCardDataAsString(
     machineState: InsertedSmartCardAuthMachineState
-  ): Promise<Result<Optional<string>, Error>>;
+  ): Promise<Result<Optional<string>, SmartCardError>>;
   writeCardData<T>(
     machineState: InsertedSmartCardAuthMachineState,
     input: { data: T; schema: z.ZodSchema<T> }
-  ): Promise<Result<void, Error>>;
+  ): Promise<Result<void, SmartCardError>>;
   clearCardData(
     machineState: InsertedSmartCardAuthMachineState
-  ): Promise<Result<void, Error>>;
+  ): Promise<Result<void, SmartCardError>>;
 }
 
 /**

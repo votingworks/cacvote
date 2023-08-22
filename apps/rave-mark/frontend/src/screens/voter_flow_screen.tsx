@@ -1,6 +1,7 @@
 import { assert, find, throwIllegalValue } from '@votingworks/basics';
 import {
   ContestId,
+  Id,
   OptionalVote,
   VotesDict,
   getContests,
@@ -26,12 +27,23 @@ interface ReviewState {
   contestIndex?: number;
 }
 
-interface PrintState {
-  type: 'print';
+interface SubmitState {
+  type: 'submit';
   votes: VotesDict;
 }
 
-type VoterFlowState = InitState | MarkState | ReviewState | PrintState;
+interface PrintState {
+  type: 'print';
+  votes: VotesDict;
+  ballotPendingPrintId: Id;
+}
+
+type VoterFlowState =
+  | InitState
+  | MarkState
+  | ReviewState
+  | SubmitState
+  | PrintState;
 
 function RegisteredStateScreen(): JSX.Element | null {
   const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
@@ -80,7 +92,7 @@ function RegisteredStateScreen(): JSX.Element | null {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'review');
       return {
-        type: 'print',
+        type: 'submit',
         votes: prev.votes,
       };
     });
@@ -136,6 +148,17 @@ function RegisteredStateScreen(): JSX.Element | null {
     });
   }
 
+  function onSubmitted(ballotPendingPrintId: Id) {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'submit');
+      return {
+        type: 'print',
+        votes: prev.votes,
+        ballotPendingPrintId,
+      };
+    });
+  }
+
   switch (voterFlowState.type) {
     case 'init':
       return (
@@ -183,6 +206,14 @@ function RegisteredStateScreen(): JSX.Element | null {
         />
       );
 
+    case 'submit':
+      return (
+        <Voting.SubmitScreen
+          votes={voterFlowState.votes}
+          onSubmitted={onSubmitted}
+        />
+      );
+
     case 'print':
       return (
         <Voting.PrintScreen
@@ -193,6 +224,7 @@ function RegisteredStateScreen(): JSX.Element | null {
           generateBallotId={() => ''}
           // TODO: use live vs test mode?
           isLiveMode={false}
+          ballotPendingPrintId={voterFlowState.ballotPendingPrintId}
         />
       );
 
@@ -216,9 +248,8 @@ export function VoterFlowScreen(): JSX.Element | null {
     case 'registration_pending':
       return <Registration.StatusScreen />;
 
-    case 'registered': {
+    case 'registered':
       return <RegisteredStateScreen />;
-    }
 
     case 'voted':
       return <Voting.DoneScreen />;

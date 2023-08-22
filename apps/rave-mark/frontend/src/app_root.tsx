@@ -29,11 +29,8 @@ export function AppRoot(): JSX.Element {
         <UnlockMachineScreen
           auth={authStatus}
           checkPin={async (pin) => {
-            try {
-              await checkPinMutation.mutateAsync({ pin });
-            } catch {
-              // Handled by default query client error handling
-            }
+            // errors handled by default query client error handling
+            void (await checkPinMutation.mutateAsync({ pin }));
           }}
           pinLength={COMMON_ACCESS_CARD_PIN_LENGTH}
         />

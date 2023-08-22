@@ -2,7 +2,14 @@ import { Buffer } from 'buffer';
 import fs from 'fs/promises';
 import { sha256 } from 'js-sha256';
 import { v4 as uuid } from 'uuid';
-import { assert, Optional, throwIllegalValue } from '@votingworks/basics';
+import {
+  assert,
+  asyncResultBlock,
+  err,
+  ok,
+  Result,
+  throwIllegalValue,
+} from '@votingworks/basics';
 import {
   Byte,
   ElectionManagerUser,
@@ -51,6 +58,7 @@ import {
   RESET_RETRY_COUNTER,
   VERIFY,
 } from './piv';
+import { SmartCardError, SmartCardErrorCode } from './error';
 
 /**
  * The OpenFIPS201 applet ID
@@ -177,8 +185,17 @@ export class JavaCard implements Card {
             return;
           }
           case 'ready': {
-            const cardDetails = await this.safeReadCardDetails();
-            this.cardStatus = { status: 'ready', cardDetails };
+            const readCardDetailsResult = await this.readCardDetails();
+            if (readCardDetailsResult.isErr()) {
+              console.log(
+                'Failed to read card details:',
+                readCardDetailsResult.err()
+              );
+            }
+            this.cardStatus = {
+              status: 'ready',
+              cardDetails: readCardDetailsResult.ok(),
+            };
             return;
           }
           /* istanbul ignore next: Compile-time check for completeness */
@@ -190,58 +207,70 @@ export class JavaCard implements Card {
     });
   }
 
-  async getCardStatus(): Promise<CardStatus> {
-    return Promise.resolve(this.cardStatus);
+  async getCardStatus(): Promise<Result<CardStatus, SmartCardError>> {
+    return Promise.resolve(ok(this.cardStatus));
   }
 
-  async checkPin(pin: string): Promise<CheckPinResponse> {
-    await this.selectApplet();
+  async checkPin(
+    pin: string
+  ): Promise<Result<CheckPinResponse, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.selectApplet()).okOrElse(ret);
 
-    const cardVxAdminCert = await this.retrieveCert(
-      CARD_VX_ADMIN_CERT.OBJECT_ID
-    );
-    try {
+      const cardVxAdminCert = (
+        await this.retrieveCert(CARD_VX_ADMIN_CERT.OBJECT_ID)
+      ).okOrElse(ret);
       // Verify that the card has a private key that corresponds to the public key in the card
       // VxAdmin cert
-      await this.verifyCardPrivateKey(
+      const verifyResult = await this.verifyCardPrivateKey(
         CARD_VX_ADMIN_CERT.PRIVATE_KEY_ID,
         cardVxAdminCert,
         pin
       );
-    } catch (error) {
-      if (
-        error instanceof ResponseApduError &&
-        isIncorrectPinStatusWord(error.statusWord())
-      ) {
-        const numIncorrectPinAttempts =
-          MAX_NUM_INCORRECT_PIN_ATTEMPTS -
-          numRemainingPinAttemptsFromIncorrectPinStatusWord(error.statusWord());
-        if (this.cardStatus.status === 'ready' && this.cardStatus.cardDetails) {
-          this.cardStatus = {
-            status: 'ready',
-            cardDetails: {
-              ...this.cardStatus.cardDetails,
-              numIncorrectPinAttempts,
-            },
+
+      if (verifyResult.isErr()) {
+        const error = verifyResult.err();
+        if (
+          error.code === SmartCardErrorCode.ResponseError &&
+          isIncorrectPinStatusWord(error.error.statusWord())
+        ) {
+          const numIncorrectPinAttempts =
+            MAX_NUM_INCORRECT_PIN_ATTEMPTS -
+            numRemainingPinAttemptsFromIncorrectPinStatusWord(
+              error.error.statusWord()
+            );
+          if (
+            this.cardStatus.status === 'ready' &&
+            this.cardStatus.cardDetails
+          ) {
+            this.cardStatus = {
+              status: 'ready',
+              cardDetails: {
+                ...this.cardStatus.cardDetails,
+                numIncorrectPinAttempts,
+              },
+            };
+          }
+          return {
+            response: 'incorrect',
+            numIncorrectPinAttempts,
           };
         }
-        return {
-          response: 'incorrect',
-          numIncorrectPinAttempts,
+
+        return err(error);
+      }
+
+      if (this.cardStatus.status === 'ready' && this.cardStatus.cardDetails) {
+        this.cardStatus = {
+          status: 'ready',
+          cardDetails: {
+            ...this.cardStatus.cardDetails,
+            numIncorrectPinAttempts: undefined,
+          },
         };
       }
-      throw error;
-    }
-    if (this.cardStatus.status === 'ready' && this.cardStatus.cardDetails) {
-      this.cardStatus = {
-        status: 'ready',
-        cardDetails: {
-          ...this.cardStatus.cardDetails,
-          numIncorrectPinAttempts: undefined,
-        },
-      };
-    }
-    return { response: 'correct' };
+      return { response: 'correct' };
+    });
   }
 
   async program(
@@ -249,191 +278,211 @@ export class JavaCard implements Card {
       | { user: SystemAdministratorUser; pin: string }
       | { user: ElectionManagerUser; pin: string }
       | { user: PollWorkerUser; pin?: string }
-  ): Promise<void> {
-    assert(
-      this.cardProgrammingConfig !== undefined,
-      'cardProgrammingConfig must be defined'
-    );
-    const { vxAdminCertAuthorityCertPath, vxAdminPrivateKey } =
-      this.cardProgrammingConfig;
-    const { user } = input;
-    const hasPin = input.pin !== undefined;
-    const pin = input.pin ?? DEFAULT_PIN;
-    await this.selectApplet();
-
-    await this.resetPinAndInvalidateCard(pin);
-
-    const publicKey = await this.generateAsymmetricKeyPair(
-      CARD_VX_ADMIN_CERT.PRIVATE_KEY_ID,
-      pin
-    );
-    const vxAdminCertAuthorityCertDetails = await parseCert(
-      await fs.readFile(vxAdminCertAuthorityCertPath)
-    );
-    assert(vxAdminCertAuthorityCertDetails.component === 'admin');
-    assert(user.jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction);
-    let cardDetails: CardDetails;
-    switch (user.role) {
-      case 'system_administrator': {
-        cardDetails = { user };
-        break;
-      }
-      case 'election_manager': {
-        cardDetails = { user };
-        break;
-      }
-      case 'poll_worker': {
-        cardDetails = { user, hasPin };
-        break;
-      }
-      /* istanbul ignore next: Compile-time check for completeness */
-      default: {
-        throwIllegalValue(user, 'role');
-      }
-    }
-    const cardVxAdminCert = await createCert({
-      certKeyInput: {
-        type: 'public',
-        key: { source: 'inline', content: publicKey.toString('utf-8') },
-      },
-      certSubject: constructCardCertSubject(cardDetails),
-      expiryInDays:
-        user.role === 'system_administrator'
-          ? CERT_EXPIRY_IN_DAYS.SYSTEM_ADMINISTRATOR_CARD_VX_ADMIN_CERT
-          : CERT_EXPIRY_IN_DAYS.ELECTION_CARD_VX_ADMIN_CERT,
-      signingCertAuthorityCertPath: vxAdminCertAuthorityCertPath,
-      signingPrivateKey: vxAdminPrivateKey,
-    });
-    await this.storeCert(CARD_VX_ADMIN_CERT.OBJECT_ID, cardVxAdminCert);
-
-    const vxAdminCertAuthorityCert = await fs.readFile(
-      vxAdminCertAuthorityCertPath
-    );
-    await this.storeCert(
-      VX_ADMIN_CERT_AUTHORITY_CERT.OBJECT_ID,
-      vxAdminCertAuthorityCert
-    );
-
-    this.cardStatus = { status: 'ready', cardDetails };
-  }
-
-  async unprogram(): Promise<void> {
-    assert(
-      this.cardProgrammingConfig !== undefined,
-      'cardProgrammingConfig must be defined'
-    );
-    await this.selectApplet();
-    await this.resetPinAndInvalidateCard(DEFAULT_PIN);
-    await this.clearCert(CARD_VX_ADMIN_CERT.OBJECT_ID);
-    await this.clearCert(VX_ADMIN_CERT_AUTHORITY_CERT.OBJECT_ID);
-    await this.clearData();
-    this.cardStatus = { status: 'ready', cardDetails: undefined };
-  }
-
-  async readData(): Promise<Buffer> {
-    await this.selectApplet();
-
-    const chunks: Buffer[] = [];
-    for (const objectId of GENERIC_STORAGE_SPACE.OBJECT_IDS) {
-      let chunk: Buffer;
-      try {
-        chunk = await this.getData(objectId);
-      } catch (error) {
-        if (
-          error instanceof ResponseApduError &&
-          error.hasStatusWord([
-            STATUS_WORD.FILE_NOT_FOUND.SW1,
-            STATUS_WORD.FILE_NOT_FOUND.SW2,
-          ])
-        ) {
-          // OpenFIPS201 treats an empty data object as a non-existent one, so when we clear an
-          // object by writing an empty buffer, subsequent retrievals return a file-not-found
-          // response instead of a success response with an empty buffer
-          chunks.push(Buffer.from([]));
-          continue;
-        }
-        throw error;
-      }
-      chunks.push(chunk);
-    }
-    return Buffer.concat(chunks);
-  }
-
-  async writeData(data: Buffer): Promise<void> {
-    if (data.length > GENERIC_STORAGE_SPACE_CAPACITY_BYTES) {
-      throw new Error('Not enough space on card');
-    }
-    await this.selectApplet();
-
-    for (const [i, objectId] of GENERIC_STORAGE_SPACE.OBJECT_IDS.entries()) {
-      const chunk = data.subarray(
-        // When this first number is larger than data.length, the chunk will be empty, and we'll
-        // clear the corresponding data object
-        MAX_DATA_OBJECT_SIZE_BYTES * i,
-        // Okay if this is larger than data.length as .subarray() automatically caps
-        MAX_DATA_OBJECT_SIZE_BYTES * i + MAX_DATA_OBJECT_SIZE_BYTES
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      assert(
+        this.cardProgrammingConfig !== undefined,
+        'cardProgrammingConfig must be defined'
       );
-      await this.putData(objectId, chunk);
-    }
+      const { vxAdminCertAuthorityCertPath, vxAdminPrivateKey } =
+        this.cardProgrammingConfig;
+      const { user } = input;
+      const hasPin = input.pin !== undefined;
+      const pin = input.pin ?? DEFAULT_PIN;
+      (await this.selectApplet()).okOrElse(ret);
+
+      (await this.resetPinAndInvalidateCard(pin)).okOrElse(ret);
+
+      const publicKey = (
+        await this.generateAsymmetricKeyPair(
+          CARD_VX_ADMIN_CERT.PRIVATE_KEY_ID,
+          pin
+        )
+      ).okOrElse(ret);
+      const vxAdminCertAuthorityCertDetails = await parseCert(
+        await fs.readFile(vxAdminCertAuthorityCertPath)
+      );
+      assert(vxAdminCertAuthorityCertDetails.component === 'admin');
+      assert(
+        user.jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction
+      );
+      let cardDetails: CardDetails;
+      switch (user.role) {
+        case 'system_administrator': {
+          cardDetails = { user };
+          break;
+        }
+        case 'election_manager': {
+          cardDetails = { user };
+          break;
+        }
+        case 'poll_worker': {
+          cardDetails = { user, hasPin };
+          break;
+        }
+        /* istanbul ignore next: Compile-time check for completeness */
+        default: {
+          throwIllegalValue(user, 'role');
+        }
+      }
+      const cardVxAdminCert = await createCert({
+        certKeyInput: {
+          type: 'public',
+          key: { source: 'inline', content: publicKey.toString('utf-8') },
+        },
+        certSubject: constructCardCertSubject(cardDetails),
+        expiryInDays:
+          user.role === 'system_administrator'
+            ? CERT_EXPIRY_IN_DAYS.SYSTEM_ADMINISTRATOR_CARD_VX_ADMIN_CERT
+            : CERT_EXPIRY_IN_DAYS.ELECTION_CARD_VX_ADMIN_CERT,
+        signingCertAuthorityCertPath: vxAdminCertAuthorityCertPath,
+        signingPrivateKey: vxAdminPrivateKey,
+      });
+      (
+        await this.storeCert(CARD_VX_ADMIN_CERT.OBJECT_ID, cardVxAdminCert)
+      ).okOrElse(ret);
+
+      const vxAdminCertAuthorityCert = await fs.readFile(
+        vxAdminCertAuthorityCertPath
+      );
+      (
+        await this.storeCert(
+          VX_ADMIN_CERT_AUTHORITY_CERT.OBJECT_ID,
+          vxAdminCertAuthorityCert
+        )
+      ).okOrElse(ret);
+
+      this.cardStatus = { status: 'ready', cardDetails };
+    });
   }
 
-  async clearData(): Promise<void> {
+  async unprogram(): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      assert(
+        this.cardProgrammingConfig !== undefined,
+        'cardProgrammingConfig must be defined'
+      );
+      (await this.selectApplet()).okOrElse(ret);
+      (await this.resetPinAndInvalidateCard(DEFAULT_PIN)).okOrElse(ret);
+      (await this.clearCert(CARD_VX_ADMIN_CERT.OBJECT_ID)).okOrElse(ret);
+      (await this.clearCert(VX_ADMIN_CERT_AUTHORITY_CERT.OBJECT_ID)).okOrElse(
+        ret
+      );
+      (await this.clearData()).okOrElse(ret);
+      this.cardStatus = { status: 'ready', cardDetails: undefined };
+    });
+  }
+
+  async readData(): Promise<Result<Buffer, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.selectApplet()).okOrElse(ret);
+
+      const chunks: Buffer[] = [];
+      for (const objectId of GENERIC_STORAGE_SPACE.OBJECT_IDS) {
+        let chunk: Buffer;
+        try {
+          chunk = (await this.getData(objectId)).okOrElse(ret);
+        } catch (error) {
+          if (
+            error instanceof ResponseApduError &&
+            error.hasStatusWord([
+              STATUS_WORD.FILE_NOT_FOUND.SW1,
+              STATUS_WORD.FILE_NOT_FOUND.SW2,
+            ])
+          ) {
+            // OpenFIPS201 treats an empty data object as a non-existent one, so when we clear an
+            // object by writing an empty buffer, subsequent retrievals return a file-not-found
+            // response instead of a success response with an empty buffer
+            chunks.push(Buffer.from([]));
+            continue;
+          }
+          throw error;
+        }
+        chunks.push(chunk);
+      }
+      return Buffer.concat(chunks);
+    });
+  }
+
+  async writeData(data: Buffer): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      if (data.length > GENERIC_STORAGE_SPACE_CAPACITY_BYTES) {
+        return err(
+          SmartCardError(
+            SmartCardErrorCode.NoSpaceLeftOnDevice,
+            'Not enough space on card'
+          )
+        );
+      }
+      (await this.selectApplet()).okOrElse(ret);
+
+      for (const [i, objectId] of GENERIC_STORAGE_SPACE.OBJECT_IDS.entries()) {
+        const chunk = data.subarray(
+          // When this first number is larger than data.length, the chunk will be empty, and we'll
+          // clear the corresponding data object
+          MAX_DATA_OBJECT_SIZE_BYTES * i,
+          // Okay if this is larger than data.length as .subarray() automatically caps
+          MAX_DATA_OBJECT_SIZE_BYTES * i + MAX_DATA_OBJECT_SIZE_BYTES
+        );
+        (await this.putData(objectId, chunk)).okOrElse(ret);
+      }
+    });
+  }
+
+  async clearData(): Promise<Result<void, SmartCardError>> {
     // No need to explicitly call this.selectApplet here since this.writeData does so internally
-    await this.writeData(Buffer.from([]));
-  }
-
-  /**
-   * We wrap readCardDetails to create safeReadCardDetails because readCardDetails:
-   * 1. Intentionally throws errors if any verification fails
-   * 2. Can throw errors due to external actions like preemptively removing the card from the card
-   *    reader
-   *
-   * This wrapper should never throw errors.
-   */
-  private async safeReadCardDetails(): Promise<Optional<CardDetails>> {
-    try {
-      return await this.readCardDetails();
-    } catch (err) {
-      console.error('Error reading card details', err);
-      return undefined;
-    }
+    return await this.writeData(Buffer.from([]));
   }
 
   /**
    * Reads the card details, performing various forms of verification along the way. Throws an
    * error if any verification fails (this includes the case that the card is simply unprogrammed).
    */
-  private async readCardDetails(): Promise<CardDetails> {
-    await this.selectApplet();
+  private async readCardDetails(): Promise<
+    Result<CardDetails, SmartCardError>
+  > {
+    return asyncResultBlock(async (ret) => {
+      (await this.selectApplet()).okOrElse(ret);
 
-    // Verify that the card VotingWorks cert was signed by VotingWorks
-    const cert = await this.retrieveCert(CARD_VX_ADMIN_CERT.OBJECT_ID);
+      // Verify that the card VotingWorks cert was signed by VotingWorks
+      const cert = (
+        await this.retrieveCert(CARD_VX_ADMIN_CERT.OBJECT_ID)
+      ).okOrElse(ret);
 
-    return parseCardDetailsFromCert(cert);
+      return parseCardDetailsFromCert(cert);
+    });
   }
 
   /**
    * Selects the OpenFIPS201 applet
    */
-  private async selectApplet(): Promise<void> {
-    await this.cardReader.transmit(
-      new CardCommand({
-        ins: SELECT.INS,
-        p1: SELECT.P1,
-        p2: SELECT.P2,
-        data: Buffer.from(OPEN_FIPS_201_AID, 'hex'),
-      })
-    );
+  private async selectApplet(): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (
+        await this.cardReader.transmit(
+          new CardCommand({
+            ins: SELECT.INS,
+            p1: SELECT.P1,
+            p2: SELECT.P2,
+            data: Buffer.from(OPEN_FIPS_201_AID, 'hex'),
+          })
+        )
+      ).okOrElse(ret);
+    });
   }
 
   /**
    * Retrieves a cert in PEM format
    */
-  async retrieveCert(certObjectId: Buffer): Promise<Buffer> {
-    const data = await this.getData(certObjectId);
-    const certTlv = data.subarray(0, -5); // Trim metadata
-    const [, , certInDerFormat] = parseTlv(PUT_DATA.CERT_TAG, certTlv);
-    return await certDerToPem(certInDerFormat);
+  async retrieveCert(
+    certObjectId: Buffer
+  ): Promise<Result<Buffer, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      const data = (await this.getData(certObjectId)).okOrElse(ret);
+      const certTlv = data.subarray(0, -5); // Trim metadata
+      const [, , certInDerFormat] = parseTlv(PUT_DATA.CERT_TAG, certTlv);
+      return await certDerToPem(certInDerFormat);
+    });
   }
 
   /**
@@ -443,9 +492,9 @@ export class JavaCard implements Card {
   private async storeCert(
     certObjectId: Buffer,
     certInPemFormat: Buffer
-  ): Promise<void> {
+  ): Promise<Result<void, SmartCardError>> {
     const certInDerFormat = await certPemToDer(certInPemFormat);
-    await this.putData(
+    return await this.putData(
       certObjectId,
       Buffer.concat([
         constructTlv(PUT_DATA.CERT_TAG, certInDerFormat),
@@ -458,8 +507,10 @@ export class JavaCard implements Card {
     );
   }
 
-  private async clearCert(certObjectId: Buffer): Promise<void> {
-    await this.putData(certObjectId, Buffer.from([]));
+  private async clearCert(
+    certObjectId: Buffer
+  ): Promise<Result<void, SmartCardError>> {
+    return await this.putData(certObjectId, Buffer.from([]));
   }
 
   /**
@@ -473,73 +524,86 @@ export class JavaCard implements Card {
     privateKeyId: Byte,
     cert: Buffer,
     pin?: string
-  ): Promise<void> {
-    // Have the private key sign a "challenge"
-    const challenge = this.generateChallenge();
-    const challengeBuffer = Buffer.from(challenge, 'utf-8');
-    const challengeSignature = await this.generateSignature(challengeBuffer, {
-      privateKeyId,
-      pin,
-    });
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      // Have the private key sign a "challenge"
+      const challenge = this.generateChallenge();
+      const challengeBuffer = Buffer.from(challenge, 'utf-8');
+      const challengeSignature = (
+        await this.generateSignature(challengeBuffer, {
+          privateKeyId,
+          pin,
+        })
+      ).okOrElse(ret);
 
-    // Use the cert's public key to verify the generated signature
-    const certPublicKey = await extractPublicKeyFromCert(cert);
-    await verifySignature({
-      message: challengeBuffer,
-      messageSignature: challengeSignature,
-      publicKey: certPublicKey,
+      // Use the cert's public key to verify the generated signature
+      const certPublicKey = await extractPublicKeyFromCert(cert);
+      await verifySignature({
+        message: challengeBuffer,
+        messageSignature: challengeSignature,
+        publicKey: certPublicKey,
+      });
     });
   }
 
   async generateSignature(
     message: Buffer,
     { privateKeyId, pin }: { privateKeyId: Byte; pin?: string }
-  ): Promise<Buffer> {
-    if (pin) {
-      await this.checkPinInternal(pin);
-    }
+  ): Promise<Result<Buffer, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      if (pin) {
+        (await this.checkPinInternal(pin)).okOrElse(ret);
+      }
 
-    const challengeHash = Buffer.from(sha256(message), 'hex');
-    const asn1Sha256MagicValue = Buffer.from([
-      0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
-      0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
-    ]);
+      const challengeHash = Buffer.from(sha256(message), 'hex');
+      const asn1Sha256MagicValue = Buffer.from([
+        0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
+        0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
+      ]);
 
-    const allFsPadding = Buffer.from(
-      new Uint8Array(256 - 19 - 2 - 1 - 32).fill(0xff)
-    );
+      const allFsPadding = Buffer.from(
+        new Uint8Array(256 - 19 - 2 - 1 - 32).fill(0xff)
+      );
 
-    // now we pad
-    const paddedMessage = Buffer.concat([
-      Buffer.from([0, 1]),
-      allFsPadding,
-      Buffer.from([0]),
-      asn1Sha256MagicValue,
-      challengeHash,
-    ]);
-    assert(paddedMessage.length === 256);
+      // now we pad
+      const paddedMessage = Buffer.concat([
+        Buffer.from([0, 1]),
+        allFsPadding,
+        Buffer.from([0]),
+        asn1Sha256MagicValue,
+        challengeHash,
+      ]);
+      assert(paddedMessage.length === 256);
 
-    const generalAuthenticateResponse = await this.cardReader.transmit(
-      new CardCommand({
-        ins: GENERAL_AUTHENTICATE.INS,
-        p1: 0x07, // CRYPTOGRAPHIC_ALGORITHM_IDENTIFIER.ECC256,
-        p2: privateKeyId,
-        data: constructTlv(
-          GENERAL_AUTHENTICATE.DYNAMIC_AUTHENTICATION_TEMPLATE_TAG,
+      const generalAuthenticateResponse = (
+        await this.cardReader.transmit(
+          new CardCommand({
+            ins: GENERAL_AUTHENTICATE.INS,
+            p1: 0x07, // CRYPTOGRAPHIC_ALGORITHM_IDENTIFIER.ECC256,
+            p2: privateKeyId,
+            data: constructTlv(
+              GENERAL_AUTHENTICATE.DYNAMIC_AUTHENTICATION_TEMPLATE_TAG,
 
-          Buffer.concat([
-            constructTlv(GENERAL_AUTHENTICATE.CHALLENGE_TAG, paddedMessage),
-            constructTlv(GENERAL_AUTHENTICATE.RESPONSE_TAG, Buffer.from([])),
-          ])
-        ),
-      })
-    );
+              Buffer.concat([
+                constructTlv(GENERAL_AUTHENTICATE.CHALLENGE_TAG, paddedMessage),
+                constructTlv(
+                  GENERAL_AUTHENTICATE.RESPONSE_TAG,
+                  Buffer.from([])
+                ),
+              ])
+            ),
+          })
+        )
+      ).okOrElse(ret);
 
-    // why are we trimming 8 here instead of 4, and why were we trimming 4 before? Is this an ECC vs. RSA formatting?
-    return generalAuthenticateResponse.subarray(8); // Trim metadata
+      // why are we trimming 8 here instead of 4, and why were we trimming 4 before? Is this an ECC vs. RSA formatting?
+      return generalAuthenticateResponse.subarray(8); // Trim metadata
+    });
   }
 
-  async getCertificate(options: { objectId: Buffer }): Promise<Buffer> {
+  async getCertificate(options: {
+    objectId: Buffer;
+  }): Promise<Result<Buffer, SmartCardError>> {
     return await this.retrieveCert(options.objectId);
   }
 
@@ -552,31 +616,37 @@ export class JavaCard implements Card {
   private async generateAsymmetricKeyPair(
     privateKeyId: Byte,
     pin?: string
-  ): Promise<Buffer> {
-    if (pin) {
-      await this.checkPinInternal(pin);
-    }
+  ): Promise<Result<Buffer, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      if (pin) {
+        (await this.checkPinInternal(pin)).okOrElse(ret);
+      }
 
-    const generateKeyPairResponse = await this.cardReader.transmit(
-      new CardCommand({
-        ins: GENERATE_ASYMMETRIC_KEY_PAIR.INS,
-        p1: GENERATE_ASYMMETRIC_KEY_PAIR.P1,
-        p2: privateKeyId,
-        data: constructTlv(
-          GENERATE_ASYMMETRIC_KEY_PAIR.CRYPTOGRAPHIC_ALGORITHM_IDENTIFIER_TEMPLATE_TAG,
-          constructTlv(
-            GENERATE_ASYMMETRIC_KEY_PAIR.CRYPTOGRAPHIC_ALGORITHM_IDENTIFIER_TAG,
-            Buffer.from([CRYPTOGRAPHIC_ALGORITHM_IDENTIFIER.ECC256])
-          )
-        ),
-      })
-    );
-    const publicKeyInDerFormat = Buffer.concat([
-      PUBLIC_KEY_IN_DER_FORMAT_HEADER,
-      generateKeyPairResponse.subarray(5), // Trim metadata
-    ]);
-    const publicKeyInPemFormat = await publicKeyDerToPem(publicKeyInDerFormat);
-    return publicKeyInPemFormat;
+      const generateKeyPairResponse = (
+        await this.cardReader.transmit(
+          new CardCommand({
+            ins: GENERATE_ASYMMETRIC_KEY_PAIR.INS,
+            p1: GENERATE_ASYMMETRIC_KEY_PAIR.P1,
+            p2: privateKeyId,
+            data: constructTlv(
+              GENERATE_ASYMMETRIC_KEY_PAIR.CRYPTOGRAPHIC_ALGORITHM_IDENTIFIER_TEMPLATE_TAG,
+              constructTlv(
+                GENERATE_ASYMMETRIC_KEY_PAIR.CRYPTOGRAPHIC_ALGORITHM_IDENTIFIER_TAG,
+                Buffer.from([CRYPTOGRAPHIC_ALGORITHM_IDENTIFIER.ECC256])
+              )
+            ),
+          })
+        )
+      ).okOrElse(ret);
+      const publicKeyInDerFormat = Buffer.concat([
+        PUBLIC_KEY_IN_DER_FORMAT_HEADER,
+        generateKeyPairResponse.subarray(5), // Trim metadata
+      ]);
+      const publicKeyInPemFormat = await publicKeyDerToPem(
+        publicKeyInDerFormat
+      );
+      return publicKeyInPemFormat;
+    });
   }
 
   /**
@@ -584,46 +654,21 @@ export class JavaCard implements Card {
    * status word if an incorrect PIN is entered. Named checkPinInternal to avoid a conflict with
    * the public checkPin method.
    */
-  private async checkPinInternal(pin: string): Promise<void> {
-    await this.cardReader.transmit(
-      new CardCommand({
-        ins: VERIFY.INS,
-        p1: VERIFY.P1_VERIFY,
-        p2: VERIFY.P2_PIN,
-        data: construct8BytePinBuffer(pin),
-      })
-    );
-  }
-
-  /**
-   * Gets the number of incorrect PIN attempts since the last successful PIN entry (without
-   * spending another attempt). Under the hood, gets the number of remaining PIN attempts and
-   * converts from that to the number of incorrect PIN attempts.
-   */
-  private async getNumIncorrectPinAttempts(): Promise<number> {
-    try {
-      await this.cardReader.transmit(
-        new CardCommand({
-          ins: VERIFY.INS,
-          p1: VERIFY.P1_VERIFY,
-          p2: VERIFY.P2_PIN,
-        })
-      );
-    } catch (error) {
-      // The data is returned in what would typically be considered an error
-      if (
-        error instanceof ResponseApduError &&
-        isIncorrectPinStatusWord(error.statusWord())
-      ) {
-        return (
-          MAX_NUM_INCORRECT_PIN_ATTEMPTS -
-          numRemainingPinAttemptsFromIncorrectPinStatusWord(error.statusWord())
-        );
-      }
-      throw error;
-    }
-    /* istanbul ignore next */
-    throw new Error('Error retrieving number of incorrect PIN attempts');
+  private async checkPinInternal(
+    pin: string
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (
+        await this.cardReader.transmit(
+          new CardCommand({
+            ins: VERIFY.INS,
+            p1: VERIFY.P1_VERIFY,
+            p2: VERIFY.P2_PIN,
+            data: construct8BytePinBuffer(pin),
+          })
+        )
+      ).okOrElse(ret);
+    });
   }
 
   /**
@@ -635,42 +680,61 @@ export class JavaCard implements Card {
    * key that corresponds to the public key in the card VxAdmin cert, and the card will need to be
    * reprogrammed.
    */
-  private async resetPinAndInvalidateCard(newPin: string): Promise<void> {
-    await this.cardReader.transmit(
-      new CardCommand({
-        ins: RESET_RETRY_COUNTER.INS,
-        p1: RESET_RETRY_COUNTER.P1,
-        p2: RESET_RETRY_COUNTER.P2,
-        data: Buffer.concat([PUK, construct8BytePinBuffer(newPin)]),
-      })
-    );
+  private async resetPinAndInvalidateCard(
+    newPin: string
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (
+        await this.cardReader.transmit(
+          new CardCommand({
+            ins: RESET_RETRY_COUNTER.INS,
+            p1: RESET_RETRY_COUNTER.P1,
+            p2: RESET_RETRY_COUNTER.P2,
+            data: Buffer.concat([PUK, construct8BytePinBuffer(newPin)]),
+          })
+        )
+      ).okOrElse(ret);
+    });
   }
 
-  private async getData(objectId: Buffer): Promise<Buffer> {
-    const dataTlv = await this.cardReader.transmit(
-      new CardCommand({
-        ins: GET_DATA.INS,
-        p1: GET_DATA.P1,
-        p2: GET_DATA.P2,
-        data: constructTlv(GET_DATA.TAG_LIST_TAG, objectId),
-      })
-    );
-    const [, , data] = parseTlv(PUT_DATA.DATA_TAG, dataTlv);
-    return data;
+  private async getData(
+    objectId: Buffer
+  ): Promise<Result<Buffer, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      const dataTlv = (
+        await this.cardReader.transmit(
+          new CardCommand({
+            ins: GET_DATA.INS,
+            p1: GET_DATA.P1,
+            p2: GET_DATA.P2,
+            data: constructTlv(GET_DATA.TAG_LIST_TAG, objectId),
+          })
+        )
+      ).okOrElse(ret);
+      const [, , data] = parseTlv(PUT_DATA.DATA_TAG, dataTlv);
+      return data;
+    });
   }
 
-  private async putData(objectId: Buffer, data: Buffer): Promise<void> {
-    await this.cardReader.transmit(
-      new CardCommand({
-        ins: PUT_DATA.INS,
-        p1: PUT_DATA.P1,
-        p2: PUT_DATA.P2,
-        data: Buffer.concat([
-          constructTlv(PUT_DATA.TAG_LIST_TAG, objectId),
-          constructTlv(PUT_DATA.DATA_TAG, data),
-        ]),
-      })
-    );
+  private async putData(
+    objectId: Buffer,
+    data: Buffer
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (
+        await this.cardReader.transmit(
+          new CardCommand({
+            ins: PUT_DATA.INS,
+            p1: PUT_DATA.P1,
+            p2: PUT_DATA.P2,
+            data: Buffer.concat([
+              constructTlv(PUT_DATA.TAG_LIST_TAG, objectId),
+              constructTlv(PUT_DATA.DATA_TAG, data),
+            ]),
+          })
+        )
+      ).okOrElse(ret);
+    });
   }
 
   /**
@@ -679,22 +743,24 @@ export class JavaCard implements Card {
    */
   async createAndStoreCardVxCert(
     vxPrivateKey: FileKey | TpmKey
-  ): Promise<void> {
-    await this.selectApplet();
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.selectApplet()).okOrElse(ret);
 
-    const publicKey = await this.generateAsymmetricKeyPair(
-      CARD_VX_CERT.PRIVATE_KEY_ID
-    );
-    const cardVxCert = await createCert({
-      certKeyInput: {
-        type: 'public',
-        key: { source: 'inline', content: publicKey.toString('utf-8') },
-      },
-      certSubject: constructCardCertSubjectWithoutJurisdictionAndCardType(),
-      expiryInDays: CERT_EXPIRY_IN_DAYS.CARD_VX_CERT,
-      signingCertAuthorityCertPath: this.vxCertAuthorityCertPath,
-      signingPrivateKey: vxPrivateKey,
+      const publicKey = (
+        await this.generateAsymmetricKeyPair(CARD_VX_CERT.PRIVATE_KEY_ID)
+      ).okOrElse(ret);
+      const cardVxCert = await createCert({
+        certKeyInput: {
+          type: 'public',
+          key: { source: 'inline', content: publicKey.toString('utf-8') },
+        },
+        certSubject: constructCardCertSubjectWithoutJurisdictionAndCardType(),
+        expiryInDays: CERT_EXPIRY_IN_DAYS.CARD_VX_CERT,
+        signingCertAuthorityCertPath: this.vxCertAuthorityCertPath,
+        signingPrivateKey: vxPrivateKey,
+      });
+      return await this.storeCert(CARD_VX_CERT.OBJECT_ID, cardVxCert);
     });
-    await this.storeCert(CARD_VX_CERT.OBJECT_ID, cardVxCert);
   }
 }

@@ -196,7 +196,7 @@ test('MockFileCard programming', async () => {
     },
   });
 
-  await card.program({ user: systemAdministratorUser, pin });
+  (await card.program({ user: systemAdministratorUser, pin })).unsafeUnwrap();
   expect(await card.getCardStatus()).toEqual({
     status: 'ready',
     cardDetails: {
@@ -205,13 +205,13 @@ test('MockFileCard programming', async () => {
   });
   expect(await card.checkPin(pin)).toEqual({ response: 'correct' });
 
-  await card.unprogram();
+  (await card.unprogram()).unsafeUnwrap();
   expect(await card.getCardStatus()).toEqual({
     status: 'ready',
     cardDetails: undefined,
   });
 
-  await card.program({ user: electionManagerUser, pin });
+  (await card.program({ user: electionManagerUser, pin })).unsafeUnwrap();
   expect(await card.getCardStatus()).toEqual({
     status: 'ready',
     cardDetails: {
@@ -220,13 +220,13 @@ test('MockFileCard programming', async () => {
   });
   expect(await card.checkPin(pin)).toEqual({ response: 'correct' });
 
-  await card.unprogram();
+  (await card.unprogram()).unsafeUnwrap();
   expect(await card.getCardStatus()).toEqual({
     status: 'ready',
     cardDetails: undefined,
   });
 
-  await card.program({ user: pollWorkerUser });
+  (await card.program({ user: pollWorkerUser })).unsafeUnwrap();
   expect(await card.getCardStatus()).toEqual({
     status: 'ready',
     cardDetails: {
@@ -235,7 +235,7 @@ test('MockFileCard programming', async () => {
     },
   });
 
-  await card.program({ user: pollWorkerUser, pin });
+  (await card.program({ user: pollWorkerUser, pin })).unsafeUnwrap();
   expect(await card.getCardStatus()).toEqual({
     status: 'ready',
     cardDetails: {
@@ -258,11 +258,13 @@ test('MockFileCard data reading and writing', async () => {
   });
 
   expect(await card.readData()).toEqual(Buffer.from([]));
-  await card.writeData(Buffer.from('Hey! How is it going?', 'utf-8'));
-  expect((await card.readData()).toString('utf-8')).toEqual(
+  (
+    await card.writeData(Buffer.from('Hey! How is it going?', 'utf-8'))
+  ).unsafeUnwrap();
+  expect((await card.readData()).unsafeUnwrap().toString('utf-8')).toEqual(
     'Hey! How is it going?'
   );
-  await card.clearData();
+  (await card.clearData()).unsafeUnwrap();
   expect(await card.readData()).toEqual(Buffer.from([]));
 });
 

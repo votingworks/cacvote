@@ -2,13 +2,13 @@ import { Buffer } from 'buffer';
 import { z } from 'zod';
 import {
   assert,
+  asyncResultBlock,
   err,
   extractErrorMessage,
   ok,
   Optional,
   Result,
   throwIllegalValue,
-  wrapException,
 } from '@votingworks/basics';
 import {
   LogDispositionStandardTypes,
@@ -43,6 +43,7 @@ import {
 } from './inserted_smart_card_auth_api';
 import { computeCardLockoutEndTime } from './lockout';
 import { computeSessionEndTime } from './sessions';
+import { SmartCardError, SmartCardErrorCode } from './error';
 
 type CheckPinResponseExtended = CheckPinResponse | { response: 'error' };
 
@@ -168,72 +169,84 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
 
   async getAuthStatus(
     machineState: InsertedSmartCardAuthMachineState
-  ): Promise<InsertedSmartCardAuthTypes.AuthStatus> {
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
+  ): Promise<Result<InsertedSmartCardAuthTypes.AuthStatus, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
 
-    // Cardless voter session has been started, but poll worker hasn't removed their card yet
-    if (
-      this.authStatus.status === 'logged_in' &&
-      this.authStatus.user.role === 'poll_worker' &&
-      this.cardlessVoterUser
-    ) {
-      return {
-        ...this.authStatus,
-        cardlessVoterUser: this.cardlessVoterUser,
-      };
-    }
+      // Cardless voter session has been started, but poll worker hasn't removed their card yet
+      if (
+        this.authStatus.status === 'logged_in' &&
+        this.authStatus.user.role === 'poll_worker' &&
+        this.cardlessVoterUser
+      ) {
+        return ok({
+          ...this.authStatus,
+          cardlessVoterUser: this.cardlessVoterUser,
+        });
+      }
 
-    // Cardless voter session has been started, and poll worker has removed their card
-    if (
-      this.authStatus.status === 'logged_out' &&
-      this.authStatus.reason === 'no_card' &&
-      this.cardlessVoterUser
-    ) {
-      return {
-        status: 'logged_in',
-        user: this.cardlessVoterUser,
-        sessionExpiresAt: computeSessionEndTime(machineState),
-      };
-    }
+      // Cardless voter session has been started, and poll worker has removed their card
+      if (
+        this.authStatus.status === 'logged_out' &&
+        this.authStatus.reason === 'no_card' &&
+        this.cardlessVoterUser
+      ) {
+        return ok({
+          status: 'logged_in',
+          user: this.cardlessVoterUser,
+          sessionExpiresAt: computeSessionEndTime(machineState),
+        });
+      }
 
-    return this.authStatus;
+      return ok(this.authStatus);
+    });
   }
 
   async checkPin(
     machineState: InsertedSmartCardAuthMachineState,
     input: { pin: string }
-  ): Promise<void> {
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
-    if (this.isLockedOut()) {
-      return;
-    }
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
+      if (this.isLockedOut()) {
+        return;
+      }
 
-    let checkPinResponse: CheckPinResponseExtended;
-    try {
-      checkPinResponse = await this.card.checkPin(input.pin);
-    } catch (error) {
-      const userRole =
-        'user' in this.authStatus ? this.authStatus.user.role : 'unknown';
-      await this.logger.log(LogEventId.AuthPinEntry, userRole, {
-        disposition: LogDispositionStandardTypes.Failure,
-        message: `Error checking PIN: ${extractErrorMessage(error)}`,
+      let checkPinResult: Result<CheckPinResponseExtended, SmartCardError> =
+        await this.card.checkPin(input.pin);
+
+      if (checkPinResult.isErr()) {
+        const error = checkPinResult.err();
+        const userRole =
+          'user' in this.authStatus ? this.authStatus.user.role : 'unknown';
+        await this.logger.log(LogEventId.AuthPinEntry, userRole, {
+          disposition: LogDispositionStandardTypes.Failure,
+          message: `Error checking PIN: ${extractErrorMessage(error)}`,
+        });
+        checkPinResult = ok({ response: 'error' });
+      }
+
+      await this.updateAuthStatus(machineState, {
+        type: 'check_pin',
+        checkPinResponse: checkPinResult.okOrElse(ret),
       });
-      checkPinResponse = { response: 'error' };
-    }
-    await this.updateAuthStatus(machineState, {
-      type: 'check_pin',
-      checkPinResponse,
     });
   }
 
   async generateSignature(
     message: Buffer,
     options: { privateKeyId: Byte; pin?: string }
-  ): Promise<Buffer> {
+  ): Promise<Result<Buffer, SmartCardError>> {
     return this.card.generateSignature(message, options);
   }
 
-  async getCertificate(options: { objectId: Buffer }): Promise<Buffer> {
+  async getCertificate(options: {
+    objectId: Buffer;
+  }): Promise<Result<Buffer, SmartCardError>> {
     return this.card.getCertificate(options);
   }
 
@@ -244,32 +257,40 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
   async updateSessionExpiry(
     machineState: InsertedSmartCardAuthMachineState,
     input: { sessionExpiresAt: Date }
-  ): Promise<void> {
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
-    await this.updateAuthStatus(machineState, {
-      type: 'update_session_expiry',
-      sessionExpiresAt: input.sessionExpiresAt,
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
+      await this.updateAuthStatus(machineState, {
+        type: 'update_session_expiry',
+        sessionExpiresAt: input.sessionExpiresAt,
+      });
     });
   }
 
   async startCardlessVoterSession(
     machineState: InsertedSmartCardAuthMachineState,
     input: { ballotStyleId: BallotStyleId; precinctId: PrecinctId }
-  ): Promise<void> {
-    assert(this.config.allowCardlessVoterSessions);
-    await this.checkCardReaderAndUpdateAuthStatus(machineState);
-    if (
-      this.authStatus.status !== 'logged_in' ||
-      this.authStatus.user.role !== 'poll_worker'
-    ) {
-      return;
-    }
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      assert(this.config.allowCardlessVoterSessions);
+      (await this.checkCardReaderAndUpdateAuthStatus(machineState)).okOrElse(
+        ret
+      );
+      if (
+        this.authStatus.status !== 'logged_in' ||
+        this.authStatus.user.role !== 'poll_worker'
+      ) {
+        return;
+      }
 
-    this.cardlessVoterUser = { ...input, role: 'cardless_voter' };
+      this.cardlessVoterUser = { ...input, role: 'cardless_voter' };
 
-    await this.logger.log(LogEventId.AuthLogin, 'cardless_voter', {
-      disposition: LogDispositionStandardTypes.Success,
-      message: 'Cardless voter session started.',
+      await this.logger.log(LogEventId.AuthLogin, 'cardless_voter', {
+        disposition: LogDispositionStandardTypes.Success,
+        message: 'Cardless voter session started.',
+      });
     });
   }
 
@@ -287,66 +308,65 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
   async readCardData<T>(
     machineState: InsertedSmartCardAuthMachineState,
     input: { schema: z.ZodSchema<T> }
-  ): Promise<Result<Optional<T>, SyntaxError | z.ZodError | Error>> {
-    let result: Result<Optional<T>, SyntaxError | z.ZodError | Error>;
-    try {
-      const data = (await this.card.readData()).toString('utf-8') || undefined;
-      result = data ? safeParseJson(data, input.schema) : ok(undefined);
-    } catch (error) {
-      return wrapException(error);
-    }
-    return result;
+  ): Promise<Result<Optional<T>, SyntaxError | z.ZodError | SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      const data =
+        (await this.card.readData()).okOrElse(ret).toString('utf-8') ||
+        undefined;
+      return data ? safeParseJson(data, input.schema) : ok(undefined);
+    });
   }
 
-  async readCardDataAsString(): Promise<Result<Optional<string>, Error>> {
-    let data: Optional<string>;
-    try {
-      data = (await this.card.readData()).toString('utf-8') || undefined;
-    } catch (error) {
-      return wrapException(error);
-    }
-    return ok(data);
+  async readCardDataAsString(): Promise<
+    Result<Optional<string>, SmartCardError>
+  > {
+    return asyncResultBlock(
+      async (ret) =>
+        (await this.card.readData()).okOrElse(ret).toString('utf-8') ||
+        undefined
+    );
   }
 
   async writeCardData<T>(
     machineState: InsertedSmartCardAuthMachineState,
     input: { data: T; schema: z.ZodSchema<T> }
-  ): Promise<Result<void, Error>> {
-    try {
-      await this.card.writeData(
-        Buffer.from(JSON.stringify(input.data), 'utf-8')
-      );
-    } catch (error) {
-      return wrapException(error);
-    }
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      (
+        await this.card.writeData(
+          Buffer.from(JSON.stringify(input.data), 'utf-8')
+        )
+      ).okOrElse(ret);
 
-    // Verify that the write was in fact successful by reading the data
-    const readResult = await this.readCardData(machineState, {
-      schema: input.schema,
+      // Verify that the write was in fact successful by reading the data
+      const readResult = await this.readCardData(machineState, {
+        schema: input.schema,
+      });
+
+      if (readResult.isErr()) {
+        return err(
+          SmartCardError(
+            SmartCardErrorCode.UnknownError,
+            'Verification of write by reading data failed'
+          )
+        );
+      }
     });
-    if (readResult.isErr()) {
-      return err(new Error('Verification of write by reading data failed'));
-    }
-
-    return ok();
   }
 
-  async clearCardData(): Promise<Result<void, Error>> {
-    try {
-      await this.card.clearData();
-    } catch (error) {
-      return wrapException(error);
-    }
-    return ok();
+  async clearCardData(): Promise<Result<void, SmartCardError>> {
+    return await this.card.clearData();
   }
 
   private async checkCardReaderAndUpdateAuthStatus(
     machineState: InsertedSmartCardAuthMachineState
-  ): Promise<void> {
-    const cardStatus = await this.card.getCardStatus();
-    await this.updateAuthStatus(machineState, {
-      type: 'check_card_reader',
-      cardStatus,
+  ): Promise<Result<void, SmartCardError>> {
+    return asyncResultBlock(async (ret) => {
+      const cardStatus = (await this.card.getCardStatus()).okOrElse(ret);
+      await this.updateAuthStatus(machineState, {
+        type: 'check_card_reader',
+        cardStatus,
+      });
     });
   }
 

@@ -9,14 +9,14 @@ export async function waitForReadyCardStatus(
   card: Card,
   waitTimeSeconds = 3
 ): Promise<void> {
-  let cardStatus = await card.getCardStatus();
+  let cardStatus = (await card.getCardStatus()).ok();
   let remainingWaitTimeSeconds = waitTimeSeconds;
-  while (cardStatus.status !== 'ready' && remainingWaitTimeSeconds > 0) {
+  while (cardStatus?.status !== 'ready' && remainingWaitTimeSeconds > 0) {
     await sleep(1000);
-    cardStatus = await card.getCardStatus();
+    cardStatus = (await card.getCardStatus()).ok();
     remainingWaitTimeSeconds -= 1;
   }
-  if (cardStatus.status !== 'ready') {
+  if (cardStatus?.status !== 'ready') {
     throw new Error(`Card status not "ready" after ${waitTimeSeconds} seconds`);
   }
 }

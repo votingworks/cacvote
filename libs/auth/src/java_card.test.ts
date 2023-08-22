@@ -2,7 +2,7 @@ import { Buffer } from 'buffer';
 import * as fs from 'fs';
 import { sha256 } from 'js-sha256';
 import waitForExpect from 'wait-for-expect';
-import { assert } from '@votingworks/basics';
+import { assert, ok } from '@votingworks/basics';
 import { electionFamousNames2021Fixtures } from '@votingworks/fixtures';
 import {
   fakeElectionManagerUser,
@@ -125,7 +125,7 @@ function mockCardAppletSelectionRequest(): void {
     data: Buffer.from(OPEN_FIPS_201_AID, 'hex'),
   });
   const responseData = Buffer.from([]);
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 function mockCardCertRetrievalRequest(
@@ -149,7 +149,7 @@ function mockCardCertRetrievalRequest(
       constructTlv(PUT_DATA.ERROR_DETECTION_CODE_TAG, Buffer.from([])),
     ])
   );
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 async function mockCardSignatureRequest(
@@ -187,7 +187,7 @@ async function mockCardSignatureRequest(
       constructTlv(GENERAL_AUTHENTICATE.RESPONSE_TAG, challengeSignature),
     ])
   );
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 function mockCardPinVerificationRequest(pin: string, error?: Error): void {
@@ -202,7 +202,7 @@ function mockCardPinVerificationRequest(pin: string, error?: Error): void {
     return;
   }
   const responseData = Buffer.from([]);
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 function mockCardGetNumRemainingPinAttemptsRequest(
@@ -237,7 +237,7 @@ function mockCardPinResetRequest(newPin: string): void {
     data: Buffer.concat([PUK, construct8BytePinBuffer(newPin)]),
   });
   const responseData = Buffer.from([]);
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 function mockCardKeyPairGenerationRequest(
@@ -266,7 +266,7 @@ function mockCardKeyPairGenerationRequest(
       publicKeyRawData
     )
   );
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 function mockCardCertStorageRequest(
@@ -293,7 +293,7 @@ function mockCardCertStorageRequest(
     ]),
   });
   const responseData = Buffer.from([]);
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 function mockCardGetDataRequest(
@@ -311,7 +311,7 @@ function mockCardGetDataRequest(
     return;
   }
   const responseData = constructTlv(PUT_DATA.DATA_TAG, dataOrError);
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 function mockCardPutDataRequest(dataObjectId: Buffer, data: Buffer): void {
@@ -325,7 +325,7 @@ function mockCardPutDataRequest(dataObjectId: Buffer, data: Buffer): void {
     ]),
   });
   const responseData = Buffer.from([]);
-  mockCardReader.transmit.expectCallWith(command).resolves(responseData);
+  mockCardReader.transmit.expectCallWith(command).resolves(ok(responseData));
 }
 
 test('Non-ready card statuses', async () => {
@@ -840,7 +840,7 @@ test.each<{
       })
     );
 
-    await javaCard.program(programInput);
+    (await javaCard.program(programInput)).unsafeUnwrap();
     expect(createCert).toHaveBeenCalledTimes(1);
     expect(createCert).toHaveBeenNthCalledWith(1, {
       certKeyInput: {
@@ -894,7 +894,7 @@ test('Unprogramming', async () => {
     mockCardPutDataRequest(objectId, Buffer.from([]));
   }
 
-  await javaCard.unprogram();
+  (await javaCard.unprogram()).unsafeUnwrap();
 
   expect(await javaCard.getCardStatus()).toEqual({
     status: 'ready',
@@ -1000,7 +1000,7 @@ test.each<{
     mockCardPutDataRequest(request.dataObjectId, request.data);
   }
 
-  await javaCard.writeData(data);
+  (await javaCard.writeData(data)).unsafeUnwrap();
 });
 
 test('Data clearing', async () => {
@@ -1011,7 +1011,7 @@ test('Data clearing', async () => {
     mockCardPutDataRequest(dataObjectId, Buffer.from([]));
   }
 
-  await javaCard.clearData();
+  (await javaCard.clearData()).unsafeUnwrap();
 });
 
 test('Data reading error handling', async () => {
@@ -1061,12 +1061,14 @@ test('createAndStoreCardVxCert', async () => {
   );
   mockCardCertStorageRequest(CARD_VX_CERT.OBJECT_ID, cardVxCertPath);
 
-  await javaCard.createAndStoreCardVxCert({
-    source: 'file',
-    path: getTestFilePath({
-      fileType: 'vx-private-key.pem',
-    }),
-  });
+  (
+    await javaCard.createAndStoreCardVxCert({
+      source: 'file',
+      path: getTestFilePath({
+        fileType: 'vx-private-key.pem',
+      }),
+    })
+  ).unsafeUnwrap();
   expect(createCert).toHaveBeenCalledTimes(1);
   expect(createCert).toHaveBeenNthCalledWith(1, {
     certKeyInput: {

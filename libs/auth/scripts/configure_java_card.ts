@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer';
 import { existsSync } from 'fs';
-import { extractErrorMessage } from '@votingworks/basics';
+import { Result, extractErrorMessage } from '@votingworks/basics';
 import { Byte } from '@votingworks/types';
 
 import { CommandApdu, constructTlv } from '../src/apdu';
@@ -22,6 +22,7 @@ import {
 } from '../src/piv';
 import { runCommand } from '../src/shell';
 import { waitForReadyCardStatus } from './utils';
+import { SmartCardError } from '../src';
 
 const APPLET_PATH = 'applets/OpenFIPS201-v1.10.2-with-vx-mods.cap';
 const GLOBAL_PLATFORM_JAR_FILE_PATH = 'scripts/gp.jar';
@@ -262,11 +263,13 @@ async function runAppletConfigurationCommands(): Promise<void> {
   }
 }
 
-async function createAndStoreCardVxCert(): Promise<void> {
+async function createAndStoreCardVxCert(): Promise<
+  Result<void, SmartCardError>
+> {
   sectionLog('🔏', 'Creating and storing card VotingWorks cert...');
   const card = new JavaCard({ vxCertAuthorityCertPath });
   await waitForReadyCardStatus(card);
-  await card.createAndStoreCardVxCert({
+  return await card.createAndStoreCardVxCert({
     source: 'file',
     path: vxPrivateKeyPath,
   });
@@ -280,7 +283,7 @@ export async function main(): Promise<void> {
     checkForScriptDependencies();
     await installApplet();
     await runAppletConfigurationCommands();
-    await createAndStoreCardVxCert();
+    (await createAndStoreCardVxCert()).unsafeUnwrap();
   } catch (error) {
     console.error(`❌ ${extractErrorMessage(error)}`);
     process.exit(1);
