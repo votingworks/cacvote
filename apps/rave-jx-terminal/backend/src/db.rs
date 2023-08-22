@@ -12,7 +12,7 @@ use types_rs::rave::jx;
 use types_rs::rave::{client, ClientId, ServerId};
 use uuid::Uuid;
 
-use crate::cac::verify_cast_vote_record;
+use crate::cac::{verify_cast_vote_record, CertificateAuthority};
 use crate::config::{DATABASE_URL, VX_MACHINE_ID};
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
@@ -535,6 +535,7 @@ pub(crate) async fn get_printed_ballots(
                 &record.common_access_card_certificate,
                 &record.cast_vote_record,
                 &record.cast_vote_record_signature,
+                CertificateAuthority::DodTest,
             );
 
             Ok(jx::PrintedBallot {

@@ -606,6 +606,10 @@ video {
   justify-content: center;
 }
 
+.whitespace-nowrap {
+  white-space: nowrap;
+}
+
 .rounded-lg {
   border-radius: 0.5rem;
 }
@@ -616,6 +620,16 @@ video {
 
 .rounded-xl {
   border-radius: 0.75rem;
+}
+
+.rounded-l-xl {
+  border-top-left-radius: 0.75rem;
+  border-bottom-left-radius: 0.75rem;
+}
+
+.rounded-l-md {
+  border-top-left-radius: 0.375rem;
+  border-bottom-left-radius: 0.375rem;
 }
 
 .border {

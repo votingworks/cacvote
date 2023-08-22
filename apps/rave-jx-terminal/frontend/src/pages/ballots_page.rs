@@ -102,47 +102,47 @@ fn PrintedBallotsTable(cx: Scope<PendingRegistrationsTableProps>) -> Element {
                                         ballot_style_id: printed_ballot.ballot_style_id().clone(),
                                     }
                                     td {
-                                        class: "border px-4 py-2",
+                                        class: "border px-4 py-2 whitespace-nowrap",
                                         match printed_ballot.cast_vote_record() {
                                             Ok(cvr) => {
                                                 rsx!(
                                                     match &printed_ballot.verification_status {
                                                         jx::VerificationStatus::Success { common_access_card_id, display_name } => {
                                                             rsx!(span {
-                                                                class: "text-sm p-1 ps-0 pe-2 text-green-800 bg-green-300 font-semibold rounded-xl",
+                                                                class: "text-sm p-1 ps-0 pe-2 text-green-800 bg-green-300 font-semibold rounded-md",
                                                                 title: "{display_name}",
                                                                 span {
-                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-xl",
+                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-l-md",
                                                                     "CAC #{common_access_card_id}"
                                                                 }
                                                                 span {
-                                                                    class: "ps-1",
+                                                                    class: "ps-2",
                                                                     "Verified"
                                                                 }
                                                             })
                                                         }
                                                         jx::VerificationStatus::Failure => {
                                                             rsx!(span {
-                                                                class: "text-sm p-1 ps-0 pe-2 text-red-800 bg-red-300 font-semibold rounded-xl",
+                                                                class: "text-sm p-1 ps-0 pe-2 text-red-800 bg-red-300 font-semibold rounded-md",
                                                                 span {
-                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-xl",
+                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-l-md",
                                                                     "CAC"
                                                                 }
                                                                 span {
-                                                                    class: "ps-1",
+                                                                    class: "ps-2",
                                                                     "Unverified"
                                                                 }
                                                             })
                                                         }
                                                         jx::VerificationStatus::Error(err) => {
                                                             rsx!(span {
-                                                                class: "text-sm p-1 ps-0 pe-2 text-orange-800 bg-orange-300 font-semibold rounded-xl",
+                                                                class: "text-sm p-1 ps-0 pe-2 text-orange-800 bg-orange-300 font-semibold rounded-md",
                                                                 span {
-                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-xl",
+                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-l-md",
                                                                     "CAC"
                                                                 }
                                                                 span {
-                                                                    class: "ps-1",
+                                                                    class: "ps-2",
                                                                     title: "{err}",
                                                                     "Error"
                                                                 }
@@ -150,13 +150,13 @@ fn PrintedBallotsTable(cx: Scope<PendingRegistrationsTableProps>) -> Element {
                                                         }
                                                         jx::VerificationStatus::Unknown => {
                                                             rsx!(span {
-                                                                class: "text-sm p-1 ps-0 pe-2 text-yellow-800 bg-yellow-300 font-semibold rounded-xl",
+                                                                class: "text-sm p-1 ps-0 pe-2 text-yellow-800 bg-yellow-300 font-semibold rounded-md",
                                                                 span {
-                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-xl",
+                                                                    class: "text-sm p-1 ps-2 pe-2 text-white bg-gray-400 font-semibold rounded-l-md",
                                                                     "CAC"
                                                                 }
                                                                 span {
-                                                                    class: "ps-1",
+                                                                    class: "ps-2",
                                                                     "Unknown"
                                                                 }
                                                             })

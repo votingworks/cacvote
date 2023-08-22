@@ -23,7 +23,7 @@ pub fn DateOrDateTimeColumn(cx: Scope<Props>) -> Element {
     );
     render!(
         td {
-            class: "border px-4 py-2",
+            class: "border px-4 py-2 whitespace-nowrap",
             title: "{date_or_datetime.to_iso8601()}",
             "{formatted}"
         }

@@ -4,12 +4,20 @@ use openssl::sign::Verifier;
 use openssl::x509::X509;
 use types_rs::rave::jx::VerificationStatus;
 
+const DOD_TEST_CAC_CERTIFICATE_BYTES: &[u8] = include_bytes!("../certs/DODJITCEMAILCA_63.cer");
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum CertificateAuthority {
+    DodTest,
+}
+
 pub(crate) fn verify_cast_vote_record(
     common_access_card_certificate: &[u8],
     cast_vote_record: &[u8],
     cast_vote_record_signature: &[u8],
+    ca: CertificateAuthority,
 ) -> VerificationStatus {
-    let x509 = match X509::from_pem(common_access_card_certificate) {
+    let common_access_card_certificate = match X509::from_pem(common_access_card_certificate) {
         Ok(x509) => x509,
         Err(err) => {
             return VerificationStatus::Error(format!(
@@ -18,7 +26,21 @@ pub(crate) fn verify_cast_vote_record(
         }
     };
 
-    let public_key = match x509.public_key() {
+    match verify_common_access_card_certificate(&common_access_card_certificate, ca) {
+        Ok(true) => {
+            // certificate is valid, continue
+        }
+        Ok(false) => {
+            return VerificationStatus::Failure;
+        }
+        Err(err) => {
+            return VerificationStatus::Error(format!(
+                "error verifying CAC certificate against {ca:?} CA: {err}"
+            ));
+        }
+    }
+
+    let public_key = match common_access_card_certificate.public_key() {
         Ok(public_key) => public_key,
         Err(err) => {
             return VerificationStatus::Error(format!(
@@ -44,7 +66,7 @@ pub(crate) fn verify_cast_vote_record(
         surname,
         given_name,
         middle_name,
-    }) = extract_common_name_metadata(&x509) else {
+    }) = extract_common_name_metadata(&common_access_card_certificate) else {
         return VerificationStatus::Error(
             "could not extract and parse CN field from X509 certificate".to_owned()
         );
@@ -56,6 +78,41 @@ pub(crate) fn verify_cast_vote_record(
     VerificationStatus::Success {
         common_access_card_id,
         display_name,
+    }
+}
+
+/// Verify that the certificate is signed by the given certificate authority.
+/// This function only supports the DOD Test CA.
+fn verify_common_access_card_certificate(
+    common_access_card_certificate: &X509,
+    ca: CertificateAuthority,
+) -> color_eyre::Result<bool> {
+    match ca {
+        CertificateAuthority::DodTest => {
+            let signing_cert = match X509::from_der(DOD_TEST_CAC_CERTIFICATE_BYTES) {
+                Ok(signing_cert) => signing_cert,
+                Err(err) => {
+                    return Err(color_eyre::eyre::eyre!(
+                        "error parsing {ca:?} certificate from DER format: {err}"
+                    ));
+                }
+            };
+
+            let public_key = match signing_cert.public_key() {
+                Ok(public_key) => public_key,
+                Err(err) => {
+                    return Err(color_eyre::eyre::eyre!(
+                        "error extracting public key from {ca:?} certificate: {err}"
+                    ));
+                }
+            };
+
+            // directly verifies the certificate against the DOD Test CA because
+            // we're only verifying against the one certificate for now. when we
+            // need to verify the whole chain, we'll need to use the appropriate
+            // openssl APIs to verify the chain or perform this check in a loop
+            Ok(common_access_card_certificate.verify(&public_key)?)
+        }
     }
 }
 
