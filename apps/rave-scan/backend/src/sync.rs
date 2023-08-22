@@ -6,13 +6,13 @@ use tracing::Level;
 use types_rs::rave::{RaveServerSyncInput, RaveServerSyncOutput};
 
 use crate::{
-    config::{RAVE_URL, SYNC_INTERVAL},
+    config::{Config, SYNC_INTERVAL},
     db,
 };
 
 /// Spawns an async loop that synchronizes with the RAVE Server on a fixed
 /// schedule.
-pub(crate) async fn sync_periodically(pool: &PgPool) {
+pub(crate) async fn sync_periodically(pool: &PgPool, config: Config) {
     tracing::debug!(
         "Starting sync loop, syncing every {} seconds",
         SYNC_INTERVAL.as_secs()
@@ -24,7 +24,7 @@ pub(crate) async fn sync_periodically(pool: &PgPool) {
 
     tokio::spawn(async move {
         loop {
-            match sync(&mut connection).await {
+            match sync(&mut connection, &config).await {
                 Ok(_) => {
                     tracing::info!("Successfully synced with RAVE Server");
                 }
@@ -38,11 +38,14 @@ pub(crate) async fn sync_periodically(pool: &PgPool) {
     });
 }
 
-pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre::Result<()> {
+pub(crate) async fn sync(
+    executor: &mut sqlx::PgConnection,
+    config: &Config,
+) -> color_eyre::eyre::Result<()> {
     let span = tracing::span!(Level::DEBUG, "Syncing with RAVE Server");
     let _enter = span.enter();
 
-    check_status(RAVE_URL.join("/api/status")?).await?;
+    check_status(config.rave_url.join("/api/status")?).await?;
 
     let sync_input = RaveServerSyncInput {
         last_synced_election_id: db::get_last_synced_election_id(executor)
@@ -121,7 +124,8 @@ pub(crate) async fn sync(executor: &mut sqlx::PgConnection) -> color_eyre::eyre:
             })?,
     };
 
-    let sync_endpoint = RAVE_URL
+    let sync_endpoint = config
+        .rave_url
         .join("/api/sync")
         .expect("failed to construct sync URL");
     let sync_output = request(sync_endpoint, &sync_input).await?;

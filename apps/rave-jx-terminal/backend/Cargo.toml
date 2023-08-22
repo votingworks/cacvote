@@ -10,9 +10,9 @@ async-stream = { workspace = true }
 axum = { workspace = true }
 base64 = { workspace = true }
 base64-serde = { workspace = true }
+clap = { workspace = true }
 color-eyre = { workspace = true }
 futures-core = { workspace = true }
-lazy_static = { workspace = true }
 openssl = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }

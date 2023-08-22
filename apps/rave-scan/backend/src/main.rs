@@ -41,6 +41,8 @@
 #![cfg_attr(test, allow(clippy::float_cmp))]
 #![cfg_attr(not(test), warn(clippy::print_stdout, clippy::dbg_macro))]
 
+use clap::Parser;
+
 mod app;
 mod config;
 mod db;
@@ -50,9 +52,9 @@ mod sync;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
-    config::check();
-    log::setup()?;
-    let pool = db::setup().await?;
-    sync::sync_periodically(&pool).await;
-    app::run(app::setup(pool).await?).await
+    let config = config::Config::parse();
+    log::setup(&config)?;
+    let pool = db::setup(&config).await?;
+    sync::sync_periodically(&pool, config.clone()).await;
+    app::run(app::setup(pool, config.clone()).await?, &config).await
 }

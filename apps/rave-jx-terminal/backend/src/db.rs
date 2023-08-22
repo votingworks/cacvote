@@ -13,18 +13,18 @@ use types_rs::rave::{client, ClientId, ServerId};
 use uuid::Uuid;
 
 use crate::cac::{verify_cast_vote_record, CertificateAuthority};
-use crate::config::{DATABASE_URL, VX_MACHINE_ID};
+use crate::config::Config;
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
 /// Sets up the database pool and runs any pending migrations, returning the
 /// pool to be used by the app.
-pub(crate) async fn setup() -> color_eyre::Result<PgPool> {
+pub(crate) async fn setup(config: &Config) -> color_eyre::Result<PgPool> {
     let _entered = tracing::span!(Level::DEBUG, "Setting up database").entered();
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(3))
-        .connect(&DATABASE_URL)
+        .connect(&config.database_url)
         .await?;
     tracing::debug!("Running database migrations");
     sqlx::migrate!("db/migrations").run(&pool).await?;
@@ -410,6 +410,7 @@ pub(crate) async fn get_elections(
 
 pub(crate) async fn add_election(
     executor: &mut sqlx::PgConnection,
+    config: &Config,
     election: ElectionDefinition,
 ) -> color_eyre::Result<ClientId> {
     let client_id = ClientId::new();
@@ -427,7 +428,7 @@ pub(crate) async fn add_election(
         "#,
         client_id.as_uuid(),
         client_id.as_uuid(),
-        VX_MACHINE_ID.clone(),
+        config.machine_id.clone(),
         election.election_hash.as_str(),
         election.election_data,
     )
@@ -609,6 +610,7 @@ pub(crate) async fn get_scanned_ballots(
 
 pub(crate) async fn create_registration(
     executor: &mut sqlx::PgConnection,
+    config: &Config,
     registration_request_id: ClientId,
     election_id: ClientId,
     precinct_id: &PrecinctId,
@@ -645,7 +647,7 @@ pub(crate) async fn create_registration(
         "#,
         registration_id.as_uuid(),
         registration_id.as_uuid(),
-        VX_MACHINE_ID.clone(),
+        config.machine_id.clone(),
         common_access_card_id,
         registration_request_id.as_uuid(),
         election_id.as_uuid(),
@@ -1240,8 +1242,6 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
 
 #[cfg(test)]
 mod test {
-    use std::env;
-
     use super::*;
     use pretty_assertions::assert_eq;
     use time::OffsetDateTime;
@@ -1334,6 +1334,17 @@ mod test {
         }
     }
 
+    fn build_config() -> Config {
+        Config {
+            rave_url: reqwest::Url::parse("http://localhost:8000").unwrap(),
+            database_url: "postgres:test".to_owned(),
+            machine_id: "rave-jx-test".to_owned(),
+            port: 5000,
+            public_dir: None,
+            log_level: tracing::Level::INFO,
+        }
+    }
+
     #[sqlx::test(migrations = "db/migrations")]
     async fn test_add_election_from_rave_server(pool: sqlx::PgPool) -> sqlx::Result<()> {
         let mut db = pool.acquire().await?;
@@ -1357,13 +1368,11 @@ mod test {
 
     #[sqlx::test(migrations = "db/migrations")]
     async fn test_add_election_to_be_synced(pool: sqlx::PgPool) -> sqlx::Result<()> {
-        env::set_var("VX_MACHINE_ID", "rave-jx-test");
-
         let mut db = pool.acquire().await?;
 
         let election_definition = load_famous_names_election();
 
-        let client_id = add_election(&mut db, election_definition.clone())
+        let client_id = add_election(&mut db, &build_config(), election_definition.clone())
             .await
             .unwrap();
 

@@ -19,9 +19,11 @@ use tracing::Level;
 use types_rs::rave::{client, RaveServerSyncInput, RaveServerSyncOutput};
 
 use crate::{
-    config::{MAX_REQUEST_SIZE, PORT},
+    config::{Config, MAX_REQUEST_SIZE},
     db,
 };
+
+type AppState = PgPool;
 
 /// Prepares the application to be run within an HTTP server.
 ///
@@ -40,10 +42,10 @@ pub(crate) async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
 
 /// Create and run an HTTP server using the provided application at the port
 /// from [`config`][`super::config`].
-pub(crate) async fn run(app: Router) -> color_eyre::Result<()> {
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT);
+pub(crate) async fn run(app: Router, config: &Config) -> color_eyre::Result<()> {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port);
     tracing::info!("Server listening at http://{addr}/");
-    axum::Server::bind(&SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT))
+    axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await?;
     Ok(())
@@ -57,7 +59,7 @@ pub(crate) async fn get_status() -> impl IntoResponse {
 
 /// Synchronizes data between a client and the server.
 pub(crate) async fn do_sync(
-    State(pool): State<PgPool>,
+    State(pool): State<AppState>,
     Json(input): Json<RaveServerSyncInput>,
 ) -> Result<Json<RaveServerSyncOutput>, impl IntoResponse> {
     let mut txn = match pool.begin().await {
@@ -216,7 +218,7 @@ pub(crate) async fn do_sync(
 /// Creates an admin user. Admins have elevated privileges when logged into
 /// client machines.
 pub(crate) async fn create_admin(
-    State(pool): State<PgPool>,
+    State(pool): State<AppState>,
     Json(input): Json<client::input::Admin>,
 ) -> impl IntoResponse {
     let input = input;

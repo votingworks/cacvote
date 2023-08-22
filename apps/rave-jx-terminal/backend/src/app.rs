@@ -5,7 +5,6 @@
 
 use std::convert::Infallible;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::path::Path;
 use std::time::Duration;
 
 use async_stream::try_stream;
@@ -27,37 +26,43 @@ use tracing::Level;
 use types_rs::election::ElectionDefinition;
 use types_rs::rave::jx;
 
-use crate::config::{MAX_REQUEST_SIZE, PORT};
+use crate::config::{Config, MAX_REQUEST_SIZE};
 use crate::db::{self, get_app_data};
+
+type AppState = (Config, PgPool);
 
 /// Prepares the application with all the routes. Run the application with
 /// `app::run(…)` once you have it.
-pub(crate) async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
+pub(crate) async fn setup(pool: PgPool, config: Config) -> color_eyre::Result<Router> {
     let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
 
-    let dist_path = Path::new("../frontend/dist");
-    let _ = std::fs::create_dir_all(dist_path);
-
-    Ok(Router::new()
-        .fallback_service(
-            ServeDir::new(dist_path)
+    let router = match &config.public_dir {
+        Some(public_dir) => Router::new().fallback_service(
+            ServeDir::new(public_dir)
                 .append_index_html_on_directories(true)
-                .fallback(ServeFile::new(dist_path.join("index.html"))),
-        )
+                .fallback(ServeFile::new(public_dir.join("index.html"))),
+        ),
+        None => {
+            tracing::info!("No PUBLIC_DIR configured, serving no files");
+            Router::new()
+        }
+    };
+
+    Ok(router
         .route("/api/status", get(get_status))
         .route("/api/status-stream", get(get_status_stream))
         .route("/api/elections", post(create_election))
         .route("/api/registrations", post(create_registration))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
-        .with_state(pool))
+        .with_state((config, pool)))
 }
 
 /// Runs an application built by `app::setup(…)`.
-pub(crate) async fn run(app: Router) -> color_eyre::Result<()> {
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT);
+pub(crate) async fn run(app: Router, config: &Config) -> color_eyre::Result<()> {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port);
     tracing::info!("Server listening at http://{addr}/");
-    axum::Server::bind(&SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), *PORT))
+    axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await?;
     Ok(())
@@ -68,7 +73,7 @@ async fn get_status() -> impl IntoResponse {
 }
 
 async fn get_status_stream(
-    State(pool): State<PgPool>,
+    State((_, pool)): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let mut last_app_data = jx::AppData::default();
 
@@ -88,11 +93,14 @@ async fn get_status_stream(
     .keep_alive(KeepAlive::default())
 }
 
-async fn create_election(State(pool): State<PgPool>, election: String) -> impl IntoResponse {
+async fn create_election(
+    State((config, pool)): State<AppState>,
+    election: String,
+) -> impl IntoResponse {
     let election_definition: ElectionDefinition = election.parse().map_err(into_internal_error)?;
     let mut connection = pool.acquire().await.map_err(into_internal_error)?;
 
-    db::add_election(&mut connection, election_definition)
+    db::add_election(&mut connection, &config, election_definition)
         .await
         .map_err(into_internal_error)?;
 
@@ -100,7 +108,7 @@ async fn create_election(State(pool): State<PgPool>, election: String) -> impl I
 }
 
 async fn create_registration(
-    State(pool): State<PgPool>,
+    State((config, pool)): State<AppState>,
     registration: Json<jx::CreateRegistrationData>,
 ) -> impl IntoResponse {
     let ballot_style_id = &registration.ballot_style_id;
@@ -110,6 +118,7 @@ async fn create_registration(
 
     db::create_registration(
         &mut connection,
+        &config,
         registration.registration_request_id,
         registration.election_id,
         precinct_id,

@@ -6,6 +6,7 @@ node_modules
 # production
 build/
 target/
+dist/
 *-*.*.*.tgz
 *.tsbuildinfo
 

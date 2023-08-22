@@ -1,29 +1,23 @@
-//! Application configuration, e.g. `PORT` and `DATABASE_URL`.
+//! Application configuration.
+
+use clap::Parser;
 
 const TEN_MB: usize = 10 * 1024 * 1024;
 
-pub(crate) const DEFAULT_PORT: u16 = 8000;
 pub(crate) const MAX_REQUEST_SIZE: usize = TEN_MB;
 
-/// Checks that all required configuration is present.
-///
-/// # Panics
-///
-/// This function will panic if any required configuration is not present.
-pub(crate) fn check() {
-    let _ = *DATABASE_URL;
-    let _ = *PORT;
-}
+#[derive(Debug, Clone, Parser)]
+#[command(author, version, about)]
+pub(crate) struct Config {
+    /// URL of the PostgreSQL database, e.g. `postgres://user:pass@host:port/dbname`.
+    #[arg(long, env = "DATABASE_URL")]
+    pub(crate) database_url: String,
 
-lazy_static::lazy_static! {
-    pub static ref DATABASE_URL: String = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
-}
+    /// Port to listen on.
+    #[arg(long, env = "PORT")]
+    pub(crate) port: u16,
 
-lazy_static::lazy_static! {
-    pub static ref PORT: u16 =
-        match std::env::var("PORT").ok() {
-            Some(port) => port.parse().expect("PORT must be a valid port number"),
-            None => DEFAULT_PORT,
-        };
+    /// Log level.
+    #[arg(long, env = "LOG_LEVEL", default_value = "info")]
+    pub(crate) log_level: tracing::Level,
 }

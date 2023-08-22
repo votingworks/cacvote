@@ -1,78 +1,38 @@
-//! Application configuration, e.g. `PORT` and `DATABASE_URL`.
+//! Application configuration.
 
 use std::time::Duration;
 
+use clap::Parser;
+
 const TEN_MB: usize = 10 * 1024 * 1024;
 
-pub(crate) const DEFAULT_PORT: u16 = 5001;
 pub(crate) const MAX_REQUEST_SIZE: usize = TEN_MB;
 pub(crate) const SYNC_INTERVAL: Duration = Duration::from_secs(5);
 
-/// Checks that all required configuration is present.
-///
-/// # Panics
-///
-/// This function will panic if any required configuration is not present.
-pub(crate) fn check() {
-    let _ = *RAVE_URL;
-    let _ = *DATABASE_URL;
-    let _ = *VX_MACHINE_ID;
-    let _ = *PORT;
-}
+#[derive(Debug, Clone, Parser)]
+#[command(author, version, about)]
+pub(crate) struct Config {
+    /// URL of the RAVE server, e.g. `https://rave.example.com/`.
+    #[arg(long, env = "RAVE_URL")]
+    pub(crate) rave_url: reqwest::Url,
 
-lazy_static::lazy_static! {
-    pub static ref RAVE_URL: reqwest::Url = reqwest::Url::parse(
-        std::env::var("RAVE_URL")
-            .expect("RAVE_URL must be set")
-            .as_str(),
-    )
-    .expect("RAVE_URL must be a valid URL");
-}
+    /// URL of the PostgreSQL database, e.g. `postgres://user:pass@host:port/dbname`.
+    #[arg(long, env = "DATABASE_URL")]
+    pub(crate) database_url: String,
 
-lazy_static::lazy_static! {
-    pub static ref VX_MACHINE_ID: String = std::env::var("VX_MACHINE_ID")
-        .expect("VX_MACHINE_ID must be set");
-}
+    /// ID of this machine, e.g. `machine-1`.
+    #[arg(long, env = "VX_MACHINE_ID")]
+    pub(crate) machine_id: String,
 
-lazy_static::lazy_static! {
-    pub static ref DATABASE_URL: String = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
-}
+    /// Port to listen on.
+    #[arg(long, env = "PORT")]
+    pub(crate) port: u16,
 
-lazy_static::lazy_static! {
-    pub static ref PORT: u16 =
-        match std::env::var("PORT").ok() {
-            Some(port) => port.parse().expect("PORT must be a valid port number"),
-            None => DEFAULT_PORT,
-        };
-}
+    /// Directory to serve static files from.
+    #[arg(long, env = "PUBLIC_DIR")]
+    pub(crate) public_dir: Option<std::path::PathBuf>,
 
-impl PartialEq<String> for VX_MACHINE_ID {
-    fn eq(&self, other: &String) -> bool {
-        self.as_str() == other.as_str()
-    }
-}
-
-impl PartialEq<&str> for VX_MACHINE_ID {
-    fn eq(&self, other: &&str) -> bool {
-        self.as_str() == *other
-    }
-}
-
-impl PartialEq<VX_MACHINE_ID> for String {
-    fn eq(&self, other: &VX_MACHINE_ID) -> bool {
-        self.as_str() == other.as_str()
-    }
-}
-
-impl PartialEq<VX_MACHINE_ID> for &str {
-    fn eq(&self, other: &VX_MACHINE_ID) -> bool {
-        *self == other.as_str()
-    }
-}
-
-impl std::fmt::Display for PORT {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&(*self).to_string())
-    }
+    /// Log level.
+    #[arg(long, env = "LOG_LEVEL", default_value = "info")]
+    pub(crate) log_level: tracing::Level,
 }

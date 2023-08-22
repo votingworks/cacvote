@@ -11,11 +11,11 @@ axum = { workspace = true }
 ballot-encoder-rs = { workspace = true }
 base64 = { workspace = true }
 central-scanner = { workspace = true }
+clap = { workspace = true }
 color-eyre = { workspace = true }
 env_logger = { workspace = true }
 futures-core = { workspace = true }
 image = { workspace = true }
-lazy_static = { workspace = true }
 rayon = { workspace = true }
 reqwest = { workspace = true }
 rqrr = { workspace = true }
