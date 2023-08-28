@@ -858,13 +858,4 @@ commands:
             "pnpm-lock.yaml" }}
           paths:
             - /root/.local/share/pnpm/store/v3
-            - /root/.cache/Cypress
             - /root/.cargo
-  install-cypress-browser:
-    description: Installs a browser for Cypress tests.
-    steps:
-      - run: sudo apt update
-      - browser-tools/install-chrome:
-          # TODO remove following line when fixed https://github.com/CircleCI-Public/browser-tools-orb/issues/90
-          chrome-version: 116.0.5845.96
-      - browser-tools/install-chromedriver

@@ -1,5 +1,4 @@
 import { join } from 'path';
-import { existsSync } from 'fs';
 import { Optional } from '@votingworks/basics';
 import { PackageInfo } from './pnpm';
 
@@ -14,14 +13,12 @@ function generateTestJobForNodeJsPackage(pkg: PackageInfo): Optional<string[]> {
     return;
   }
 
-  const hasCypressTests = existsSync(`${pkg.path}/cypress`);
   const lines = [
     `# ${pkg.name}`,
     `${jobIdForPackage(pkg)}:`,
-    `  executor: ${hasCypressTests ? 'nodejs-browsers' : 'nodejs'}`,
+    `  executor: nodejs`,
     `  resource_class: xlarge`,
     `  steps:`,
-    ...(hasCypressTests ? [`    - install-cypress-browser`] : []),
     `    - checkout-and-install`,
     `    - run:`,
     `        name: Build`,
@@ -40,15 +37,6 @@ function generateTestJobForNodeJsPackage(pkg: PackageInfo): Optional<string[]> {
     `    - store_test_results:`,
     `        path: ${pkg.relativePath}/reports/`,
   ];
-
-  if (hasCypressTests) {
-    lines.push(
-      `    - store_artifacts:`,
-      `        path: ${pkg.relativePath}/cypress/screenshots/`,
-      `    - store_artifacts:`,
-      `        path: ${pkg.relativePath}/cypress/videos/`
-    );
-  }
 
   return lines;
 }
@@ -160,16 +148,7 @@ commands:
             "pnpm-lock.yaml" }}
           paths:
             - /root/.local/share/pnpm/store/v3
-            - /root/.cache/Cypress
             - /root/.cargo
-  install-cypress-browser:
-    description: Installs a browser for Cypress tests.
-    steps:
-      - run: sudo apt update
-      - browser-tools/install-chrome:
-          # TODO remove following line when fixed https://github.com/CircleCI-Public/browser-tools-orb/issues/90
-          chrome-version: 116.0.5845.96
-      - browser-tools/install-chromedriver
 
 `.trim();
 }
