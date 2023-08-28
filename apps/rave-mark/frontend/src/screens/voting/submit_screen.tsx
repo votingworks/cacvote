@@ -51,6 +51,8 @@ export function SubmitScreen({
   const pinEntry = usePinEntry({ pinLength });
   const createBallotPendingPrintMutation =
     createBallotPendingPrint.useMutation();
+  const createBallotPendingPrintMutationMutateAsync =
+    createBallotPendingPrintMutation.mutateAsync;
 
   const submitBallot = useCallback(
     async (pin: string) => {
@@ -58,7 +60,7 @@ export function SubmitScreen({
       setIsCheckingPin(true);
       try {
         const ballotPendingPrintId =
-          await createBallotPendingPrintMutation.mutateAsync(
+          await createBallotPendingPrintMutationMutateAsync(
             { votes, pin },
             {
               onError(err) {
@@ -73,7 +75,7 @@ export function SubmitScreen({
         setIsCheckingPin(false);
       }
     },
-    [createBallotPendingPrintMutation, onSubmitted, votes]
+    [createBallotPendingPrintMutationMutateAsync, onSubmitted, votes]
   );
 
   const handleNumberEntry = useCallback(
