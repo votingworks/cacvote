@@ -32,7 +32,6 @@ export interface RaveVoterUser {
   readonly givenName: string;
   readonly middleName?: string;
   readonly familyName: string;
-  readonly jurisdiction: string;
 }
 
 export type User =
