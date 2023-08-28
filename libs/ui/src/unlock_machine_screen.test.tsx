@@ -172,11 +172,16 @@ test('PIN submission disabled when checking PIN', async () => {
     userEvent.click(await screen.findButton('0'));
   }
 
-  expect(checkPin).toHaveBeenCalledWith('000000');
+  expect(checkPin).toHaveBeenCalledTimes(1);
+  expect(checkPin).toHaveBeenNthCalledWith(1, '000000');
   expect(await screen.findButton('0')).toBeDisabled();
-  act(() => {
+
+  // resolve the checkPin promise and let the component re-render
+  await act(async () => {
     checkPinDeferred.resolve();
+    await Promise.resolve();
   });
+
   expect(await screen.findButton('0')).toBeEnabled();
 });
 
