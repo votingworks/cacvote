@@ -60,7 +60,6 @@ export function fakeRaveVoterUser(
     commonAccessCardId: 'test-common-access-card-id',
     givenName: 'Bob',
     familyName: 'Smith',
-    jurisdiction: 'USA',
     ...props,
   };
 }
