@@ -17,10 +17,6 @@
       "name": "apps/rave-mark/frontend"
     },
     {
-      "path": "apps/rave-mark/integration-testing",
-      "name": "apps/rave-mark/integration-testing"
-    },
-    {
       "path": "apps/rave-scan/backend",
       "name": "apps/rave-scan/backend"
     },
