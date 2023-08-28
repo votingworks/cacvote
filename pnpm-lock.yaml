@@ -1418,6 +1418,9 @@ importers:
       '@types/jest':
         specifier: ^29.5.3
         version: 29.5.3
+      '@types/luxon':
+        specifier: ^3.0.0
+        version: 3.2.0
       '@types/node-fetch':
         specifier: ^2.6.0
         version: 2.6.2
