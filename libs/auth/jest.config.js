@@ -5,11 +5,12 @@ const shared = require('../../jest.config.shared');
  */
 module.exports = {
   ...shared,
-  coveragePathIgnorePatterns: [
-    'src/cypress.ts',
-    'src/index.ts',
-    'src/intermediate-scripts',
-    'src/jurisdictions.ts',
-    'src/test_utils.ts',
-  ],
+  coverageThreshold: {
+    global: {
+      branches: 50,
+      functions: 50,
+      lines: 50,
+      statements: 50,
+    },
+  },
 };
