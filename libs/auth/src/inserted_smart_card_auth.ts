@@ -432,25 +432,36 @@ export class InsertedSmartCardAuth implements InsertedSmartCardAuthApi {
         switch (action.checkPinResponse.response) {
           case 'correct': {
             const sessionExpiresAt = computeSessionEndTime(machineState);
-            if (currentAuthStatus.user.role === 'system_administrator') {
-              return {
-                status: 'logged_in',
-                user: currentAuthStatus.user,
-                sessionExpiresAt,
-              };
+            switch (currentAuthStatus.user.role) {
+              case 'system_administrator':
+                return {
+                  status: 'logged_in',
+                  user: currentAuthStatus.user,
+                  sessionExpiresAt,
+                };
+              case 'election_manager':
+                return {
+                  status: 'logged_in',
+                  user: currentAuthStatus.user,
+                  sessionExpiresAt,
+                };
+              case 'poll_worker':
+                return {
+                  status: 'logged_in',
+                  user: currentAuthStatus.user,
+                  sessionExpiresAt,
+                };
+              case 'rave_voter':
+                return {
+                  status: 'logged_in',
+                  user: currentAuthStatus.user,
+                  sessionExpiresAt,
+                };
+
+              /* istanbul ignore next - compile-time check */
+              default:
+                return throwIllegalValue(currentAuthStatus.user, 'role');
             }
-            if (currentAuthStatus.user.role === 'election_manager') {
-              return {
-                status: 'logged_in',
-                user: currentAuthStatus.user,
-                sessionExpiresAt,
-              };
-            }
-            return {
-              status: 'logged_in',
-              user: currentAuthStatus.user,
-              sessionExpiresAt,
-            };
           }
           case 'incorrect': {
             return {
