@@ -1,4 +1,3 @@
-import { VX_MACHINE_ID } from '@votingworks/backend';
 import { assert, Optional } from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
 import {
@@ -15,6 +14,7 @@ import {
 import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
 import { join } from 'path';
+import { VX_MACHINE_ID } from './globals';
 import {
   PrintedBallotRow,
   ClientId,

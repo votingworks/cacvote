@@ -52,3 +52,8 @@ export const RAVE_URL = process.env.RAVE_URL
 export const USE_MOCK_RAVE_SERVER =
   (process.env.USE_MOCK_RAVE_SERVER === 'true' || IS_INTEGRATION_TEST) &&
   process.env.USE_MOCK_RAVE_SERVER !== 'false';
+
+/**
+ * What's the unique ID for this machine?
+ */
+export const VX_MACHINE_ID = process.env.VX_MACHINE_ID ?? '000';
