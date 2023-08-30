@@ -1,9 +1,4 @@
-import {
-  UserRole,
-  UserRoleSchema,
-  Dictionary,
-  EventLogging,
-} from '@votingworks/types';
+import { Dictionary, EventLogging } from '@votingworks/types';
 import { z } from 'zod';
 import { LogEventId } from './log_event_ids';
 import { LogSource } from './log_source';
@@ -15,7 +10,7 @@ export enum LogDispositionStandardTypes {
   NotApplicable = 'na',
 }
 
-export type LoggingUserRole = UserRole | 'vx-staff' | 'system' | 'unknown';
+export type LoggingUserRole = 'vx-staff' | 'system' | 'unknown';
 export type LogDisposition = LogDispositionStandardTypes | string;
 
 export interface LogLine extends Dictionary<string> {
@@ -34,7 +29,6 @@ export const LogEventIdSchema: z.ZodSchema<LogEventId> =
 export const LogEventTypeSchema: z.ZodSchema<LogEventType> =
   z.nativeEnum(LogEventType);
 export const LoggingUserRoleSchema: z.ZodSchema<LoggingUserRole> = z.union([
-  UserRoleSchema,
   z.literal('vx-staff'),
   z.literal('system'),
   z.literal('unknown'),

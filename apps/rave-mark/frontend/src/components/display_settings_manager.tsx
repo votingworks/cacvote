@@ -19,8 +19,8 @@ export function DisplaySettingsManager(): JSX.Element | null {
   useQueryChangeListener(authStatusQuery, (newStatus, previousStatus) => {
     // Reset to default theme when election official logs in:
     if (
-      previousStatus?.status === 'logged_out' &&
-      newStatus.status !== 'logged_out'
+      previousStatus?.status === 'no_card' &&
+      newStatus.status !== 'no_card'
     ) {
       setVoterSessionTheme(currentTheme);
       themeManager.resetThemes();
@@ -28,8 +28,8 @@ export function DisplaySettingsManager(): JSX.Element | null {
 
     // Reset to previous voter settings when election official logs out:
     if (
-      previousStatus?.status !== 'logged_out' &&
-      newStatus.status === 'logged_out' &&
+      previousStatus?.status !== 'no_card' &&
+      newStatus.status === 'no_card' &&
       voterSessionTheme
     ) {
       themeManager.setColorMode(voterSessionTheme.colorMode);

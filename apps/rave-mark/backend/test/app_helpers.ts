@@ -21,7 +21,7 @@ export function buildMockAuth({
   pin: actualPin = '000000',
 }: { pin?: string } = {}): Auth {
   let currentStatus: AuthStatus = {
-    status: 'logged_out',
+    status: 'no_card',
   };
 
   return {
@@ -32,9 +32,9 @@ export function buildMockAuth({
     checkPin(pin) {
       if (pin === actualPin) {
         currentStatus = {
-          status: 'logged_in',
-          user: {
-            role: 'rave_voter',
+          status: 'has_card',
+          card: {
+            numIncorrectPinAttempts: 0,
             givenName: 'Joe',
             familyName: 'Smith',
             commonAccessCardId: '1234567890',
@@ -57,7 +57,7 @@ export function buildMockAuth({
 
     logOut() {
       currentStatus = {
-        status: 'logged_out',
+        status: 'no_card',
       };
       return Promise.resolve();
     },
