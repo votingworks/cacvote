@@ -1,39 +1,23 @@
 import { Buffer } from 'buffer';
-import {
-  CARD_VX_ADMIN_CERT,
-  InsertedSmartCardAuthApi,
-  InsertedSmartCardAuthMachineState,
-} from '@votingworks/auth';
-import { VX_MACHINE_ID, buildCastVoteRecord } from '@votingworks/backend';
+import { buildCastVoteRecord } from '@votingworks/backend';
 import { Optional, assert, find, iter } from '@votingworks/basics';
-import { useDevDockRouter } from '@votingworks/dev-dock-backend';
 import * as grout from '@votingworks/grout';
 import {
   BallotIdSchema,
   BallotStyleId,
   BallotType,
-  DEFAULT_SYSTEM_SETTINGS,
   Id,
-  InsertedSmartCardAuth,
   PrecinctId,
   VotesDict,
   unsafeParse,
 } from '@votingworks/types';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
-import { IS_INTEGRATION_TEST } from './globals';
+import { IS_INTEGRATION_TEST, VX_MACHINE_ID } from './globals';
 import { RaveServerClient } from './rave_server_client';
-import { AuthStatus } from './types/auth';
+import { Auth, AuthStatus } from './types/auth';
 import { ClientId, ClientIdSchema, RegistrationRequest } from './types/db';
 import { Workspace } from './workspace';
-
-function constructAuthMachineState(
-  workspace: Workspace
-): InsertedSmartCardAuthMachineState {
-  const systemSettings =
-    workspace.store.getSystemSettings() ?? DEFAULT_SYSTEM_SETTINGS;
-  return { ...systemSettings.auth };
-}
 
 export type VoterStatus =
   | 'unregistered'
@@ -112,23 +96,12 @@ function buildApi({
   workspace,
   raveServerClient,
 }: {
-  auth: InsertedSmartCardAuthApi;
+  auth: Auth;
   workspace: Workspace;
   raveServerClient: RaveServerClient;
 }) {
   async function getAuthStatus(): Promise<AuthStatus> {
-    const authStatus = (
-      await auth.getAuthStatus(constructAuthMachineState(workspace))
-    ).unsafeUnwrap();
-    const isRaveAdmin =
-      authStatus.status === 'logged_in' &&
-      authStatus.user.role === 'rave_voter' &&
-      workspace.store.isAdmin(authStatus.user.commonAccessCardId);
-
-    return {
-      ...authStatus,
-      isRaveAdmin,
-    };
+    return await auth.getAuthStatus();
   }
 
   function assertIsIntegrationTest() {
@@ -141,13 +114,11 @@ function buildApi({
     getAuthStatus,
 
     checkPin(input: { pin: string }) {
-      return auth.checkPin(constructAuthMachineState(workspace), {
-        pin: input.pin,
-      });
+      return auth.checkPin(input.pin);
     },
 
     async getVoterStatus(): Promise<
-      Optional<{ status: VoterStatus; isRaveAdmin: boolean }>
+      Optional<{ status: VoterStatus; isAdmin: boolean }>
     > {
       const authStatus: AuthStatus = await getAuthStatus();
 
@@ -159,7 +130,7 @@ function buildApi({
       }
 
       const { commonAccessCardId } = authStatus.user;
-      const isRaveAdmin = workspace.store.isAdmin(commonAccessCardId);
+      const isAdmin = workspace.store.isAdmin(commonAccessCardId);
       const registrations =
         workspace.store.getRegistrations(commonAccessCardId);
 
@@ -172,7 +143,7 @@ function buildApi({
             registrationRequests.length > 0
               ? 'registration_pending'
               : 'unregistered',
-          isRaveAdmin,
+          isAdmin,
         };
       }
 
@@ -184,7 +155,7 @@ function buildApi({
           registration.id
         );
 
-      return { status: selection ? 'voted' : 'registered', isRaveAdmin };
+      return { status: selection ? 'voted' : 'registered', isAdmin };
     },
 
     async getRegistrationRequests(): Promise<RegistrationRequest[]> {
@@ -324,19 +295,13 @@ function buildApi({
         ballotMarkingMode: 'machine',
       });
 
-      const commonAccessCardCertificate = (
-        await auth.getCertificate({
-          objectId: CARD_VX_ADMIN_CERT.OBJECT_ID,
-        })
-      ).unsafeUnwrap();
+      const commonAccessCardCertificate = await auth.getCertificate();
       assert(commonAccessCardCertificate);
       const castVoteRecordJson = JSON.stringify(castVoteRecord);
-      const signature = (
-        await auth.generateSignature(Buffer.from(castVoteRecordJson, 'utf-8'), {
-          privateKeyId: CARD_VX_ADMIN_CERT.PRIVATE_KEY_ID,
-          pin: input.pin,
-        })
-      ).unsafeUnwrap();
+      const signature = await auth.generateSignature(
+        Buffer.from(castVoteRecordJson, 'utf-8'),
+        { pin: input.pin }
+      );
       assert(signature);
 
       return workspace.store.createBallotPendingPrint({
@@ -371,7 +336,7 @@ function buildApi({
       assert(
         authStatus.status === 'logged_in' &&
           authStatus.user.role === 'rave_voter' &&
-          authStatus.isRaveAdmin,
+          authStatus.isAdmin,
         'not logged in as admin'
       );
 
@@ -383,7 +348,7 @@ function buildApi({
     },
 
     logOut() {
-      return auth.logOut(constructAuthMachineState(workspace));
+      return auth.logOut();
     },
 
     createTestVoter(input: CreateTestVoterInput) {
@@ -501,7 +466,7 @@ export function buildApp({
   workspace,
   raveServerClient,
 }: {
-  auth: InsertedSmartCardAuthApi;
+  auth: Auth;
   workspace: Workspace;
   raveServerClient: RaveServerClient;
 }): Application {
@@ -516,7 +481,7 @@ export function buildApp({
     });
 
     let timeout: NodeJS.Timeout | undefined;
-    let lastAuthStatus: InsertedSmartCardAuth.AuthStatus | undefined;
+    let lastAuthStatus: AuthStatus | undefined;
 
     async function sendUpdate() {
       const authStatus = await api.getAuthStatus();
@@ -541,6 +506,5 @@ export function buildApp({
   });
 
   app.use('/api', grout.buildRouter(api, express));
-  useDevDockRouter(app, express);
   return app;
 }
