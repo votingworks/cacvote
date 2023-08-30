@@ -1,15 +1,6 @@
-import {
-  InsertedSmartCardAuth,
-  InsertedSmartCardAuthApi,
-  JavaCard,
-  MockFileCard,
-} from '@votingworks/auth';
+import { CARD_CERT, JavaCard } from '@votingworks/auth';
+import { throwIllegalValue } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
-import {
-  BooleanEnvironmentVariableName,
-  isFeatureFlagEnabled,
-  isIntegrationTest,
-} from '@votingworks/utils';
 import { Server } from 'http';
 import { buildApp } from './app';
 import { RAVE_URL, USE_MOCK_RAVE_SERVER } from './globals';
@@ -18,28 +9,66 @@ import {
   RaveServerClient,
   RaveServerClientImpl,
 } from './rave_server_client';
+import { Store } from './store';
+import { Auth } from './types/auth';
 import { Workspace } from './workspace';
 
 export interface StartOptions {
-  auth?: InsertedSmartCardAuthApi;
+  auth?: Auth;
   workspace: Workspace;
   logger: Logger;
   port: number;
 }
 
-function getDefaultAuth(logger: Logger): InsertedSmartCardAuthApi {
-  return new InsertedSmartCardAuth({
-    card:
-      isFeatureFlagEnabled(BooleanEnvironmentVariableName.USE_MOCK_CARDS) ||
-      isIntegrationTest()
-        ? new MockFileCard()
-        : new JavaCard(),
-    config: {
-      allowCardlessVoterSessions: true,
-      allowElectionManagersToAccessMachinesConfiguredForOtherElections: true,
+function getDefaultAuth(store: Store): Auth {
+  const card = new JavaCard();
+
+  return {
+    async checkPin(pin) {
+      const result = await card.checkPin(pin);
+      return result.response === 'correct';
     },
-    logger,
-  });
+
+    async getAuthStatus() {
+      const status = await card.getCardStatus();
+
+      switch (status.status) {
+        case 'no_card':
+        case 'unknown_error':
+        case 'card_error':
+          return { status: 'logged_out' };
+
+        case 'ready': {
+          const { cardDetails } = status;
+          const isAdmin = store.isAdmin(cardDetails.user.commonAccessCardId);
+          return {
+            status: 'logged_in',
+            user: cardDetails.user,
+            isAdmin,
+          };
+        }
+
+        /* istanbul ignore next: Compile-time check for completeness */
+        default:
+          throwIllegalValue(status);
+      }
+    },
+
+    getCertificate() {
+      return card.getCertificate({ objectId: CARD_CERT.OBJECT_ID });
+    },
+
+    generateSignature(message, options) {
+      return card.generateSignature(message, {
+        privateKeyId: CARD_CERT.PRIVATE_KEY_ID,
+        pin: options.pin,
+      });
+    },
+
+    async logOut() {
+      await card.disconnect();
+    },
+  };
 }
 
 function getRaveServerClient(workspace: Workspace): RaveServerClient {
@@ -63,7 +92,7 @@ function getRaveServerClient(workspace: Workspace): RaveServerClient {
  */
 export function start({ auth, logger, port, workspace }: StartOptions): Server {
   const raveServerClient = getRaveServerClient(workspace);
-  const resolvedAuth = auth ?? getDefaultAuth(logger);
+  const resolvedAuth = auth ?? getDefaultAuth(workspace.store);
   const app = buildApp({
     workspace,
     auth: resolvedAuth,
