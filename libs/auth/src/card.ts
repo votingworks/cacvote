@@ -16,7 +16,7 @@ export type CardDetails = CommonAccessCardDetails;
 
 interface CardStatusReady {
   status: 'ready';
-  cardDetails?: CardDetails;
+  cardDetails: CardDetails;
 }
 
 interface CardStatusNotReady {
