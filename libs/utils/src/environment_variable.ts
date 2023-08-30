@@ -19,8 +19,6 @@ export enum BooleanEnvironmentVariableName {
   DISALLOW_CASTING_OVERVOTES = 'REACT_APP_VX_DISALLOW_CASTING_OVERVOTES',
   // Enables the React Query Devtools in development.
   ENABLE_REACT_QUERY_DEVTOOLS = 'REACT_APP_VX_ENABLE_REACT_QUERY_DEVTOOLS',
-  // Enables the VxSuite Dev Dock in development. See libs/dev-dock.
-  ENABLE_DEV_DOCK = 'REACT_APP_VX_ENABLE_DEV_DOCK',
   // Skips PIN entry during authentication
   SKIP_PIN_ENTRY = 'REACT_APP_VX_SKIP_PIN_ENTRY',
   // Use mock cards instead of a real card reader. Meant for development and integration tests.
