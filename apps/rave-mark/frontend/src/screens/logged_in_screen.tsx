@@ -10,5 +10,5 @@ export function LoggedInScreen(): JSX.Element | null {
     return null;
   }
 
-  return voterStatus.isRaveAdmin ? <AdminFlowScreen /> : <VoterFlowScreen />;
+  return voterStatus.isAdmin ? <AdminFlowScreen /> : <VoterFlowScreen />;
 }
