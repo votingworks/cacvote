@@ -1,11 +1,14 @@
-import { Byte, RaveVoterUser } from '@votingworks/types';
+import { Byte, Id } from '@votingworks/types';
 import { Buffer } from 'buffer';
 
 /**
  * Details about a Common Access Card.
  */
 export interface CommonAccessCardDetails {
-  user: RaveVoterUser;
+  commonAccessCardId: Id;
+  givenName: string;
+  middleName?: string;
+  familyName: string;
   numIncorrectPinAttempts: number;
 }
 

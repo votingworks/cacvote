@@ -1,40 +1,21 @@
 import { throwIllegalValue } from '@votingworks/basics';
-import { InvalidCardScreen, UnlockMachineScreen } from '@votingworks/ui';
-import { InsertedSmartCardAuth } from '@votingworks/types';
-import { checkPin, getAuthStatus } from './api';
-import { IdleScreen } from './screens/idle_screen';
-import { LoggedInScreen } from './screens/logged_in_screen';
-import { COMMON_ACCESS_CARD_PIN_LENGTH } from './globals';
+import { AuthStatus } from '@votingworks/rave-mark-backend';
+import { getAuthStatus } from './api';
+import { HasCardScreen } from './screens/has_card_screen';
+import { NoCardScreen } from './screens/no_card_screen';
 
 export function AppRoot(): JSX.Element {
   const authStatusQuery = getAuthStatus.useQuery();
-  const authStatus = authStatusQuery.isSuccess
+  const authStatus: AuthStatus = authStatusQuery.isSuccess
     ? authStatusQuery.data
-    : InsertedSmartCardAuth.DEFAULT_AUTH_STATUS;
-  const checkPinMutation = checkPin.useMutation();
+    : { status: 'no_card' };
 
   switch (authStatus.status) {
-    case 'logged_out':
-      return <IdleScreen />;
+    case 'no_card':
+      return <NoCardScreen />;
 
-    case 'logged_in':
-      return authStatus.user.role === 'rave_voter' ? (
-        <LoggedInScreen />
-      ) : (
-        <InvalidCardScreen reason="card_error" />
-      );
-
-    case 'checking_pin':
-      return (
-        <UnlockMachineScreen
-          auth={authStatus}
-          checkPin={async (pin) => {
-            // errors handled by default query client error handling
-            void (await checkPinMutation.mutateAsync({ pin }));
-          }}
-          pinLength={COMMON_ACCESS_CARD_PIN_LENGTH}
-        />
-      );
+    case 'has_card':
+      return <HasCardScreen />;
 
     default:
       throwIllegalValue(authStatus);

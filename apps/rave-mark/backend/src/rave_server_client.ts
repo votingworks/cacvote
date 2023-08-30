@@ -85,11 +85,7 @@ export class RaveServerClientImpl {
   }
 
   async sync({ authStatus }: { authStatus?: AuthStatus } = {}): Promise<void> {
-    const user =
-      authStatus?.status === 'logged_in' &&
-      authStatus.user.role === 'rave_voter'
-        ? authStatus.user
-        : null;
+    const user = authStatus?.status === 'has_card' ? authStatus.card : null;
     assert(!authStatus || user, 'not logged in as voter');
     const creator = user?.commonAccessCardId ?? 'system';
 
@@ -297,17 +293,13 @@ export class MockRaveServerClient implements RaveServerClient {
   } = {}): Promise<void> {
     await Promise.resolve();
 
-    const user =
-      authStatus?.status === 'logged_in' &&
-      authStatus.user.role === 'rave_voter'
-        ? authStatus.user
-        : null;
-    assert(!authStatus || user, 'not logged in as voter');
-    const creator = user?.commonAccessCardId ?? 'system';
+    const card = authStatus?.status === 'has_card' ? authStatus.card : null;
+    assert(!authStatus || card, 'not logged in as voter');
+    const creator = card?.commonAccessCardId ?? 'system';
 
     const id = this.store.createServerSyncAttempt({
       creator,
-      trigger: user ? 'manual' : 'scheduled',
+      trigger: card ? 'manual' : 'scheduled',
       initialStatusMessage: 'Syncing…',
     });
 

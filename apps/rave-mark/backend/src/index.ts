@@ -6,6 +6,7 @@ import * as server from './server';
 import { NODE_ENV, PORT, RAVE_MARK_WORKSPACE } from './globals';
 import { Workspace, createWorkspace } from './workspace';
 
+export type { AuthStatus } from './types/auth';
 export type { Api, CreateTestVoterInput } from './app';
 
 // https://github.com/bkeepers/dotenv#what-other-env-files-can-i-use
