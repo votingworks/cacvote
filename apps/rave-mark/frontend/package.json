@@ -40,7 +40,6 @@
   "dependencies": {
     "@tanstack/react-query": "^4.32.1",
     "@votingworks/basics": "workspace:*",
-    "@votingworks/dev-dock-frontend": "workspace:^",
     "@votingworks/grout": "workspace:*",
     "@votingworks/logging": "workspace:*",
     "@votingworks/mark-flow-ui": "workspace:*",
