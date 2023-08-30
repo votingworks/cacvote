@@ -36,14 +36,14 @@ function getDefaultAuth(store: Store): Auth {
         case 'no_card':
         case 'unknown_error':
         case 'card_error':
-          return { status: 'logged_out' };
+          return { status: 'no_card' };
 
         case 'ready': {
           const { cardDetails } = status;
-          const isAdmin = store.isAdmin(cardDetails.user.commonAccessCardId);
+          const isAdmin = store.isAdmin(cardDetails.commonAccessCardId);
           return {
-            status: 'logged_in',
-            user: cardDetails.user,
+            status: 'has_card',
+            card: cardDetails,
             isAdmin,
           };
         }

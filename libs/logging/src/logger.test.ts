@@ -42,7 +42,7 @@ test('logger logs client logs as expected through kiosk browser with overridden 
   console.log = jest.fn();
   const kiosk = fakeKiosk();
   const logger = new Logger(LogSource.VxAdminFrontend, kiosk);
-  await logger.log(LogEventId.ElectionConfigured, 'election_manager', {
+  await logger.log(LogEventId.ElectionConfigured, 'system', {
     message: 'On my tallest tiptoes',
     disposition: LogDispositionStandardTypes.NotApplicable,
     folklore: 'mirrorball',
@@ -54,7 +54,7 @@ test('logger logs client logs as expected through kiosk browser with overridden 
       source: LogSource.VxAdminFrontend,
       eventId: LogEventId.ElectionConfigured,
       eventType: LogEventType.UserAction,
-      user: 'election_manager',
+      user: 'system',
       message: 'On my tallest tiptoes', // overrides the default message
       disposition: LogDispositionStandardTypes.NotApplicable,
       folklore: 'mirrorball',
@@ -67,7 +67,7 @@ test('defaults to default message when defined and no disposition', async () => 
   console.log = jest.fn();
   const kiosk = fakeKiosk();
   const logger = new Logger(LogSource.VxAdminFrontend, kiosk);
-  await logger.log(LogEventId.ElectionUnconfigured, 'election_manager');
+  await logger.log(LogEventId.ElectionUnconfigured, 'system');
   expect(kiosk.log).toHaveBeenCalledTimes(1);
   expect(kiosk.log).toHaveBeenCalledWith(
     JSON.stringify({
@@ -75,7 +75,7 @@ test('defaults to default message when defined and no disposition', async () => 
       source: LogSource.VxAdminFrontend,
       eventId: LogEventId.ElectionUnconfigured,
       eventType: LogEventType.UserAction,
-      user: 'election_manager',
+      user: 'system',
       message: 'Application has been unconfigured from the previous election.',
       disposition: LogDispositionStandardTypes.NotApplicable,
     })
@@ -111,7 +111,7 @@ test('logs unknown disposition as expected', async () => {
 test('logging from a client side app without sending window.kiosk does NOT log to console', async () => {
   console.log = jest.fn();
   const logger = new Logger(LogSource.VxAdminFrontend);
-  await logger.log(LogEventId.AuthLogin, 'election_manager');
+  await logger.log(LogEventId.AuthLogin, 'system');
   expect(console.log).not.toHaveBeenCalled();
 });
 
@@ -129,7 +129,7 @@ describe('test cdf conversion', () => {
       '',
       '12machine34',
       'thisisacodeversion',
-      'election_manager'
+      'system'
     );
     const cdfLogResult = safeParseJson(
       cdfLogContent,
@@ -161,7 +161,7 @@ describe('test cdf conversion', () => {
       '{"timeLogWritten":"2021-11-03T16:38:09.384062-07:00","source":"vx-admin-frontend","eventId":"usb-drive-detected","eventType":"application-status","user":"system","message":"i know the deal","disposition":"na"}',
       '12machine34',
       'thisisacodeversion',
-      'election_manager'
+      'system'
     );
     const cdfLogResult = safeParseJson(
       cdfLogContent,
@@ -188,7 +188,7 @@ describe('test cdf conversion', () => {
     expect('otherDisposition' in decodedEvent).toEqual(false);
     expect(logSpy).toHaveBeenCalledWith(
       LogEventId.LogConversionToCdfComplete,
-      'election_manager',
+      'system',
       expect.objectContaining({
         message: 'Log file successfully converted to CDF format.',
         disposition: 'success',
@@ -203,7 +203,7 @@ describe('test cdf conversion', () => {
       '{"timeLogWritten":"2021-11-03T16:38:09.384062-07:00","source":"vx-admin-frontend","eventId":"usb-drive-detected","eventType":"application-status","user":"system","message":"i know the deal","disposition":""}',
       '12machine34',
       'thisisacodeversion',
-      'election_manager'
+      'system'
     );
     const cdfLogResult = safeParseJson(
       cdfLogContent,
@@ -228,7 +228,7 @@ describe('test cdf conversion', () => {
       '{"timeLogWritten":"2021-11-03T16:38:09.384062-07:00","host":"ubuntu","timeLogInitiated":"1635982689382","source":"vx-admin-frontend","eventId":"usb-drive-detected","eventType":"application-status","user":"system","message":"glistened as it fell","disposition":"dinosaurs","newStatus":"absent"}',
       '12machine34',
       'thisisacodeversion',
-      'election_manager'
+      'system'
     );
     const cdfLogResult = safeParseJson(
       cdfLogContent,
@@ -264,12 +264,12 @@ describe('test cdf conversion', () => {
         '',
         '12machine34',
         'thisisacodeversion',
-        'election_manager'
+        'system'
       )
     ).toThrowError('Can only export CDF logs from a frontend app.');
     expect(logSpy).toHaveBeenCalledWith(
       LogEventId.LogConversionToCdfComplete,
-      'election_manager',
+      'system',
       expect.objectContaining({
         message: 'The current application is not able to export logs.',
         disposition: 'failure',
@@ -298,11 +298,11 @@ describe('test cdf conversion', () => {
       `rawr\n${properLog}\n`,
       '12machine34',
       'thisisacodeversion',
-      'election_manager'
+      'system'
     );
     expect(logSpy).toHaveBeenCalledWith(
       LogEventId.LogConversionToCdfLogLineError,
-      'election_manager',
+      'system',
       expect.objectContaining({
         message:
           'Malformed log line identified, log line will be ignored: rawr ',
@@ -323,11 +323,11 @@ describe('test cdf conversion', () => {
       missingTimeLog,
       '12machine34',
       'thisisacodeversion',
-      'election_manager'
+      'system'
     );
     expect(logSpy).toHaveBeenCalledWith(
       LogEventId.LogConversionToCdfLogLineError,
-      'election_manager',
+      'system',
       expect.objectContaining({
         message: `Malformed log line identified, log line will be ignored: ${missingTimeLog} `,
         disposition: 'failure',
@@ -397,7 +397,7 @@ describe('test cdf conversion', () => {
         "Sequence": "31",
         "TimeStamp": "2021-12-12T15:22:14.250052-08:00",
         "Type": "user-action",
-        "UserId": "election_manager",
+        "UserId": "system",
       }
     `);
 

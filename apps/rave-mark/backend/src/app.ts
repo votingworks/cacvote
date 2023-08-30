@@ -122,14 +122,11 @@ function buildApi({
     > {
       const authStatus: AuthStatus = await getAuthStatus();
 
-      if (
-        authStatus.status !== 'logged_in' ||
-        authStatus.user.role !== 'rave_voter'
-      ) {
+      if (authStatus.status !== 'has_card') {
         return undefined;
       }
 
-      const { commonAccessCardId } = authStatus.user;
+      const { commonAccessCardId } = authStatus.card;
       const isAdmin = workspace.store.isAdmin(commonAccessCardId);
       const registrations =
         workspace.store.getRegistrations(commonAccessCardId);
@@ -161,15 +158,12 @@ function buildApi({
     async getRegistrationRequests(): Promise<RegistrationRequest[]> {
       const authStatus = await getAuthStatus();
 
-      if (
-        authStatus.status !== 'logged_in' ||
-        authStatus.user.role !== 'rave_voter'
-      ) {
+      if (authStatus.status !== 'has_card') {
         return [];
       }
 
       return workspace.store.getRegistrationRequests(
-        authStatus.user.commonAccessCardId
+        authStatus.card.commonAccessCardId
       );
     },
 
@@ -185,17 +179,14 @@ function buildApi({
     }): Promise<{ id: Id }> {
       const authStatus = await getAuthStatus();
 
-      if (
-        authStatus.status !== 'logged_in' ||
-        authStatus.user.role !== 'rave_voter'
-      ) {
+      if (authStatus.status !== 'has_card') {
         throw new Error('Not logged in');
       }
 
       const id = ClientId();
       workspace.store.createRegistrationRequest({
         id,
-        commonAccessCardId: authStatus.user.commonAccessCardId,
+        commonAccessCardId: authStatus.card.commonAccessCardId,
         givenName: input.givenName,
         familyName: input.familyName,
         addressLine1: input.addressLine1,
@@ -211,14 +202,11 @@ function buildApi({
     async getElectionConfiguration() {
       const authStatus = await getAuthStatus();
 
-      if (
-        authStatus.status !== 'logged_in' ||
-        authStatus.user.role !== 'rave_voter'
-      ) {
+      if (authStatus.status !== 'has_card') {
         return undefined;
       }
 
-      const { commonAccessCardId } = authStatus.user;
+      const { commonAccessCardId } = authStatus.card;
       const registrations =
         workspace.store.getRegistrations(commonAccessCardId);
       // TODO: Handle multiple registrations
@@ -246,14 +234,11 @@ function buildApi({
     async createBallotPendingPrint(input: { votes: VotesDict; pin: string }) {
       const authStatus = await getAuthStatus();
 
-      if (
-        authStatus.status !== 'logged_in' ||
-        authStatus.user.role !== 'rave_voter'
-      ) {
+      if (authStatus.status !== 'has_card') {
         throw new Error('Not logged in');
       }
 
-      const { commonAccessCardId } = authStatus.user;
+      const { commonAccessCardId } = authStatus.card;
       const registrations =
         workspace.store.getRegistrations(commonAccessCardId);
       // TODO: Handle multiple registrations
@@ -316,10 +301,7 @@ function buildApi({
     async markBallotPrinted(input: { ballotPendingPrintId: Id }) {
       const authStatus = await getAuthStatus();
 
-      if (
-        authStatus.status !== 'logged_in' ||
-        authStatus.user.role !== 'rave_voter'
-      ) {
+      if (authStatus.status !== 'has_card') {
         throw new Error('Not logged in');
       }
 
@@ -334,9 +316,7 @@ function buildApi({
     async sync() {
       const authStatus = await getAuthStatus();
       assert(
-        authStatus.status === 'logged_in' &&
-          authStatus.user.role === 'rave_voter' &&
-          authStatus.isAdmin,
+        authStatus.status === 'has_card' && authStatus.isAdmin,
         'not logged in as admin'
       );
 
@@ -430,14 +410,11 @@ function buildApi({
 
       const authStatus = await getAuthStatus();
 
-      if (
-        authStatus.status !== 'logged_in' ||
-        authStatus.user.role !== 'rave_voter'
-      ) {
+      if (authStatus.status !== 'has_card') {
         throw new Error('Not logged in');
       }
 
-      const { commonAccessCardId } = authStatus.user;
+      const { commonAccessCardId } = authStatus.card;
       const mostRecentVotes = iter(
         workspace.store.getRegistrations(commonAccessCardId)
       )

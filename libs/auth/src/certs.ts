@@ -113,13 +113,10 @@ export async function parseCardDetailsFromCert(
 
   const { commonAccessCardId, givenName, middleName, familyName } = certDetails;
   return {
-    user: {
-      role: 'rave_voter',
-      commonAccessCardId,
-      givenName,
-      middleName,
-      familyName,
-    },
+    commonAccessCardId,
+    givenName,
+    middleName,
+    familyName,
     numIncorrectPinAttempts: 0,
   };
 }

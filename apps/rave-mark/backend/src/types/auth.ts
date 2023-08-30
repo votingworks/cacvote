@@ -1,9 +1,9 @@
 import { Buffer } from 'buffer';
-import { RaveVoterUser } from '@votingworks/types';
+import { CommonAccessCardDetails } from '@votingworks/auth';
 
 export type AuthStatus =
-  | { status: 'logged_out' }
-  | { status: 'logged_in'; user: RaveVoterUser; isAdmin: boolean };
+  | { status: 'no_card' }
+  | { status: 'has_card'; card: CommonAccessCardDetails; isAdmin: boolean };
 
 export interface Auth {
   /**

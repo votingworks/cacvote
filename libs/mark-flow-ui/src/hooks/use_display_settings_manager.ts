@@ -1,21 +1,20 @@
 import React from 'react';
 import { DefaultTheme, ThemeContext } from 'styled-components';
 
-import { isCardlessVoterAuth } from '@votingworks/utils';
 import { ThemeManagerContext } from '@votingworks/ui';
-import { InsertedSmartCardAuth, VotesDict } from '@votingworks/types';
+import { VotesDict } from '@votingworks/types';
 
 export interface UseDisplaySettingsManagerParams {
-  authStatus: InsertedSmartCardAuth.AuthStatus;
+  isLoggedInAsVoter: boolean;
   votes?: VotesDict;
 }
 
 export function useDisplaySettingsManager(
   params: UseDisplaySettingsManagerParams
 ): void {
-  const { authStatus, votes } = params;
+  const { isLoggedInAsVoter, votes } = params;
 
-  const previousAuthStatus = React.useRef<InsertedSmartCardAuth.AuthStatus>();
+  const wasLoggedInAsVoter = React.useRef<boolean>();
 
   const themeManager = React.useContext(ThemeManagerContext);
   const currentTheme = React.useContext(ThemeContext);
@@ -23,10 +22,7 @@ export function useDisplaySettingsManager(
     React.useState<DefaultTheme | null>(null);
 
   React.useEffect(() => {
-    const wasPreviouslyLoggedInAsVoter =
-      previousAuthStatus.current &&
-      isCardlessVoterAuth(previousAuthStatus.current);
-    const isLoggedInAsVoter = isCardlessVoterAuth(authStatus);
+    const wasPreviouslyLoggedInAsVoter = wasLoggedInAsVoter.current;
     const isVotingSessionActive = !!votes;
 
     // Reset to default theme when election official logs in, since
@@ -54,6 +50,6 @@ export function useDisplaySettingsManager(
       setVoterSessionTheme(null);
     }
 
-    previousAuthStatus.current = authStatus;
-  }, [authStatus, currentTheme, themeManager, voterSessionTheme, votes]);
+    wasLoggedInAsVoter.current = isLoggedInAsVoter;
+  }, [currentTheme, isLoggedInAsVoter, themeManager, voterSessionTheme, votes]);
 }

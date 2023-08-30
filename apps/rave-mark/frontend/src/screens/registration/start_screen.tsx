@@ -5,13 +5,12 @@ import { createVoterRegistration, getAuthStatus } from '../../api';
 
 export function StartScreen(): JSX.Element {
   const authStatusQuery = getAuthStatus.useQuery();
-  const raveVoter =
-    authStatusQuery.data?.status === 'logged_in' &&
-    authStatusQuery.data.user.role === 'rave_voter'
-      ? authStatusQuery.data.user
+  const cardDetails =
+    authStatusQuery.data?.status === 'has_card'
+      ? authStatusQuery.data.card
       : undefined;
-  const [givenName, setGivenName] = useState(raveVoter?.givenName ?? '');
-  const [familyName, setFamilyName] = useState(raveVoter?.familyName ?? '');
+  const [givenName, setGivenName] = useState(cardDetails?.givenName ?? '');
+  const [familyName, setFamilyName] = useState(cardDetails?.familyName ?? '');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
   const [city, setCity] = useState('');

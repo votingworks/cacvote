@@ -1,4 +1,4 @@
-import { type Api } from '@votingworks/rave-mark-backend';
+import { AuthStatus, type Api } from '@votingworks/rave-mark-backend';
 import React, { useEffect } from 'react';
 import * as grout from '@votingworks/grout';
 import {
@@ -9,7 +9,6 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { QUERY_CLIENT_DEFAULT_OPTIONS } from '@votingworks/ui';
-import { InsertedSmartCardAuth } from '@votingworks/types';
 
 export type ApiClient = grout.Client<Api>;
 
@@ -49,9 +48,7 @@ export const getAuthStatus = {
       );
 
       eventSource.addEventListener('message', (event) => {
-        const authStatus = grout.deserialize(
-          event.data
-        ) as InsertedSmartCardAuth.AuthStatus;
+        const authStatus = grout.deserialize(event.data) as AuthStatus;
         queryClient.setQueryData(getAuthStatus.queryKey(), authStatus);
       });
 
