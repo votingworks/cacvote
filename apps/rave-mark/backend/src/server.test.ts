@@ -1,10 +1,9 @@
-import { buildMockInsertedSmartCardAuth } from '@votingworks/auth';
 import { fakeLogger } from '@votingworks/logging';
 import { rmSync } from 'fs-extra';
 import { dirSync } from 'tmp';
-import { PORT } from './globals';
 import { start } from './server';
 import { createWorkspace } from './workspace';
+import { buildMockAuth } from '../test/app_helpers';
 
 let workdir: string;
 
@@ -19,12 +18,12 @@ afterEach(() => {
 
 test('can start server', () => {
   const logger = fakeLogger();
-  const auth = buildMockInsertedSmartCardAuth();
+  const auth = buildMockAuth();
 
   const server = start({
     auth,
     logger,
-    port: PORT,
+    port: 0,
     workspace: createWorkspace(workdir),
   });
   expect(server.listening).toBeTruthy();

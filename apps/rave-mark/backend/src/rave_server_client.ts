@@ -6,7 +6,6 @@ import fetch from 'cross-fetch';
 import makeDebug from 'debug';
 import { unsafeParse } from '@votingworks/types';
 import { format } from '@votingworks/utils';
-import { VX_MACHINE_ID } from '@votingworks/backend';
 import { Store } from './store';
 import { AuthStatus } from './types/auth';
 import { ClientId } from './types/db';
@@ -15,6 +14,7 @@ import {
   RaveServerSyncInput,
   RaveServerSyncOutput,
 } from './types/sync';
+import { VX_MACHINE_ID } from './globals';
 
 const debug = makeDebug('rave-server-client');
 
