@@ -114,7 +114,7 @@
     "stream-browserify": "^3.0.0",
     "ts-jest": "^29.1.1",
     "util": "^0.12.4",
-    "vite": "^4.0.4"
+    "vite": "^4.0.5"
   },
   "peerDependencies": {
     "react": "18.2.0",
