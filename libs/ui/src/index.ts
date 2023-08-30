@@ -74,7 +74,6 @@ export * from './usbcontroller_button';
 export * from './remove_card_screen';
 export * from './unconfigure_machine_button';
 export * from './print_element';
-export * from './graphics';
 export * from './types';
 export * from './unconfigured_election_screen';
 export * from './usb_drive';
