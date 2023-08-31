@@ -85,19 +85,6 @@ create table registrations (
   unique (client_id, machine_id)
 );
 
-create table ballots_pending_print (
-  id uuid primary key,
-  -- CAC ID of the person for this record
-  common_access_card_id uuid not null unique,
-  common_access_card_certificate bytea not null,
-  registration_id uuid not null references registrations(id),
-  cast_vote_record bytea not null,
-  cast_vote_record_signature bytea not null,
-  created_at timestamptz not null default current_timestamp,
-
-  unique (registration_id)
-);
-
 create table printed_ballots (
   -- generated on this machine
   id uuid primary key,

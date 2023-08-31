@@ -122,23 +122,11 @@ export const createVoterRegistration = {
   },
 } as const;
 
-export const createBallotPendingPrint = {
+export const castBallot = {
   useMutation() {
     const apiClient = useApiClient();
     const queryClient = useQueryClient();
-    return useMutation(apiClient.createBallotPendingPrint, {
-      async onSuccess() {
-        await queryClient.invalidateQueries();
-      },
-    });
-  },
-} as const;
-
-export const markBallotPrinted = {
-  useMutation() {
-    const apiClient = useApiClient();
-    const queryClient = useQueryClient();
-    return useMutation(apiClient.markBallotPrinted, {
+    return useMutation(apiClient.castBallot, {
       async onSuccess() {
         await queryClient.invalidateQueries();
       },

@@ -1,5 +1,7 @@
-import { Button, H1, Main, P, Screen } from '@votingworks/ui';
 import { ElectionDefinition } from '@votingworks/types';
+import { Button, H1, Main, Screen, Text } from '@votingworks/ui';
+import { formatShortDate } from '@votingworks/utils';
+import { DateTime } from 'luxon';
 
 export interface StartScreenProps {
   electionDefinition: ElectionDefinition;
@@ -12,10 +14,15 @@ export function StartScreen({
 }: StartScreenProps): JSX.Element | null {
   return (
     <Screen>
-      <Main>
-        <H1>Voting</H1>
-        <P>{electionDefinition.election.title}</P>
-        <Button onPress={onStartVoting}>Start Voting</Button>
+      <Main centerChild>
+        <H1>Ready to Vote</H1>
+        <Text>{electionDefinition.election.title}</Text>
+        <Text>
+          {formatShortDate(DateTime.fromISO(electionDefinition.election.date))}
+        </Text>
+        <Button variant="primary" onPress={onStartVoting}>
+          Start Voting
+        </Button>
       </Main>
     </Screen>
   );

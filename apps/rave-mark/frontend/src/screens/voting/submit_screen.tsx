@@ -1,7 +1,9 @@
-import { Id, VotesDict } from '@votingworks/types';
+import { VotesDict } from '@votingworks/types';
 import {
   Button,
+  H1,
   Main,
+  Modal,
   NumberPad,
   P,
   Prose,
@@ -9,9 +11,9 @@ import {
   fontSizeTheme,
   usePinEntry,
 } from '@votingworks/ui';
-import { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import { createBallotPendingPrint } from '../../api';
+import { castBallot } from '../../api';
 import { COMMON_ACCESS_CARD_PIN_LENGTH } from '../../globals';
 
 const NumberPadWrapper = styled.div`
@@ -37,7 +39,7 @@ const EnteredCode = styled.div`
 
 export interface SubmitScreenProps {
   votes: VotesDict;
-  onSubmitted: (ballotPendingPrintId: Id) => void;
+  onSubmitted: () => void;
 }
 
 const pinLength = COMMON_ACCESS_CARD_PIN_LENGTH;
@@ -47,50 +49,40 @@ export function SubmitScreen({
   onSubmitted,
 }: SubmitScreenProps): JSX.Element {
   const [error, setError] = useState<string>();
+  const [isShowingPinModal, setIsShowingPinModal] = useState(false);
   const [isCheckingPin, setIsCheckingPin] = useState(false);
   const pinEntry = usePinEntry({ pinLength });
-  const createBallotPendingPrintMutation =
-    createBallotPendingPrint.useMutation();
-  const createBallotPendingPrintMutationMutateAsync =
-    createBallotPendingPrintMutation.mutateAsync;
+  const castBallotMutation = castBallot.useMutation();
+  const castBallotMutationMutateAsync = castBallotMutation.mutateAsync;
 
-  const submitBallot = useCallback(
-    async (pin: string) => {
-      setError(undefined);
-      setIsCheckingPin(true);
-      try {
-        const ballotPendingPrintId =
-          await createBallotPendingPrintMutationMutateAsync(
-            { votes, pin },
-            {
-              onError(err) {
-                setError(err instanceof Error ? err.message : `${err}`);
-              },
-            }
-          );
-        onSubmitted(ballotPendingPrintId);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : `${err}`);
-      } finally {
-        setIsCheckingPin(false);
-      }
-    },
-    [createBallotPendingPrintMutationMutateAsync, onSubmitted, votes]
-  );
+  async function submitBallot(pin: string) {
+    setError(undefined);
+    setIsCheckingPin(true);
+    try {
+      await castBallotMutationMutateAsync(
+        { votes, pin },
+        {
+          onError(err) {
+            setError(err instanceof Error ? err.message : `${err}`);
+          },
+        }
+      );
+      onSubmitted();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `${err}`);
+    } finally {
+      setIsCheckingPin(false);
+    }
+  }
 
-  const handleNumberEntry = useCallback(
-    async (digit: number) => {
-      const pin = pinEntry.handleDigit(digit);
-      if (pin.length === pinLength.max) {
-        await submitBallot(pin);
-      }
-    },
-    [pinEntry, submitBallot]
-  );
-
-  const handleEnter = useCallback(async () => {
+  async function handleEnter() {
     await submitBallot(pinEntry.current);
-  }, [pinEntry, submitBallot]);
+  }
+
+  function dismissPinModal() {
+    setIsShowingPinModal(false);
+    pinEntry.reset();
+  }
 
   return (
     <Screen white>
@@ -100,23 +92,48 @@ export function SubmitScreen({
           themeDeprecated={fontSizeTheme.medium}
           maxWidth={false}
         >
-          <P>Enter the card PIN to digitally sign your ballot.</P>
-          {error && <P>{error}</P>}
-          <EnteredCode>{pinEntry.display}</EnteredCode>
-          <NumberPadWrapper>
-            <NumberPad
-              disabled={isCheckingPin}
-              onButtonPress={handleNumberEntry}
-              onBackspace={pinEntry.handleBackspace}
-              onClear={pinEntry.reset}
-              onEnter={handleEnter}
+          <H1>Cast My Ballot</H1>
+          <P>
+            Thanks for reviewing your printed ballot!
+            <br />
+            Now, we&rsquo;ll sign and cast your electronic ballot.
+          </P>
+          <Button variant="primary" onPress={() => setIsShowingPinModal(true)}>
+            Sign &amp; Cast My Ballot
+          </Button>
+          {isShowingPinModal && (
+            <Modal
+              title="Enter Your PIN"
+              onOverlayClick={dismissPinModal}
+              content={
+                <React.Fragment>
+                  {error && <P>{error}</P>}
+                  <EnteredCode>{pinEntry.display}</EnteredCode>
+                  <NumberPadWrapper>
+                    <NumberPad
+                      disabled={isCheckingPin}
+                      onButtonPress={pinEntry.handleDigit}
+                      onBackspace={pinEntry.handleBackspace}
+                      onClear={pinEntry.reset}
+                      onEnter={handleEnter}
+                    />
+                  </NumberPadWrapper>
+                </React.Fragment>
+              }
+              actions={
+                <React.Fragment>
+                  <Button
+                    variant="primary"
+                    onPress={handleEnter}
+                    disabled={isCheckingPin}
+                  >
+                    {isCheckingPin ? 'Checking…' : 'Submit'}
+                  </Button>
+                  <Button onPress={dismissPinModal}>Back</Button>
+                </React.Fragment>
+              }
             />
-            {!pinLength.isFixed && (
-              <Button onPress={handleEnter} disabled={isCheckingPin}>
-                Enter
-              </Button>
-            )}
-          </NumberPadWrapper>
+          )}
         </Prose>
       </Main>
     </Screen>
