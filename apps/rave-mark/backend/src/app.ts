@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import { buildCastVoteRecord } from '@votingworks/backend';
 import { Optional, assert, find, iter } from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
@@ -11,12 +10,13 @@ import {
   VotesDict,
   unsafeParse,
 } from '@votingworks/types';
+import { Buffer } from 'buffer';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
 import { IS_INTEGRATION_TEST, VX_MACHINE_ID } from './globals';
 import { RaveServerClient } from './rave_server_client';
 import { Auth, AuthStatus } from './types/auth';
-import { ClientId, ClientIdSchema, RegistrationRequest } from './types/db';
+import { ClientId, RegistrationRequest } from './types/db';
 import { Workspace } from './workspace';
 
 export type VoterStatus =
@@ -231,7 +231,7 @@ function buildApi({
       };
     },
 
-    async createBallotPendingPrint(input: { votes: VotesDict; pin: string }) {
+    async castBallot(input: { votes: VotesDict; pin: string }) {
       const authStatus = await getAuthStatus();
 
       if (authStatus.status !== 'has_card') {
@@ -289,27 +289,12 @@ function buildApi({
       );
       assert(signature);
 
-      return workspace.store.createBallotPendingPrint({
+      return workspace.store.createCastBallot({
         id: ballotId,
         registrationId: registration.clientId,
         commonAccessCardCertificate,
         castVoteRecord: Buffer.from(castVoteRecordJson),
         castVoteRecordSignature: signature,
-      });
-    },
-
-    async markBallotPrinted(input: { ballotPendingPrintId: Id }) {
-      const authStatus = await getAuthStatus();
-
-      if (authStatus.status !== 'has_card') {
-        throw new Error('Not logged in');
-      }
-
-      workspace.store.markBallotPrinted({
-        ballotPendingPrintId: unsafeParse(
-          ClientIdSchema,
-          input.ballotPendingPrintId
-        ),
       });
     },
 

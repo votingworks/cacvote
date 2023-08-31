@@ -1,7 +1,6 @@
 import { assert, find, throwIllegalValue } from '@votingworks/basics';
 import {
   ContestId,
-  Id,
   OptionalVote,
   VotesDict,
   getContests,
@@ -21,10 +20,20 @@ interface MarkState {
   votes: VotesDict;
 }
 
-interface ReviewState {
-  type: 'review';
+interface ReviewOnscreenState {
+  type: 'review_onscreen';
   votes: VotesDict;
   contestIndex?: number;
+}
+
+interface PrintBallotState {
+  type: 'print';
+  votes: VotesDict;
+}
+
+interface ReviewPrintedBallotState {
+  type: 'review_printed';
+  votes: VotesDict;
 }
 
 interface SubmitState {
@@ -32,18 +41,13 @@ interface SubmitState {
   votes: VotesDict;
 }
 
-interface PrintState {
-  type: 'print';
-  votes: VotesDict;
-  ballotPendingPrintId: Id;
-}
-
 type VoterFlowState =
   | InitState
   | MarkState
-  | ReviewState
-  | SubmitState
-  | PrintState;
+  | ReviewOnscreenState
+  | PrintBallotState
+  | ReviewPrintedBallotState
+  | SubmitState;
 
 function RegisteredStateScreen(): JSX.Element | null {
   const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
@@ -80,7 +84,7 @@ function RegisteredStateScreen(): JSX.Element | null {
 
   function onReviewContestAtIndex(contestIndex: number) {
     setVoterFlowState((prev) => {
-      assert(prev?.type === 'review');
+      assert(prev?.type === 'review_onscreen');
       return {
         ...prev,
         contestIndex,
@@ -90,9 +94,9 @@ function RegisteredStateScreen(): JSX.Element | null {
 
   function onReviewConfirm() {
     setVoterFlowState((prev) => {
-      assert(prev?.type === 'review');
+      assert(prev?.type === 'review_onscreen');
       return {
-        type: 'submit',
+        type: 'print',
         votes: prev.votes,
       };
     });
@@ -100,7 +104,7 @@ function RegisteredStateScreen(): JSX.Element | null {
 
   function updateVote(contestId: ContestId, vote: OptionalVote) {
     setVoterFlowState((prev) => {
-      assert(prev?.type === 'mark' || prev?.type === 'review');
+      assert(prev?.type === 'mark' || prev?.type === 'review_onscreen');
       return {
         ...prev,
         votes: {
@@ -116,7 +120,7 @@ function RegisteredStateScreen(): JSX.Element | null {
       assert(prev?.type === 'mark');
       if (prev.contestIndex === contests.length - 1) {
         return {
-          type: 'review',
+          type: 'review_onscreen',
           votes: prev.votes,
         };
       }
@@ -130,9 +134,9 @@ function RegisteredStateScreen(): JSX.Element | null {
 
   function onReturnToReview() {
     setVoterFlowState((prev) => {
-      assert(prev?.type === 'review');
+      assert(prev?.type === 'review_onscreen');
       return {
-        type: 'review',
+        type: 'review_onscreen',
         votes: prev.votes,
       };
     });
@@ -148,13 +152,42 @@ function RegisteredStateScreen(): JSX.Element | null {
     });
   }
 
-  function onSubmitted(ballotPendingPrintId: Id) {
+  function onPrintBallotCompleted() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'print');
+      return {
+        type: 'review_printed',
+        votes: prev.votes,
+      };
+    });
+  }
+
+  function onConfirmPrintedBallotSelections() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'review_printed');
+      return {
+        type: 'submit',
+        votes: prev.votes,
+      };
+    });
+  }
+
+  function onRejectPrintedBallotSelections() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'review_printed');
+      return {
+        type: 'review_onscreen',
+        votes: prev.votes,
+      };
+    });
+  }
+
+  function onSubmitted() {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'submit');
       return {
         type: 'print',
         votes: prev.votes,
-        ballotPendingPrintId,
       };
     });
   }
@@ -181,7 +214,7 @@ function RegisteredStateScreen(): JSX.Element | null {
         />
       );
 
-    case 'review':
+    case 'review_onscreen':
       if (typeof voterFlowState.contestIndex === 'number') {
         return (
           <Voting.ReviewMarkScreen
@@ -196,7 +229,7 @@ function RegisteredStateScreen(): JSX.Element | null {
       }
 
       return (
-        <Voting.ReviewScreen
+        <Voting.ReviewOnscreenBallotScreen
           electionDefinition={electionDefinition}
           contests={contests}
           precinctId={precinctId}
@@ -206,17 +239,9 @@ function RegisteredStateScreen(): JSX.Element | null {
         />
       );
 
-    case 'submit':
-      return (
-        <Voting.SubmitScreen
-          votes={voterFlowState.votes}
-          onSubmitted={onSubmitted}
-        />
-      );
-
     case 'print':
       return (
-        <Voting.PrintScreen
+        <Voting.PrintBallotScreen
           electionDefinition={electionDefinition}
           ballotStyleId={ballotStyleId}
           precinctId={precinctId}
@@ -224,7 +249,23 @@ function RegisteredStateScreen(): JSX.Element | null {
           generateBallotId={() => ''}
           // TODO: use live vs test mode?
           isLiveMode={false}
-          ballotPendingPrintId={voterFlowState.ballotPendingPrintId}
+          onPrintCompleted={onPrintBallotCompleted}
+        />
+      );
+
+    case 'review_printed':
+      return (
+        <Voting.ReviewPrintedBallotScreen
+          onConfirm={onConfirmPrintedBallotSelections}
+          onReject={onRejectPrintedBallotSelections}
+        />
+      );
+
+    case 'submit':
+      return (
+        <Voting.SubmitScreen
+          votes={voterFlowState.votes}
+          onSubmitted={onSubmitted}
         />
       );
 

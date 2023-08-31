@@ -13,7 +13,7 @@ const ContentHeader = styled.div`
   padding: 0.5rem 0.75rem 0;
 `;
 
-export interface ReviewScreenProps {
+export interface ReviewOnscreenBallotScreenProps {
   electionDefinition: ElectionDefinition;
   contests: Contests;
   votes: VotesDict;
@@ -22,14 +22,14 @@ export interface ReviewScreenProps {
   goToIndex: (contestIndex: number) => void;
 }
 
-export function ReviewScreen({
+export function ReviewOnscreenBallotScreen({
   electionDefinition,
   contests,
   votes,
   precinctId,
   onConfirm,
   goToIndex,
-}: ReviewScreenProps): JSX.Element {
+}: ReviewOnscreenBallotScreenProps): JSX.Element {
   return (
     <Screen>
       <Main flexColumn>
@@ -50,7 +50,7 @@ export function ReviewScreen({
       </Main>
       <ButtonFooter>
         <Button onPress={onConfirm} variant="primary">
-          Cast My Ballot
+          Print My Ballot
         </Button>
       </ButtonFooter>
     </Screen>
