@@ -3,8 +3,10 @@ import {
   BallotStyleId,
   ElectionDefinition,
   PrecinctId,
+  PrintOptions,
   VotesDict,
 } from '@votingworks/types';
+import { printElement } from '@votingworks/ui';
 import { useEffect, useRef } from 'react';
 
 export interface PrintBallotScreenProps {
@@ -34,6 +36,16 @@ export function PrintBallotScreen({
     };
   }, []);
 
+  function printElementToBallotPrinter(
+    element: JSX.Element,
+    printOptions: PrintOptions
+  ) {
+    return printElement(element, {
+      ...printOptions,
+      deviceName: process.env.REACT_APP_BALLOT_PRINTER_NAME,
+    });
+  }
+
   return (
     <MarkFlowPrintPage
       electionDefinition={electionDefinition}
@@ -42,6 +54,7 @@ export function PrintBallotScreen({
       generateBallotId={generateBallotId}
       isLiveMode={isLiveMode}
       votes={votes}
+      printElement={printElementToBallotPrinter}
       onPrintStarted={() => {
         printTimer.current = window.setTimeout(
           onPrintCompleted,

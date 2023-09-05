@@ -27,7 +27,12 @@ interface ReviewOnscreenState {
 }
 
 interface PrintBallotState {
-  type: 'print';
+  type: 'print_ballot';
+  votes: VotesDict;
+}
+
+interface PrintMailingLabelState {
+  type: 'print_mailing_label';
   votes: VotesDict;
 }
 
@@ -47,7 +52,8 @@ type VoterFlowState =
   | ReviewOnscreenState
   | PrintBallotState
   | ReviewPrintedBallotState
-  | SubmitState;
+  | SubmitState
+  | PrintMailingLabelState;
 
 function RegisteredStateScreen(): JSX.Element | null {
   const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
@@ -96,7 +102,7 @@ function RegisteredStateScreen(): JSX.Element | null {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'review_onscreen');
       return {
-        type: 'print',
+        type: 'print_ballot',
         votes: prev.votes,
       };
     });
@@ -154,7 +160,7 @@ function RegisteredStateScreen(): JSX.Element | null {
 
   function onPrintBallotCompleted() {
     setVoterFlowState((prev) => {
-      assert(prev?.type === 'print');
+      assert(prev?.type === 'print_ballot');
       return {
         type: 'review_printed',
         votes: prev.votes,
@@ -166,7 +172,7 @@ function RegisteredStateScreen(): JSX.Element | null {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'review_printed');
       return {
-        type: 'submit',
+        type: 'print_mailing_label',
         votes: prev.votes,
       };
     });
@@ -182,11 +188,21 @@ function RegisteredStateScreen(): JSX.Element | null {
     });
   }
 
+  function onPrintMailingLabelCompleted() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'print_mailing_label');
+      return {
+        type: 'submit',
+        votes: prev.votes,
+      };
+    });
+  }
+
   function onSubmitted() {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'submit');
       return {
-        type: 'print',
+        type: 'print_ballot',
         votes: prev.votes,
       };
     });
@@ -239,7 +255,7 @@ function RegisteredStateScreen(): JSX.Element | null {
         />
       );
 
-    case 'print':
+    case 'print_ballot':
       return (
         <Voting.PrintBallotScreen
           electionDefinition={electionDefinition}
@@ -258,6 +274,13 @@ function RegisteredStateScreen(): JSX.Element | null {
         <Voting.ReviewPrintedBallotScreen
           onConfirm={onConfirmPrintedBallotSelections}
           onReject={onRejectPrintedBallotSelections}
+        />
+      );
+
+    case 'print_mailing_label':
+      return (
+        <Voting.PrintMailingLabelScreen
+          onPrintCompleted={onPrintMailingLabelCompleted}
         />
       );
 
