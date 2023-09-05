@@ -46,6 +46,10 @@ interface SubmitState {
   votes: VotesDict;
 }
 
+interface PostVoteState {
+  type: 'post_vote';
+}
+
 type VoterFlowState =
   | InitState
   | MarkState
@@ -53,9 +57,18 @@ type VoterFlowState =
   | PrintBallotState
   | ReviewPrintedBallotState
   | SubmitState
-  | PrintMailingLabelState;
+  | PrintMailingLabelState
+  | PostVoteState;
 
-function RegisteredStateScreen(): JSX.Element | null {
+interface RegisteredStateScreenProps {
+  onIsVotingSessionInProgressChanged: (
+    isVotingSessionInProgress: boolean
+  ) => void;
+}
+
+function RegisteredStateScreen({
+  onIsVotingSessionInProgressChanged,
+}: RegisteredStateScreenProps): JSX.Element | null {
   const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
   const electionConfiguration = getElectionConfigurationQuery.data;
   const [voterFlowState, setVoterFlowState] = useState<VoterFlowState>({
@@ -78,6 +91,7 @@ function RegisteredStateScreen(): JSX.Element | null {
   });
 
   function onStartVoting() {
+    onIsVotingSessionInProgressChanged(true);
     setVoterFlowState((prev) => {
       assert(prev?.type === 'init');
       return {
@@ -172,7 +186,7 @@ function RegisteredStateScreen(): JSX.Element | null {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'review_printed');
       return {
-        type: 'print_mailing_label',
+        type: 'submit',
         votes: prev.votes,
       };
     });
@@ -188,21 +202,21 @@ function RegisteredStateScreen(): JSX.Element | null {
     });
   }
 
-  function onPrintMailingLabelCompleted() {
+  function onSubmitted() {
     setVoterFlowState((prev) => {
-      assert(prev?.type === 'print_mailing_label');
+      assert(prev?.type === 'submit');
       return {
-        type: 'submit',
+        type: 'print_mailing_label',
         votes: prev.votes,
       };
     });
   }
 
-  function onSubmitted() {
+  function onPrintMailingLabelCompleted() {
     setVoterFlowState((prev) => {
-      assert(prev?.type === 'submit');
+      assert(prev?.type === 'print_mailing_label');
       return {
-        type: 'print_ballot',
+        type: 'post_vote',
         votes: prev.votes,
       };
     });
@@ -277,13 +291,6 @@ function RegisteredStateScreen(): JSX.Element | null {
         />
       );
 
-    case 'print_mailing_label':
-      return (
-        <Voting.PrintMailingLabelScreen
-          onPrintCompleted={onPrintMailingLabelCompleted}
-        />
-      );
-
     case 'submit':
       return (
         <Voting.SubmitScreen
@@ -292,17 +299,37 @@ function RegisteredStateScreen(): JSX.Element | null {
         />
       );
 
+    case 'print_mailing_label':
+      return (
+        <Voting.PrintMailingLabelScreen
+          onPrintCompleted={onPrintMailingLabelCompleted}
+        />
+      );
+
+    case 'post_vote':
+      return <Voting.PostVoteScreen />;
+
     default:
       throwIllegalValue(voterFlowState);
   }
 }
 
 export function VoterFlowScreen(): JSX.Element | null {
+  const [isVotingSessionInProgress, setIsVotingSessionInProgress] =
+    useState(false);
   const getVoterStatusQuery = getVoterStatus.useQuery();
   const voterStatus = getVoterStatusQuery.data;
 
   if (!voterStatus) {
     return null;
+  }
+
+  if (isVotingSessionInProgress) {
+    return (
+      <RegisteredStateScreen
+        onIsVotingSessionInProgressChanged={setIsVotingSessionInProgress}
+      />
+    );
   }
 
   switch (voterStatus.status) {
@@ -313,10 +340,14 @@ export function VoterFlowScreen(): JSX.Element | null {
       return <Registration.StatusScreen />;
 
     case 'registered':
-      return <RegisteredStateScreen />;
+      return (
+        <RegisteredStateScreen
+          onIsVotingSessionInProgressChanged={setIsVotingSessionInProgress}
+        />
+      );
 
     case 'voted':
-      return <Voting.DoneScreen />;
+      return <Voting.AlreadyVotedScreen />;
 
     default:
       throwIllegalValue(voterStatus.status);
