@@ -1,7 +1,7 @@
 import { VotesDict } from '@votingworks/types';
 import {
   Button,
-  H1,
+  H2,
   Main,
   Modal,
   NumberPad,
@@ -92,14 +92,14 @@ export function SubmitScreen({
           themeDeprecated={fontSizeTheme.medium}
           maxWidth={false}
         >
-          <H1>Cast My Ballot</H1>
+          <H2>You’re Almost Done</H2>
           <P>
             Thanks for reviewing your printed ballot!
             <br />
-            Now, we&rsquo;ll sign and cast your electronic ballot.
+            Tap the button below to continue.
           </P>
           <Button variant="primary" onPress={() => setIsShowingPinModal(true)}>
-            Sign &amp; Cast My Ballot
+            Cast My Ballot
           </Button>
           {isShowingPinModal && (
             <Modal
@@ -127,9 +127,9 @@ export function SubmitScreen({
                     onPress={handleEnter}
                     disabled={isCheckingPin}
                   >
-                    {isCheckingPin ? 'Checking…' : 'Submit'}
+                    {isCheckingPin ? 'Checking…' : 'Cast My Ballot'}
                   </Button>
-                  <Button onPress={dismissPinModal}>Back</Button>
+                  <Button onPress={dismissPinModal}>Go Back</Button>
                 </React.Fragment>
               }
             />
