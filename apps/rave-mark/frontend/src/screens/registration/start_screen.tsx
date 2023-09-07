@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { extractErrorMessage } from '@votingworks/basics';
 import { Button, H1, Main, P, Screen } from '@votingworks/ui';
-import { InlineForm, TextInput } from '../../components/text_input';
+import { useState } from 'react';
 import { createVoterRegistration, getAuthStatus } from '../../api';
+import { PinPadModal } from '../../components/pin_pad_modal';
+import { InlineForm, TextInput } from '../../components/text_input';
+import { COMMON_ACCESS_CARD_PIN_LENGTH } from '../../globals';
 
 export function StartScreen(): JSX.Element {
   const authStatusQuery = getAuthStatus.useQuery();
@@ -17,9 +20,15 @@ export function StartScreen(): JSX.Element {
   const [state, setState] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [stateId, setStateId] = useState('');
+  const [isShowingPinModal, setIsShowingPinModal] = useState(false);
   const createVoterRegistrationMutation = createVoterRegistration.useMutation();
+  const error = createVoterRegistrationMutation.data?.err();
 
-  function onSubmit() {
+  function onSubmitRegistrationForm() {
+    setIsShowingPinModal(true);
+  }
+
+  function onEnterPin(pin: string) {
     createVoterRegistrationMutation.mutate({
       givenName,
       familyName,
@@ -29,6 +38,7 @@ export function StartScreen(): JSX.Element {
       state,
       postalCode,
       stateId,
+      pin,
     });
   }
 
@@ -110,8 +120,23 @@ export function StartScreen(): JSX.Element {
               setStateId(newValue);
             }}
           />
-          <Button onPress={onSubmit}>Submit</Button>
+          <Button onPress={onSubmitRegistrationForm}>Submit</Button>
         </InlineForm>
+        {isShowingPinModal && (
+          <PinPadModal
+            pinLength={COMMON_ACCESS_CARD_PIN_LENGTH}
+            primaryButtonLabel={
+              createVoterRegistrationMutation.isLoading
+                ? 'Checking…'
+                : 'Register'
+            }
+            dismissButtonLabel="Go Back"
+            onEnter={onEnterPin}
+            onDismiss={() => setIsShowingPinModal(false)}
+            disabled={createVoterRegistrationMutation.isLoading}
+            error={error ? extractErrorMessage(error) : undefined}
+          />
+        )}
       </Main>
     </Screen>
   );

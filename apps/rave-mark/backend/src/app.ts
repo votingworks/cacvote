@@ -1,5 +1,13 @@
 import { buildCastVoteRecord } from '@votingworks/backend';
-import { Optional, assert, find, iter } from '@votingworks/basics';
+import {
+  Optional,
+  Result,
+  assert,
+  err,
+  find,
+  iter,
+  ok,
+} from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
 import {
   BallotIdSchema,
@@ -178,11 +186,21 @@ function buildApi({
       state: string;
       postalCode: string;
       stateId: string;
-    }): Promise<{ id: Id }> {
+      pin: string;
+    }): Promise<
+      Result<
+        { id: Id },
+        { type: 'not_logged_in' | 'incorrect_pin'; message: string }
+      >
+    > {
       const authStatus = await getAuthStatus();
 
       if (authStatus.status !== 'has_card') {
-        throw new Error('Not logged in');
+        return err({ type: 'not_logged_in', message: 'Not logged in' });
+      }
+
+      if (!(await auth.checkPin(input.pin))) {
+        return err({ type: 'incorrect_pin', message: 'Incorrect PIN' });
       }
 
       const id = ClientId();
@@ -198,7 +216,7 @@ function buildApi({
         postalCode: input.postalCode,
         stateId: input.stateId,
       });
-      return { id };
+      return ok({ id });
     },
 
     async getElectionConfiguration() {
