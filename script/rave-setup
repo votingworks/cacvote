@@ -22,6 +22,7 @@ setup-prereqs() {
 
   sudo apt-get install \
     build-essential \
+    chromium \
     curl \
     git \
     libcairo2-dev \
