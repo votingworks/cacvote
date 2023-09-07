@@ -31,11 +31,6 @@ interface PrintBallotState {
   votes: VotesDict;
 }
 
-interface PrintMailingLabelState {
-  type: 'print_mailing_label';
-  votes: VotesDict;
-}
-
 interface ReviewPrintedBallotState {
   type: 'review_printed';
   votes: VotesDict;
@@ -57,7 +52,6 @@ type VoterFlowState =
   | PrintBallotState
   | ReviewPrintedBallotState
   | SubmitState
-  | PrintMailingLabelState
   | PostVoteState;
 
 interface RegisteredStateScreenProps {
@@ -206,16 +200,6 @@ function RegisteredStateScreen({
     setVoterFlowState((prev) => {
       assert(prev?.type === 'submit');
       return {
-        type: 'print_mailing_label',
-        votes: prev.votes,
-      };
-    });
-  }
-
-  function onPrintMailingLabelCompleted() {
-    setVoterFlowState((prev) => {
-      assert(prev?.type === 'print_mailing_label');
-      return {
         type: 'post_vote',
         votes: prev.votes,
       };
@@ -296,13 +280,6 @@ function RegisteredStateScreen({
         <Voting.SubmitScreen
           votes={voterFlowState.votes}
           onSubmitted={onSubmitted}
-        />
-      );
-
-    case 'print_mailing_label':
-      return (
-        <Voting.PrintMailingLabelScreen
-          onPrintCompleted={onPrintMailingLabelCompleted}
         />
       );
 

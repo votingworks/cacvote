@@ -42,7 +42,7 @@ export function PrintBallotScreen({
   ) {
     return printElement(element, {
       ...printOptions,
-      deviceName: process.env.REACT_APP_BALLOT_PRINTER_NAME,
+      deviceName: process.env.REACT_APP_BALLOT_PRINTER,
     });
   }
 

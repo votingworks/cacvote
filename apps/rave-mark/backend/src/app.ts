@@ -13,7 +13,9 @@ import {
 import { Buffer } from 'buffer';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
+import { execFileSync } from 'child_process';
 import { IS_INTEGRATION_TEST, VX_MACHINE_ID } from './globals';
+import * as mailingLabel from './mailing_label';
 import { RaveServerClient } from './rave_server_client';
 import { Auth, AuthStatus } from './types/auth';
 import { ClientId, RegistrationRequest } from './types/db';
@@ -289,6 +291,18 @@ function buildApi({
       );
       assert(signature);
 
+      const pdf = await mailingLabel.buildPdf();
+
+      if (!process.env.MAILING_LABEL_PRINTER) {
+        throw new Error('MAILING_LABEL_PRINTER not set');
+      }
+
+      execFileSync(
+        'lpr',
+        ['-P', process.env.MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
+        { input: pdf }
+      );
+
       return workspace.store.createCastBallot({
         id: ballotId,
         registrationId: registration.clientId,
@@ -417,6 +431,20 @@ function buildApi({
       }
 
       return mostRecentVotes;
+    },
+
+    /**
+     * For testing purposes only.
+     *
+     * ```sh
+     * curl -d '{}' -H 'Content-Type: application/json' http://localhost:3000/api/createMailingLabel \
+     * | jq -r '.__grout_value' \
+     * | base64 -d \
+     * > /tmp/label.pdf
+     * ```
+     */
+    async createMailingLabel() {
+      return await mailingLabel.buildPdf();
     },
   });
 }
