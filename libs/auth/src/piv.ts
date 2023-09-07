@@ -76,6 +76,21 @@ export function isIncorrectPinStatusWord(statusWord: [Byte, Byte]): boolean {
 }
 
 /**
+ * CAC cards respond to the VERIFY command with a status word of 0x6982 when the
+ * PIN is incorrect.
+ */
+export function isSecurityConditionNotSatisfiedStatusWord(
+  statusWord: [Byte, Byte]
+): boolean {
+  const [sw1, sw2] = statusWord;
+
+  return (
+    sw1 === STATUS_WORD.SECURITY_CONDITION_NOT_SATISFIED.SW1 &&
+    sw2 === STATUS_WORD.SECURITY_CONDITION_NOT_SATISFIED.SW2
+  );
+}
+
+/**
  * See isIncorrectPinStatusWord().
  */
 export function numRemainingPinAttemptsFromIncorrectPinStatusWord(

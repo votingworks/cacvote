@@ -29,6 +29,7 @@ import {
   GENERAL_AUTHENTICATE,
   GET_DATA,
   isIncorrectPinStatusWord,
+  isSecurityConditionNotSatisfiedStatusWord,
   numRemainingPinAttemptsFromIncorrectPinStatusWord,
   pivDataObjectId,
   PUT_DATA,
@@ -140,6 +141,17 @@ export class JavaCard implements Card {
           numIncorrectPinAttempts,
         };
       }
+
+      if (
+        error instanceof ResponseApduError &&
+        isSecurityConditionNotSatisfiedStatusWord(error.statusWord())
+      ) {
+        return {
+          response: 'incorrect',
+          numIncorrectPinAttempts: MAX_NUM_INCORRECT_PIN_ATTEMPTS,
+        };
+      }
+
       throw error;
     }
     if (this.cardStatus.status === 'ready' && this.cardStatus.cardDetails) {
