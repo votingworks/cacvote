@@ -858,7 +858,7 @@ pub(crate) async fn get_scanned_ballot_stats(
     .fetch_all(executor)
     .await?;
 
-    return Ok(ScannedBallotStats { batches });
+    Ok(ScannedBallotStats { batches })
 }
 
 #[cfg(test)]
