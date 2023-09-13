@@ -16,6 +16,7 @@ use sqlx::PgPool;
 use tracing::Level;
 use types_rs::election::{ElectionDefinition, ElectionHash};
 use types_rs::rave::{client, ClientId, ServerId};
+use types_rs::scan::{BatchStats, ScannedBallotStats};
 
 use crate::config::Config;
 
@@ -717,9 +718,47 @@ pub(crate) async fn get_scanned_ballots_to_sync_to_rave_server(
         .collect::<Vec<_>>())
 }
 
+pub(crate) async fn start_batch(
+    executor: &mut sqlx::PgConnection,
+) -> Result<ClientId, sqlx::Error> {
+    let batch_id = ClientId::new();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO batches (id, scanned_ballot_ids)
+        VALUES ($1, $2)
+        "#,
+        batch_id.as_uuid(),
+        &vec![],
+    )
+    .execute(executor)
+    .await?;
+
+    Ok(batch_id)
+}
+
+pub(crate) async fn end_batch(
+    executor: &mut sqlx::PgConnection,
+    batch_id: ClientId,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        UPDATE batches
+        SET ended_at = NOW()
+        WHERE id = $1
+        "#,
+        batch_id.as_uuid(),
+    )
+    .execute(executor)
+    .await?;
+
+    Ok(())
+}
+
 pub(crate) async fn add_scanned_ballot(
     executor: &mut sqlx::PgConnection,
     scanned_ballot: ScannedBallot,
+    batch_id: ClientId,
 ) -> Result<(), sqlx::Error> {
     let ScannedBallot {
         id,
@@ -751,6 +790,18 @@ pub(crate) async fn add_scanned_ballot(
         cast_vote_record,
         created_at
     )
+    .execute(&mut *executor)
+    .await?;
+
+    sqlx::query!(
+        r#"
+        UPDATE batches
+        SET scanned_ballot_ids = ARRAY_APPEND(scanned_ballot_ids, $1)
+        WHERE id = $2
+        "#,
+        id.as_uuid(),
+        batch_id.as_uuid(),
+    )
     .execute(executor)
     .await?;
 
@@ -774,28 +825,40 @@ pub(crate) async fn get_last_synced_scanned_ballot_id(
     .map(|r| r.server_id))
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ScannedBallotStats {
-    pub(crate) total: i64,
-    pub(crate) pending: i64,
-}
-
 pub(crate) async fn get_scanned_ballot_stats(
     executor: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<ScannedBallotStats> {
-    sqlx::query_as!(
-        ScannedBallotStats,
+    let batches = sqlx::query_as!(
+        BatchStats,
         r#"
         SELECT
-            COUNT(*) as "total!: i64",
-            COUNT(*) FILTER (WHERE server_id IS NULL) as "pending!: i64"
-        FROM scanned_ballots
+            id as "id: ClientId",
+            COALESCE(ARRAY_LENGTH(scanned_ballot_ids, 1), 0) as "ballot_count!: _",
+            CAST(
+                (
+                    SELECT COUNT(DISTINCT election_id)
+                    FROM scanned_ballots
+                    WHERE id IN (SELECT UNNEST(scanned_ballot_ids))
+                ) AS int4
+            ) AS "election_count!: _",
+            CAST(
+                (
+                    SELECT COUNT(*)
+                    FROM scanned_ballots
+                    WHERE id IN (SELECT UNNEST(scanned_ballot_ids))
+                    AND server_id IS NOT NULL
+                ) AS int4
+            ) AS "synced_count!: _",
+            started_at,
+            ended_at
+        FROM batches
+        ORDER BY started_at DESC
         "#
     )
-    .fetch_one(&mut *executor)
-    .await
-    .map_err(Into::into)
+    .fetch_all(executor)
+    .await?;
+
+    return Ok(ScannedBallotStats { batches });
 }
 
 #[cfg(test)]
