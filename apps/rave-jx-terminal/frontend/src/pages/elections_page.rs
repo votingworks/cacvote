@@ -4,12 +4,9 @@ use std::sync::Arc;
 
 use dioxus::prelude::*;
 use types_rs::rave::jx;
-use ui_rs::FileButton;
+use ui_rs::{DateOrDateTimeCell, FileButton};
 
-use crate::{
-    components::DateOrDateTimeColumn,
-    util::{file::read_file_as_bytes, url::get_url},
-};
+use crate::util::{file::read_file_as_bytes, url::get_url};
 
 pub fn ElectionsPage(cx: Scope) -> Element {
     let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
@@ -60,11 +57,11 @@ pub fn ElectionsPage(cx: Scope) -> Element {
                                         "{election.election_hash.to_partial()}"
                                     }
                                     td { class: "border px-4 py-2", "{election.title}" }
-                                    DateOrDateTimeColumn {
+                                    DateOrDateTimeCell {
                                         date_or_datetime: election.date,
                                     }
                                     td { class: "border px-4 py-2", if election.is_synced() { "Yes" } else { "No" } }
-                                    DateOrDateTimeColumn {
+                                    DateOrDateTimeCell {
                                         date_or_datetime: election.created_at,
                                     }
                                 }

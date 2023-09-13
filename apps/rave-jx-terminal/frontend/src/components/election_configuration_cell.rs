@@ -2,6 +2,7 @@
 
 use dioxus::prelude::*;
 use types_rs::election::{BallotStyleId, ElectionHash, PrecinctId};
+use ui_rs::TableCell;
 
 #[derive(Debug, Props, PartialEq)]
 pub struct Props {
@@ -12,15 +13,14 @@ pub struct Props {
     ballot_style_id: BallotStyleId,
 }
 
-pub fn ElectionConfigurationColumn(cx: Scope<Props>) -> Element {
+pub fn ElectionConfigurationCell(cx: Scope<Props>) -> Element {
     let election_title = &cx.props.election_title;
     let election_hash = &cx.props.election_hash;
     let precinct_id = &cx.props.precinct_id;
     let ballot_style_id = &cx.props.ballot_style_id;
 
     render!(
-        td {
-            class: "border px-4 py-2",
+        TableCell {
             p {
                 "{election_title}"
                 span {

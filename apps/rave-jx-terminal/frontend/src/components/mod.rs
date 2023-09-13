@@ -1,5 +1,3 @@
-mod date_or_datetime_column;
-mod election_configuration_column;
+mod election_configuration_cell;
 
-pub use date_or_datetime_column::DateOrDateTimeColumn;
-pub use election_configuration_column::ElectionConfigurationColumn;
+pub use election_configuration_cell::ElectionConfigurationCell;

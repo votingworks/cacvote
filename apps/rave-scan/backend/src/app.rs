@@ -32,9 +32,10 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 use types_rs::election::PartialElectionHash;
 use types_rs::rave::ClientId;
+use types_rs::scan::ScannedBallotStats;
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
-use crate::db::{self, ScannedBallot, ScannedBallotStats};
+use crate::db::{self, ScannedBallot};
 use crate::sheets::decode_page_from_image;
 
 type AppState = (Config, PgPool);
@@ -89,15 +90,24 @@ pub(crate) async fn get_status_stream(
     Sse::new(try_stream! {
         loop {
             let mut connection = pool.acquire().await.unwrap();
-            if let Ok(scanned_ballot_stats) = db::get_scanned_ballot_stats(&mut connection).await {
-                if scanned_ballot_stats != last_scanned_ballot_stats {
-                    last_scanned_ballot_stats = scanned_ballot_stats.clone();
+            match db::get_scanned_ballot_stats(&mut connection).await {
+                Ok(scanned_ballot_stats) => {
+                    if scanned_ballot_stats != last_scanned_ballot_stats {
+                        last_scanned_ballot_stats = scanned_ballot_stats.clone();
+                        yield Event::default().json_data(&json!({
+                            "status": "ok",
+                            "stats": scanned_ballot_stats,
+                        })).unwrap();
+                    }
+                }
+                Err(e) => {
                     yield Event::default().json_data(&json!({
-                        "status": "ok",
-                        "stats": scanned_ballot_stats,
+                        "status": "error",
+                        "error": format!("{}", e),
                     })).unwrap();
                 }
             }
+
             sleep(Duration::from_millis(100)).await;
         }
     })
@@ -107,6 +117,8 @@ pub(crate) async fn get_status_stream(
 pub(crate) async fn do_scan(State((config, pool)): State<AppState>) -> Json<Vec<ScannedCard>> {
     let mut connection = pool.acquire().await.unwrap();
     let (tx, rx) = channel();
+
+    let batch_id = db::start_batch(&mut connection).await.unwrap();
 
     let handle = std::thread::spawn(move || {
         let session = scan(PathBuf::from("/tmp")).unwrap();
@@ -160,7 +172,7 @@ pub(crate) async fn do_scan(State((config, pool)): State<AppState>) -> Json<Vec<
                 created_at: OffsetDateTime::now_utc(),
             };
 
-            match db::add_scanned_ballot(&mut connection, scanned_ballot).await {
+            match db::add_scanned_ballot(&mut connection, scanned_ballot, batch_id).await {
                 Ok(_) => {}
                 Err(e) => {
                     tracing::error!("Failed to insert scanned ballot: {e}");
@@ -175,6 +187,8 @@ pub(crate) async fn do_scan(State((config, pool)): State<AppState>) -> Json<Vec<
     }
 
     handle.join().unwrap();
+
+    db::end_batch(&mut connection, batch_id).await.unwrap();
 
     Json(cards)
 }

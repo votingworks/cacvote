@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 
-use crate::util::datetime;
+use crate::{util::datetime, TableCell};
 
 #[derive(Debug, Props, PartialEq)]
 pub struct Props {
@@ -10,7 +10,7 @@ pub struct Props {
     date_or_datetime: datetime::DateOrDateTime,
 }
 
-pub fn DateOrDateTimeColumn(cx: Scope<Props>) -> Element {
+pub fn DateOrDateTimeCell(cx: Scope<Props>) -> Element {
     let date_or_datetime = cx.props.date_or_datetime.clone();
     let formatted = datetime::format(
         &date_or_datetime,
@@ -22,8 +22,7 @@ pub fn DateOrDateTimeColumn(cx: Scope<Props>) -> Element {
         },
     );
     render!(
-        td {
-            class: "border px-4 py-2 whitespace-nowrap",
+        TableCell {
             title: "{date_or_datetime.to_iso8601()}",
             "{formatted}"
         }

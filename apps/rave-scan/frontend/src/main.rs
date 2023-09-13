@@ -1,7 +1,8 @@
 use dioxus::prelude::*;
 use log::LevelFilter;
 use serde::Deserialize;
-use ui_rs::Button;
+use types_rs::scan::ScannedBallotStats;
+use ui_rs::{Button, DateOrDateTimeCell, TableCell};
 use wasm_bindgen::prelude::*;
 use web_sys::MessageEvent;
 
@@ -21,13 +22,6 @@ fn get_root_url() -> reqwest::Url {
 
 fn get_url(path: &str) -> reqwest::Url {
     get_root_url().join(path).unwrap()
-}
-
-#[derive(Debug, Deserialize, PartialEq, Default, Clone)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ScannedBallotStats {
-    pub total: i64,
-    pub pending: i64,
 }
 
 fn use_scanned_ballot_stats(cx: Scope) -> &UseState<Option<ScannedBallotStats>> {
@@ -102,38 +96,89 @@ fn App(cx: Scope) -> Element {
     let ballot_stats = ballot_stats.get();
 
     render! {
-       div {
-           class: "h-screen w-screen flex justify-center items-center dark:bg-slate-800",
-           div {
-               class: "flex-col",
-               div {
-                   class: "flex-row mb-2",
-                   Button {
-                       onclick: scan_ballots,
-                       disabled: is_scanning,
-                       if is_scanning {
-                           "Scanning…"
-                       } else {
-                           "Scan Ballots"
-                       },
-                   }
-               }
-               div {
-                   class: "text-xl text-center text-gray-400 dark:text-gray-300",
-                   if let Some(ballot_stats) = ballot_stats {
-                       rsx! {
-                           span { "{ballot_stats.total} scanned ballot(s)" }
-                           span {
-                               if ballot_stats.pending == 0 {
-                                   rsx!(", synced to server")
-                               } else {
-                                   rsx!(", {ballot_stats.pending} pending sync")
-                               }
-                           }
-                       }
-                   }
-               }
-           }
+        div {
+            class: "h-screen w-screen dark:bg-slate-800",
+            div {
+                class: "flex-col",
+                div {
+                    class: "flex flex-row items-center mb-2 pl-2 bg-gray-200 dark:bg-gray-700",
+                    div {
+                        class: "text-3xl flex-grow font-bold text-gray-700 dark:text-gray-200",
+                        "RAVE Scan"
+                    }
+                    div {
+                        class: "m-2",
+                        Button {
+                            onclick: scan_ballots,
+                            disabled: is_scanning,
+                            if is_scanning {
+                                "Scanning…"
+                            } else {
+                                "Scan Ballots"
+                            },
+                        }
+                    }
+                }
+                div {
+                    class: "text-xl text-center text-gray-400 dark:text-gray-300 px-3",
+                    if let Some(ballot_stats) = ballot_stats {
+                        rsx! {
+                            h3 {
+                                class: "text-left",
+                                "Batches"
+                            }
+                            table {
+                                class: "text-sm",
+                                thead {
+                                    tr {
+                                        th { "ID" }
+                                        th { "Status" }
+                                        th { "Started At" }
+                                        th { "Ended At" }
+                                    }
+                                }
+                                tbody {
+                                    for batch in ballot_stats.batches.clone().into_iter() {
+                                        rsx! {
+                                            tr {
+                                                TableCell { batch.id.to_string() }
+                                                TableCell {
+                                                    match (batch.ballot_count, batch.election_count, batch.synced_count) {
+                                                        (0, _, _) => "No ballots".to_owned(),
+                                                        (1, _, 0) => "1 ballot (pending sync)".to_owned(),
+                                                        (1, _, 1) => "1 ballot (synced)".to_owned(),
+                                                        (b, 1, s) if b == s => format!("{b} ballots, 1 election (synced)"),
+                                                        (b, 1, s) => format!("{b} ballots, 1 election ({s} synced)"),
+                                                        (b, e, s) if b == s => format!("{b} ballots, {e} elections (synced)"),
+                                                        (b, e, s) => format!("{b} ballots, {e} elections ({s} synced)"),
+                                                    }
+                                                }
+                                                DateOrDateTimeCell {
+                                                    date_or_datetime: batch.started_at,
+                                                }
+                                                match batch.ended_at {
+                                                    Some(ended_at) => {
+                                                        rsx! {
+                                                            DateOrDateTimeCell { date_or_datetime: ended_at }
+                                                        }
+                                                    }
+                                                    None => {
+                                                        rsx! {
+                                                            TableCell {
+                                                                "Scanning…"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
        }
     }
 }
