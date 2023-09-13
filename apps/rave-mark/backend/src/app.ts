@@ -340,8 +340,11 @@ function buildApi({
       void raveServerClient.sync({ authStatus });
     },
 
-    getServerSyncAttempts() {
-      return workspace.store.getServerSyncAttempts();
+    getServerSyncStatus() {
+      return {
+        attempts: workspace.store.getServerSyncAttempts(),
+        status: workspace.store.getSyncStatus(),
+      };
     },
 
     logOut() {

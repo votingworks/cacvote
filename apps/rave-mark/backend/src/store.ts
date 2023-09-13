@@ -201,8 +201,8 @@ export class Store {
       where machine_id = ?
         and common_access_card_id = ?
       `,
-      commonAccessCardId,
-      VX_MACHINE_ID
+      VX_MACHINE_ID,
+      commonAccessCardId
     ) as { count: number };
 
     return result.count > 0;
@@ -594,6 +594,55 @@ export class Store {
     return id;
   }
 
+  createScannedBallot({
+    id,
+    serverId,
+    clientId,
+    machineId,
+    electionId,
+    castVoteRecord,
+  }: {
+    id: ClientId;
+    serverId: ServerId;
+    clientId: ClientId;
+    machineId: string;
+    electionId: ClientId;
+    castVoteRecord: Buffer;
+  }): ClientId {
+    assert(
+      (serverId === undefined) === (clientId === undefined),
+      'ballot serverId must be defined if and only if clientId is defined'
+    );
+    assert(
+      (machineId === VX_MACHINE_ID) === (clientId === id || !clientId),
+      'ballot machineId must be VX_MACHINE_ID if and only if ID equals clientId'
+    );
+
+    // TODO: validate votes against election definition
+    this.client.run(
+      `
+      insert or replace into scanned_ballots (
+        id,
+        server_id,
+        client_id,
+        machine_id,
+        election_id,
+        cast_vote_record
+      ) values (
+        ?, ?, ?, ?, ?, ?
+      )
+      `,
+      id,
+      serverId ?? null,
+      clientId ?? id,
+      machineId,
+      electionId,
+      castVoteRecord
+    );
+
+    return id;
+  }
+
   /**
    * Records a cast ballot for a voter registration.
    */
@@ -709,6 +758,49 @@ export class Store {
     }
 
     return JSON.parse(result.castVoteRecordJson);
+  }
+
+  /**
+   * Gets the sync status, i.e. the count of the synced and pending items of
+   * various types.
+   */
+  getSyncStatus(): {
+    printedBallots: { synced: number; pending: number };
+    pendingRegistrations: { synced: number; pending: number };
+    elections: { synced: number; pending: number };
+  } {
+    const printedBallots = this.client.one(
+      `
+      select
+        sum(case when server_id is not null then 1 else 0 end) as synced,
+        sum(case when server_id is null then 1 else 0 end) as pending
+      from printed_ballots
+      `
+    ) as { synced: number; pending: number };
+
+    const pendingRegistrations = this.client.one(
+      `
+      select
+        sum(case when server_id is not null then 1 else 0 end) as synced,
+        sum(case when server_id is null then 1 else 0 end) as pending
+      from registrations
+      `
+    ) as { synced: number; pending: number };
+
+    const elections = this.client.one(
+      `
+      select
+        sum(case when server_id is not null then 1 else 0 end) as synced,
+        sum(case when server_id is null then 1 else 0 end) as pending
+      from elections
+      `
+    ) as { synced: number; pending: number };
+
+    return {
+      printedBallots,
+      pendingRegistrations,
+      elections,
+    };
   }
 
   /**

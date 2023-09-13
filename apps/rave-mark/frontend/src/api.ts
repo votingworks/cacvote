@@ -146,13 +146,13 @@ export const sync = {
   },
 } as const;
 
-export const getServerSyncAttempts = {
+export const getServerSyncStatus = {
   queryKey(): QueryKey {
-    return ['getServerSyncAttempts'];
+    return ['getServerSyncStatus'];
   },
   useQuery() {
     const apiClient = useApiClient();
-    return useQuery(this.queryKey(), () => apiClient.getServerSyncAttempts(), {
+    return useQuery(this.queryKey(), () => apiClient.getServerSyncStatus(), {
       staleTime: 0,
       refetchInterval: 1000,
     });

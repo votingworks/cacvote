@@ -255,7 +255,32 @@ export class RaveServerClientImpl {
         ),
       });
 
-      debug('created or replaced ballot %s', ballotId);
+      debug('created or replaced printed ballot %s', ballotId);
+    }
+
+    for (const scannedBallot of output.scannedBallots) {
+      const localElection = this.store.getElection({
+        serverId: scannedBallot.electionId,
+      });
+
+      assert(
+        localElection,
+        `could not find local election with server id ${scannedBallot.electionId}`
+      );
+
+      const ballotId = this.store.createScannedBallot({
+        id:
+          scannedBallot.machineId === VX_MACHINE_ID
+            ? scannedBallot.clientId
+            : ClientId(),
+        serverId: scannedBallot.serverId,
+        clientId: scannedBallot.clientId,
+        machineId: scannedBallot.machineId,
+        electionId: localElection.id,
+        castVoteRecord: scannedBallot.castVoteRecord,
+      });
+
+      debug('created or replaced scanned ballot %s', ballotId);
     }
   }
 
