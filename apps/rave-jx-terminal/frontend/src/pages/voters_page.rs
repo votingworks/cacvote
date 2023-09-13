@@ -1,10 +1,8 @@
 use dioxus::prelude::*;
 use types_rs::rave::jx;
+use ui_rs::DateOrDateTimeCell;
 
-use crate::{
-    components::{DateOrDateTimeColumn, ElectionConfigurationColumn},
-    util::url::get_url,
-};
+use crate::{components::ElectionConfigurationCell, util::url::get_url};
 
 #[derive(PartialEq, Props)]
 struct VotersProps<'a> {
@@ -159,7 +157,7 @@ fn PendingRegistrationsTable(cx: Scope<PendingRegistrationsTableProps>) -> Eleme
                                         }
                                     }
                                 }
-                                DateOrDateTimeColumn {
+                                DateOrDateTimeCell {
                                     date_or_datetime: registration_request.created_at(),
                                 }
                             }
@@ -193,14 +191,14 @@ fn RegistrationsTable(cx: Scope<RegistrationsTableProps>) -> Element {
                     tr {
                         td { class: "border px-4 py-2", "{registration.display_name()}" }
                         td { class: "border px-4 py-2", "{registration.common_access_card_id()}" }
-                        ElectionConfigurationColumn {
+                        ElectionConfigurationCell {
                             election_title: registration.election_title(),
                             election_hash: registration.election_hash().clone(),
                             precinct_id: registration.precinct_id().clone(),
                             ballot_style_id: registration.ballot_style_id().clone(),
                         }
                         td { class: "border px-4 py-2", if registration.is_synced() { "Yes" } else { "No" } }
-                        DateOrDateTimeColumn {
+                        DateOrDateTimeCell {
                             date_or_datetime: registration.created_at()
                         }
                     }

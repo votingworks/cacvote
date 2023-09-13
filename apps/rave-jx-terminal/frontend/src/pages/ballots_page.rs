@@ -1,7 +1,8 @@
 use dioxus::prelude::*;
 use types_rs::{cdf::cvr::Cvr, rave::jx};
+use ui_rs::DateOrDateTimeCell;
 
-use crate::components::{DateOrDateTimeColumn, ElectionConfigurationColumn};
+use crate::components::ElectionConfigurationCell;
 
 #[derive(PartialEq, Props)]
 struct VotersProps<'a> {
@@ -95,7 +96,7 @@ fn PrintedBallotsTable(cx: Scope<PendingRegistrationsTableProps>) -> Element {
                                 let election = get_election_by_id(printed_ballot.election_id()).unwrap();
 
                                 rsx!(tr {
-                                    ElectionConfigurationColumn {
+                                    ElectionConfigurationCell {
                                         election_title: election.title.clone(),
                                         election_hash: election.election_hash.clone(),
                                         precinct_id: printed_ballot.precinct_id().clone(),
@@ -185,7 +186,7 @@ fn PrintedBallotsTable(cx: Scope<PendingRegistrationsTableProps>) -> Element {
                                         }
 
                                     }
-                                    DateOrDateTimeColumn {
+                                    DateOrDateTimeCell {
                                         date_or_datetime: printed_ballot.created_at(),
                                     }
                                 })
@@ -223,14 +224,14 @@ fn ScannedBallotsTable(cx: Scope<RegistrationsTableProps>) -> Element {
                                 .iter()
                                 .find(|election| *election.id() == scanned_ballot.election_id)
                                 .unwrap();
-                            rsx!(ElectionConfigurationColumn {
+                            rsx!(ElectionConfigurationCell {
                                 election_title: election.title.clone(),
                                 election_hash: election.election_hash.clone(),
                                 precinct_id: scanned_ballot.precinct_id.clone(),
                                 ballot_style_id: scanned_ballot.ballot_style_id.clone(),
                             })
                         }
-                        DateOrDateTimeColumn {
+                        DateOrDateTimeCell {
                             date_or_datetime: scanned_ballot.created_at()
                         }
                     }
