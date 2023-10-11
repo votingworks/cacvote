@@ -1,0 +1,6 @@
+# build-time settings for `rave-server` in Heroku
+BUILD_PATH=services/rave-server
+
+# tell sqlx to use offline mode, i.e. don't check against the database
+# and instead use the query metadata checked into the repository
+export SQLX_OFFLINE=true

@@ -16,6 +16,7 @@ function generateTestJobForNodeJsPackage(pkg: PackageInfo): Optional<string[]> {
 
   const hasPlaywrightTests = existsSync(`${pkg.path}/playwright.config.ts`);
   const isIntegrationTestJob = hasPlaywrightTests;
+  /* istanbul ignore next */
   const lines = [
     `# ${pkg.name}`,
     `${jobIdForPackage(pkg)}:`,
@@ -50,6 +51,7 @@ function generateTestJobForNodeJsPackage(pkg: PackageInfo): Optional<string[]> {
     `        path: ${pkg.relativePath}/reports/`,
   ];
 
+  /* istanbul ignore next */
   if (hasPlaywrightTests) {
     lines.push(
       `    - store_artifacts:`,
@@ -161,8 +163,6 @@ commands:
           name: Setup Dependencies
           command: |
             pnpm install --frozen-lockfile
-            pnpm --dir libs/ballot-interpreter install:rust-addon
-            pnpm --dir libs/ballot-interpreter build:rust-addon
       - save_cache:
           key:
             dotcache-cache-{{checksum ".circleci/config.yml" }}-{{ checksum

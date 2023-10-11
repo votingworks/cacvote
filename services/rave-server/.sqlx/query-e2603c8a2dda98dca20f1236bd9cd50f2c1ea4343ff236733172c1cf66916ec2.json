@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO printed_ballots (\n            id,\n            client_id,\n            machine_id,\n            common_access_card_id,\n            common_access_card_certificate,\n            registration_id,\n            cast_vote_record,\n            cast_vote_record_signature\n        )\n        VALUES (\n            $1, $2, $3, $4, $5,\n            (SELECT id FROM registrations WHERE client_id = $6),\n            $7, $8\n        )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Bytea",
+        "Uuid",
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e2603c8a2dda98dca20f1236bd9cd50f2c1ea4343ff236733172c1cf66916ec2"
+}

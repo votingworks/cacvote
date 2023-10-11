@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders 1`] = `
+<div>
+  <div
+    class="sc-dSCufp dqPMxK"
+  >
+    <main
+      class="sc-fxwrCY hkigys"
+    >
+      <h1
+        class="sc-dcJsrY fqlfQL"
+      >
+        Welcome
+      </h1>
+      <p
+        class="sc-eqUAAy zDfVT"
+      >
+        Insert your Common Access Card to begin.
+      </p>
+    </main>
+  </div>
+</div>
+`;

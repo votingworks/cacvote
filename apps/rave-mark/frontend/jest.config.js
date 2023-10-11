@@ -13,6 +13,7 @@ module.exports = {
   transformIgnorePatterns: [
     '[/\\\\]node_modules[/\\\\].+\\.(js|jsx|mjs|cjs|ts|tsx)$',
   ],
+  setupFilesAfterEnv: ['<rootDir>/test/setup.ts'],
   coverageThreshold: {
     global: {
       statements: 0,

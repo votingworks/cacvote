@@ -1,5 +1,5 @@
 export * from './artifact_authentication';
-export type { CardStatus } from './card';
+export type { CardStatus, CommonAccessCardDetails } from './card';
 export * from './cast_vote_record_hashes';
 export * from './common_access_card';
 export * from './config';

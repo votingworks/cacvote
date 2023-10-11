@@ -1,22 +1,40 @@
-import { unsafeParse } from '@votingworks/types';
-import { z } from 'zod';
+import { NODE_ENV } from '@votingworks/backend';
+import { safeParseInt } from '@votingworks/types';
+import { join } from 'path';
+
+const BASE_PORT = safeParseInt(process.env.BASE_PORT).ok() || 3000;
 
 /**
- * Default port for the VxMark API.
+ * Default port for the RaveMark backend.
  */
-// eslint-disable-next-line vx/gts-safe-number-parse
-export const PORT = Number(process.env.PORT || 3002);
-
-const NodeEnvSchema = z.union([
-  z.literal('development'),
-  z.literal('test'),
-  z.literal('production'),
-]);
+export const PORT = safeParseInt(process.env.PORT).ok() || BASE_PORT + 2;
 
 /**
- * Which node environment is this?
+ * Where should the database and audio files go?
  */
-export const NODE_ENV = unsafeParse(
-  NodeEnvSchema,
-  process.env.NODE_ENV ?? 'development'
-);
+export const RAVE_MARK_WORKSPACE =
+  process.env.RAVE_MARK_WORKSPACE ??
+  (NODE_ENV === 'development'
+    ? join(__dirname, '../dev-workspace')
+    : undefined);
+
+/**
+ * Is this running as part of an integration test?
+ */
+export const IS_INTEGRATION_TEST = process.env.IS_INTEGRATION_TEST === 'true';
+
+/**
+ * RAVE Server URL.
+ */
+export const RAVE_URL = process.env.RAVE_URL
+  ? new URL(process.env.RAVE_URL)
+  : NODE_ENV === 'development' || typeof jest !== 'undefined'
+  ? new URL('http://localhost:8000')
+  : undefined;
+
+/**
+ * Should we mock the RAVE Server?
+ */
+export const USE_MOCK_RAVE_SERVER =
+  (process.env.USE_MOCK_RAVE_SERVER === 'true' || IS_INTEGRATION_TEST) &&
+  process.env.USE_MOCK_RAVE_SERVER !== 'false';

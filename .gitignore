@@ -4,9 +4,9 @@ node_modules
 .pnp.js
 
 # production
-build
-dist
-target
+build/
+target/
+dist/
 *-*.*.*.tgz
 *.tsbuildinfo
 

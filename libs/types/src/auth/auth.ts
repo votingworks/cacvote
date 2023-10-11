@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { BallotStyleId, PrecinctId } from '../election';
+import { Id } from '../generic';
 
 export interface SystemAdministratorUser {
   readonly role: 'system_administrator';
@@ -41,6 +42,14 @@ export const UserRoleSchema: z.ZodSchema<UserRole> = z.union([
   z.literal('poll_worker'),
   z.literal('cardless_voter'),
 ]);
+
+export interface RaveVoterUser {
+  readonly role: 'rave_voter';
+  readonly commonAccessCardId: Id;
+  readonly givenName: string;
+  readonly middleName?: string;
+  readonly familyName: string;
+}
 
 /**
  * See libs/auth/src/lockout.ts for more context.
