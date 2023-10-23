@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO elections (\n            id,\n            server_id,\n            client_id,\n            machine_id,\n            election_hash,\n            definition\n        )\n        VALUES ($1, $2, $3, $4, $5, $6)\n        ON CONFLICT (machine_id, client_id)\n        DO UPDATE SET\n            server_id = $2,\n            election_hash = $5,\n            definition = $6\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "251cd0c2c4af6a1a75f1960c48e5fca2b6c88cd47fe5053eb67f1193b8775859"
+}

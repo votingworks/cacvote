@@ -21,6 +21,52 @@ executors:
           password: $VX_DOCKER_PASSWORD
 
 jobs:
+  # @votingworks/rave-jx-terminal-backend
+  test-apps-rave-jx-terminal-backend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-jx-terminal/backend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-jx-terminal/backend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-jx-terminal/backend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-jx-terminal/backend/reports/
+
+  # @votingworks/rave-jx-terminal-frontend
+  test-apps-rave-jx-terminal-frontend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-jx-terminal/frontend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-jx-terminal/frontend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-jx-terminal/frontend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-jx-terminal/frontend/reports/
+
   # @votingworks/rave-mark-backend
   test-apps-rave-mark-backend:
     executor: nodejs
@@ -67,8 +113,8 @@ jobs:
       - store_test_results:
           path: apps/rave-mark/frontend/reports/
 
-  # @votingworks/rave-mark-integration-testing
-  test-apps-rave-mark-integration-testing:
+  # @votingworks/rave-scan-backend
+  test-apps-rave-scan-backend:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -76,19 +122,42 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir apps/rave-mark/integration-testing build
+            pnpm --dir apps/rave-scan/backend build
       - run:
           name: Lint
           command: |
-            pnpm --dir apps/rave-mark/integration-testing lint
+            pnpm --dir apps/rave-scan/backend lint
       - run:
           name: Test
           command: |
-            pnpm --dir apps/rave-mark/integration-testing test
+            pnpm --dir apps/rave-scan/backend test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: apps/rave-mark/integration-testing/reports/
+          path: apps/rave-scan/backend/reports/
+
+  # @votingworks/rave-scan-frontend
+  test-apps-rave-scan-frontend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-scan/frontend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-scan/frontend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-scan/frontend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-scan/frontend/reports/
 
   # @votingworks/auth
   test-libs-auth:
@@ -159,6 +228,29 @@ jobs:
       - store_test_results:
           path: libs/ballot-encoder/reports/
 
+  # ballot-encoder-rs
+  test-libs-ballot-encoder-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/ballot-encoder-rs build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/ballot-encoder-rs lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/ballot-encoder-rs test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/ballot-encoder-rs/reports/
+
   # @votingworks/basics
   test-libs-basics:
     executor: nodejs
@@ -204,6 +296,29 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: libs/cdf-schema-builder/reports/
+
+  # central-scanner
+  test-libs-central-scanner:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/central-scanner build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/central-scanner lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/central-scanner test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/central-scanner/reports/
 
   # @votingworks/db
   test-libs-db:
@@ -504,6 +619,29 @@ jobs:
       - store_test_results:
           path: libs/types/reports/
 
+  # @votingworks/types-rs
+  test-libs-types-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/types-rs build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/types-rs lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/types-rs test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/types-rs/reports/
+
   # @votingworks/ui
   test-libs-ui:
     executor: nodejs
@@ -526,6 +664,29 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: libs/ui/reports/
+
+  # @votingworks/ui-rs
+  test-libs-ui-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/ui-rs build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/ui-rs lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/ui-rs test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/ui-rs/reports/
 
   # @votingworks/usb-drive
   test-libs-usb-drive:
@@ -573,6 +734,29 @@ jobs:
       - store_test_results:
           path: libs/utils/reports/
 
+  # @votingworks/rave-server
+  test-services-rave-server:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir services/rave-server build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir services/rave-server lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir services/rave-server test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: services/rave-server/reports/
+
   validate-monorepo:
     executor: nodejs
     resource_class: xlarge
@@ -590,14 +774,19 @@ jobs:
 workflows:
   test:
     jobs:
+      - test-apps-rave-jx-terminal-backend
+      - test-apps-rave-jx-terminal-frontend
       - test-apps-rave-mark-backend
       - test-apps-rave-mark-frontend
-      - test-apps-rave-mark-integration-testing
+      - test-apps-rave-scan-backend
+      - test-apps-rave-scan-frontend
       - test-libs-auth
       - test-libs-backend
       - test-libs-ballot-encoder
+      - test-libs-ballot-encoder-rs
       - test-libs-basics
       - test-libs-cdf-schema-builder
+      - test-libs-central-scanner
       - test-libs-db
       - test-libs-dev-dock-backend
       - test-libs-dev-dock-frontend
@@ -611,9 +800,12 @@ workflows:
       - test-libs-res-to-ts
       - test-libs-test-utils
       - test-libs-types
+      - test-libs-types-rs
       - test-libs-ui
+      - test-libs-ui-rs
       - test-libs-usb-drive
       - test-libs-utils
+      - test-services-rave-server
       - validate-monorepo
 
 commands:

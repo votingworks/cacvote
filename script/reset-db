@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+(
+    cd apps/rave-mark/backend
+    rm -rf dev-workspace
+)
+(
+    cd apps/rave-scan/backend
+    cargo sqlx database reset --source=db/migrations
+)
+(
+    cd apps/rave-jx-terminal/backend
+    cargo sqlx database reset --source=db/migrations
+)
+(
+    cd services/rave-server
+    cargo sqlx database reset --source=db/migrations
+)
