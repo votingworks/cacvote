@@ -1,13 +1,5 @@
 import './polyfills';
-import React from 'react';
-import ReactDom from 'react-dom';
-import { DevDock } from '@votingworks/dev-dock-frontend';
+import { createRoot } from 'react-dom/client';
 import { App } from './app';
 
-ReactDom.render(
-  <React.Fragment>
-    <App />
-    <DevDock />
-  </React.Fragment>,
-  document.getElementById('root') as HTMLElement
-);
+createRoot(document.getElementById('root') as HTMLElement).render(<App />);
