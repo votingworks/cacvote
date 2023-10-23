@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    id as \"id: ServerId\",\n                    client_id as \"client_id: ClientId\",\n                    machine_id,\n                    common_access_card_id,\n                    common_access_card_certificate,\n                    registration_id as \"registration_id: ServerId\",\n                    cast_vote_record,\n                    cast_vote_record_signature,\n                    created_at\n                FROM printed_ballots\n                ORDER BY created_at DESC\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: ServerId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id: ClientId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "machine_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "common_access_card_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "common_access_card_certificate",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "registration_id: ServerId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "cast_vote_record",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 7,
+        "name": "cast_vote_record_signature",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f305266bf89a3cab405a359d5f0ab357bbe118fa193c4ccddb9ac0cd9cafe202"
+}

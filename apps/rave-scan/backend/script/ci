@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "${DIR}/.."
+
+if [ $(id -u) -eq 0 ] && [ "${CI:-}" == true ]; then
+  service postgresql start
+  sudo -u postgres createuser --superuser $(whoami) || true
+  sudo -u postgres createdb $(cat .env | grep DATABASE_URL | cut -d '=' -f 2 - | cut -d ':' -f 2 -) || true
+fi
+
+SQLX_OFFLINE=true cargo test

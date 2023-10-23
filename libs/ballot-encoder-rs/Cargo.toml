@@ -1,0 +1,16 @@
+[package]
+name = "ballot-encoder-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitstream-io = { workspace = true }
+color-eyre = { workspace = true }
+hex = { workspace = true }
+nanoid = { workspace = true }
+types-rs = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

@@ -22,6 +22,7 @@ function generateTestJobForNodeJsPackage(
 
   const hasPlaywrightTests = existsSync(`${pkg.path}/playwright.config.ts`);
   const isIntegrationTestJob = hasPlaywrightTests;
+  /* istanbul ignore next */
   const lines = [
     `# ${pkg.name}`,
     `${jobIdForPackage(pkg)}:`,
@@ -56,6 +57,7 @@ function generateTestJobForNodeJsPackage(
     `        path: ${pkg.relativePath}/reports/`,
   ];
 
+  /* istanbul ignore next */
   if (hasPlaywrightTests) {
     lines.push(
       `    - store_artifacts:`,

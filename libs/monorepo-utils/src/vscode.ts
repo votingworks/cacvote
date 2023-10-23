@@ -3,7 +3,8 @@
 import { Result, err, iter, ok } from '@votingworks/basics';
 import { readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
-import { PackageInfo, getWorkspacePackageInfo } from './pnpm';
+import { getWorkspacePackageInfo } from './pnpm';
+import { PnpmPackageInfo } from '.';
 
 /**
  * The contents of a VS Code `.code-workspace` file.
@@ -29,7 +30,7 @@ const DEFAULT_EXTRA_FOLDERS: readonly WorkspaceFolder[] = [
   'libs/usb-mocking',
 ].map((path) => ({ path, name: path }));
 
-function DEFAULT_PACKAGE_FILTER(pkg: PackageInfo) {
+function DEFAULT_PACKAGE_FILTER(pkg: PnpmPackageInfo) {
   return !pkg.name.startsWith('@types/') && !pkg.name.endsWith('prodserver');
 }
 
@@ -53,7 +54,7 @@ export function updateWorkspaceConfig(
     check = false,
   }: {
     extraFolders?: readonly WorkspaceFolder[];
-    pkgFilter?: (pkg: PackageInfo) => boolean;
+    pkgFilter?: (pkg: PnpmPackageInfo) => boolean;
     check?: boolean;
   } = {}
 ): Result<WorkspaceConfig, UpdateWorkspaceConfigCheckFailed> {

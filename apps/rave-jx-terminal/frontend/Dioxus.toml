@@ -1,0 +1,51 @@
+[application]
+
+# App (Project) Name
+name = "rave-jx-terminal-frontend"
+
+# Dioxus App Default Platform
+# desktop, web, mobile, ssr
+default_platform = "web"
+
+# `build` & `serve` dist path
+out_dir = "dist"
+
+# resource (public) file folder
+asset_dir = "public"
+
+[web.app]
+
+# HTML title tag content
+title = "RAVE Jurisdiction"
+
+[web.watcher]
+
+# when watcher trigger, regenerate the `index.html`
+reload_html = true
+
+# which files or dirs will be watcher monitoring
+watch_path = ["src", "public"]
+
+# serve the root page when a route is not found
+# this is necessary when using the `Router` component
+index_on_404 = true
+
+# include `assets` in web platform
+[web.resource]
+
+# CSS style file
+
+style = ["/styles.css"]
+
+
+# Javascript code file
+script = []
+
+[web.resource.dev]
+
+# Javascript code file
+# serve: [dev-server] only
+script = []
+
+[[web.proxy]]
+backend = "http://127.0.0.1:5001/api"
