@@ -1,4 +1,8 @@
-import { CIRCLECI_CONFIG_PATH, PackageInfo, generateCircleCiConfig } from '@votingworks/monorepo-utils';
+import {
+  CIRCLECI_CONFIG_PATH,
+  PackageInfo,
+  generateCircleCiConfig,
+} from '@votingworks/monorepo-utils';
 import { readFileSync } from 'fs';
 
 /**
@@ -27,7 +31,7 @@ export interface OutdatedConfig {
 export function* checkConfig(
   workspacePackages: ReadonlyMap<string, PackageInfo>
 ): Generator<ValidationIssue> {
-  const expectedCircleCiConfig = generateCircleCiConfig(workspacePackages)
+  const expectedCircleCiConfig = generateCircleCiConfig(workspacePackages);
   const actualConfig = readFileSync(CIRCLECI_CONFIG_PATH, 'utf-8');
 
   if (expectedCircleCiConfig !== actualConfig) {

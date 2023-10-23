@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE batches\n        SET scanned_ballot_ids = ARRAY_APPEND(scanned_ballot_ids, $1)\n        WHERE id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ca8f21b8ec1238ad97fe75692ce5383d238c4a5a53768269230063419162668d"
+}

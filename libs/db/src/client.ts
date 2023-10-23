@@ -8,6 +8,7 @@ import Database = require('better-sqlite3');
 type Database = Database.Database;
 
 const debug = makeDebug('db-client');
+const queryDebug = debug.extend('query');
 
 const MEMORY_DB_PATH = ':memory:';
 
@@ -182,6 +183,7 @@ export class Client {
    * client.run('insert into muppets (name) values (?)', 'Kermit')
    */
   run<P extends Bindable[]>(sql: string, ...params: P): void {
+    queryDebug('run %s (%o)', sql, params);
     const db = this.getDatabase();
     const stmt = db.prepare<P>(sql);
     stmt.run(...params);
@@ -200,6 +202,7 @@ export class Client {
    * `)
    */
   exec(sql: string): void {
+    queryDebug('exec %s', sql);
     const db = this.getDatabase();
     db.exec(sql);
   }
@@ -212,6 +215,7 @@ export class Client {
    * client.all('select * from muppets')
    */
   all<P extends Bindable[] = []>(sql: string, ...params: P): unknown[] {
+    queryDebug('all %s (%o)', sql, params);
     const db = this.getDatabase();
     const stmt = db.prepare<P>(sql);
     return stmt.all(...params);
@@ -224,6 +228,7 @@ export class Client {
     sql: string,
     ...params: P
   ): IterableIterator<unknown> {
+    queryDebug('each %s (%o)', sql, params);
     const db = this.getDatabase();
     const stmt = db.prepare<P>(sql);
     return stmt.iterate(...params);
@@ -237,6 +242,7 @@ export class Client {
    * client.one('select count(*) as count from muppets')
    */
   one<P extends Bindable[] = []>(sql: string, ...params: P): unknown {
+    queryDebug('one %s (%o)', sql, params);
     const db = this.getDatabase();
     const stmt = db.prepare<P>(sql);
     return stmt.get(...params);

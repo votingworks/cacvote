@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            client_id as \"client_id: ClientId\",\n            machine_id,\n            definition\n        FROM elections\n        WHERE server_id IS NULL\n        ORDER BY created_at ASC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "client_id: ClientId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "machine_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "definition",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a9d72c1006b4e9649cd11cfaff5617b2d34544fd063e7f47b3b2eced9c972711"
+}
