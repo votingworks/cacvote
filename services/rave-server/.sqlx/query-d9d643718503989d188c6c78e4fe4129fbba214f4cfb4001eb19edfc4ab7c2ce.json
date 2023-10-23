@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            machine_id,\n            common_access_card_id,\n            created_at\n        FROM admins\n        ORDER BY created_at ASC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "machine_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "common_access_card_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d9d643718503989d188c6c78e4fe4129fbba214f4cfb4001eb19edfc4ab7c2ce"
+}

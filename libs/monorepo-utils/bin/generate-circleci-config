@@ -5,7 +5,7 @@
 require('esbuild-runner/register');
 
 const { join } = require('path');
-const { generateConfig } = require('../src/circleci');
+const { generateConfig, CIRCLECI_CONFIG_PATH } = require('../src/circleci');
 const { getWorkspacePackageInfo } = require('../src/pnpm');
 const { getRustPackageIds } = require('../src/cargo');
 const { writeFileSync } = require('fs');
