@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id as \"id: _\",\n            server_id as \"server_id: _\",\n            client_id as \"client_id: _\",\n            machine_id,\n            common_access_card_id,\n            given_name,\n            family_name,\n            address_line_1,\n            address_line_2,\n            city,\n            state,\n            postal_code,\n            state_id,\n            created_at\n        FROM registration_requests\n        ORDER BY created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: _",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "server_id: _",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "client_id: _",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "machine_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "common_access_card_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "given_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "family_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "address_line_1",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "address_line_2",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "city",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "state",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "postal_code",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "state_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "596419db69532c6f5062ab2c42990df8aeaa8355d9f5713b2c20e7b22ec0ff45"
+}

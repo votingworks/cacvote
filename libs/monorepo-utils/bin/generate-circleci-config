@@ -5,13 +5,13 @@
 require('esbuild-runner/register');
 
 const { join } = require('path');
-const { generateConfig } = require('../src/circleci');
+const { generateConfig, CIRCLECI_CONFIG_PATH } = require('../src/circleci');
 const { getWorkspacePackageInfo } = require('../src/pnpm');
 const { writeFileSync } = require('fs');
 
 const workspaceRoot = join(__dirname, '..', '..', '..');
 
 writeFileSync(
-  join(workspaceRoot, '.circleci', 'config.yml'),
+  CIRCLECI_CONFIG_PATH,
   generateConfig(getWorkspacePackageInfo(workspaceRoot))
 );

@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO registrations (\n            id,\n            client_id,\n            machine_id,\n            common_access_card_id,\n            registration_request_id,\n            election_id,\n            precinct_id,\n            ballot_style_id\n        )\n        VALUES (\n            $1, $2, $3, $4,\n            (SELECT id FROM registration_requests WHERE client_id = $5),\n            (SELECT id FROM elections WHERE client_id = $6),\n            $7, $8\n        )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3548e96944f55ebcba37b8e7ec9ce7fcc7da3214562a130aab92c688893e13f1"
+}

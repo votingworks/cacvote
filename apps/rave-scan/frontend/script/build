@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if ! command dx --version &> /dev/null; then
+  cargo install dioxus-cli
+fi
+
+rustup target add wasm32-unknown-unknown
+dx build

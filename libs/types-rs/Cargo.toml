@@ -1,0 +1,29 @@
+[package]
+name = "types-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+base64 = { workspace = true }
+base64-serde = { workspace = true }
+color-eyre = { workspace = true }
+hex = { workspace = true }
+hmac-sha256 = { workspace = true }
+lazy_static = { workspace = true }
+nanoid = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true, optional = true }
+time = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+proptest = { workspace = true }
+
+[features]
+backend = ["sqlx"]
+sqlx = ["dep:sqlx"]

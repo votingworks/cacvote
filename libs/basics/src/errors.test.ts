@@ -12,6 +12,7 @@ test.each<{ error: unknown; expectedErrorMessage: string }>([
   { error: Buffer.from('Whoa!', 'utf-8'), expectedErrorMessage: 'Whoa!' },
   { error: 1234, expectedErrorMessage: '1234' },
   { error: { error: 'Whoa!' }, expectedErrorMessage: '[object Object]' },
+  { error: { message: 'Whoa!' }, expectedErrorMessage: 'Whoa!' },
 ])('extractErrorMessage', ({ error, expectedErrorMessage }) => {
   expect(extractErrorMessage(error)).toEqual(expectedErrorMessage);
 });
