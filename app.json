@@ -1,0 +1,18 @@
+{
+  "addons": [
+
+  ],
+  "buildpacks": [
+    {
+      "url": "emk/rust"
+    }
+  ],
+  "env": {
+  },
+  "formation": {
+  },
+  "name": "rave",
+  "scripts": {
+  },
+  "stack": "heroku-22"
+}

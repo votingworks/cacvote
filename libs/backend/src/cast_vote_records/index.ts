@@ -1,5 +1,6 @@
 /* istanbul ignore file */
 export {
+  buildCastVoteRecord,
   buildCVRContestsFromVotes,
   buildCvrImageData,
 } from './build_cast_vote_record';
