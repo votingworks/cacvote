@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            jurisdiction_id as \"jurisdiction_id: ServerId\"\n        FROM elections\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jurisdiction_id: ServerId",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3e0f0f4dd62f3a1ae66d9296ac1abe9960a3a5a29efd10efd7e823c81d8f4e12"
+}
