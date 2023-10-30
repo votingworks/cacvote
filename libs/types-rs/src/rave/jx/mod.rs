@@ -24,6 +24,7 @@ pub struct Election {
 }
 
 impl Election {
+    #[must_use]
     pub const fn new(
         id: ClientId,
         server_id: Option<ServerId>,
@@ -44,14 +45,17 @@ impl Election {
         }
     }
 
+    #[must_use]
     pub fn id(&self) -> &ClientId {
         &self.id
     }
 
+    #[must_use]
     pub fn is_synced(&self) -> bool {
         self.server_id.is_some()
     }
 
+    #[must_use]
     pub fn created_at(&self) -> &time::OffsetDateTime {
         &self.created_at
     }
@@ -69,6 +73,7 @@ pub struct RegistrationRequest {
 }
 
 impl RegistrationRequest {
+    #[must_use]
     pub const fn new(
         id: ClientId,
         server_id: ServerId,
@@ -85,18 +90,22 @@ impl RegistrationRequest {
         }
     }
 
+    #[must_use]
     pub fn id(&self) -> &ClientId {
         &self.id
     }
 
+    #[must_use]
     pub fn common_access_card_id(&self) -> &str {
         &self.common_access_card_id
     }
 
+    #[must_use]
     pub fn display_name(&self) -> &str {
         &self.display_name
     }
 
+    #[must_use]
     pub fn created_at(&self) -> &time::OffsetDateTime {
         &self.created_at
     }
@@ -120,6 +129,7 @@ pub struct Registration {
 
 impl Registration {
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub const fn new(
         id: ClientId,
         server_id: Option<ServerId>,
@@ -146,42 +156,52 @@ impl Registration {
         }
     }
 
+    #[must_use]
     pub fn id(&self) -> &ClientId {
         &self.id
     }
 
+    #[must_use]
     pub fn is_synced(&self) -> bool {
         self.server_id.is_some()
     }
 
+    #[must_use]
     pub fn display_name(&self) -> &str {
         self.display_name.as_str()
     }
 
+    #[must_use]
     pub fn election_title(&self) -> &str {
         &self.election_title
     }
 
+    #[must_use]
     pub fn election_hash(&self) -> &ElectionHash {
         &self.election_hash
     }
 
+    #[must_use]
     pub fn common_access_card_id(&self) -> &str {
         &self.common_access_card_id
     }
 
+    #[must_use]
     pub fn ballot_style_id(&self) -> &BallotStyleId {
         &self.ballot_style_id
     }
 
+    #[must_use]
     pub fn precinct_id(&self) -> &PrecinctId {
         &self.precinct_id
     }
 
+    #[must_use]
     pub fn is_registration_request(&self, registration_request: &RegistrationRequest) -> bool {
         self.registration_request_id == registration_request.id
     }
 
+    #[must_use]
     pub fn created_at(&self) -> &time::OffsetDateTime {
         &self.created_at
     }
@@ -217,22 +237,31 @@ pub struct PrintedBallot {
 }
 
 impl PrintedBallot {
+    #[must_use]
     pub fn election_id(&self) -> &ClientId {
         &self.election_id
     }
 
+    #[must_use]
     pub fn ballot_style_id(&self) -> &BallotStyleId {
         &self.ballot_style_id
     }
 
+    #[must_use]
     pub fn precinct_id(&self) -> &PrecinctId {
         &self.precinct_id
     }
 
+    #[must_use]
     pub fn created_at(&self) -> &time::OffsetDateTime {
         &self.created_at
     }
 
+    /// Returns the cast vote record as a CVR.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the cast vote record is not valid JSON.
     pub fn cast_vote_record(&self) -> color_eyre::Result<Cvr> {
         let cast_vote_record_json = serde_json::from_slice(&self.cast_vote_record)?;
         Ok(cast_vote_record_json)
@@ -253,6 +282,7 @@ pub struct ScannedBallot {
 }
 
 impl ScannedBallot {
+    #[must_use]
     pub fn created_at(&self) -> &time::OffsetDateTime {
         &self.created_at
     }
@@ -260,7 +290,7 @@ impl ScannedBallot {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct AppData {
+pub struct LoggedInAppData {
     pub elections: Vec<Election>,
     pub registration_requests: Vec<RegistrationRequest>,
     pub registrations: Vec<Registration>,

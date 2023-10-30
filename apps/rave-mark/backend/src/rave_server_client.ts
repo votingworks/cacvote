@@ -47,6 +47,16 @@ function describeSyncInputOrOutput(
     );
   }
 
+  if (data.jurisdictions?.length) {
+    parts.push(
+      format.countPhrase({
+        value: data.jurisdictions.length,
+        one: '1 jurisdiction',
+        many: `${data.jurisdictions.length} jurisdictions`,
+      })
+    );
+  }
+
   if (data.elections?.length) {
     parts.push(
       format.countPhrase({
@@ -128,6 +138,7 @@ export class RaveServerClientImpl {
       lastSyncedPrintedBallotId: this.store.getLastSyncedPrintedBallotId(),
       lastSyncedScannedBallotId: this.store.getLastSyncedScannedBallotId(),
       registrationRequests: this.store.getRegistrationRequestsToSync(),
+      jurisdictions: this.store.getJurisdictionsToSync(),
       elections: this.store.getElectionsToSync(),
       registrations: this.store.getRegistrationsToSync(),
       printedBallots: this.store.getPrintedBallotsToSync(),
@@ -171,6 +182,11 @@ export class RaveServerClientImpl {
       this.store.createAdmin(admin);
     }
     debug('reset and replaced admins; count: %d', output.admins.length);
+
+    for (const jurisdiction of output.jurisdictions) {
+      const jurisdictionId = this.store.createJurisdiction(jurisdiction);
+      debug('created or replaced jurisdiction %s', jurisdictionId);
+    }
 
     for (const election of output.elections) {
       const electionId = this.store.createElection({
@@ -221,6 +237,7 @@ export class RaveServerClientImpl {
         serverId: registration.serverId,
         clientId: registration.clientId,
         machineId: registration.machineId,
+        jurisdictionId: registration.jurisdictionId,
         registrationRequestId: localRegistrationRequest.id,
         electionId: localElection.id,
         ballotStyleId: registration.ballotStyleId,

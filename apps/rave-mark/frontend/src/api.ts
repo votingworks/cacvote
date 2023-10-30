@@ -34,6 +34,18 @@ export function createQueryClient(): QueryClient {
   return new QueryClient({ defaultOptions: QUERY_CLIENT_DEFAULT_OPTIONS });
 }
 
+export const getJurisdictions = {
+  queryKey(): QueryKey {
+    return ['getJurisdictions'];
+  },
+  useQuery() {
+    const apiClient = useApiClient();
+    return useQuery(this.queryKey(), () => apiClient.getJurisdictions(), {
+      staleTime: Infinity,
+    });
+  },
+} as const;
+
 export const getAuthStatus = {
   queryKey(): QueryKey {
     return ['getAuthStatus'];
