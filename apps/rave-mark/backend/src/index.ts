@@ -9,6 +9,7 @@ import { Workspace, createWorkspace } from './workspace';
 
 export type { AuthStatus } from './types/auth';
 export type { Api, CreateTestVoterInput } from './app';
+export type { ServerId } from './types/db';
 
 // https://github.com/bkeepers/dotenv#what-other-env-files-can-i-use
 const dotEnvPath = '.env';
