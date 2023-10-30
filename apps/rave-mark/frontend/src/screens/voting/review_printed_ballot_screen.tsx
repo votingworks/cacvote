@@ -18,13 +18,13 @@ export function ReviewPrintedBallotScreen({
           one of the choices below.
         </P>
         <P>
-          <Button variant="done" onPress={onConfirmPrintedBallotSelections}>
+          <Button icon="Done" onPress={onConfirmPrintedBallotSelections}>
             My Printed Ballot is Correct
           </Button>
         </P>
         <P>- or -</P>
         <P>
-          <Button variant="warning" onPress={onRejectPrintedBallotSelections}>
+          <Button icon="Warning" onPress={onRejectPrintedBallotSelections}>
             I Need to Make Changes
           </Button>
         </P>
