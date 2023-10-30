@@ -5,6 +5,7 @@ import {
   SystemSettings,
   safeParseSystemSettings,
 } from '@votingworks/types';
+import { DateTime } from 'luxon';
 import { Store } from './store';
 import { ClientId, ServerId } from './types/db';
 
@@ -62,10 +63,16 @@ test('reset clears the database', () => {
   const { electionDefinition } = electionTwoPartyPrimaryFixtures;
   const store = Store.memoryStore();
 
+  const jurisdictionId = ServerId();
+  store.createJurisdiction({
+    id: jurisdictionId,
+    name: 'Test Jurisdiction',
+    createdAt: DateTime.now(),
+  });
   const electionId = ClientId();
   store.createElection({
     id: electionId,
-    jurisdictionId: ServerId(),
+    jurisdictionId,
     definition: Buffer.from(electionDefinition.electionData),
   });
   expect(store.getElection({ clientId: electionId })).toBeTruthy();
