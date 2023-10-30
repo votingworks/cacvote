@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    id as \"id: _\",\n                    jurisdiction_id as \"jurisdiction_id: _\",\n                    server_id as \"server_id: _\",\n                    client_id as \"client_id: _\",\n                    machine_id,\n                    definition,\n                    election_hash,\n                    created_at\n                FROM elections\n                WHERE created_at > $1\n                  AND jurisdiction_id = $2\n                ORDER BY created_at DESC\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: _",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "jurisdiction_id: _",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "server_id: _",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "client_id: _",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "machine_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "definition",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
+        "name": "election_hash",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a4e8fa2c94864b0dc5b6453133166a27c01bc3085a30386699687a40162609ee"
+}

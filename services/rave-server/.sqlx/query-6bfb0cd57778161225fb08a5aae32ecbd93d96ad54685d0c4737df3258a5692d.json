@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO registration_requests (\n            id,\n            client_id,\n            machine_id,\n            jurisdiction_id,\n            common_access_card_id,\n            given_name,\n            family_name,\n            address_line_1,\n            address_line_2,\n            city,\n            state,\n            postal_code,\n            state_id\n        )\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6bfb0cd57778161225fb08a5aae32ecbd93d96ad54685d0c4737df3258a5692d"
+}

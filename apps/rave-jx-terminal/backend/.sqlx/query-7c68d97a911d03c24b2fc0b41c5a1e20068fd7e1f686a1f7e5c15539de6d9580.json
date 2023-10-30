@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            scanned_ballots.id as \"id: ClientId\",\n            scanned_ballots.server_id as \"server_id: ServerId\",\n            scanned_ballots.election_id as \"election_id: ClientId\",\n            scanned_ballots.cast_vote_record,\n            scanned_ballots.created_at\n        FROM scanned_ballots\n        INNER JOIN elections ON elections.id = scanned_ballots.election_id\n        WHERE elections.jurisdiction_id = $1\n        ORDER BY created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: ClientId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "server_id: ServerId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "election_id: ClientId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "cast_vote_record",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7c68d97a911d03c24b2fc0b41c5a1e20068fd7e1f686a1f7e5c15539de6d9580"
+}
