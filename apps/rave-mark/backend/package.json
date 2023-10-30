@@ -20,10 +20,10 @@
     "pre-commit": "lint-staged",
     "start": "TZ=UTC VX_MACHINE_TYPE=rave-mark node ./build/index.js",
     "test": "is-ci test:ci test:watch",
-    "test:ci": "VX_MACHINE_TYPE=rave-mark jest --coverage --reporters=default --reporters=jest-junit --maxWorkers=7",
-    "test:coverage": "VX_MACHINE_TYPE=rave-mark jest --coverage",
-    "test:debug": "VX_MACHINE_TYPE=rave-mark node --inspect-brk $(which jest) --runInBand --no-cache",
-    "test:watch": "VX_MACHINE_TYPE=rave-mark jest --watch",
+    "test:ci": "VX_MACHINE_TYPE=rave-mark MAILING_LABEL_PRINTER=rave-mark-printer jest --coverage --reporters=default --reporters=jest-junit --maxWorkers=7",
+    "test:coverage": "VX_MACHINE_TYPE=rave-mark MAILING_LABEL_PRINTER=rave-mark-printer jest --coverage",
+    "test:debug": "VX_MACHINE_TYPE=rave-mark MAILING_LABEL_PRINTER=rave-mark-printer node --inspect-brk $(which jest) --runInBand --no-cache",
+    "test:watch": "VX_MACHINE_TYPE=rave-mark MAILING_LABEL_PRINTER=rave-mark-printer jest --watch",
     "type-check": "tsc --build"
   },
   "lint-staged": {
