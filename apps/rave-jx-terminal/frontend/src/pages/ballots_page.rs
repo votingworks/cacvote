@@ -1,8 +1,5 @@
 use dioxus::prelude::*;
-use types_rs::{
-    cdf::cvr::Cvr,
-    rave::{jx, ServerId},
-};
+use types_rs::{cdf::cvr::Cvr, rave::jx};
 use ui_rs::DateOrDateTimeCell;
 
 use crate::components::ElectionConfigurationCell;
