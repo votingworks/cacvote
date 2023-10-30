@@ -5,12 +5,12 @@ use ui_rs::DateOrDateTimeCell;
 use crate::{components::ElectionConfigurationCell, util::url::get_url};
 
 #[derive(PartialEq, Props)]
-struct VotersProps<'a> {
-    app_data: &'a jx::AppData,
+pub struct VotersProps {
+    jurisdiction_id: String,
 }
 
-pub fn VotersPage(cx: Scope) -> Element {
-    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
+pub fn VotersPage(cx: Scope<VotersProps>) -> Element {
+    let app_data = use_shared_state::<jx::LoggedInAppData>(cx).unwrap();
     let app_data = app_data.read();
     let elections = app_data.elections.clone();
     let registration_requests = app_data.registration_requests.clone();
