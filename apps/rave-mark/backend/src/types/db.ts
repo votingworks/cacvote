@@ -47,6 +47,37 @@ export const ServerIdSchema = IdSchema as z.ZodSchema<ServerId>;
  */
 export const ClientIdSchema = IdSchema as z.ZodSchema<ClientId>;
 
+export interface JurisdictionRow {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Jurisdiction {
+  /**
+   * Database ID for a jurisdiction record.
+   */
+  id: ServerId;
+
+  /**
+   * Name of the jurisdiction.
+   */
+  name: string;
+
+  /**
+   * Date and time when the jurisdiction was created.
+   */
+  createdAt: DateTime;
+}
+
+export function deserializeJurisdiction(row: JurisdictionRow): Jurisdiction {
+  return {
+    id: row.id as ServerId,
+    name: row.name,
+    createdAt: DateTime.fromSQL(row.createdAt),
+  };
+}
+
 export interface RegistrationRequest {
   /**
    * Database ID for a registration request record.
@@ -67,6 +98,11 @@ export interface RegistrationRequest {
    * Machine ID for the machine that created this registration request record.
    */
   machineId: Id;
+
+  /**
+   * Jurisdiction ID for the jurisdiction that this registration request.
+   */
+  jurisdictionId: ServerId;
 
   /**
    * Common Access Card ID for the voter who created this registration request.
@@ -124,6 +160,7 @@ export interface RegistrationRequestRow {
   serverId: string | null;
   clientId: string;
   machineId: string;
+  jurisdictionId: string;
   commonAccessCardId: string;
   givenName: string;
   familyName: string;
@@ -158,6 +195,11 @@ export interface Election {
   machineId: Id;
 
   /**
+   * ID for the jurisdiction that this election belongs to.
+   */
+  jurisdictionId: ServerId;
+
+  /**
    * Election data.
    */
   definition: Buffer;
@@ -173,12 +215,14 @@ export interface ElectionRow {
   serverId: string | null;
   clientId: string;
   machineId: string;
+  jurisdictionId: string;
   definition: Buffer;
 }
 
 export function deserializeElection(row: ElectionRow): Election {
   return {
     id: row.id as ClientId,
+    jurisdictionId: row.jurisdictionId as ServerId,
     serverId: row.serverId ? (row.serverId as ServerId) : undefined,
     clientId: row.clientId as ClientId,
     machineId: row.machineId,
@@ -451,6 +495,7 @@ export function deserializeRegistrationRequest(
     serverId: (row.serverId ?? undefined) as Optional<ServerId>,
     clientId: row.clientId as ClientId,
     machineId: row.machineId,
+    jurisdictionId: row.jurisdictionId as ServerId,
     // because these are just strings of digits, sqlite may return them as
     // numbers, so we have to convert them back to strings
     commonAccessCardId: row.commonAccessCardId.toString(),

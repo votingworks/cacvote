@@ -131,6 +131,7 @@ pub(crate) async fn sync(
     let sync_output = request(sync_endpoint, &sync_input).await?;
 
     let RaveServerSyncOutput {
+        jurisdictions,
         elections,
         registration_requests,
         registrations,
@@ -139,7 +140,15 @@ pub(crate) async fn sync(
         ..
     } = sync_output.clone();
 
-    for election in elections.into_iter() {
+    for jurisdiction in jurisdictions {
+        let result = db::add_or_update_jurisdiction_from_rave_server(executor, jurisdiction).await;
+
+        if let Err(e) = result {
+            tracing::error!("Failed to insert or update jurisdiction: {}", e);
+        }
+    }
+
+    for election in elections {
         let result = db::add_election_from_rave_server(executor, election).await;
 
         if let Err(e) = result {
@@ -147,7 +156,7 @@ pub(crate) async fn sync(
         }
     }
 
-    for registration_request in registration_requests.into_iter() {
+    for registration_request in registration_requests {
         let result =
             db::add_or_update_registration_request_from_rave_server(executor, registration_request)
                 .await;
@@ -157,7 +166,7 @@ pub(crate) async fn sync(
         }
     }
 
-    for registration in registrations.into_iter() {
+    for registration in registrations {
         let result = db::add_or_update_registration_from_rave_server(executor, registration).await;
 
         if let Err(e) = result {
@@ -165,7 +174,7 @@ pub(crate) async fn sync(
         }
     }
 
-    for printed_ballot in printed_ballots.into_iter() {
+    for printed_ballot in printed_ballots {
         let result =
             db::add_or_update_printed_ballot_from_rave_server(executor, printed_ballot).await;
 
@@ -174,7 +183,7 @@ pub(crate) async fn sync(
         }
     }
 
-    for scanned_ballot in scanned_ballots.into_iter() {
+    for scanned_ballot in scanned_ballots {
         let result =
             db::add_or_update_scanned_ballot_from_rave_server(executor, scanned_ballot).await;
 

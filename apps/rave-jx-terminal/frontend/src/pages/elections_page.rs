@@ -8,16 +8,24 @@ use ui_rs::{DateOrDateTimeCell, FileButton};
 
 use crate::util::{file::read_file_as_bytes, url::get_url};
 
-pub fn ElectionsPage(cx: Scope) -> Element {
-    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
+#[derive(PartialEq, Props)]
+pub struct ElectionsPageProps {
+    jurisdiction_id: String,
+}
+
+pub fn ElectionsPage(cx: Scope<ElectionsPageProps>) -> Element {
+    let app_data = use_shared_state::<jx::LoggedInAppData>(cx).unwrap();
     let elections = &app_data.read().elections;
     let is_uploading = use_state(cx, || false);
+    let jurisdiction_id = &cx.props.jurisdiction_id;
     let upload_election = {
-        to_owned![is_uploading];
+        to_owned![is_uploading, jurisdiction_id];
         |election_data: Vec<u8>| async move {
             is_uploading.set(true);
 
-            let url = get_url("/api/elections");
+            let url = get_url(&*format!(
+                "/api/elections?jurisdiction_id={jurisdiction_id}"
+            ));
             let client = reqwest::Client::new();
             let res = client
                 .post(url)

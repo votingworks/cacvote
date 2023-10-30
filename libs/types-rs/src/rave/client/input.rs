@@ -2,7 +2,7 @@ use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
 use crate::election::ElectionDefinition;
-use crate::rave::ClientId;
+use crate::rave::{ClientId, ServerId};
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
@@ -18,6 +18,7 @@ pub struct Admin {
 pub struct RegistrationRequest {
     pub client_id: ClientId,
     pub machine_id: String,
+    pub jurisdiction_id: ServerId,
     pub common_access_card_id: String,
     pub given_name: String,
     pub family_name: String,
@@ -33,6 +34,7 @@ pub struct RegistrationRequest {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Election {
+    pub jurisdiction_id: ServerId,
     pub client_id: ClientId,
     pub machine_id: String,
     pub definition: ElectionDefinition,
@@ -44,6 +46,7 @@ pub struct Registration {
     pub client_id: ClientId,
     pub machine_id: String,
     pub common_access_card_id: String,
+    pub jurisdiction_id: ServerId,
     pub registration_request_id: ClientId,
     pub election_id: ClientId,
     pub precinct_id: String,

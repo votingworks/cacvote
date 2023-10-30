@@ -26,7 +26,7 @@ import { IS_INTEGRATION_TEST } from './globals';
 import * as mailingLabel from './mailing_label';
 import { RaveServerClient } from './rave_server_client';
 import { Auth, AuthStatus } from './types/auth';
-import { ClientId, RegistrationRequest } from './types/db';
+import { ClientId, RegistrationRequest, ServerId } from './types/db';
 import { Workspace } from './workspace';
 
 export type VoterStatus =
@@ -40,6 +40,8 @@ export interface CreateTestVoterInput {
    * Whether or not the voter should be an admin.
    */
   isAdmin?: boolean;
+
+  jurisdictionId?: string;
 
   registrationRequest?: {
     /**
@@ -121,6 +123,10 @@ function buildApi({
   }
 
   return grout.createApi({
+    getJurisdictions() {
+      return workspace.store.getJurisdictions();
+    },
+
     getAuthStatus,
 
     checkPin(input: { pin: string }) {
@@ -178,6 +184,7 @@ function buildApi({
     },
 
     async createVoterRegistration(input: {
+      jurisdictionId: ServerId;
       givenName: string;
       familyName: string;
       addressLine1: string;
@@ -206,6 +213,7 @@ function buildApi({
       const id = ClientId();
       workspace.store.createRegistrationRequest({
         id,
+        jurisdictionId: input.jurisdictionId,
         commonAccessCardId: authStatus.card.commonAccessCardId,
         givenName: input.givenName,
         familyName: input.familyName,
@@ -367,11 +375,16 @@ function buildApi({
         });
       }
 
+      const jurisdictionId = input.jurisdictionId
+        ? (input.jurisdictionId as ServerId)
+        : ServerId();
+
       if (input.registrationRequest || input.registration) {
         const registrationRequestId = ClientId();
 
         workspace.store.createRegistrationRequest({
           id: registrationRequestId,
+          jurisdictionId,
           commonAccessCardId,
           givenName: input.registrationRequest?.givenName ?? 'Rebecca',
           familyName: input.registrationRequest?.familyName ?? 'Welton',
@@ -388,6 +401,7 @@ function buildApi({
           const electionId = ClientId();
           workspace.store.createElection({
             id: electionId,
+            jurisdictionId,
             definition: Buffer.from(input.registration.electionData),
           });
           const electionRecord = workspace.store.getElection({
@@ -415,6 +429,7 @@ function buildApi({
           workspace.store.createRegistration({
             id: ClientId(),
             registrationRequestId,
+            jurisdictionId,
             electionId,
             precinctId,
             ballotStyleId: ballotStyle.id,
