@@ -1293,12 +1293,22 @@ mod test {
         election_json.parse().unwrap()
     }
 
-    fn build_rave_server_registration_request() -> client::output::RegistrationRequest {
+    fn build_rave_server_jurisdiction() -> client::output::Jurisdiction {
+        client::output::Jurisdiction {
+            id: ServerId::new(),
+            name: "Test Jurisdiction".to_owned(),
+            created_at: OffsetDateTime::now_utc(),
+        }
+    }
+
+    fn build_rave_server_registration_request(
+        jurisdiction_id: ServerId,
+    ) -> client::output::RegistrationRequest {
         client::output::RegistrationRequest {
             server_id: ServerId::new(),
             client_id: ClientId::new(),
             machine_id: "mark-terminal-001".to_owned(),
-            jurisdiction_id: ServerId::new(),
+            jurisdiction_id,
             common_access_card_id: "0000000000".to_owned(),
             given_name: "John".to_owned(),
             family_name: "Doe".to_owned(),
@@ -1313,13 +1323,14 @@ mod test {
     }
 
     fn build_rave_server_election(
+        jurisdiction_id: ServerId,
         election_definition: ElectionDefinition,
     ) -> client::output::Election {
         client::output::Election {
             server_id: ServerId::new(),
             client_id: ClientId::new(),
             machine_id: "mark-terminal-001".to_owned(),
-            jurisdiction_id: ServerId::new(),
+            jurisdiction_id,
             election_hash: election_definition.election_hash.clone(),
             definition: election_definition,
             created_at: OffsetDateTime::now_utc(),
@@ -1394,7 +1405,12 @@ mod test {
         let mut db = pool.acquire().await?;
 
         let election_definition = load_famous_names_election();
-        let record = build_rave_server_election(election_definition.clone());
+        let jurisdiction = build_rave_server_jurisdiction();
+        let record = build_rave_server_election(jurisdiction.id, election_definition.clone());
+
+        add_or_update_jurisdiction_from_rave_server(&mut db, jurisdiction)
+            .await
+            .unwrap();
 
         let client_id = add_election_from_rave_server(&mut db, record.clone())
             .await
@@ -1415,7 +1431,11 @@ mod test {
         let mut db = pool.acquire().await?;
 
         let election_definition = load_famous_names_election();
-        let jurisdiction_id = ServerId::new();
+        let jurisdiction = build_rave_server_jurisdiction();
+
+        let jurisdiction_id = add_or_update_jurisdiction_from_rave_server(&mut db, jurisdiction)
+            .await
+            .unwrap();
 
         let client_id = add_election(
             &mut db,
@@ -1443,12 +1463,17 @@ mod test {
         let mut db = pool.acquire().await?;
 
         let election_definition = load_famous_names_election();
-        let registration_request = build_rave_server_registration_request();
-        let election = build_rave_server_election(election_definition.clone());
+        let jurisdiction = build_rave_server_jurisdiction();
+        let registration_request = build_rave_server_registration_request(jurisdiction.id);
+        let election = build_rave_server_election(jurisdiction.id, election_definition.clone());
         let registration =
             build_rave_server_registration(&registration_request, &election, &election_definition);
         let printed_ballot = build_rave_server_printed_ballot(&registration, Cvr::default());
         let scanned_ballot = build_rave_server_scanned_ballot(&election, Cvr::default());
+
+        add_or_update_jurisdiction_from_rave_server(&mut db, jurisdiction)
+            .await
+            .unwrap();
 
         add_election_from_rave_server(&mut db, election)
             .await
