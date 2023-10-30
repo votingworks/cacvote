@@ -6,7 +6,7 @@ import {
   safeParseSystemSettings,
 } from '@votingworks/types';
 import { Store } from './store';
-import { ClientId } from './types/db';
+import { ClientId, ServerId } from './types/db';
 
 // We pause in some of these tests so we need to increase the timeout
 jest.setTimeout(20000);
@@ -65,6 +65,7 @@ test('reset clears the database', () => {
   const electionId = ClientId();
   store.createElection({
     id: electionId,
+    jurisdictionId: ServerId(),
     definition: Buffer.from(electionDefinition.electionData),
   });
   expect(store.getElection({ clientId: electionId })).toBeTruthy();
