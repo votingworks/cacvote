@@ -5,6 +5,7 @@ procs:
     env:
       PORT: '8000'
       DATABASE_URL: 'postgres:rave'
+      AUTOMATICALLY_LINK_PENDING_REGISTRATION_REQUESTS_WITH_LATEST_ELECTION: 'true'
 
   rave-scan-backend:
     cwd: 'apps/rave-scan/backend'
