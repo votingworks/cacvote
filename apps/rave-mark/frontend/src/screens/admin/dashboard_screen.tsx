@@ -39,7 +39,7 @@ export function DashboardScreen({
       <Main>
         <H1>Admin</H1>
         <FloatingTopRight>
-          <Button onPress={onClickShowVoterFlow} variant="previous">
+          <Button onPress={onClickShowVoterFlow} icon="Previous">
             Exit to Voter Flow
           </Button>
           <Button
