@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id as \"id: ClientId\"\n        FROM registrations\n        WHERE registration_request_id = $1\n          AND election_id = $2\n          AND jurisdiction_id = $3\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: ClientId",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7a0a2e51a9c2186830e1ea7a57f592ddb8fa7ba8bd6e4d74ef5246ff4b4d402c"
+}
