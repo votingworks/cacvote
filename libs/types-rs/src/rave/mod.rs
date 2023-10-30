@@ -5,121 +5,81 @@ use uuid::Uuid;
 pub mod client;
 pub mod jx;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[repr(transparent)]
-pub struct ServerId(Uuid);
+macro_rules! uuid_newtype {
+    ($name:ident) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+        #[repr(transparent)]
+        pub struct $name(Uuid);
 
-impl ServerId {
-    pub fn new() -> Self {
-        Self::default()
-    }
+        impl $name {
+            #[must_use]
+            pub fn new() -> Self {
+                Self::default()
+            }
 
-    pub fn as_uuid(&self) -> Uuid {
-        self.0
-    }
+            #[must_use]
+            pub fn as_uuid(&self) -> Uuid {
+                self.0
+            }
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self(Uuid::new_v4())
+            }
+        }
+
+        impl From<Uuid> for $name {
+            fn from(uuid: Uuid) -> Self {
+                Self(uuid)
+            }
+        }
+
+        impl std::str::FromStr for $name {
+            type Err = uuid::Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Uuid::from_str(s).map(Self)
+            }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+
+        #[cfg(feature = "sqlx")]
+        impl sqlx::Type<sqlx::Postgres> for $name {
+            fn type_info() -> sqlx::postgres::PgTypeInfo {
+                <Uuid as sqlx::Type<sqlx::Postgres>>::type_info()
+            }
+        }
+
+        #[cfg(feature = "sqlx")]
+        impl<'r> sqlx::Decode<'r, sqlx::Postgres> for $name {
+            fn decode(
+                value: sqlx::postgres::PgValueRef<'r>,
+            ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
+                <Uuid as sqlx::Decode<sqlx::Postgres>>::decode(value).map(Self)
+            }
+        }
+
+        #[cfg(feature = "sqlx")]
+        impl<'q> sqlx::Encode<'q, sqlx::Postgres> for $name {
+            fn encode_by_ref(
+                &self,
+                buf: &mut <sqlx::Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+            ) -> sqlx::encode::IsNull {
+                <Uuid as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.0, buf)
+            }
+        }
+    };
 }
 
-impl Default for ServerId {
-    fn default() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
+uuid_newtype!(ServerId);
+uuid_newtype!(ClientId);
 
-impl From<Uuid> for ServerId {
-    fn from(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-}
-
-impl std::fmt::Display for ServerId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-#[cfg(feature = "sqlx")]
-impl sqlx::Type<sqlx::Postgres> for ServerId {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        <Uuid as sqlx::Type<sqlx::Postgres>>::type_info()
-    }
-}
-
-#[cfg(feature = "sqlx")]
-impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ServerId {
-    fn decode(
-        value: sqlx::postgres::PgValueRef<'r>,
-    ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
-        <Uuid as sqlx::Decode<sqlx::Postgres>>::decode(value).map(Self)
-    }
-}
-
-#[cfg(feature = "sqlx")]
-impl<'q> sqlx::Encode<'q, sqlx::Postgres> for ServerId {
-    fn encode_by_ref(
-        &self,
-        buf: &mut <sqlx::Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
-        <Uuid as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.0, buf)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[repr(transparent)]
-pub struct ClientId(Uuid);
-
-impl ClientId {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn as_uuid(&self) -> Uuid {
-        self.0
-    }
-}
-
-impl Default for ClientId {
-    fn default() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
-
-impl From<Uuid> for ClientId {
-    fn from(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-}
-
-impl std::fmt::Display for ClientId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-#[cfg(feature = "sqlx")]
-impl sqlx::Type<sqlx::Postgres> for ClientId {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        <Uuid as sqlx::Type<sqlx::Postgres>>::type_info()
-    }
-}
-
-#[cfg(feature = "sqlx")]
-impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ClientId {
-    fn decode(
-        value: sqlx::postgres::PgValueRef<'r>,
-    ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
-        <Uuid as sqlx::Decode<sqlx::Postgres>>::decode(value).map(Self)
-    }
-}
-
-#[cfg(feature = "sqlx")]
-impl<'q> sqlx::Encode<'q, sqlx::Postgres> for ClientId {
-    fn encode_by_ref(
-        &self,
-        buf: &mut <sqlx::Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
-        <Uuid as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.0, buf)
-    }
-}
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RaveServerSyncInput {
@@ -148,6 +108,7 @@ pub struct RaveServerSyncInput {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RaveServerSyncOutput {
+    pub jurisdictions: Vec<client::output::Jurisdiction>,
     pub admins: Vec<client::output::Admin>,
     pub elections: Vec<client::output::Election>,
     pub registration_requests: Vec<client::output::RegistrationRequest>,

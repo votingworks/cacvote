@@ -1,16 +1,19 @@
 use dioxus::prelude::*;
-use types_rs::{cdf::cvr::Cvr, rave::jx};
+use types_rs::{
+    cdf::cvr::Cvr,
+    rave::{jx, ServerId},
+};
 use ui_rs::DateOrDateTimeCell;
 
 use crate::components::ElectionConfigurationCell;
 
-#[derive(PartialEq, Props)]
-struct VotersProps<'a> {
-    app_data: &'a jx::AppData,
+#[derive(Debug, PartialEq, Props)]
+pub struct BallotsPageProps {
+    pub jurisdiction_id: String,
 }
 
-pub fn BallotsPage(cx: Scope) -> Element {
-    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
+pub fn BallotsPage(cx: Scope<BallotsPageProps>) -> Element {
+    let app_data = use_shared_state::<jx::LoggedInAppData>(cx).unwrap();
     let app_data = app_data.read();
     let elections = app_data.elections.clone();
     let printed_ballots = app_data.printed_ballots.clone();

@@ -34,10 +34,14 @@ import {
   ServerSyncAttemptRow,
   ScannedBallotRow,
   deserializeScannedBallot,
+  Jurisdiction,
+  JurisdictionRow,
+  deserializeJurisdiction,
 } from './types/db';
 import {
   Base64StringSchema,
   ElectionInput,
+  JurisdictionInput,
   PrintedBallotInput,
   ScannedBallotInput,
 } from './types/sync';
@@ -106,6 +110,34 @@ export class Store {
   }
 
   /**
+   * Creates a new jurisdiction record or updates an existing one.
+   */
+  createJurisdiction({
+    id,
+    name,
+    createdAt,
+  }: {
+    id: ServerId;
+    name: string;
+    createdAt: DateTime;
+  }): void {
+    this.client.run(
+      `
+      insert or replace into jurisdictions (
+        id,
+        name,
+        created_at
+      ) values (
+        ?, ?, ?
+      )
+      `,
+      id,
+      name,
+      createdAt.toSQL()
+    );
+  }
+
+  /**
    * Creates a new election record.
    */
   createElection({
@@ -113,12 +145,14 @@ export class Store {
     serverId,
     clientId,
     machineId = VX_MACHINE_ID,
+    jurisdictionId,
     definition,
   }: {
     id: ClientId;
     serverId?: ServerId;
     clientId?: ClientId;
     machineId?: Id;
+    jurisdictionId: ServerId;
     definition: Buffer;
   }): ClientId {
     assert(
@@ -142,15 +176,17 @@ export class Store {
         server_id,
         client_id,
         machine_id,
+        jurisdiction_id,
         definition
       ) values (
-        ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?
       )
       `,
       id,
       serverId ?? null,
       clientId ?? id,
       machineId,
+      jurisdictionId,
       definition
     );
 
@@ -340,6 +376,7 @@ export class Store {
     serverId,
     clientId,
     machineId = VX_MACHINE_ID,
+    jurisdictionId,
     commonAccessCardId,
     givenName,
     familyName,
@@ -354,6 +391,7 @@ export class Store {
     serverId?: ServerId;
     clientId?: ClientId;
     machineId?: Id;
+    jurisdictionId: ServerId;
     commonAccessCardId: Id;
     givenName: string;
     familyName: string;
@@ -380,6 +418,7 @@ export class Store {
         server_id,
         client_id,
         machine_id,
+        jurisdiction_id,
         common_access_card_id,
         given_name,
         family_name,
@@ -390,13 +429,14 @@ export class Store {
         postal_code,
         state_id
       ) values (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
       id,
       serverId ?? null,
       clientId ?? id,
       machineId,
+      jurisdictionId,
       commonAccessCardId,
       givenName,
       familyName,
@@ -420,6 +460,7 @@ export class Store {
     clientId,
     machineId = VX_MACHINE_ID,
     registrationRequestId,
+    jurisdictionId,
     electionId,
     precinctId,
     ballotStyleId,
@@ -429,6 +470,7 @@ export class Store {
     clientId?: ClientId;
     machineId?: Id;
     registrationRequestId: ClientId;
+    jurisdictionId: ServerId;
     electionId: ClientId;
     precinctId: PrecinctId;
     ballotStyleId: BallotStyleId;
@@ -459,11 +501,12 @@ export class Store {
         machine_id,
         common_access_card_id,
         registration_request_id,
+        jurisdiction_id,
         election_id,
         precinct_id,
         ballot_style_id
       ) values (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
       id,
@@ -472,6 +515,7 @@ export class Store {
       machineId,
       registrationRequest.commonAccessCardId,
       registrationRequest.id,
+      jurisdictionId,
       electionId,
       precinctId,
       ballotStyleId
@@ -507,6 +551,7 @@ export class Store {
         server_id as serverId,
         client_id as clientId,
         machine_id as machineId,
+        jurisdiction_id as jurisdictionId,
         common_access_card_id as commonAccessCardId,
         given_name as givenName,
         family_name as familyName,
@@ -967,6 +1012,7 @@ export class Store {
         server_id as serverId,
         client_id as clientId,
         machine_id as machineId,
+        jurisdiction_id as jurisdictionId,
         common_access_card_id as commonAccessCardId,
         given_name as givenName,
         family_name as familyName,
@@ -992,6 +1038,7 @@ export class Store {
         server_id as serverId,
         client_id as clientId,
         machine_id as machineId,
+        jurisdiction_id as jurisdictionId,
         common_access_card_id as commonAccessCardId,
         (select client_id from registration_requests where id = registration_request_id) as registrationRequestId,
         (select client_id from elections where id = election_id) as electionId,
@@ -1005,11 +1052,31 @@ export class Store {
     return result.map(deserializeRegistration);
   }
 
+  getJurisdictions(): Jurisdiction[] {
+    const result = this.client.all(
+      `
+      select
+        id,
+        name,
+        created_at as createdAt
+      from jurisdictions
+      `
+    ) as JurisdictionRow[];
+
+    return result.map(deserializeJurisdiction);
+  }
+
+  getJurisdictionsToSync(): JurisdictionInput[] {
+    // we don't create jurisdictions in the client, so there's nothing to sync
+    return [];
+  }
+
   getElectionsToSync(): ElectionInput[] {
     const result = this.client.all(
       `
       select
         id,
+        jurisdiction_id as jurisdictionId,
         server_id as serverId,
         client_id as clientId,
         machine_id as machineId,

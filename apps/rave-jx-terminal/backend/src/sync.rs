@@ -25,7 +25,7 @@ pub(crate) async fn sync_periodically(pool: &PgPool, config: Config) {
                     tracing::info!("Successfully synced with RAVE Server");
                 }
                 Err(e) => {
-                    tracing::error!("Failed to sync with RAVE Server: {}", e);
+                    tracing::error!("Failed to sync with RAVE Server: {e}");
                 }
             }
             sleep(SYNC_INTERVAL).await;
@@ -46,75 +46,63 @@ pub(crate) async fn sync(
         last_synced_election_id: db::get_last_synced_election_id(executor)
             .await
             .map_err(|e| {
-                color_eyre::Report::msg(format!("failed to get last synced election ID: {}", e))
+                color_eyre::Report::msg(format!("failed to get last synced election ID: {e}"))
             })?,
         last_synced_registration_request_id: db::get_last_synced_registration_request_id(executor)
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get last synced registration request ID: {}",
-                    e
+                    "failed to get last synced registration request ID: {e}"
                 ))
             })?,
         last_synced_registration_id: db::get_last_synced_registration_id(executor)
             .await
             .map_err(|e| {
-                color_eyre::Report::msg(format!("failed to get last synced registration ID: {}", e))
+                color_eyre::Report::msg(format!("failed to get last synced registration ID: {e}"))
             })?,
         last_synced_scanned_ballot_id: db::get_last_synced_scanned_ballot_id(executor)
             .await
             .map_err(|e| {
-                color_eyre::Report::msg(format!(
-                    "failed to get last synced scanned ballot ID: {}",
-                    e
-                ))
+                color_eyre::Report::msg(format!("failed to get last synced scanned ballot ID: {e}"))
             })?,
         last_synced_printed_ballot_id: db::get_last_synced_printed_ballot_id(executor)
             .await
             .map_err(|e| {
-                color_eyre::Report::msg(format!(
-                    "failed to get last synced printed ballot ID: {}",
-                    e
-                ))
+                color_eyre::Report::msg(format!("failed to get last synced printed ballot ID: {e}"))
             })?,
         elections: db::get_elections_to_sync_to_rave_server(executor)
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get elections to sync to RAVE Server: {}",
-                    e
+                    "failed to get elections to sync to RAVE Server: {e}"
                 ))
             })?,
         registration_requests: db::get_registration_requests_to_sync_to_rave_server(executor)
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get registration requests to sync to RAVE Server: {}",
-                    e
+                    "failed to get registration requests to sync to RAVE Server: {e}"
                 ))
             })?,
         registrations: db::get_registrations_to_sync_to_rave_server(executor)
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get registrations to sync to RAVE Server: {}",
-                    e
+                    "failed to get registrations to sync to RAVE Server: {e}"
                 ))
             })?,
         printed_ballots: db::get_printed_ballots_to_sync_to_rave_server(executor)
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get printed ballots to sync to RAVE Server: {}",
-                    e
+                    "failed to get printed ballots to sync to RAVE Server: {e}"
                 ))
             })?,
         scanned_ballots: db::get_scanned_ballots_to_sync_to_rave_server(executor)
             .await
             .map_err(|e| {
                 color_eyre::Report::msg(format!(
-                    "failed to get scanned ballots to sync to RAVE Server: {}",
-                    e
+                    "failed to get scanned ballots to sync to RAVE Server: {e}"
                 ))
             })?,
     };
@@ -126,6 +114,7 @@ pub(crate) async fn sync(
     let sync_output = request(sync_endpoint, &sync_input).await?;
 
     let RaveServerSyncOutput {
+        jurisdictions,
         elections,
         registration_requests,
         registrations,
@@ -134,47 +123,55 @@ pub(crate) async fn sync(
         ..
     } = sync_output.clone();
 
-    for election in elections.into_iter() {
-        let result = db::add_election_from_rave_server(executor, election).await;
+    for jurisdiction in jurisdictions {
+        let result = db::add_or_update_jurisdiction_from_rave_server(executor, jurisdiction).await;
 
         if let Err(e) = result {
-            tracing::error!("Failed to insert election: {}", e);
+            tracing::error!("Failed to insert or update jurisdiction: {e}");
         }
     }
 
-    for registration_request in registration_requests.into_iter() {
+    for election in elections {
+        let result = db::add_election_from_rave_server(executor, election).await;
+
+        if let Err(e) = result {
+            tracing::error!("Failed to insert election: {e}");
+        }
+    }
+
+    for registration_request in registration_requests {
         let result =
             db::add_or_update_registration_request_from_rave_server(executor, registration_request)
                 .await;
 
         if let Err(e) = result {
-            tracing::error!("Failed to insert or update registration request: {}", e);
+            tracing::error!("Failed to insert or update registration request: {e}");
         }
     }
 
-    for registration in registrations.into_iter() {
+    for registration in registrations {
         let result = db::add_or_update_registration_from_rave_server(executor, registration).await;
 
         if let Err(e) = result {
-            tracing::error!("Failed to insert or update registration: {}", e);
+            tracing::error!("Failed to insert or update registration: {e}");
         }
     }
 
-    for printed_ballot in printed_ballots.into_iter() {
+    for printed_ballot in printed_ballots {
         let result =
             db::add_or_update_printed_ballot_from_rave_server(executor, printed_ballot).await;
 
         if let Err(e) = result {
-            tracing::error!("Failed to insert or update printed ballot: {}", e);
+            tracing::error!("Failed to insert or update printed ballot: {e}");
         }
     }
 
-    for scanned_ballot in scanned_ballots.into_iter() {
+    for scanned_ballot in scanned_ballots {
         let result =
             db::add_or_update_scanned_ballot_from_rave_server(executor, scanned_ballot).await;
 
         if let Err(e) = result {
-            tracing::error!("Failed to insert or update scanned ballot: {}", e);
+            tracing::error!("Failed to insert or update scanned ballot: {e}");
         }
     }
 

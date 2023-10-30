@@ -215,6 +215,33 @@ pub(crate) async fn get_elections(
         .collect::<Result<Vec<_>, _>>()
 }
 
+pub(crate) async fn add_or_update_jurisdiction_from_rave_server(
+    executor: &mut sqlx::PgConnection,
+    record: client::output::Jurisdiction,
+) -> color_eyre::Result<ServerId> {
+    sqlx::query!(
+        r#"
+        INSERT INTO jurisdictions (
+            id,
+            name,
+            created_at
+        )
+        VALUES ($1, $2, $3)
+        ON CONFLICT (id)
+        DO UPDATE SET
+            name = $2,
+            created_at = $3
+        "#,
+        record.id.as_uuid(),
+        record.name,
+        record.created_at
+    )
+    .execute(executor)
+    .await?;
+
+    Ok(record.id)
+}
+
 pub(crate) async fn add_election_from_rave_server(
     executor: &mut sqlx::PgConnection,
     record: client::output::Election,
@@ -226,20 +253,23 @@ pub(crate) async fn add_election_from_rave_server(
             server_id,
             client_id,
             machine_id,
+            jurisdiction_id,
             election_hash,
             definition
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (machine_id, client_id)
         DO UPDATE SET
             server_id = $2,
-            election_hash = $5,
-            definition = $6
+            jurisdiction_id = $5,
+            election_hash = $6,
+            definition = $7
         "#,
         ClientId::new().as_uuid(),
         record.server_id.as_uuid(),
         record.client_id.as_uuid(),
         record.machine_id,
+        record.jurisdiction_id.as_uuid(),
         record.definition.election_hash.as_str(),
         record.definition.election_data,
     )
@@ -297,6 +327,7 @@ pub(crate) async fn add_or_update_registration_from_rave_server(
             server_id,
             client_id,
             machine_id,
+            jurisdiction_id,
             common_access_card_id,
             registration_request_id,
             election_id,
@@ -304,21 +335,23 @@ pub(crate) async fn add_or_update_registration_from_rave_server(
             ballot_style_id,
             created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         ON CONFLICT (machine_id, client_id)
         DO UPDATE SET
             server_id = $2,
-            common_access_card_id = $5,
-            registration_request_id = $6,
-            election_id = $7,
-            precinct_id = $8,
-            ballot_style_id = $9,
-            created_at = $10
+            jurisdiction_id = $5,
+            common_access_card_id = $6,
+            registration_request_id = $7,
+            election_id = $8,
+            precinct_id = $9,
+            ballot_style_id = $10,
+            created_at = $11
         "#,
         ClientId::new().as_uuid(),
         registration.server_id.as_uuid(),
         registration.client_id.as_uuid(),
         registration.machine_id,
+        registration.jurisdiction_id.as_uuid(),
         registration.common_access_card_id,
         registration_request_id.as_uuid(),
         election_id.as_uuid(),
@@ -485,6 +518,7 @@ pub(crate) async fn add_or_update_registration_request_from_rave_server(
             server_id,
             client_id,
             machine_id,
+            jurisdiction_id,
             common_access_card_id,
             given_name,
             family_name,
@@ -496,25 +530,27 @@ pub(crate) async fn add_or_update_registration_request_from_rave_server(
             state_id,
             created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT (client_id, machine_id)
         DO UPDATE SET
             server_id = $2,
-            common_access_card_id = $5,
-            given_name = $6,
-            family_name = $7,
-            address_line_1 = $8,
-            address_line_2 = $9,
-            city = $10,
-            state = $11,
-            postal_code = $12,
-            state_id = $13,
-            created_at = $14
+            jurisdiction_id = $5,
+            common_access_card_id = $6,
+            given_name = $7,
+            family_name = $8,
+            address_line_1 = $9,
+            address_line_2 = $10,
+            city = $11,
+            state = $12,
+            postal_code = $13,
+            state_id = $14,
+            created_at = $15
         "#,
         ClientId::new().as_uuid(),
         registration_request.server_id.as_uuid(),
         registration_request.client_id.as_uuid(),
         registration_request.machine_id,
+        registration_request.jurisdiction_id.as_uuid(),
         registration_request.common_access_card_id,
         registration_request.given_name,
         registration_request.family_name,
@@ -552,6 +588,7 @@ pub(crate) async fn get_registration_requests_to_sync_to_rave_server(
         SELECT
             client_id as "client_id: ClientId",
             machine_id,
+            jurisdiction_id as "jurisdiction_id: ServerId",
             common_access_card_id,
             given_name,
             family_name,
@@ -574,6 +611,7 @@ pub(crate) async fn get_registration_requests_to_sync_to_rave_server(
         .map(|r| client::input::RegistrationRequest {
             client_id: r.client_id,
             machine_id: r.machine_id,
+            jurisdiction_id: r.jurisdiction_id,
             common_access_card_id: r.common_access_card_id,
             given_name: r.given_name,
             family_name: r.family_name,
@@ -595,6 +633,7 @@ pub(crate) async fn get_elections_to_sync_to_rave_server(
         SELECT
             client_id as "client_id: ClientId",
             machine_id,
+            jurisdiction_id as "jurisdiction_id: ServerId",
             definition as "definition: String"
         FROM elections
         WHERE server_id IS NULL
@@ -610,6 +649,7 @@ pub(crate) async fn get_elections_to_sync_to_rave_server(
             Ok(client::input::Election {
                 client_id: e.client_id,
                 machine_id: e.machine_id,
+                jurisdiction_id: e.jurisdiction_id,
                 definition: e.definition.parse()?,
             })
         })
@@ -624,9 +664,10 @@ pub(crate) async fn get_registrations_to_sync_to_rave_server(
         SELECT
             client_id as "client_id: ClientId",
             machine_id,
-            common_access_card_id,
+            jurisdiction_id as "jurisdiction_id: ServerId",
             registration_request_id as "registration_request_id: ClientId",
             election_id as "election_id: ClientId",
+            common_access_card_id,
             precinct_id,
             ballot_style_id
         FROM registrations
@@ -642,6 +683,7 @@ pub(crate) async fn get_registrations_to_sync_to_rave_server(
         .map(|r| client::input::Registration {
             client_id: r.client_id,
             machine_id: r.machine_id,
+            jurisdiction_id: r.jurisdiction_id,
             election_id: r.election_id,
             registration_request_id: r.registration_request_id,
             common_access_card_id: r.common_access_card_id,
@@ -878,6 +920,7 @@ mod test {
             server_id: ServerId::new(),
             client_id: ClientId::new(),
             machine_id: "mark-terminal-001".to_owned(),
+            jurisdiction_id: ServerId::new(),
             common_access_card_id: "0000000000".to_owned(),
             given_name: "John".to_owned(),
             family_name: "Doe".to_owned(),
@@ -897,6 +940,7 @@ mod test {
         client::output::Election {
             server_id: ServerId::new(),
             client_id: ClientId::new(),
+            jurisdiction_id: ServerId::new(),
             machine_id: "mark-terminal-001".to_owned(),
             election_hash: election_definition.election_hash.clone(),
             definition: election_definition,
@@ -915,9 +959,10 @@ mod test {
             server_id: registration_request.server_id,
             client_id: registration_request.client_id,
             machine_id: registration_request.machine_id.clone(),
-            common_access_card_id: registration_request.common_access_card_id.clone(),
-            registration_request_id: registration_request.server_id,
+            jurisdiction_id: election.jurisdiction_id,
             election_id: election.server_id,
+            registration_request_id: registration_request.server_id,
+            common_access_card_id: registration_request.common_access_card_id.clone(),
             precinct_id: ballot_style.precincts[0].to_string(),
             ballot_style_id: ballot_style.id.to_string(),
             created_at: OffsetDateTime::now_utc(),

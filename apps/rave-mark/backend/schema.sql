@@ -14,6 +14,12 @@ create table server_sync_attempts (
   completed_at timestamp
 );
 
+create table jurisdictions (
+  id uuid primary key,
+  name text not null,
+  created_at timestamptz not null default current_timestamp
+);
+
 create table elections (
   -- generated on this machine
   id uuid primary key,
@@ -24,6 +30,7 @@ create table elections (
   client_id uuid not null,
   -- ID of the machine this record was originally created on
   machine_id text not null,
+  jurisdiction_id uuid not null references jurisdictions(id),
   definition bytea not null,
   created_at timestamptz not null default current_timestamp,
 
@@ -47,6 +54,7 @@ create table registration_requests (
   client_id uuid not null unique,
   -- ID of the machine this record was originally created on
   machine_id text not null,
+  jurisdiction_id uuid not null references jurisdictions(id),
   -- CAC ID of the person for this record
   common_access_card_id uuid not null unique,
   given_name text not null,
@@ -74,6 +82,7 @@ create table registrations (
   client_id uuid not null,
   -- ID of the machine this record was originally created on
   machine_id text not null,
+  jurisdiction_id uuid not null references jurisdictions(id),
   -- CAC ID of the person for this record
   common_access_card_id uuid not null unique,
   registration_request_id uuid not null references registration_requests(id),

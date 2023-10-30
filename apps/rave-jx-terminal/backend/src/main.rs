@@ -57,5 +57,5 @@ async fn main() -> color_eyre::Result<()> {
     log::setup(&config)?;
     let pool = db::setup(&config).await?;
     sync::sync_periodically(&pool, config.clone()).await;
-    app::run(app::setup(pool, config.clone()).await?, &config).await
+    app::run(app::setup(pool, config.clone()), &config).await
 }

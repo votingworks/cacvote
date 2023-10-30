@@ -127,6 +127,15 @@ pub(crate) async fn do_sync(
         }
     }
 
+    let get_jurisdictions_result = db::get_jurisdictions(&mut txn).await;
+    let jurisdictions = match get_jurisdictions_result {
+        Err(e) => {
+            tracing::error!("Failed to get jurisdictions: {}", e);
+            return Err(Json(json!({ "error": e.to_string() })));
+        }
+        Ok(jurisdictions) => jurisdictions,
+    };
+
     let get_admins_result = db::get_admins(&mut txn).await;
     let admins = match get_admins_result {
         Err(e) => {
@@ -184,27 +193,13 @@ pub(crate) async fn do_sync(
         };
 
     let output = RaveServerSyncOutput {
-        admins: admins.into_iter().map(|admin| admin.into()).collect(),
-        elections: elections
-            .into_iter()
-            .map(|election| election.into())
-            .collect(),
-        registration_requests: registration_requests
-            .into_iter()
-            .map(|registration_request| registration_request.into())
-            .collect(),
-        registrations: registrations
-            .into_iter()
-            .map(|registration| registration.into())
-            .collect(),
-        printed_ballots: printed_ballots
-            .into_iter()
-            .map(|ballot| ballot.into())
-            .collect(),
-        scanned_ballots: scanned_ballots
-            .into_iter()
-            .map(|ballot| ballot.into())
-            .collect(),
+        jurisdictions: jurisdictions.into_iter().map(Into::into).collect(),
+        admins: admins.into_iter().map(Into::into).collect(),
+        elections: elections.into_iter().map(Into::into).collect(),
+        registration_requests: registration_requests.into_iter().map(Into::into).collect(),
+        registrations: registrations.into_iter().map(Into::into).collect(),
+        printed_ballots: printed_ballots.into_iter().map(Into::into).collect(),
+        scanned_ballots: scanned_ballots.into_iter().map(Into::into).collect(),
     };
 
     if let Err(err) = txn.commit().await {
