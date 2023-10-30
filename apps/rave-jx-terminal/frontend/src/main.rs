@@ -4,7 +4,7 @@ use log::LevelFilter;
 
 mod app;
 mod components;
-mod layout;
+mod logged_in_layout;
 mod pages;
 mod route;
 mod util;

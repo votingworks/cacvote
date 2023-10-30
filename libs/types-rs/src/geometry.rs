@@ -68,6 +68,7 @@ impl<T: Sub<Output = T> + AddAssign + Copy> AddAssign for Point<T> {
 }
 
 impl Point<SubPixelUnit> {
+    #[must_use]
     pub fn round(self) -> Point<PixelPosition> {
         Point::new(
             self.x.round() as PixelPosition,
@@ -86,6 +87,7 @@ pub struct Rect {
 }
 
 impl Rect {
+    #[must_use]
     pub const fn new(
         left: PixelPosition,
         top: PixelPosition,
@@ -100,6 +102,7 @@ impl Rect {
         }
     }
 
+    #[must_use]
     pub const fn from_points(
         top_left: Point<PixelPosition>,
         bottom_right: Point<PixelPosition>,
@@ -112,42 +115,52 @@ impl Rect {
         )
     }
 
+    #[must_use]
     pub const fn left(&self) -> PixelPosition {
         self.left
     }
 
+    #[must_use]
     pub const fn top(&self) -> PixelPosition {
         self.top
     }
 
+    #[must_use]
     pub const fn width(&self) -> PixelUnit {
         self.width
     }
 
+    #[must_use]
     pub const fn height(&self) -> PixelUnit {
         self.height
     }
 
+    #[must_use]
     pub const fn right(&self) -> PixelPosition {
         self.left + self.width as PixelPosition - 1
     }
 
+    #[must_use]
     pub const fn bottom(&self) -> PixelPosition {
         self.top + self.height as PixelPosition - 1
     }
 
+    #[must_use]
     pub const fn offset(&self, dx: PixelPosition, dy: PixelPosition) -> Self {
         Self::new(self.left + dx, self.top + dy, self.width, self.height)
     }
 
+    #[must_use]
     pub const fn top_left(&self) -> Point<PixelPosition> {
         Point::new(self.left, self.top)
     }
 
+    #[must_use]
     pub const fn bottom_right(&self) -> Point<PixelPosition> {
         Point::new(self.right(), self.bottom())
     }
 
+    #[must_use]
     pub fn center(&self) -> Point<SubPixelUnit> {
         Point::new(
             self.left() as SubPixelUnit
@@ -157,6 +170,7 @@ impl Rect {
         )
     }
 
+    #[must_use]
     pub fn intersect(&self, other: &Self) -> Option<Self> {
         let left = self.left.max(other.left);
         let top = self.top.max(other.top);
@@ -174,7 +188,8 @@ impl Rect {
         }
     }
 
-    // Returns the smallest rectangle that contains both `self` and `other`.
+    /// Returns the smallest rectangle that contains both `self` and `other`.
+    #[must_use]
     pub fn union(&self, other: &Self) -> Self {
         let left = self.left.min(other.left);
         let top = self.top.min(other.top);

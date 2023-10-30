@@ -3,6 +3,6 @@ pub fn get_root_url() -> reqwest::Url {
     reqwest::Url::parse(loc.origin().unwrap().as_str()).unwrap()
 }
 
-pub fn get_url(path: &str) -> reqwest::Url {
-    get_root_url().join(path).unwrap()
+pub fn get_url<'a, S: Into<&'a str>>(path: S) -> reqwest::Url {
+    get_root_url().join(path.into()).unwrap()
 }
