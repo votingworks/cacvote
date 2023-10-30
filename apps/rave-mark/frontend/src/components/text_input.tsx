@@ -104,7 +104,7 @@ export function TextInput({
           }
           actions={
             <React.Fragment>
-              <Button variant="done" onPress={onAccept}>
+              <Button icon="Done" onPress={onAccept}>
                 Accept
               </Button>
               <Button onPress={onCancel}>Cancel</Button>
