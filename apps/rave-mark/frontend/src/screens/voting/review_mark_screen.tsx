@@ -39,7 +39,7 @@ export function ReviewMarkScreen({
         updateVote={updateVote}
       />
       <ButtonFooter>
-        <Button onPress={onReturnToReview} variant="next">
+        <Button onPress={onReturnToReview} icon="Next">
           Return to Review
         </Button>
       </ButtonFooter>
