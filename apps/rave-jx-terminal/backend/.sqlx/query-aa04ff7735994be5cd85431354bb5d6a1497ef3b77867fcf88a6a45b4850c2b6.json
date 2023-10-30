@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO jurisdictions (\n            id,\n            name,\n            created_at\n        )\n        VALUES ($1, $2, $3)\n        ON CONFLICT (id)\n        DO UPDATE SET\n            name = $2,\n            created_at = $3\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "aa04ff7735994be5cd85431354bb5d6a1497ef3b77867fcf88a6a45b4850c2b6"
+}

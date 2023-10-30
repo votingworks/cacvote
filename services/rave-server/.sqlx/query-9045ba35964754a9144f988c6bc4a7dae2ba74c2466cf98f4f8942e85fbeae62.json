@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    id as \"id: ServerId\",\n                    client_id as \"client_id: ClientId\",\n                    machine_id,\n                    jurisdiction_id as \"jurisdiction_id: ServerId\",\n                    common_access_card_id,\n                    given_name,\n                    family_name,\n                    address_line_1,\n                    address_line_2,\n                    city,\n                    state,\n                    postal_code,\n                    state_id,\n                    created_at\n                FROM registration_requests\n                ORDER BY created_at DESC\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: ServerId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id: ClientId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "machine_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "jurisdiction_id: ServerId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "common_access_card_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "given_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "family_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "address_line_1",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "address_line_2",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "city",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "state",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "postal_code",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "state_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9045ba35964754a9144f988c6bc4a7dae2ba74c2466cf98f4f8942e85fbeae62"
+}
