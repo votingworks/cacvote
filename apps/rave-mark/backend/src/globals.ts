@@ -1,6 +1,7 @@
 import { NODE_ENV } from '@votingworks/backend';
-import { safeParseInt } from '@votingworks/types';
+import { safeParseInt, unsafeParse } from '@votingworks/types';
 import { join } from 'path';
+import { z } from 'zod';
 
 const BASE_PORT = safeParseInt(process.env.BASE_PORT).ok() || 3000;
 
@@ -38,3 +39,11 @@ export const RAVE_URL = process.env.RAVE_URL
 export const USE_MOCK_RAVE_SERVER =
   (process.env.USE_MOCK_RAVE_SERVER === 'true' || IS_INTEGRATION_TEST) &&
   process.env.USE_MOCK_RAVE_SERVER !== 'false';
+
+/**
+ * What is the name of the mailing label printer?
+ */
+export const MAILING_LABEL_PRINTER = unsafeParse(
+  z.string(),
+  process.env.MAILING_LABEL_PRINTER
+);

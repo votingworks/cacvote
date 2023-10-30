@@ -22,6 +22,7 @@ pub struct RegistrationRequest {
     pub client_id: ClientId,
     pub machine_id: String,
     pub common_access_card_id: String,
+    pub jurisdiction_id: ServerId,
     pub given_name: String,
     pub family_name: String,
     pub address_line_1: String,
@@ -42,6 +43,7 @@ pub struct Registration {
     pub client_id: ClientId,
     pub machine_id: String,
     pub common_access_card_id: String,
+    pub jurisdiction_id: ServerId,
     pub registration_request_id: ServerId,
     pub election_id: ServerId,
     pub precinct_id: String,
@@ -52,10 +54,20 @@ pub struct Registration {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct Jurisdiction {
+    pub id: ServerId,
+    pub name: String,
+    #[serde(with = "time::serde::iso8601")]
+    pub created_at: time::OffsetDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Election {
     pub server_id: ServerId,
     pub client_id: ClientId,
     pub machine_id: String,
+    pub jurisdiction_id: ServerId,
     pub definition: ElectionDefinition,
     pub election_hash: ElectionHash,
     #[serde(with = "time::serde::iso8601")]

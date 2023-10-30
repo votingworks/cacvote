@@ -15,7 +15,10 @@ use sqlx::{self, postgres::PgPoolOptions, PgPool};
 use tracing::Level;
 use types_rs::{
     election::ElectionHash,
-    rave::{client, ClientId, ServerId},
+    rave::{
+        client::{self, output::Jurisdiction},
+        ClientId, ServerId,
+    },
 };
 
 use crate::config::Config;
@@ -65,6 +68,7 @@ pub(crate) struct Election {
     pub(crate) id: ServerId,
     pub(crate) client_id: ClientId,
     pub(crate) machine_id: String,
+    pub(crate) jurisdiction_id: ServerId,
     pub(crate) definition: types_rs::election::ElectionDefinition,
     pub(crate) election_hash: ElectionHash,
     pub(crate) created_at: sqlx::types::time::OffsetDateTime,
@@ -76,6 +80,7 @@ impl From<Election> for client::output::Election {
             id,
             client_id,
             machine_id,
+            jurisdiction_id,
             definition,
             election_hash,
             created_at,
@@ -85,6 +90,7 @@ impl From<Election> for client::output::Election {
             server_id: id,
             client_id,
             machine_id,
+            jurisdiction_id,
             definition,
             election_hash,
             created_at,
@@ -98,6 +104,7 @@ pub(crate) struct RegistrationRequest {
     pub(crate) id: ServerId,
     pub(crate) client_id: ClientId,
     pub(crate) machine_id: String,
+    pub(crate) jurisdiction_id: ServerId,
     pub(crate) common_access_card_id: String,
     pub(crate) given_name: String,
     pub(crate) family_name: String,
@@ -113,6 +120,7 @@ pub(crate) struct RegistrationRequest {
 impl From<client::input::RegistrationRequest> for RegistrationRequest {
     fn from(request: client::input::RegistrationRequest) -> Self {
         let client::input::RegistrationRequest {
+            jurisdiction_id,
             client_id,
             machine_id,
             common_access_card_id,
@@ -130,6 +138,7 @@ impl From<client::input::RegistrationRequest> for RegistrationRequest {
             id: ServerId::new(),
             client_id,
             machine_id,
+            jurisdiction_id,
             common_access_card_id,
             given_name,
             family_name,
@@ -150,6 +159,7 @@ impl From<RegistrationRequest> for client::output::RegistrationRequest {
             id,
             client_id,
             machine_id,
+            jurisdiction_id,
             common_access_card_id,
             given_name,
             family_name,
@@ -166,6 +176,7 @@ impl From<RegistrationRequest> for client::output::RegistrationRequest {
             server_id: id,
             client_id,
             machine_id,
+            jurisdiction_id,
             common_access_card_id,
             given_name,
             family_name,
@@ -186,6 +197,7 @@ pub(crate) struct Registration {
     pub(crate) client_id: ClientId,
     pub(crate) machine_id: String,
     pub(crate) common_access_card_id: String,
+    pub(crate) jurisdiction_id: ServerId,
     pub(crate) registration_request_id: ServerId,
     pub(crate) election_id: ServerId,
     pub(crate) precinct_id: String,
@@ -200,6 +212,7 @@ impl From<Registration> for client::output::Registration {
             client_id,
             machine_id,
             common_access_card_id,
+            jurisdiction_id,
             registration_request_id,
             election_id,
             precinct_id,
@@ -212,6 +225,7 @@ impl From<Registration> for client::output::Registration {
             client_id,
             machine_id,
             common_access_card_id,
+            jurisdiction_id,
             registration_request_id,
             election_id,
             precinct_id,
@@ -322,6 +336,25 @@ pub(crate) async fn add_admin(
     Ok(())
 }
 
+pub(crate) async fn get_jurisdictions(
+    executor: &mut sqlx::PgConnection,
+) -> color_eyre::Result<Vec<Jurisdiction>> {
+    sqlx::query_as!(
+        Jurisdiction,
+        r#"
+        SELECT
+            id,
+            name,
+            created_at
+        FROM jurisdictions
+        ORDER BY created_at ASC
+        "#
+    )
+    .fetch_all(&mut *executor)
+    .await
+    .map_err(Into::into)
+}
+
 pub(crate) async fn get_admins(
     executor: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<Vec<Admin>> {
@@ -349,6 +382,7 @@ pub(crate) async fn get_elections(
         id: ServerId,
         client_id: ClientId,
         machine_id: String,
+        jurisdiction_id: ServerId,
         definition: Vec<u8>,
         election_hash: String,
         created_at: time::OffsetDateTime,
@@ -379,6 +413,7 @@ pub(crate) async fn get_elections(
                     id as "id: _",
                     client_id as "client_id: _",
                     machine_id,
+                    jurisdiction_id,
                     definition,
                     election_hash,
                     created_at
@@ -399,6 +434,7 @@ pub(crate) async fn get_elections(
                     id as "id: _",
                     client_id as "client_id: _",
                     machine_id,
+                    jurisdiction_id,
                     definition,
                     election_hash,
                     created_at
@@ -418,6 +454,7 @@ pub(crate) async fn get_elections(
                 id: r.id,
                 client_id: r.client_id,
                 machine_id: r.machine_id,
+                jurisdiction_id: r.jurisdiction_id,
                 definition: r.definition.as_slice().try_into()?,
                 election_hash: ElectionHash::from_str(&r.election_hash)?,
                 created_at: r.created_at,
@@ -454,6 +491,7 @@ pub(crate) async fn get_registration_requests(
                     id as "id: ServerId",
                     client_id as "client_id: ClientId",
                     machine_id,
+                    jurisdiction_id as "jurisdiction_id: ServerId",
                     common_access_card_id,
                     given_name,
                     family_name,
@@ -480,6 +518,7 @@ pub(crate) async fn get_registration_requests(
                     id as "id: ServerId",
                     client_id as "client_id: ClientId",
                     machine_id,
+                    jurisdiction_id as "jurisdiction_id: ServerId",
                     common_access_card_id,
                     given_name,
                     family_name,
@@ -528,6 +567,7 @@ pub(crate) async fn get_registrations(
                     id as "id: ServerId",
                     client_id as "client_id: ClientId",
                     machine_id,
+                    jurisdiction_id as "jurisdiction_id: ServerId",
                     common_access_card_id,
                     registration_request_id as "registration_request_id: ServerId",
                     election_id as "election_id: ServerId",
@@ -550,6 +590,7 @@ pub(crate) async fn get_registrations(
                     id as "id: ServerId",
                     client_id as "client_id: ClientId",
                     machine_id,
+                    jurisdiction_id as "jurisdiction_id: ServerId",
                     common_access_card_id,
                     registration_request_id as "registration_request_id: ServerId",
                     election_id as "election_id: ServerId",
@@ -578,6 +619,7 @@ pub(crate) async fn add_registration_request_from_client(
             id,
             client_id,
             machine_id,
+            jurisdiction_id,
             common_access_card_id,
             given_name,
             family_name,
@@ -588,11 +630,12 @@ pub(crate) async fn add_registration_request_from_client(
             postal_code,
             state_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         "#,
         registration_request_id.as_uuid(),
         request.client_id.as_uuid(),
         request.machine_id,
+        request.jurisdiction_id.as_uuid(),
         request.common_access_card_id,
         request.given_name,
         request.family_name,
@@ -620,14 +663,16 @@ pub(crate) async fn add_election(
         r#"
         INSERT INTO elections (
             id,
+            jurisdiction_id,
             client_id,
             machine_id,
             election_hash,
             definition
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
         "#,
         election_id.as_uuid(),
+        election.jurisdiction_id.as_uuid(),
         election.client_id.as_uuid(),
         election.machine_id,
         election_definition.election_hash.as_str(),
@@ -645,31 +690,34 @@ pub(crate) async fn add_registration_from_client(
 ) -> color_eyre::Result<ServerId> {
     let registration_id = ServerId::new();
 
+    tracing::info!("Adding registration from client: {:?}", registration);
     sqlx::query!(
         r#"
         INSERT INTO registrations (
             id,
             client_id,
             machine_id,
-            common_access_card_id,
-            registration_request_id,
+            jurisdiction_id,
             election_id,
+            registration_request_id,
+            common_access_card_id,
             precinct_id,
             ballot_style_id
         )
         VALUES (
             $1, $2, $3, $4,
-            (SELECT id FROM registration_requests WHERE client_id = $5),
-            (SELECT id FROM elections WHERE client_id = $6),
-            $7, $8
+            (SELECT id FROM elections WHERE client_id = $5),
+            (SELECT id FROM registration_requests WHERE client_id = $6),
+            $7, $8, $9
         )
         "#,
         registration_id.as_uuid(),
         registration.client_id.as_uuid(),
         registration.machine_id,
-        registration.common_access_card_id,
-        registration.registration_request_id.as_uuid(),
+        registration.jurisdiction_id.as_uuid(),
         registration.election_id.as_uuid(),
+        registration.registration_request_id.as_uuid(),
+        registration.common_access_card_id,
         registration.precinct_id,
         registration.ballot_style_id
     )

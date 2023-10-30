@@ -40,6 +40,7 @@ export const DateTimeSchema = z
 export interface RegistrationRequestInput {
   clientId: ClientId;
   machineId: Id;
+  jurisdictionId: ServerId;
   commonAccessCardId: string;
   givenName: string;
   familyName: string;
@@ -61,6 +62,7 @@ export const RegistrationRequestOutputSchema: z.ZodSchema<RegistrationRequestOut
     serverId: ServerIdSchema,
     clientId: ClientIdSchema,
     machineId: z.string(),
+    jurisdictionId: ServerIdSchema,
     commonAccessCardId: z.string(),
     givenName: z.string(),
     familyName: z.string(),
@@ -88,6 +90,7 @@ export interface RegistrationOutput {
   clientId: ClientId;
   machineId: Id;
   commonAccessCardId: Id;
+  jurisdictionId: ServerId;
   registrationRequestId: ServerId;
   electionId: ServerId;
   precinctId: PrecinctId;
@@ -101,6 +104,7 @@ export const RegistrationOutputSchema: z.ZodSchema<RegistrationOutput> =
     clientId: ClientIdSchema,
     machineId: z.string(),
     commonAccessCardId: z.string(),
+    jurisdictionId: ServerIdSchema,
     registrationRequestId: ServerIdSchema,
     electionId: ServerIdSchema,
     precinctId: PrecinctIdSchema,
@@ -170,6 +174,23 @@ export interface AdminInput {
   createdAt: DateTime;
 }
 
+export interface JurisdictionInput {
+  name: string;
+}
+
+export interface JurisdictionOutput {
+  id: ServerId;
+  name: string;
+  createdAt: DateTime;
+}
+
+export const JurisdictionOutputSchema: z.ZodSchema<JurisdictionOutput> =
+  z.object({
+    id: ServerIdSchema,
+    name: z.string().nonempty(),
+    createdAt: DateTimeSchema,
+  });
+
 export type AdminOutput = AdminInput;
 
 export const AdminOutputSchema: z.ZodSchema<AdminOutput> = z.object({
@@ -179,6 +200,7 @@ export const AdminOutputSchema: z.ZodSchema<AdminOutput> = z.object({
 });
 
 export interface ElectionInput {
+  jurisdictionId: ServerId;
   clientId: ClientId;
   machineId: Id;
   definition: Base64String;
@@ -190,6 +212,7 @@ export type ElectionOutput = ElectionInput & {
 };
 
 export const ElectionOutputSchema: z.ZodSchema<ElectionOutput> = z.object({
+  jurisdictionId: ServerIdSchema,
   serverId: ServerIdSchema,
   clientId: ClientIdSchema,
   machineId: z.string(),
@@ -203,6 +226,7 @@ export interface RaveServerSyncInput {
   lastSyncedElectionId?: ServerId;
   lastSyncedPrintedBallotId?: ServerId;
   lastSyncedScannedBallotId?: ServerId;
+  jurisdictions?: JurisdictionInput[];
   registrationRequests?: RegistrationRequestInput[];
   elections?: ElectionInput[];
   registrations?: RegistrationInput[];
@@ -211,6 +235,7 @@ export interface RaveServerSyncInput {
 }
 
 export interface RaveServerSyncOutput {
+  jurisdictions: JurisdictionOutput[];
   admins: AdminOutput[];
   elections: ElectionOutput[];
   registrationRequests: RegistrationRequestOutput[];
@@ -221,6 +246,7 @@ export interface RaveServerSyncOutput {
 
 export const RaveMarkSyncOutputSchema: z.ZodSchema<RaveServerSyncOutput> =
   z.object({
+    jurisdictions: z.array(JurisdictionOutputSchema),
     admins: z.array(AdminOutputSchema),
     elections: z.array(ElectionOutputSchema),
     registrationRequests: z.array(RegistrationRequestOutputSchema),
