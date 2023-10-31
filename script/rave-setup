@@ -260,7 +260,7 @@ setup-kiosk-browser() {
     cd "${KIOSK_BROWSER_DIR}"
     make install
     make build
-    sudo dpkg -i dist/kiosk_browser_1.0.0_amd64.deb
+    sudo dpkg -i dist/kiosk-browser_1.0.0_*.deb
   )
 }
 
