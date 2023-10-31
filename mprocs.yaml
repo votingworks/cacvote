@@ -26,3 +26,10 @@ procs:
   rave-mark:
     cwd: 'apps/rave-mark/frontend'
     shell: 'pnpm tsc --build && pnpm start'
+
+  kiosk-browser:
+    cwd: '../kiosk-browser'
+    shell: |
+      echo "Waiting for Rave Mark to start…"
+      while ! nc -z localhost 3000; do sleep 1; done
+      kiosk-browser http://localhost:3000/
