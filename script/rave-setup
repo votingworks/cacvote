@@ -2,6 +2,8 @@
 
 ### Sets up a Debian system for running RAVE apps. ###
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 set -euo pipefail
 
 setup-prereqs() {
@@ -242,6 +244,26 @@ setup-app-db() {
   )
 }
 
+setup-kiosk-browser() {
+  if which kiosk-browser >/dev/null 2>&1; then
+    echo -e "\e[1m[skip]\e[0m kiosk-browser is already installed"
+    return
+  fi
+
+  local KIOSK_BROWSER_DIR="${DIR}/../../kiosk-browser"
+
+  if [ ! -d "${KIOSK_BROWSER_DIR}" ]; then
+    git clone https://github.com/votingworks/kiosk-browser.git "${KIOSK_BROWSER_DIR}"
+  fi
+
+  (
+    cd "${KIOSK_BROWSER_DIR}"
+    make install
+    make build
+    sudo dpkg -i dist/kiosk_browser_1.0.0_amd64.deb
+  )
+}
+
 setup-label-printer() {
   echo "🖨️ Label Printer Driver"
 
@@ -288,6 +310,7 @@ setup-node
 setup-rust
 setup-global-devtools
 setup-postgresql
+setup-kiosk-browser
 setup-label-printer
 setup-thermal-printer
 
