@@ -17,6 +17,7 @@ use crate::{config::Config, db};
 
 pub(crate) async fn setup(config: &Config, pool: &PgPool) -> color_eyre::Result<()> {
     if let Some(ref election_definition_path) = config.election_definition_path {
+        tracing::info!("Loading election definition from {election_definition_path}");
         let election_definition = std::fs::read_to_string(election_definition_path)?;
         let election_definition: ElectionDefinition = election_definition.parse()?;
         let mut txn = pool.begin().await?;
