@@ -157,17 +157,27 @@ setup-global-devtools() {
    local PNPM_VERSION=8.1.0
    local EXISTING_PNPM_VERSION=$(pnpm --version 2>/dev/null || true)
 
-   if [ "${EXISTING_PNPM_VERSION}" != "${PNPM_VERSION}" ]; then
-     sudo npm install --global pnpm@${PNPM_VERSION}
+  if [ "${EXISTING_PNPM_VERSION}" != "${PNPM_VERSION}" ]; then
+    sudo npm install --global pnpm@${PNPM_VERSION}
   else
     echo -e "\e[1m[skip]\e[0m pnpm@${PNPM_VERSION} is already installed"
-   fi
+  fi
 
-   if ! which yarn >/dev/null 2>&1; then
-     sudo npm install --global yarn
-   else
-     echo -e "\e[1m[skip]\e[0m yarn is already installed"
-   fi
+  if ! which yarn >/dev/null 2>&1; then
+    sudo npm install --global yarn
+  else
+    echo -e "\e[1m[skip]\e[0m yarn is already installed"
+  fi
+
+  if ! which fpm >/dev/null 2>&1; then
+    if ! which gem >/dev/null 2>&1; then
+      sudo apt-get install ruby --yes --quiet --no-upgrade
+    fi
+
+    sudo gem install fpm
+  else
+    echo -e "\e[1m[skip]\e[0m fpm is already installed"
+  fi
 }
 
 setup-postgresql() {
