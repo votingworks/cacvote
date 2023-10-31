@@ -22,7 +22,7 @@ import { Buffer } from 'buffer';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
 import { execFileSync } from 'child_process';
-import { IS_INTEGRATION_TEST } from './globals';
+import { IS_INTEGRATION_TEST, MAILING_LABEL_PRINTER } from './globals';
 import * as mailingLabel from './mailing_label';
 import { RaveServerClient } from './rave_server_client';
 import { Auth, AuthStatus } from './types/auth';
@@ -277,13 +277,9 @@ function buildApi({
 
       const pdf = await mailingLabel.buildPdf();
 
-      if (!process.env.MAILING_LABEL_PRINTER) {
-        throw new Error('MAILING_LABEL_PRINTER not set');
-      }
-
       execFileSync(
         'lpr',
-        ['-P', process.env.MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
+        ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
         { input: pdf }
       );
 
