@@ -162,22 +162,6 @@ setup-global-devtools() {
   else
     echo -e "\e[1m[skip]\e[0m pnpm@${PNPM_VERSION} is already installed"
   fi
-
-  if ! which yarn >/dev/null 2>&1; then
-    sudo npm install --global yarn
-  else
-    echo -e "\e[1m[skip]\e[0m yarn is already installed"
-  fi
-
-  if ! which fpm >/dev/null 2>&1; then
-    if ! which gem >/dev/null 2>&1; then
-      sudo apt-get install ruby --yes --quiet --no-upgrade
-    fi
-
-    sudo gem install fpm
-  else
-    echo -e "\e[1m[skip]\e[0m fpm is already installed"
-  fi
 }
 
 setup-postgresql() {
@@ -265,6 +249,24 @@ setup-kiosk-browser() {
     echo -e "\e[1m[skip]\e[0m kiosk-browser is already installed"
     return
   fi
+
+  if ! which yarn >/dev/null 2>&1; then
+    sudo npm install --global yarn
+  else
+    echo -e "\e[1m[skip]\e[0m yarn is already installed"
+  fi
+
+  if ! which fpm >/dev/null 2>&1; then
+    if ! which gem >/dev/null 2>&1; then
+      sudo apt-get install ruby --yes --quiet --no-upgrade
+    fi
+
+    sudo gem install fpm
+  else
+    echo -e "\e[1m[skip]\e[0m fpm is already installed"
+  fi
+
+  sudo apt-get install libudev-dev --yes --quiet --no-upgrade
 
   local KIOSK_BROWSER_DIR="${DIR}/../../kiosk-browser"
 
