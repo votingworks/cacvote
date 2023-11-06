@@ -33,6 +33,10 @@
       "name": "libs/auth"
     },
     {
+      "path": "libs/auth-rs",
+      "name": "libs/auth-rs"
+    },
+    {
       "path": "libs/backend",
       "name": "libs/backend"
     },

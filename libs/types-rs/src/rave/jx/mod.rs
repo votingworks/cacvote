@@ -289,6 +289,13 @@ impl ScannedBallot {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
+pub enum AppData {
+    #[default]
+    LoggedOut,
+    LoggedIn(LoggedInAppData),
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct LoggedInAppData {
     pub elections: Vec<Election>,

@@ -7,6 +7,7 @@ members = [
     "apps/rave-scan/frontend",
     "apps/rave-jx-terminal/backend",
     "apps/rave-jx-terminal/frontend",
+    "libs/auth-rs",
     "libs/ballot-encoder-rs",
     "libs/central-scanner",
     "libs/types-rs",
@@ -39,6 +40,7 @@ lazy_static = "1.4.0"
 log = "0.4.19"
 nanoid = "0.4.0"
 openssl = "0.10.56"
+pcsc = "2.8.0"
 pretty_assertions = "1.4.0"
 proptest = "1.2.0"
 rayon = "1.7.0"
@@ -48,6 +50,7 @@ rqrr = "0.6.0"
 serde = { version = "1.0.175", features = ["derive"] }
 serde_json = "1.0.103"
 sha256 = "1.2.2"
+thiserror = "1.0.50"
 time = { version = "0.3.22", features = ["formatting", "parsing", "serde"] }
 tokio = { version = "1.29.1", default-features = false, features = [
     "sync",

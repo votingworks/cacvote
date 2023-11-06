@@ -48,6 +48,7 @@ mod cac;
 mod config;
 mod db;
 mod log;
+mod smartcard;
 mod sync;
 
 #[tokio::main]
@@ -57,5 +58,10 @@ async fn main() -> color_eyre::Result<()> {
     log::setup(&config)?;
     let pool = db::setup(&config).await?;
     sync::sync_periodically(&pool, config.clone()).await;
-    app::run(app::setup(pool, config.clone()), &config).await
+    let smartcard_watcher = smartcard::watch();
+    app::run(
+        app::setup(pool, config.clone(), smartcard_watcher.status_getter()),
+        &config,
+    )
+    .await
 }
