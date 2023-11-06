@@ -14,8 +14,8 @@ pub struct LoggedInLayoutProps {
 }
 
 pub fn LoggedInLayout(cx: Scope<LoggedInLayoutProps>) -> Element {
-    use_shared_state_provider(cx, jx::LoggedInAppData::default);
-    let app_data = use_shared_state::<jx::LoggedInAppData>(cx).unwrap();
+    use_shared_state_provider(cx, jx::AppData::default);
+    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
     let jurisdiction_id = &cx.props.jurisdiction_id;
 
     use_coroutine(cx, {
@@ -28,7 +28,7 @@ pub fn LoggedInLayout(cx: Scope<LoggedInLayoutProps>) -> Element {
 
             let callback = Closure::wrap(Box::new(move |event: MessageEvent| {
                 if let Some(data) = event.data().as_string() {
-                    match serde_json::from_str::<jx::LoggedInAppData>(data.as_str()) {
+                    match serde_json::from_str::<jx::AppData>(data.as_str()) {
                         Ok(new_app_data) => {
                             log::info!("new app data: {:?}", new_app_data);
                             *app_data.write() = new_app_data;

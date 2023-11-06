@@ -3,26 +3,20 @@ use std::thread;
 
 use pcsc::{ReaderState, PNP_NOTIFICATION};
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) enum Status {
-    NoReader,
-    NoCard,
-    Card,
-}
+use types_rs::rave::jx::SmartcardStatus;
 
 pub(crate) fn watch() -> Watcher {
     Watcher::new()
 }
 
 pub(crate) struct Watcher {
-    status: Arc<Mutex<Status>>,
+    status: Arc<Mutex<SmartcardStatus>>,
 }
 
 impl Watcher {
     pub(crate) fn new() -> Self {
         let ctx = pcsc::Context::establish(pcsc::Scope::User).unwrap();
-        let status = Arc::new(Mutex::new(Status::NoReader));
+        let status = Arc::new(Mutex::new(Default::default()));
 
         let mut readers_buf = [0; 2048];
         let mut reader_states = vec![
@@ -62,7 +56,7 @@ impl Watcher {
                         .expect("failed to get status change");
 
                     // Print current state.
-                    *status.lock().unwrap() = Status::NoReader;
+                    *status.lock().unwrap() = SmartcardStatus::NoReader;
 
                     for rs in reader_states.iter() {
                         if rs.name() == PNP_NOTIFICATION() || is_dead(rs) {
@@ -71,11 +65,11 @@ impl Watcher {
 
                         if rs.event_state().intersects(pcsc::State::PRESENT) {
                             // found a card, break out of the loop
-                            *status.lock().unwrap() = Status::Card;
+                            *status.lock().unwrap() = SmartcardStatus::Card;
                             break;
                         } else {
                             // found a reader but no card, keep looking
-                            *status.lock().unwrap() = Status::NoCard;
+                            *status.lock().unwrap() = SmartcardStatus::NoCard;
                         }
                     }
                 }
@@ -92,15 +86,15 @@ impl Watcher {
 
 #[derive(Clone)]
 pub(crate) struct StatusGetter {
-    status: Arc<Mutex<Status>>,
+    status: Arc<Mutex<SmartcardStatus>>,
 }
 
 impl StatusGetter {
-    pub(crate) fn new(status: Arc<Mutex<Status>>) -> Self {
+    pub(crate) fn new(status: Arc<Mutex<SmartcardStatus>>) -> Self {
         Self { status }
     }
 
-    pub(crate) fn get(&self) -> Status {
+    pub(crate) fn get(&self) -> SmartcardStatus {
         self.status.lock().unwrap().clone()
     }
 }

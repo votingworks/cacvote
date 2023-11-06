@@ -33,13 +33,17 @@ use types_rs::rave::{jx, ServerId};
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
 use crate::db::{self, get_app_data};
-use crate::smartcard::StatusGetter;
+use crate::smartcard;
 
-type AppState = (Config, PgPool, StatusGetter);
+type AppState = (Config, PgPool, smartcard::StatusGetter);
 
 /// Prepares the application with all the routes. Run the application with
 /// `app::run(…)` once you have it.
-pub(crate) fn setup(pool: PgPool, config: Config, smartcard_status: StatusGetter) -> Router {
+pub(crate) fn setup(
+    pool: PgPool,
+    config: Config,
+    smartcard_status: smartcard::StatusGetter,
+) -> Router {
     let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
 
     let router = match &config.public_dir {
@@ -121,7 +125,7 @@ async fn get_smartcard_stream(
             let status = Some(smartcard_status.get());
 
             if status != last_status {
-                yield Event::default().json_data(&status).unwrap();
+                yield Event::default().json_data(json!({ "status": &status })).unwrap();
                 last_status = status.clone();
             }
 
@@ -132,23 +136,53 @@ async fn get_smartcard_stream(
 }
 
 async fn get_status_stream(
-    State((_, pool, _)): State<AppState>,
+    State((_, pool, smartcard_status)): State<AppState>,
     Query(Scope { jurisdiction_id }): Query<Scope>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let mut last_app_data = jx::AppData::default();
+    let mut last_app_data: Option<AppData> = None;
+
+    fn data_to_yield<'a>(
+        last_app_data: &Option<AppData>,
+        current_app_data: &'a AppData,
+    ) -> Option<&'a AppData> {
+        match (last_app_data, current_app_data) {
+            (None, _) => Some(&current_app_data),
+            (Some(last_app_data), current_app_data) if last_app_data != current_app_data => {
+                Some(&current_app_data)
+            }
+            _ => None,
+        }
+    }
 
     Sse::new(try_stream! {
         loop {
             let mut connection = pool.acquire().await.unwrap();
             let logged_in_app_data = get_app_data(&mut connection, jurisdiction_id).await.unwrap();
+            let auth_status = smartcard_status.get();
+            let current_app_data = AppData::LoggedIn { auth: auth_status, app_data: logged_in_app_data };
 
-            match last_app_data {
-                AppData::LoggedIn(data) if data != logged_in_app_data => {
-                    yield Event::default().json_data(&logged_in_app_data).unwrap();
-                    last_app_data = AppData::LoggedIn(logged_in_app_data);
-                }
-                _ => {},
+            if let Some(new_app_data) = data_to_yield(&last_app_data, &current_app_data) {
+                yield Event::default().json_data(&new_app_data).unwrap();
+                last_app_data = Some(current_app_data);
             }
+
+            // match (last_app_data, current_app_data) {
+            //     (AppData::LoggedOut(last_auth_status), AppData::LoggedOut(auth_status)) => {
+            //         if last_auth_status != auth_status {
+            //         yield Event::default().json_data(&auth_status).unwrap();
+            //         last_auth_status = auth_status;
+            //     }
+            // }
+            //     AppData::LoggedOut(data) if Some(data) != auth_status => {
+            //         yield Event::default().json_data(&auth_status).unwrap();
+            //         last_auth_status = auth_status;
+            //     }
+            //     AppData::LoggedIn(last_auth_status, last_logged_in_app_data) if Some(last_auth_status) !=  last_logged_in_app_data != logged_in_app_data => {
+            //         yield Event::default().json_data(&logged_in_app_data).unwrap();
+            //         last_app_data = AppData::LoggedIn(logged_in_app_data);
+            //     }
+            //     _ => {},
+            // }
 
             sleep(Duration::from_secs(1)).await;
         }

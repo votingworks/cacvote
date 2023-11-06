@@ -288,11 +288,31 @@ impl ScannedBallot {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
-pub enum AppData {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub enum SmartcardStatus {
     #[default]
-    LoggedOut,
-    LoggedIn(LoggedInAppData),
+    NoReader,
+    NoCard,
+    Card,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum AppData {
+    LoggedOut {
+        auth: SmartcardStatus,
+    },
+    LoggedIn {
+        auth: SmartcardStatus,
+        app_data: LoggedInAppData,
+    },
+}
+
+impl Default for AppData {
+    fn default() -> Self {
+        Self::LoggedOut {
+            auth: SmartcardStatus::NoReader,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
