@@ -160,9 +160,13 @@ export class CardReader {
       throw new Error(`Reader not ready: ${this.reader.status}`);
     }
 
+    console.log('sending apdu', apdu);
     let response: Buffer;
     try {
-      response = await this.reader.transmit(apdu.asBuffer());
+      const buffer = apdu.asBuffer();
+      console.log('transmitting', buffer.toString('hex'));
+      response = await this.reader.transmit(buffer);
+      console.log('response', response.toString('hex'));
     } catch {
       throw new Error('Failed to transmit data to card');
     }

@@ -1,20 +1,25 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 use pcsc::{ReaderState, PNP_NOTIFICATION};
-use serde::{Deserialize, Serialize};
 use types_rs::rave::jx::SmartcardStatus;
 
-pub(crate) fn watch() -> Watcher {
+/// Watches for smartcard events.
+pub fn watch() -> Watcher {
     Watcher::new()
 }
 
-pub(crate) struct Watcher {
+/// Watches for smartcard events.
+#[derive(Debug)]
+pub struct Watcher {
     status: Arc<Mutex<SmartcardStatus>>,
+    handle: Option<thread::JoinHandle<()>>,
+    stop_tx: mpsc::Sender<()>,
 }
 
 impl Watcher {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         let ctx = pcsc::Context::establish(pcsc::Scope::User).unwrap();
         let status = Arc::new(Mutex::new(Default::default()));
 
@@ -24,11 +29,18 @@ impl Watcher {
             ReaderState::new(PNP_NOTIFICATION(), pcsc::State::UNAWARE),
         ];
 
+        let (stop_tx, stop_rx) = mpsc::channel();
+
         // spawn a thread to watch for smartcard events
-        thread::spawn({
+        let handle = thread::spawn({
             let status = status.clone();
             move || {
-                loop {
+                'thread: loop {
+                    if stop_rx.try_recv().is_ok() {
+                        tracing::debug!("stopping smartcard watcher while listing readers");
+                        break;
+                    }
+
                     // Remove dead readers.
                     fn is_dead(rs: &ReaderState) -> bool {
                         rs.event_state()
@@ -52,8 +64,25 @@ impl Watcher {
                     }
 
                     // Wait until the state changes.
-                    ctx.get_status_change(None, &mut reader_states)
-                        .expect("failed to get status change");
+                    'status_change: loop {
+                        if stop_rx.try_recv().is_ok() {
+                            tracing::debug!(
+                                "stopping smartcard watcher while waiting for status change"
+                            );
+                            break 'thread;
+                        }
+
+                        match ctx.get_status_change(Duration::from_millis(50), &mut reader_states) {
+                            Ok(()) => break 'status_change,
+                            Err(pcsc::Error::Timeout) => {
+                                // no change, keep waiting
+                            }
+                            Err(err) => {
+                                tracing::error!("error getting status change: {:?}", err);
+                                break 'status_change;
+                            }
+                        }
+                    }
 
                     // Print current state.
                     *status.lock().unwrap() = SmartcardStatus::NoReader;
@@ -76,25 +105,44 @@ impl Watcher {
             }
         });
 
-        Self { status }
+        Self {
+            status,
+            handle: Some(handle),
+            stop_tx,
+        }
     }
 
-    pub(crate) fn status_getter(&self) -> StatusGetter {
+    pub fn status_getter(&self) -> StatusGetter {
         StatusGetter::new(self.status.clone())
+    }
+
+    pub fn stop(self) {
+        // let `self` drop
     }
 }
 
-#[derive(Clone)]
-pub(crate) struct StatusGetter {
+impl Drop for Watcher {
+    fn drop(&mut self) {
+        self.stop_tx.send(()).unwrap();
+        if let Some(handle) = self.handle.take() {
+            handle.join().unwrap();
+        }
+    }
+}
+
+/// Provides access to the current smartcard status.
+#[derive(Debug, Clone)]
+pub struct StatusGetter {
     status: Arc<Mutex<SmartcardStatus>>,
 }
 
 impl StatusGetter {
-    pub(crate) fn new(status: Arc<Mutex<SmartcardStatus>>) -> Self {
+    fn new(status: Arc<Mutex<SmartcardStatus>>) -> Self {
         Self { status }
     }
 
-    pub(crate) fn get(&self) -> SmartcardStatus {
+    /// Gets the current smartcard status.
+    pub fn get(&self) -> SmartcardStatus {
         self.status.lock().unwrap().clone()
     }
 }

@@ -51,6 +51,8 @@ mod log;
 mod smartcard;
 mod sync;
 
+pub use smartcard::watch;
+
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     dotenvy::dotenv()?;

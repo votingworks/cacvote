@@ -10,6 +10,7 @@ use std::thread;
 use std::time::Duration;
 
 use async_stream::try_stream;
+use auth_rs::CardReader;
 use axum::extract::Query;
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{Response, Sse};

@@ -409,7 +409,9 @@ export class JavaCard implements Card {
    * error if any verification fails (this includes the case that the card is simply unprogrammed).
    */
   private async readCardDetails(): Promise<CardDetails> {
+    console.time('selectApplet');
     await this.selectApplet();
+    console.timeEnd('selectApplet');
 
     // Verify that the card VotingWorks cert was signed by VotingWorks
     const cardVxCert = await this.retrieveCert(CARD_VX_CERT.OBJECT_ID);

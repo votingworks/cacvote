@@ -17,6 +17,7 @@ members = [
 
 [workspace.dependencies]
 async-stream = "0.3.5"
+auth-rs = { path = "libs/auth-rs" }
 axum = { version = "0.6.20" }
 ballot-encoder-rs = { path = "libs/ballot-encoder-rs" }
 base64 = "0.21.2"

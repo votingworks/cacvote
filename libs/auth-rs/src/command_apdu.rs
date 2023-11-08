@@ -14,7 +14,7 @@ pub const MAX_RESPONSE_APDU_DATA_LENGTH: usize = MAX_APDU_LENGTH - 2;
 ///
 /// The CLA also indicates whether the APDU is being sent over a GlobalPlatform Secure Channel,
 /// typically used for initial card configuration.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum CLA {
     Standard = 0x00,
     Chained = 0x10,
@@ -22,7 +22,7 @@ pub enum CLA {
     SecureChained = 0x1c,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CommandApdu {
     cla: CLA,
     ins: u8,
@@ -48,6 +48,20 @@ impl CommandApdu {
             lc: lc as u8,
             data,
         })
+    }
+
+    pub fn data<'a>(&'a self) -> &'a [u8] {
+        &self.data
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![self.cla as u8, self.ins, self.p1, self.p2, self.lc];
+        bytes.extend_from_slice(&self.data);
+        bytes
+    }
+
+    pub fn is_chained(&self) -> bool {
+        matches!(self.cla, CLA::Chained | CLA::SecureChained)
     }
 }
 
