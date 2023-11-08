@@ -212,6 +212,7 @@ dependencies = [
  "openssl",
  "pcsc",
  "thiserror",
+ "types-rs",
 ]
 
 [[package]]

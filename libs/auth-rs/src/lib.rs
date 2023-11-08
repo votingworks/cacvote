@@ -1,4 +1,5 @@
 mod card_command;
+mod card_details;
 mod card_reader;
 mod command_apdu;
 mod java_card;

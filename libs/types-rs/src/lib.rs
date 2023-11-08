@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod ballot_card;
 pub mod cdf;
 pub mod election;

@@ -9,3 +9,4 @@ edition = "2021"
 openssl = { workspace = true }
 pcsc = { workspace = true }
 thiserror = { workspace = true }
+types-rs = { workspace = true }

@@ -3,7 +3,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use openssl::{error, x509::X509};
+use openssl::{
+    error,
+    x509::{self, X509},
+};
 use pcsc::{Card, ReaderState, State, PNP_NOTIFICATION};
 
 use crate::{
