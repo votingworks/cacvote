@@ -3,29 +3,32 @@
 use std::sync::Arc;
 
 use dioxus::prelude::*;
-use types_rs::rave::jx;
+use dioxus_router::prelude::use_navigator;
+use types_rs::rave::jx::{self, AppData};
 use ui_rs::{DateOrDateTimeCell, FileButton};
 
-use crate::util::{file::read_file_as_bytes, url::get_url};
+use crate::{
+    route::Route,
+    util::{file::read_file_as_bytes, url::get_url},
+};
 
-#[derive(PartialEq, Props)]
-pub struct ElectionsPageProps {
-    jurisdiction_id: String,
-}
-
-pub fn ElectionsPage(cx: Scope<ElectionsPageProps>) -> Element {
-    let app_data = use_shared_state::<jx::LoggedInAppData>(cx).unwrap();
-    let elections = &app_data.read().elections;
+pub fn ElectionsPage(cx: Scope) -> Element {
+    let nav = use_navigator(cx);
+    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
+    let app_data = &*app_data.read();
+    let is_logged_in = matches!(app_data, AppData::LoggedIn { .. });
+    let elections = if let AppData::LoggedIn { app_data, .. } = app_data {
+        Some(&app_data.elections)
+    } else {
+        None
+    };
     let is_uploading = use_state(cx, || false);
-    let jurisdiction_id = &cx.props.jurisdiction_id;
     let upload_election = {
-        to_owned![is_uploading, jurisdiction_id];
+        to_owned![is_uploading];
         |election_data: Vec<u8>| async move {
             is_uploading.set(true);
 
-            let url = get_url(&*format!(
-                "/api/elections?jurisdiction_id={jurisdiction_id}"
-            ));
+            let url = get_url("/api/elections");
             let client = reqwest::Client::new();
             let res = client
                 .post(url)
@@ -40,42 +43,58 @@ pub fn ElectionsPage(cx: Scope<ElectionsPageProps>) -> Element {
         }
     };
 
+    use_effect(cx, (&is_logged_in,), |(is_logged_in,)| {
+        to_owned![nav, is_logged_in];
+        async move {
+            if !is_logged_in {
+                nav.push(Route::MachineLockedPage);
+            }
+        }
+    });
+
     render! (
         div {
                 h1 { class: "text-2xl font-bold mb-4", "Elections" }
-                if elections.is_empty() {
-                    rsx!(div { "No elections found." })
-                } else {
-                    rsx!(table { class: "table-auto w-full",
-                        thead {
-                            tr {
-                                th { class: "px-4 py-2 text-left", "Election ID" }
-                                th { class: "px-4 py-2 text-left", "Title" }
-                                th { class: "px-4 py-2 text-left", "Date" }
-                                th { class: "px-4 py-2 text-left", "Synced" }
-                                th { class: "px-4 py-2 text-left", "Created At" }
-                            }
-                        }
-                        tbody {
-                            for election in elections.iter() {
-                                tr {
-                                    td {
-                                        class: "border px-4 py-2",
-                                        title: "Database ID: {election.id}\n\nFull Election Hash: {election.election_hash}",
-                                        "{election.election_hash.to_partial()}"
-                                    }
-                                    td { class: "border px-4 py-2", "{election.title}" }
-                                    DateOrDateTimeCell {
-                                        date_or_datetime: election.date,
-                                    }
-                                    td { class: "border px-4 py-2", if election.is_synced() { "Yes" } else { "No" } }
-                                    DateOrDateTimeCell {
-                                        date_or_datetime: election.created_at,
+                match elections {
+                    Some(elections) => {
+                        if elections.is_empty() {
+                            rsx!(div { "No elections found." })
+                        } else {
+                            rsx!(table { class: "table-auto w-full",
+                                thead {
+                                    tr {
+                                        th { class: "px-4 py-2 text-left", "Election ID" }
+                                        th { class: "px-4 py-2 text-left", "Title" }
+                                        th { class: "px-4 py-2 text-left", "Date" }
+                                        th { class: "px-4 py-2 text-left", "Synced" }
+                                        th { class: "px-4 py-2 text-left", "Created At" }
                                     }
                                 }
-                            }
+                                tbody {
+                                    for election in elections.iter() {
+                                        tr {
+                                            td {
+                                                class: "border px-4 py-2",
+                                                title: "Database ID: {election.id}\n\nFull Election Hash: {election.election_hash}",
+                                                "{election.election_hash.to_partial()}"
+                                            }
+                                            td { class: "border px-4 py-2", "{election.title}" }
+                                            DateOrDateTimeCell {
+                                                date_or_datetime: election.date,
+                                            }
+                                            td { class: "border px-4 py-2", if election.is_synced() { "Yes" } else { "No" } }
+                                            DateOrDateTimeCell {
+                                                date_or_datetime: election.created_at,
+                                            }
+                                        }
+                                    }
+                                }
+                            })
                         }
-                    })
+                    }
+                    None => {
+                        rsx!(div { "Loading elections…" })
+                    }
                 }
                 FileButton {
                         "Import Election",
@@ -90,7 +109,7 @@ pub fn ElectionsPage(cx: Scope<ElectionsPageProps>) -> Element {
                                                 if !response.status().is_success() {
                                                     web_sys::window()
                                                         .unwrap()
-                                                        .alert_with_message(format!("Error uploading election: {}", response.status().as_str()).as_str())
+                                                        .alert_with_message(format!("Error uploading election: {}", response.text().await.unwrap()).as_str())
                                                         .unwrap();
                                                     return;
                                                 }
@@ -98,9 +117,11 @@ pub fn ElectionsPage(cx: Scope<ElectionsPageProps>) -> Element {
                                                 log::info!("uploaded election: {:?}", response);
                                             }
                                             Err(err) => {
+                                                log::error!("error uploading election: {err}");
+
                                                 web_sys::window()
                                                     .unwrap()
-                                                    .alert_with_message(format!("Error uploading election: {:?}", err).as_str())
+                                                    .alert_with_message(format!("Error uploading election: {err:?}").as_str())
                                                     .unwrap();
                                             }
                                         }

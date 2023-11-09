@@ -223,16 +223,19 @@ pub(crate) async fn add_or_update_jurisdiction_from_rave_server(
         r#"
         INSERT INTO jurisdictions (
             id,
+            code,
             name,
             created_at
         )
-        VALUES ($1, $2, $3)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT (id)
         DO UPDATE SET
-            name = $2,
-            created_at = $3
+            code = $2,
+            name = $3,
+            created_at = $4
         "#,
         record.id.as_uuid(),
+        record.code,
         record.name,
         record.created_at
     )
@@ -918,6 +921,7 @@ mod test {
     fn build_rave_server_jurisdiction() -> client::output::Jurisdiction {
         client::output::Jurisdiction {
             id: ServerId::new(),
+            code: "st.test-jurisdiction".to_owned(),
             name: "Test Jurisdiction".to_owned(),
             created_at: OffsetDateTime::now_utc(),
         }

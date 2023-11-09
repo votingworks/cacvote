@@ -5,13 +5,10 @@
 
 use std::convert::Infallible;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Duration;
 
 use async_stream::try_stream;
-use auth_rs::CardReader;
-use axum::extract::Query;
+use auth_rs::card_details::CardDetails;
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{Response, Sse};
 use axum::{
@@ -34,7 +31,7 @@ use types_rs::rave::{jx, ServerId};
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
 use crate::db::{self, get_app_data};
-use crate::smartcard;
+use crate::smartcard::{self, StatusGetter};
 
 type AppState = (Config, PgPool, smartcard::StatusGetter);
 
@@ -66,7 +63,6 @@ pub(crate) fn setup(
         .route("/api/jurisdictions", get(get_jurisdictions))
         .route("/api/elections", post(create_election))
         .route("/api/registrations", post(create_registration))
-        .route("/api/auth/status", get(get_auth_status))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
         .with_state((config, pool, smartcard_status))
@@ -91,31 +87,6 @@ async fn get_status() -> impl IntoResponse {
     StatusCode::OK
 }
 
-fn get_has_card(card_ctx: &pcsc::Context) -> bool {
-    let mut readers_buf = [0; 2048];
-
-    let Ok(mut readers) = card_ctx.list_readers(&mut readers_buf) else {
-        return false;
-    };
-
-    let reader = match readers.next() {
-        Some(reader) => reader,
-        None => return false,
-    };
-
-    let card = match card_ctx.connect(reader, pcsc::ShareMode::Exclusive, pcsc::Protocols::ANY) {
-        Ok(card) => card,
-        Err(pcsc::Error::NoSmartcard) => {
-            return false;
-        }
-        Err(err) => {
-            return false;
-        }
-    };
-
-    true
-}
-
 async fn get_smartcard_stream(
     State((_, _, smartcard_status)): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
@@ -123,7 +94,7 @@ async fn get_smartcard_stream(
 
     Sse::new(try_stream! {
         loop {
-            let status = Some(smartcard_status.get());
+            let status = Some(smartcard_status.get_card_details());
 
             if status != last_status {
                 yield Event::default().json_data(json!({ "status": &status })).unwrap();
@@ -138,7 +109,6 @@ async fn get_smartcard_stream(
 
 async fn get_status_stream(
     State((_, pool, smartcard_status)): State<AppState>,
-    Query(Scope { jurisdiction_id }): Query<Scope>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let mut last_app_data: Option<AppData> = None;
 
@@ -155,35 +125,42 @@ async fn get_status_stream(
         }
     }
 
+    async fn get_current_app_data(
+        pool: &PgPool,
+        auth_status: Option<CardDetails>,
+        smartcard_status: &smartcard::StatusGetter,
+    ) -> color_eyre::Result<AppData> {
+        match auth_status {
+            Some(auth_status) => {
+                let mut connection = pool.acquire().await?;
+                let app_data =
+                    get_app_data(&mut connection, auth_status.jurisdiction_code()).await?;
+                Ok(AppData::LoggedIn {
+                    auth: auth_status.user(),
+                    app_data,
+                })
+            }
+            None => Ok(AppData::LoggedOut {
+                auth: smartcard_status.get(),
+            }),
+        }
+    }
+
     Sse::new(try_stream! {
         loop {
-            let mut connection = pool.acquire().await.unwrap();
-            let logged_in_app_data = get_app_data(&mut connection, jurisdiction_id).await.unwrap();
-            let auth_status = smartcard_status.get();
-            let current_app_data = AppData::LoggedIn { auth: auth_status, app_data: logged_in_app_data };
+            let auth_status = smartcard_status.get_card_details();
+            let current_app_data = match get_current_app_data(&pool, auth_status, &smartcard_status).await {
+                Ok(current_app_data) => current_app_data,
+                Err(e) => {
+                    tracing::error!("error getting current app data: {e}");
+                    AppData::LoggedOut { auth: smartcard_status.get() }
+                }
+            };
 
             if let Some(new_app_data) = data_to_yield(&last_app_data, &current_app_data) {
                 yield Event::default().json_data(&new_app_data).unwrap();
                 last_app_data = Some(current_app_data);
             }
-
-            // match (last_app_data, current_app_data) {
-            //     (AppData::LoggedOut(last_auth_status), AppData::LoggedOut(auth_status)) => {
-            //         if last_auth_status != auth_status {
-            //         yield Event::default().json_data(&auth_status).unwrap();
-            //         last_auth_status = auth_status;
-            //     }
-            // }
-            //     AppData::LoggedOut(data) if Some(data) != auth_status => {
-            //         yield Event::default().json_data(&auth_status).unwrap();
-            //         last_auth_status = auth_status;
-            //     }
-            //     AppData::LoggedIn(last_auth_status, last_logged_in_app_data) if Some(last_auth_status) !=  last_logged_in_app_data != logged_in_app_data => {
-            //         yield Event::default().json_data(&logged_in_app_data).unwrap();
-            //         last_app_data = AppData::LoggedIn(logged_in_app_data);
-            //     }
-            //     _ => {},
-            // }
 
             sleep(Duration::from_secs(1)).await;
         }
@@ -201,13 +178,24 @@ async fn get_jurisdictions(State((_, pool, _)): State<AppState>) -> impl IntoRes
     Ok::<_, Response>(Json(json!({ "jurisdictions": jurisdictions })))
 }
 
+async fn authenticate(pool: &PgPool, status_getter: &StatusGetter) -> Option<ServerId> {
+    let mut connection = pool.acquire().await.ok()?;
+    let card_details = status_getter.get_card_details()?;
+    let jurisdiction_code = card_details.jurisdiction_code();
+    db::get_jurisdiction_id_for_code(&mut connection, &jurisdiction_code)
+        .await
+        .ok()?
+}
+
 async fn create_election(
-    State((config, pool, _)): State<AppState>,
-    Query(Scope { jurisdiction_id }): Query<Scope>,
+    State((config, pool, status_getter)): State<AppState>,
     election: String,
 ) -> impl IntoResponse {
     let election_definition: ElectionDefinition = election.parse().map_err(into_internal_error)?;
     let mut connection = pool.acquire().await.map_err(into_internal_error)?;
+    let Some(jurisdiction_id) = authenticate(&pool, &status_getter).await else {
+        return Ok::<_, Response>(StatusCode::UNAUTHORIZED);
+    };
 
     db::add_election(
         &mut connection,
@@ -242,10 +230,6 @@ async fn create_registration(
     .map_err(into_internal_error)?;
 
     Ok::<_, Response>(StatusCode::CREATED)
-}
-
-async fn get_auth_status(State((_, _, card_ctx)): State<AppState>) -> impl IntoResponse {
-    Ok::<_, Response>(Json(json!({ "authenticated": false })))
 }
 
 fn into_internal_error(e: impl std::fmt::Display) -> Response {

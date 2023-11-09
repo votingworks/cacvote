@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 openssl = { workspace = true }
 pcsc = { workspace = true }
+serde = { workspace = true }
 thiserror = { workspace = true }
 types-rs = { workspace = true }

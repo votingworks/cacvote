@@ -1,6 +1,7 @@
 use openssl::x509::X509;
+use serde::{Deserialize, Serialize};
 use types_rs::auth::{
-    ElectionManagerUser, PollWorkerUser, RaveAdministratorUser, SystemAdministratorUser,
+    ElectionManagerUser, PollWorkerUser, RaveAdministratorUser, SystemAdministratorUser, User,
 };
 
 use crate::certs::{
@@ -8,12 +9,34 @@ use crate::certs::{
     VX_CUSTOM_CERT_FIELD_JURISDICTION,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CardDetails {
     SystemAdministratorCard(SystemAdministratorCardDetails),
     ElectionManagerCard(ElectionManagerCardDetails),
     PollWorkerCard(PollWorkerCardDetails),
     RaveAdministratorCard(RaveAdministratorCardDetails),
+}
+
+impl CardDetails {
+    pub fn user(&self) -> User {
+        match self {
+            Self::SystemAdministratorCard(details) => {
+                User::SystemAdministrator(details.user.clone())
+            }
+            Self::ElectionManagerCard(details) => User::ElectionManager(details.user.clone()),
+            Self::PollWorkerCard(details) => User::PollWorker(details.user.clone()),
+            Self::RaveAdministratorCard(details) => User::RaveAdministrator(details.user.clone()),
+        }
+    }
+
+    pub fn jurisdiction_code(&self) -> String {
+        match self {
+            Self::SystemAdministratorCard(details) => details.user.jurisdiction.clone(),
+            Self::ElectionManagerCard(details) => details.user.jurisdiction.clone(),
+            Self::PollWorkerCard(details) => details.user.jurisdiction.clone(),
+            Self::RaveAdministratorCard(details) => details.user.jurisdiction.clone(),
+        }
+    }
 }
 
 fn extract_field_value(value: &X509, field_name: &str) -> Result<Option<String>, ParseError> {
@@ -107,19 +130,19 @@ pub enum ParseError {
     UnknownCardType(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SystemAdministratorCardDetails {
     pub user: SystemAdministratorUser,
     pub num_incorrect_pin_attempts: Option<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ElectionManagerCardDetails {
     pub user: ElectionManagerUser,
     pub num_incorrect_pin_attempts: Option<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PollWorkerCardDetails {
     pub user: PollWorkerUser,
     pub num_incorrect_pin_attempts: Option<u8>,
@@ -130,7 +153,7 @@ pub struct PollWorkerCardDetails {
     pub has_pin: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RaveAdministratorCardDetails {
     pub user: RaveAdministratorUser,
 }

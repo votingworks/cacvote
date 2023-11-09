@@ -211,6 +211,7 @@ version = "0.1.0"
 dependencies = [
  "openssl",
  "pcsc",
+ "serde",
  "thiserror",
  "types-rs",
 ]

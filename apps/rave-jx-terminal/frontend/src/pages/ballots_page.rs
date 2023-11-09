@@ -4,12 +4,7 @@ use ui_rs::DateOrDateTimeCell;
 
 use crate::components::ElectionConfigurationCell;
 
-#[derive(Debug, PartialEq, Props)]
-pub struct BallotsPageProps {
-    pub jurisdiction_id: String,
-}
-
-pub fn BallotsPage(cx: Scope<BallotsPageProps>) -> Element {
+pub fn BallotsPage(cx: Scope) -> Element {
     let app_data = use_shared_state::<jx::LoggedInAppData>(cx).unwrap();
     let app_data = app_data.read();
     let elections = app_data.elections.clone();

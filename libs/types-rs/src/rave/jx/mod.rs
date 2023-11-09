@@ -2,6 +2,7 @@ use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    auth::User,
     cdf::cvr::Cvr,
     election::{BallotStyle, BallotStyleId, ElectionHash, PrecinctId},
 };
@@ -298,11 +299,11 @@ pub enum SmartcardStatus {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum AppData {
-    LoggedOut {
-        auth: SmartcardStatus,
-    },
+    #[serde(rename_all = "camelCase")]
+    LoggedOut { auth: SmartcardStatus },
+    #[serde(rename_all = "camelCase")]
     LoggedIn {
-        auth: SmartcardStatus,
+        auth: User,
         app_data: LoggedInAppData,
     },
 }

@@ -1,37 +1,42 @@
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 
-use crate::logged_in_layout::LoggedInLayout;
+use crate::layouts::AppLayout;
+use crate::layouts::LoggedInLayout;
 use crate::pages::BallotsPage;
-use crate::pages::ChooseJurisdictionPage;
 use crate::pages::ElectionsPage;
+use crate::pages::MachineLockedPage;
+use crate::pages::NotFound;
 use crate::pages::VotersPage;
 
 #[derive(Clone, Debug, PartialEq, Routable)]
 #[allow(clippy::enum_variant_names)]
 #[rustfmt::skip]
 pub enum Route {
-    #[nest("/jurisdictions/:jurisdiction_id")]
+    #[layout(AppLayout)]
         #[layout(LoggedInLayout)]
             #[route("/elections")]
-            ElectionsPage { jurisdiction_id: String },
+            ElectionsPage,
             #[route("/voters")]
-            VotersPage { jurisdiction_id: String },
+            VotersPage,
             #[route("/ballots")]
-            BallotsPage { jurisdiction_id: String },
+            BallotsPage,
         #[end_layout]
-    #[end_nest]
-    #[route("/")]
-    ChooseJurisdictionPage,
+        #[route("/")]
+        MachineLockedPage,
+    #[end_layout]
+	#[route("/:..segments")]
+	NotFound { segments: Vec<String> },
 }
 
 impl Route {
     pub fn label(&self) -> &'static str {
         match self {
-            Self::ChooseJurisdictionPage => "Choose Jurisdiction",
-            Self::ElectionsPage { .. } => "Elections",
-            Self::VotersPage { .. } => "Voters",
-            Self::BallotsPage { .. } => "Ballots",
+            Self::MachineLockedPage => "Machine Locked",
+            Self::ElectionsPage => "Elections",
+            Self::VotersPage => "Voters",
+            Self::BallotsPage => "Ballots",
+            Self::NotFound { .. } => "Not Found",
         }
     }
 }

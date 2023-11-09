@@ -51,6 +51,7 @@ mod log;
 mod smartcard;
 mod sync;
 
+use crate::smartcard::StatusGetter;
 pub use smartcard::watch;
 
 #[tokio::main]
@@ -62,7 +63,11 @@ async fn main() -> color_eyre::Result<()> {
     sync::sync_periodically(&pool, config.clone()).await;
     let smartcard_watcher = smartcard::watch();
     app::run(
-        app::setup(pool, config.clone(), smartcard_watcher.status_getter()),
+        app::setup(
+            pool,
+            config.clone(),
+            StatusGetter::new(smartcard_watcher.readers_with_cards()),
+        ),
         &config,
     )
     .await

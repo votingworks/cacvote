@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::election::{BallotStyleId, PrecinctId};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SystemAdministratorUser {
-    jurisdiction: String,
+    pub jurisdiction: String,
 }
 
 impl SystemAdministratorUser {
@@ -14,10 +14,10 @@ impl SystemAdministratorUser {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ElectionManagerUser {
-    jurisdiction: String,
-    election_hash: String,
+    pub jurisdiction: String,
+    pub election_hash: String,
 }
 
 impl ElectionManagerUser {
@@ -30,10 +30,10 @@ impl ElectionManagerUser {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PollWorkerUser {
-    jurisdiction: String,
-    election_hash: String,
+    pub jurisdiction: String,
+    pub election_hash: String,
 }
 
 impl PollWorkerUser {
@@ -46,10 +46,10 @@ impl PollWorkerUser {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CardlessVoterUser {
-    ballot_style_id: BallotStyleId,
-    precinct_id: PrecinctId,
+    pub ballot_style_id: BallotStyleId,
+    pub precinct_id: PrecinctId,
 }
 
 impl CardlessVoterUser {
@@ -62,9 +62,9 @@ impl CardlessVoterUser {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RaveAdministratorUser {
-    jurisdiction: String,
+    pub jurisdiction: String,
 }
 
 impl RaveAdministratorUser {
@@ -74,7 +74,7 @@ impl RaveAdministratorUser {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum User {
     #[serde(rename = "system_administrator")]

@@ -344,6 +344,7 @@ pub(crate) async fn get_jurisdictions(
         r#"
         SELECT
             id,
+            code,
             name,
             created_at
         FROM jurisdictions
