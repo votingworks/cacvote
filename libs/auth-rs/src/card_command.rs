@@ -1,5 +1,5 @@
 use crate::{
-    command_apdu::{CommandApdu, CLA, MAX_COMMAND_APDU_DATA_LENGTH},
+    command_apdu::{Cla, CommandApdu, MAX_COMMAND_APDU_DATA_LENGTH},
     tlv::{self, Tlv},
 };
 
@@ -23,10 +23,10 @@ impl CardCommand {
             let is_last = chunk.is_empty();
             let command_apdu = CommandApdu::new(
                 match (self.secure_channel, is_last) {
-                    (true, true) => CLA::Secure,
-                    (true, false) => CLA::SecureChained,
-                    (false, true) => CLA::Standard,
-                    (false, false) => CLA::Chained,
+                    (true, true) => Cla::Secure,
+                    (true, false) => Cla::SecureChained,
+                    (false, true) => Cla::Standard,
+                    (false, false) => Cla::Chained,
                 },
                 self.ins,
                 self.p1,
@@ -73,7 +73,6 @@ impl CardCommand {
     }
 
     /// The GET DATA command is a standard command for retrieving data from the card.
-    #[must_use]
     pub fn get_data(object_id: impl Into<Vec<u8>>) -> Result<Self, tlv::ConstructError> {
         Ok(Self {
             secure_channel: false,

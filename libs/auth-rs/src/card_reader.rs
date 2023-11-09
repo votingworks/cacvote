@@ -1,17 +1,10 @@
-use std::{
-    sync::mpsc,
-    time::{Duration, Instant},
-};
+use std::{sync::mpsc, thread::JoinHandle, time::Duration};
 
-use openssl::{
-    error,
-    x509::{self, X509},
-};
+use openssl::x509::X509;
 use pcsc::{Card, ReaderState, State, PNP_NOTIFICATION};
 
 use crate::{
-    card_command,
-    command_apdu::CLA,
+    card_details::{self, CardDetails},
     tlv::{ConstructError, ParseError, Tlv},
     CardCommand, CommandApdu,
 };
@@ -21,33 +14,31 @@ const OPEN_FIPS_201_AID: [u8; 11] = [
     0xa0, 0x00, 0x00, 0x03, 0x08, 0x00, 0x00, 0x10, 0x00, 0x01, 0x00,
 ];
 
-/// Data object IDs of the format 0x5f 0xc1 0xXX are a PIV convention.
-const fn piv_data_object_id(unique_byte: u8) -> [u8; 3] {
-    [0x5f, 0xc1, unique_byte]
-}
-
-pub struct CertInfo {
-    object_id: [u8; 3],
+pub struct CertObject {
     private_key_id: u8,
 }
 
+impl CertObject {
+    #[must_use]
+    const fn new(private_key_id: u8) -> Self {
+        Self { private_key_id }
+    }
+
+    /// Data object IDs of the format 0x5f 0xc1 0xXX are a PIV convention.
+    #[must_use]
+    pub fn object_id(&self) -> Vec<u8> {
+        vec![0x5f, 0xc1, self.private_key_id]
+    }
+}
+
 /// The card's VotingWorks-issued cert
-pub const CARD_VX_CERT: CertInfo = CertInfo {
-    object_id: piv_data_object_id(0xf0),
-    private_key_id: 0xf0,
-};
+pub const CARD_VX_CERT: CertObject = CertObject::new(0xf0);
 
 /// The card's VxAdmin-issued cert
-pub const CARD_VX_ADMIN_CERT: CertInfo = CertInfo {
-    object_id: piv_data_object_id(0xf1),
-    private_key_id: 0xf1,
-};
+pub const CARD_VX_ADMIN_CERT: CertObject = CertObject::new(0xf1);
 
 /// The cert authority cert of the VxAdmin that programmed the card
-pub const VX_ADMIN_CERT_AUTHORITY_CERT: CertInfo = CertInfo {
-    object_id: piv_data_object_id(0xf2),
-    private_key_id: 0xf2,
-};
+pub const VX_ADMIN_CERT_AUTHORITY_CERT: CertObject = CertObject::new(0xf2);
 
 type StatusWord = [u8; 2];
 
@@ -59,62 +50,31 @@ const FILE_NOT_FOUND: StatusWord = [0x6a, 0x82];
 
 #[derive(Debug)]
 pub enum Event {
-    ReaderAdded { name: String },
-    ReaderRemoved { name: String },
-    CardInserted { reader: String },
-    CardRemoved { reader: String },
+    ReaderAdded { reader: CardReader },
+    ReaderRemoved { reader: CardReader },
+    CardInserted { reader: CardReader },
+    CardRemoved { reader: CardReader },
 }
 
 pub struct Watcher {
+    handle: Option<JoinHandle<()>>,
     stop_watch: mpsc::Sender<()>,
     receiver: mpsc::Receiver<Result<Event, pcsc::Error>>,
 }
 
+impl std::fmt::Debug for Watcher {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Watcher").finish()
+    }
+}
+
 impl Watcher {
-    pub fn stop(&self) {
-        self.stop_watch.send(()).unwrap();
-    }
-
-    pub fn receiver(&self) -> &mpsc::Receiver<Result<Event, pcsc::Error>> {
-        &self.receiver
-    }
-}
-
-#[derive(Debug)]
-struct TransmitResponse {
-    data: Vec<u8>,
-    more_data: bool,
-    more_data_length: u8,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum CardReaderError {
-    #[error("construct error: {0}")]
-    ConstructError(#[from] ConstructError),
-    #[error("parse error: {0}")]
-    ParseError(#[from] ParseError),
-    #[error("pcsc error: {0}")]
-    PcscError(#[from] pcsc::Error),
-    #[error("openssl error: {0}")]
-    OpensslError(#[from] openssl::error::ErrorStack),
-}
-
-pub struct CardReader {
-    ctx: pcsc::Context,
-}
-
-impl CardReader {
-    pub fn new() -> Result<Self, pcsc::Error> {
-        // Establish a PC/SC context.
-        let ctx = pcsc::Context::establish(pcsc::Scope::User)?;
-
-        Ok(Self { ctx })
-    }
-
     /// Watch changes to card readers and cards, yielding information about each
     /// change to a mpsc channel.
-    pub fn watch(&mut self) -> Watcher {
-        let ctx = self.ctx.clone();
+    pub fn watch(ctx: impl Into<Option<pcsc::Context>>) -> Watcher {
+        let ctx = ctx.into().unwrap_or_else(|| {
+            pcsc::Context::establish(pcsc::Scope::User).expect("failed to establish pcsc context")
+        });
         let (stop_watch_tx, stop_watch_rx) = mpsc::channel();
         let (tx, rx) = mpsc::channel();
 
@@ -124,7 +84,7 @@ impl CardReader {
             ReaderState::new(PNP_NOTIFICATION(), State::UNAWARE),
         ];
 
-        std::thread::spawn(move || {
+        let handle = std::thread::spawn(move || {
             'thread: loop {
                 if stop_watch_rx.try_recv().is_ok() {
                     break 'thread;
@@ -136,10 +96,9 @@ impl CardReader {
                 }
                 for rs in &reader_states {
                     if is_dead(rs) {
-                        tx.send(Ok(Event::ReaderRemoved {
-                            name: rs.name().to_str().unwrap().to_owned(),
-                        }))
-                        .unwrap();
+                        let name = rs.name().to_str().unwrap().to_owned();
+                        let reader = CardReader::new(ctx.clone(), name);
+                        tx.send(Ok(Event::ReaderRemoved { reader })).unwrap();
                     }
                 }
                 reader_states.retain(|rs| !is_dead(rs));
@@ -155,10 +114,9 @@ impl CardReader {
                 for name in names {
                     if !reader_states.iter().any(|rs| rs.name() == name) {
                         reader_states.push(ReaderState::new(name, State::UNAWARE));
-                        tx.send(Ok(Event::ReaderAdded {
-                            name: name.to_str().unwrap().to_owned(),
-                        }))
-                        .unwrap();
+                        let reader =
+                            CardReader::new(ctx.clone(), name.to_str().unwrap().to_owned());
+                        tx.send(Ok(Event::ReaderAdded { reader })).unwrap();
                     }
                 }
 
@@ -200,10 +158,9 @@ impl CardReader {
                         .contains(pcsc::State::CHANGED | pcsc::State::PRESENT)
                     {
                         // found a card
-                        tx.send(Ok(Event::CardInserted {
-                            reader: rs.name().to_str().unwrap().to_owned(),
-                        }))
-                        .unwrap();
+                        let name = rs.name().to_str().unwrap().to_owned();
+                        let reader = CardReader::new(ctx.clone(), name);
+                        tx.send(Ok(Event::CardInserted { reader })).unwrap();
                     }
 
                     if rs
@@ -211,55 +168,125 @@ impl CardReader {
                         .contains(pcsc::State::CHANGED | pcsc::State::EMPTY)
                     {
                         // card removed
-                        tx.send(Ok(Event::CardRemoved {
-                            reader: rs.name().to_str().unwrap().to_owned(),
-                        }))
-                        .unwrap();
+                        let name = rs.name().to_str().unwrap().to_owned();
+                        let reader = CardReader::new(ctx.clone(), name);
+                        tx.send(Ok(Event::CardRemoved { reader })).unwrap();
                     }
                 }
             }
         });
 
         Watcher {
+            handle: Some(handle),
             stop_watch: stop_watch_tx,
             receiver: rx,
         }
     }
 
-    pub fn read_card_details(&self, reader: String) -> Result<(), CardReaderError> {
-        let card = self.ctx.connect(
-            &std::ffi::CString::new(reader).unwrap(),
+    pub fn stop(&mut self) {
+        self.stop_watch.send(()).unwrap();
+        self.handle.take().unwrap().join().unwrap();
+    }
+
+    pub fn events(&self) -> &mpsc::Receiver<Result<Event, pcsc::Error>> {
+        &self.receiver
+    }
+}
+
+#[derive(Debug)]
+struct TransmitResponse {
+    data: Vec<u8>,
+    more_data: bool,
+    more_data_length: u8,
+}
+
+impl TryFrom<&[u8]> for TransmitResponse {
+    type Error = pcsc::Error;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match value {
+            [.., sw1, sw2] if *sw1 == SUCCESS[0] && *sw2 == SUCCESS[1] => {
+                Ok(Self {
+                    data: value[0..value.len() - 2].to_vec(), // trim status word
+                    more_data: false,
+                    more_data_length: 0,
+                })
+            }
+            [.., sw1, sw2] if *sw1 == SUCCESS_MORE_DATA_AVAILABLE[0] => {
+                Ok(Self {
+                    data: value[0..value.len() - 2].to_vec(), // trim status word
+                    more_data: true,
+                    more_data_length: *sw2,
+                })
+            }
+            _ => Err(pcsc::Error::InvalidValue),
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CardReaderError {
+    #[error("construct error: {0}")]
+    Construct(#[from] ConstructError),
+    #[error("parse error: {0}")]
+    Parse(#[from] ParseError),
+    #[error("pc/sc error: {0}")]
+    Pcsc(#[from] pcsc::Error),
+    #[error("openssl error: {0}")]
+    OpenSSL(#[from] openssl::error::ErrorStack),
+    #[error("card details error: {0}")]
+    CardDetails(#[from] card_details::ParseError),
+}
+
+pub struct CardReader {
+    ctx: pcsc::Context,
+    name: String,
+}
+
+impl std::fmt::Debug for CardReader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CardReader")
+            .field("name", &self.name)
+            .finish()
+    }
+}
+
+impl CardReader {
+    pub fn new(ctx: pcsc::Context, reader_name: String) -> Self {
+        Self {
+            ctx,
+            name: reader_name,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn read_card_details(&self) -> Result<CardDetails, CardReaderError> {
+        let card = self.get_card()?;
+
+        self.select_applet(&card)?;
+
+        let _card_vx_cert = self.retrieve_cert(&card, CARD_VX_CERT.object_id())?;
+        let card_vx_admin_cert = self.retrieve_cert(&card, CARD_VX_ADMIN_CERT.object_id())?;
+        let _vx_admin_cert_authority_cert =
+            self.retrieve_cert(&card, VX_ADMIN_CERT_AUTHORITY_CERT.object_id())?;
+
+        Ok(card_vx_admin_cert.try_into()?)
+    }
+
+    fn get_card(&self) -> Result<Card, CardReaderError> {
+        Ok(self.ctx.connect(
+            &std::ffi::CString::new(self.name.as_bytes()).unwrap(),
             pcsc::ShareMode::Exclusive,
             pcsc::Protocols::ANY,
-        )?;
-
-        let now = Instant::now();
-        self.select_applet(&card)?;
-        println!("select_applet took: {:?}", now.elapsed());
-        let card_vx_cert = self.retrieve_cert(&card, CARD_VX_CERT.object_id.clone())?;
-
-        println!("card_vx_cert: {:#?}", card_vx_cert);
-
-        let card_vx_admin_cert = self.retrieve_cert(&card, CARD_VX_ADMIN_CERT.object_id.clone())?;
-
-        println!("card_vx_admin_cert: {:#?}", card_vx_admin_cert);
-
-        let vx_admin_cert_authority_cert =
-            self.retrieve_cert(&card, VX_ADMIN_CERT_AUTHORITY_CERT.object_id.clone())?;
-
-        println!(
-            "vx_admin_cert_authority_cert: {:#?}",
-            vx_admin_cert_authority_cert
-        );
-
-        Ok(())
+        )?)
     }
 
     fn select_applet(&self, card: &Card) -> Result<(), CardReaderError> {
         let command = CardCommand::select(OPEN_FIPS_201_AID);
-        let now = Instant::now();
         self.transmit(card, command)?;
-        println!("select_applet.transmit took: {:?}", now.elapsed());
         Ok(())
     }
 
@@ -293,9 +320,9 @@ impl CardReader {
 
         for apdu in card_command.to_command_apdus() {
             if apdu.is_chained() {
-                self.transmit_helper(&card, apdu)?;
+                self.transmit_helper(card, apdu)?;
             } else {
-                let response = self.transmit_helper(&card, apdu)?;
+                let response = self.transmit_helper(card, apdu)?;
                 data.extend(response.data);
                 more_data = response.more_data;
                 more_data_length = response.more_data_length;
@@ -305,7 +332,7 @@ impl CardReader {
         while more_data {
             let get_response_command = CardCommand::get_response(more_data_length);
             let apdu = get_response_command.to_command_apdu();
-            let response = self.transmit_helper(&card, apdu)?;
+            let response = self.transmit_helper(card, apdu)?;
             data.extend(response.data);
             more_data = response.more_data;
             more_data_length = response.more_data_length;
@@ -320,36 +347,9 @@ impl CardReader {
         apdu: CommandApdu,
     ) -> Result<TransmitResponse, pcsc::Error> {
         let mut receive_buffer = [0; 1024];
-        let mut send_buffer = apdu.to_bytes();
+        let send_buffer = apdu.to_bytes();
+        let response_apdu = card.transmit(&send_buffer, &mut receive_buffer)?;
 
-        println!("send_buffer: {:02x?}", send_buffer);
-        let now = Instant::now();
-        let response_apdu = card.transmit(&mut send_buffer, &mut receive_buffer)?;
-        println!("card.transmit took: {:?}", now.elapsed());
-        println!("response_apdu: {:02x?}", response_apdu);
-
-        if response_apdu.len() < 2 {
-            return Err(pcsc::Error::InvalidValue);
-        }
-
-        let data = response_apdu.split_at(response_apdu.len() - 2).0;
-        let sw1 = response_apdu[response_apdu.len() - 2];
-        let sw2 = response_apdu[response_apdu.len() - 1];
-
-        if sw1 == SUCCESS[0] && sw2 == SUCCESS[1] {
-            Ok(TransmitResponse {
-                data: data.to_vec(),
-                more_data: false,
-                more_data_length: 0,
-            })
-        } else if sw1 == SUCCESS_MORE_DATA_AVAILABLE[0] {
-            Ok(TransmitResponse {
-                data: data.to_vec(),
-                more_data: true,
-                more_data_length: sw2,
-            })
-        } else {
-            Err(pcsc::Error::UnknownError)
-        }
+        Ok(response_apdu.try_into()?)
     }
 }

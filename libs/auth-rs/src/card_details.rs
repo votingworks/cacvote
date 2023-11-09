@@ -1,32 +1,136 @@
 use openssl::x509::X509;
-use types_rs::auth::{ElectionManagerUser, PollWorkerUser, SystemAdministratorUser};
+use types_rs::auth::{
+    ElectionManagerUser, PollWorkerUser, RaveAdministratorUser, SystemAdministratorUser,
+};
 
+use crate::certs::{
+    VX_CUSTOM_CERT_FIELD_CARD_TYPE, VX_CUSTOM_CERT_FIELD_ELECTION_HASH,
+    VX_CUSTOM_CERT_FIELD_JURISDICTION,
+};
+
+#[derive(Debug)]
 pub enum CardDetails {
-    SystemAdministrator(SystemAdministratorCardDetails),
-    ElectionManager(ElectionManagerCardDetails),
-    PollWorker(PollWorkerCardDetails),
+    SystemAdministratorCard(SystemAdministratorCardDetails),
+    ElectionManagerCard(ElectionManagerCardDetails),
+    PollWorkerCard(PollWorkerCardDetails),
+    RaveAdministratorCard(RaveAdministratorCardDetails),
 }
 
-impl From<X509> for CardDetails {
-    fn from(value: X509) -> Self {}
+fn extract_field_value(value: &X509, field_name: &str) -> Result<Option<String>, ParseError> {
+    let field = value
+        .subject_name()
+        .entries()
+        .find(|entry| entry.object().to_string() == field_name);
+    Ok(Some(match field {
+        Some(field) => field.data().as_utf8()?.to_string(),
+        None => return Ok(None),
+    }))
 }
 
+impl TryFrom<X509> for CardDetails {
+    type Error = ParseError;
+
+    fn try_from(value: X509) -> Result<Self, Self::Error> {
+        let card_type = extract_field_value(&value, VX_CUSTOM_CERT_FIELD_CARD_TYPE)?
+            .ok_or(ParseError::MissingCardTypeField)?;
+
+        let jurisdiction = extract_field_value(&value, VX_CUSTOM_CERT_FIELD_JURISDICTION)?
+            .ok_or(ParseError::MissingJurisdictionField)?;
+
+        match card_type.as_str() {
+            "system-administrator" => {
+                let user = SystemAdministratorUser::new(jurisdiction);
+                let num_incorrect_pin_attempts = None;
+                Ok(Self::SystemAdministratorCard(
+                    SystemAdministratorCardDetails {
+                        user,
+                        num_incorrect_pin_attempts,
+                    },
+                ))
+            }
+            "election-manager" => {
+                let election_hash =
+                    extract_field_value(&value, VX_CUSTOM_CERT_FIELD_ELECTION_HASH)?
+                        .ok_or(ParseError::MissingElectionHashField)?;
+                let user = ElectionManagerUser::new(jurisdiction, election_hash);
+                let num_incorrect_pin_attempts = None;
+                Ok(Self::ElectionManagerCard(ElectionManagerCardDetails {
+                    user,
+                    num_incorrect_pin_attempts,
+                }))
+            }
+            "poll-worker" => {
+                let election_hash =
+                    extract_field_value(&value, VX_CUSTOM_CERT_FIELD_ELECTION_HASH)?
+                        .ok_or(ParseError::MissingElectionHashField)?;
+                let user = PollWorkerUser::new(jurisdiction, election_hash);
+                let num_incorrect_pin_attempts = None;
+                Ok(Self::PollWorkerCard(PollWorkerCardDetails {
+                    user,
+                    num_incorrect_pin_attempts,
+                    has_pin: false,
+                }))
+            }
+            "poll-worker-with-pin" => {
+                let election_hash =
+                    extract_field_value(&value, VX_CUSTOM_CERT_FIELD_ELECTION_HASH)?
+                        .ok_or(ParseError::MissingElectionHashField)?;
+                let user = PollWorkerUser::new(jurisdiction, election_hash);
+                Ok(Self::PollWorkerCard(PollWorkerCardDetails {
+                    user,
+                    num_incorrect_pin_attempts: None,
+                    has_pin: true,
+                }))
+            }
+            "rave-admin" => {
+                let user = RaveAdministratorUser::new(jurisdiction);
+                Ok(Self::RaveAdministratorCard(RaveAdministratorCardDetails {
+                    user,
+                }))
+            }
+            _ => Err(ParseError::UnknownCardType(card_type)),
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ParseError {
+    #[error("missing card type field")]
+    MissingCardTypeField,
+    #[error("missing jurisdiction field")]
+    MissingJurisdictionField,
+    #[error("missing election hash field")]
+    MissingElectionHashField,
+    #[error("openssl error: {0}")]
+    OpenSSL(#[from] openssl::error::ErrorStack),
+    #[error("unknown card type: {0}")]
+    UnknownCardType(String),
+}
+
+#[derive(Debug)]
 pub struct SystemAdministratorCardDetails {
-    user: SystemAdministratorUser,
-    num_incorrect_pin_attempts: Option<u8>,
+    pub user: SystemAdministratorUser,
+    pub num_incorrect_pin_attempts: Option<u8>,
 }
 
+#[derive(Debug)]
 pub struct ElectionManagerCardDetails {
-    user: ElectionManagerUser,
-    num_incorrect_pin_attempts: Option<u8>,
+    pub user: ElectionManagerUser,
+    pub num_incorrect_pin_attempts: Option<u8>,
 }
 
+#[derive(Debug)]
 pub struct PollWorkerCardDetails {
-    user: PollWorkerUser,
-    num_incorrect_pin_attempts: Option<u8>,
+    pub user: PollWorkerUser,
+    pub num_incorrect_pin_attempts: Option<u8>,
 
     /// Unlike system administrator and election manager cards, which always
     /// have PINs, poll worker cards by default don't have PINs but can if the
     /// relevant system setting is enabled.
-    has_pin: bool,
+    pub has_pin: bool,
+}
+
+#[derive(Debug)]
+pub struct RaveAdministratorCardDetails {
+    pub user: RaveAdministratorUser,
 }

@@ -1,18 +1,28 @@
-use auth_rs::{CardReader, Event};
+use auth_rs::{CardReader, Event, Watcher};
 
 fn main() {
-    let mut card_reader = CardReader::new().unwrap();
-    let watcher = card_reader.watch();
+    let ctx = pcsc::Context::establish(pcsc::Scope::User).unwrap();
+    let mut watcher = Watcher::watch(ctx);
+    let mut card_reader: Option<CardReader> = None;
 
-    for event in watcher.receiver() {
-        println!("{:?}", event);
+    println!("Insert a card to read its status…");
 
-        match event.unwrap() {
-            Event::CardInserted { reader } => {
-                watcher.stop();
-                println!("card details: {:?}", card_reader.read_card_details(reader));
+    for event in watcher.events() {
+        match event {
+            Ok(Event::CardInserted { reader }) => {
+                card_reader = Some(reader);
+                break;
+            }
+            Err(error) => {
+                eprintln!("Error: {:?}", error);
+                break;
             }
             _ => {}
         }
+    }
+
+    if let Some(card_reader) = card_reader {
+        watcher.stop();
+        println!("{:#?}", card_reader.read_card_details());
     }
 }
