@@ -293,12 +293,6 @@ export class Store {
         common_access_card_id as commonAccessCardId,
         given_name as givenName,
         family_name as familyName,
-        address_line_1 as addressLine1,
-        address_line_2 as addressLine2,
-        city as city,
-        state as state,
-        postal_code as postalCode,
-        state_id as stateId,
         created_at as createdAt
       from registration_requests
       where common_access_card_id = ?
@@ -380,12 +374,6 @@ export class Store {
     commonAccessCardId,
     givenName,
     familyName,
-    addressLine1,
-    addressLine2,
-    city,
-    state,
-    postalCode,
-    stateId,
   }: {
     id: ClientId;
     serverId?: ServerId;
@@ -395,12 +383,6 @@ export class Store {
     commonAccessCardId: Id;
     givenName: string;
     familyName: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    stateId: string;
   }): ClientId {
     assert(
       (serverId === undefined) === (clientId === undefined),
@@ -421,15 +403,9 @@ export class Store {
         jurisdiction_id,
         common_access_card_id,
         given_name,
-        family_name,
-        address_line_1,
-        address_line_2,
-        city,
-        state,
-        postal_code,
-        state_id
+        family_name
       ) values (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?
       )
       `,
       id,
@@ -439,13 +415,7 @@ export class Store {
       jurisdictionId,
       commonAccessCardId,
       givenName,
-      familyName,
-      addressLine1,
-      addressLine2 ?? null,
-      city,
-      state,
-      postalCode,
-      stateId
+      familyName
     );
 
     return id;
@@ -555,12 +525,6 @@ export class Store {
         common_access_card_id as commonAccessCardId,
         given_name as givenName,
         family_name as familyName,
-        address_line_1 as addressLine1,
-        address_line_2 as addressLine2,
-        city as city,
-        state as state,
-        postal_code as postalCode,
-        state_id as stateId,
         created_at as createdAt
       from registration_requests
       where ${serverId ? 'server_id' : 'client_id'} = ?
@@ -1015,13 +979,7 @@ export class Store {
         jurisdiction_id as jurisdictionId,
         common_access_card_id as commonAccessCardId,
         given_name as givenName,
-        family_name as familyName,
-        address_line_1 as addressLine1,
-        address_line_2 as addressLine2,
-        city,
-        state,
-        postal_code as postalCode,
-        state_id as stateId
+        family_name as familyName
       from registration_requests
       where server_id is null
       `
