@@ -108,12 +108,6 @@ pub(crate) struct RegistrationRequest {
     pub(crate) common_access_card_id: String,
     pub(crate) given_name: String,
     pub(crate) family_name: String,
-    pub(crate) address_line_1: String,
-    pub(crate) address_line_2: Option<String>,
-    pub(crate) city: String,
-    pub(crate) state: String,
-    pub(crate) postal_code: String,
-    pub(crate) state_id: String,
     pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
@@ -126,12 +120,6 @@ impl From<client::input::RegistrationRequest> for RegistrationRequest {
             common_access_card_id,
             given_name,
             family_name,
-            address_line_1,
-            address_line_2,
-            city,
-            state,
-            postal_code,
-            state_id,
         } = request;
 
         Self {
@@ -142,12 +130,6 @@ impl From<client::input::RegistrationRequest> for RegistrationRequest {
             common_access_card_id,
             given_name,
             family_name,
-            address_line_1,
-            address_line_2,
-            city,
-            state,
-            postal_code,
-            state_id,
             created_at: sqlx::types::time::OffsetDateTime::now_utc(),
         }
     }
@@ -163,12 +145,6 @@ impl From<RegistrationRequest> for client::output::RegistrationRequest {
             common_access_card_id,
             given_name,
             family_name,
-            address_line_1,
-            address_line_2,
-            city,
-            state,
-            postal_code,
-            state_id,
             created_at,
         } = request;
 
@@ -180,12 +156,6 @@ impl From<RegistrationRequest> for client::output::RegistrationRequest {
             common_access_card_id,
             given_name,
             family_name,
-            address_line_1,
-            address_line_2,
-            city,
-            state,
-            postal_code,
-            state_id,
             created_at,
         }
     }
@@ -495,12 +465,6 @@ pub(crate) async fn get_registration_requests(
                     common_access_card_id,
                     given_name,
                     family_name,
-                    address_line_1,
-                    address_line_2,
-                    city,
-                    state,
-                    postal_code,
-                    state_id,
                     created_at
                 FROM registration_requests
                 WHERE created_at > $1
@@ -522,12 +486,6 @@ pub(crate) async fn get_registration_requests(
                     common_access_card_id,
                     given_name,
                     family_name,
-                    address_line_1,
-                    address_line_2,
-                    city,
-                    state,
-                    postal_code,
-                    state_id,
                     created_at
                 FROM registration_requests
                 ORDER BY created_at DESC
@@ -622,15 +580,9 @@ pub(crate) async fn add_registration_request_from_client(
             jurisdiction_id,
             common_access_card_id,
             given_name,
-            family_name,
-            address_line_1,
-            address_line_2,
-            city,
-            state,
-            postal_code,
-            state_id
+            family_name
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
         registration_request_id.as_uuid(),
         request.client_id.as_uuid(),
@@ -639,12 +591,6 @@ pub(crate) async fn add_registration_request_from_client(
         request.common_access_card_id,
         request.given_name,
         request.family_name,
-        request.address_line_1,
-        request.address_line_2,
-        request.city,
-        request.state,
-        request.postal_code,
-        request.state_id
     )
     .execute(executor)
     .await?;

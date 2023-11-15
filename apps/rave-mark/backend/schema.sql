@@ -59,14 +59,6 @@ create table registration_requests (
   common_access_card_id uuid not null unique,
   given_name text not null,
   family_name text not null,
-  address_line_1 text not null,
-  address_line_2 text,
-  city text not null,
-  state text not null,
-  postal_code text not null,
-  -- the state-issued id number of the person making the request,
-  -- e.g. a driver's license number
-  state_id text not null,
   created_at timestamptz not null default current_timestamp,
 
   unique (client_id, machine_id)
