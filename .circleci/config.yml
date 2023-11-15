@@ -159,6 +159,29 @@ jobs:
       - store_test_results:
           path: apps/rave-scan/frontend/reports/
 
+  # @votingworks/rave-track-frontend
+  test-apps-rave-track-frontend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/rave-track/frontend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/rave-track/frontend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/rave-track/frontend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/rave-track/frontend/reports/
+
   # @votingworks/auth
   test-libs-auth:
     executor: nodejs
@@ -780,6 +803,7 @@ workflows:
       - test-apps-rave-mark-frontend
       - test-apps-rave-scan-backend
       - test-apps-rave-scan-frontend
+      - test-apps-rave-track-frontend
       - test-libs-auth
       - test-libs-backend
       - test-libs-ballot-encoder
