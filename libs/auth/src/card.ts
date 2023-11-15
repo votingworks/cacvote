@@ -100,6 +100,13 @@ interface CheckPinResponseError {
 }
 
 /**
+ * The base API any card should support
+ */
+export interface BaseCard {
+  disconnect(): Promise<void>;
+}
+
+/**
  * The response to a PIN check
  */
 export type CheckPinResponse =
