@@ -133,7 +133,7 @@ export async function main(
   const commands: CommandInfo[] = [
     npmBinCommand({
       name: `${frontend}:server`,
-      command: 'vite --clearScreen false',
+      command: 'vite --clearScreen false --host',
       prefixColor: 'yellow',
       cwd: frontendRoot,
     }),
@@ -168,8 +168,7 @@ export async function main(
             // Run the service with hot reloading.
             npmBinCommand({
               name: `${name}:run`,
-              command:
-                `while [ ! -f build/index.js ]; do echo "Waiting for build…"; sleep 1; done; nodemon --watch build --delay 1 --exitcrash --exec NODE_ENV=development VX_MACHINE_TYPE=${frontend} node build/index.js`,
+              command: `while [ ! -f build/index.js ]; do echo "Waiting for build…"; sleep 1; done; nodemon --watch build --delay 1 --exitcrash --exec NODE_ENV=development VX_MACHINE_TYPE=${frontend} node build/index.js`,
               prefixColor: 'cyan',
               cwd: serviceRoot,
               env: extraEnv,
