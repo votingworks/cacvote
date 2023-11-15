@@ -120,36 +120,6 @@ export interface RegistrationRequest {
   familyName: string;
 
   /**
-   * Voter's address line 1.
-   */
-  addressLine1: string;
-
-  /**
-   * Voter's address line 2.
-   */
-  addressLine2?: string;
-
-  /**
-   * Voter's city.
-   */
-  city: string;
-
-  /**
-   * Voter's state.
-   */
-  state: string;
-
-  /**
-   * Voter's postal code.
-   */
-  postalCode: string;
-
-  /**
-   * State-issued ID number for the voter, e.g. driver's license number.
-   */
-  stateId: string;
-
-  /**
    * Date and time when the voter registered for the election.
    */
   createdAt: DateTime;
@@ -164,12 +134,6 @@ export interface RegistrationRequestRow {
   commonAccessCardId: string;
   givenName: string;
   familyName: string;
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string;
-  postalCode: string;
-  stateId: string;
   createdAt: string;
 }
 
@@ -501,12 +465,6 @@ export function deserializeRegistrationRequest(
     commonAccessCardId: row.commonAccessCardId.toString(),
     givenName: row.givenName,
     familyName: row.familyName,
-    addressLine1: row.addressLine1,
-    addressLine2: row.addressLine2 ?? undefined,
-    city: row.city,
-    state: row.state,
-    postalCode: row.postalCode,
-    stateId: row.stateId,
     createdAt: DateTime.fromSQL(row.createdAt),
   };
 }

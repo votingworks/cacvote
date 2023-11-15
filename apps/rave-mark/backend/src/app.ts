@@ -53,36 +53,6 @@ export interface CreateTestVoterInput {
      * Voter's family name, i.e. last name.
      */
     familyName?: string;
-
-    /**
-     * Voter's address line 1.
-     */
-    addressLine1?: string;
-
-    /**
-     * Voter's address line 2.
-     */
-    addressLine2?: string;
-
-    /**
-     * Voter's city.
-     */
-    city?: string;
-
-    /**
-     * Voter's state.
-     */
-    state?: string;
-
-    /**
-     * Voter's postal code.
-     */
-    postalCode?: string;
-
-    /**
-     * Voter's state ID.
-     */
-    stateId?: string;
   };
 
   registration?: {
@@ -187,12 +157,6 @@ function buildApi({
       jurisdictionId: ServerId;
       givenName: string;
       familyName: string;
-      addressLine1: string;
-      addressLine2?: string;
-      city: string;
-      state: string;
-      postalCode: string;
-      stateId: string;
       pin: string;
     }): Promise<
       Result<
@@ -217,12 +181,6 @@ function buildApi({
         commonAccessCardId: authStatus.card.commonAccessCardId,
         givenName: input.givenName,
         familyName: input.familyName,
-        addressLine1: input.addressLine1,
-        addressLine2: input.addressLine2,
-        city: input.city,
-        state: input.state,
-        postalCode: input.postalCode,
-        stateId: input.stateId,
       });
       return ok({ id });
     },
@@ -388,13 +346,6 @@ function buildApi({
           commonAccessCardId,
           givenName: input.registrationRequest?.givenName ?? 'Rebecca',
           familyName: input.registrationRequest?.familyName ?? 'Welton',
-          addressLine1:
-            input.registrationRequest?.addressLine1 ?? '123 Main St',
-          addressLine2: input.registrationRequest?.addressLine2,
-          city: input.registrationRequest?.city ?? 'Anytown',
-          state: input.registrationRequest?.state ?? 'CA',
-          postalCode: input.registrationRequest?.postalCode ?? '95959',
-          stateId: input.registrationRequest?.stateId ?? 'B2201793',
         });
 
         if (input.registration?.electionData) {
