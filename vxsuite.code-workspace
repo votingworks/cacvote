@@ -25,6 +25,10 @@
       "name": "apps/rave-scan/frontend"
     },
     {
+      "path": "apps/rave-track/frontend",
+      "name": "apps/rave-track/frontend"
+    },
+    {
       "path": "docs",
       "name": "docs"
     },
