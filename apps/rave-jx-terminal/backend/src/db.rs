@@ -57,12 +57,6 @@ pub(crate) struct RegistrationRequest {
     pub(crate) common_access_card_id: String,
     pub(crate) given_name: String,
     pub(crate) family_name: String,
-    pub(crate) address_line_1: String,
-    pub(crate) address_line_2: Option<String>,
-    pub(crate) city: String,
-    pub(crate) state: String,
-    pub(crate) postal_code: String,
-    pub(crate) state_id: String,
     #[serde(with = "time::serde::iso8601")]
     pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
@@ -412,12 +406,6 @@ pub(crate) async fn get_registration_requests(
             common_access_card_id,
             given_name,
             family_name,
-            address_line_1,
-            address_line_2,
-            city,
-            state,
-            postal_code,
-            state_id,
             created_at
         FROM registration_requests
         WHERE jurisdiction_id = $1
@@ -983,15 +971,9 @@ pub(crate) async fn add_or_update_registration_request_from_rave_server(
             common_access_card_id,
             given_name,
             family_name,
-            address_line_1,
-            address_line_2,
-            city,
-            state,
-            postal_code,
-            state_id,
             created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (client_id, machine_id)
         DO UPDATE SET
             server_id = $2,
@@ -999,13 +981,7 @@ pub(crate) async fn add_or_update_registration_request_from_rave_server(
             common_access_card_id = $6,
             given_name = $7,
             family_name = $8,
-            address_line_1 = $9,
-            address_line_2 = $10,
-            city = $11,
-            state = $12,
-            postal_code = $13,
-            state_id = $14,
-            created_at = $15
+            created_at = $9
         "#,
         ClientId::new().as_uuid(),
         registration_request.server_id.as_uuid(),
@@ -1015,12 +991,6 @@ pub(crate) async fn add_or_update_registration_request_from_rave_server(
         registration_request.common_access_card_id,
         registration_request.given_name,
         registration_request.family_name,
-        registration_request.address_line_1,
-        registration_request.address_line_2,
-        registration_request.city,
-        registration_request.state,
-        registration_request.postal_code,
-        registration_request.state_id,
         registration_request.created_at
     )
     .execute(&mut *executor)
@@ -1052,13 +1022,7 @@ pub(crate) async fn get_registration_requests_to_sync_to_rave_server(
             jurisdiction_id as "jurisdiction_id: ServerId",
             common_access_card_id,
             given_name,
-            family_name,
-            address_line_1,
-            address_line_2,
-            city,
-            state,
-            postal_code,
-            state_id
+            family_name
         FROM registration_requests
         WHERE server_id IS NULL
         ORDER BY created_at ASC
@@ -1076,12 +1040,6 @@ pub(crate) async fn get_registration_requests_to_sync_to_rave_server(
             common_access_card_id: r.common_access_card_id,
             given_name: r.given_name,
             family_name: r.family_name,
-            address_line_1: r.address_line_1,
-            address_line_2: r.address_line_2,
-            city: r.city,
-            state: r.state,
-            postal_code: r.postal_code,
-            state_id: r.state_id,
         })
         .collect())
 }
@@ -1312,12 +1270,6 @@ mod test {
             common_access_card_id: "0000000000".to_owned(),
             given_name: "John".to_owned(),
             family_name: "Doe".to_owned(),
-            address_line_1: "123 Main St".to_owned(),
-            address_line_2: None,
-            city: "Anytown".to_owned(),
-            state: "CA".to_owned(),
-            postal_code: "95959".to_owned(),
-            state_id: "CA-12345678".to_owned(),
             created_at: OffsetDateTime::now_utc(),
         }
     }

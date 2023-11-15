@@ -44,12 +44,6 @@ export interface RegistrationRequestInput {
   commonAccessCardId: string;
   givenName: string;
   familyName: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  stateId: string;
 }
 
 export type RegistrationRequestOutput = RegistrationRequestInput & {
@@ -66,12 +60,6 @@ export const RegistrationRequestOutputSchema: z.ZodSchema<RegistrationRequestOut
     commonAccessCardId: z.string(),
     givenName: z.string(),
     familyName: z.string(),
-    addressLine1: z.string(),
-    addressLine2: z.string().optional(),
-    city: z.string(),
-    state: z.string(),
-    postalCode: z.string(),
-    stateId: z.string(),
     createdAt: DateTimeSchema,
   });
 
