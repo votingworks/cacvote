@@ -25,13 +25,6 @@ pub struct RegistrationRequest {
     pub jurisdiction_id: ServerId,
     pub given_name: String,
     pub family_name: String,
-    pub address_line_1: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub address_line_2: Option<String>,
-    pub city: String,
-    pub state: String,
-    pub postal_code: String,
-    pub state_id: String,
     #[serde(with = "time::serde::iso8601")]
     pub created_at: time::OffsetDateTime,
 }

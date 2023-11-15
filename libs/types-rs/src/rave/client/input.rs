@@ -22,13 +22,6 @@ pub struct RegistrationRequest {
     pub common_access_card_id: String,
     pub given_name: String,
     pub family_name: String,
-    pub address_line_1: String,
-    #[serde(default)]
-    pub address_line_2: Option<String>,
-    pub city: String,
-    pub state: String,
-    pub postal_code: String,
-    pub state_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
