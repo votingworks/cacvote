@@ -11,6 +11,7 @@ import { safeParseElection } from '@votingworks/types';
 
 import { DEV_JURISDICTION } from '../src/jurisdictions';
 import { mockCard } from '../src/mock_file_card';
+import * as cac from '../src/cac';
 
 const CARD_TYPES = [
   'system-administrator',
@@ -20,11 +21,12 @@ const CARD_TYPES = [
   'unprogrammed',
   'no-card',
 ] as const;
-type CardType = (typeof CARD_TYPES)[number];
+type CardType = (typeof CARD_TYPES)[number] | 'cac';
 
 interface MockCardInput {
   cardType: CardType;
   electionHash?: string;
+  certPair?: cac.CertificatePair;
 }
 
 async function parseCommandLineArgs(): Promise<MockCardInput> {
@@ -33,11 +35,19 @@ async function parseCommandLineArgs(): Promise<MockCardInput> {
       'card-type': {
         description: 'The type of card to mock',
         type: 'string',
-        choices: CARD_TYPES,
+        choices: [...CARD_TYPES, 'cac'],
       },
       'election-definition': {
         description:
           'The election definition to use for an election manager or poll worker card',
+        type: 'string',
+      },
+      key: {
+        description: 'The key to use for a CAC card',
+        type: 'string',
+      },
+      cert: {
+        description: 'The cert to use for a CAC card',
         type: 'string',
       },
     })
@@ -60,6 +70,12 @@ async function parseCommandLineArgs(): Promise<MockCardInput> {
         '--election-definition ../fixtures/data/electionGeneral/election.json',
       ''
     )
+    .example(
+      '$ ./scripts/mock-card --card-type cac \\\n' +
+        '--key ../fixtures/data/cac/cac-key.pem \\\n' +
+        '--cert ../fixtures/data/cac/cac-cert.pem',
+      ''
+    )
     .example('$ ./scripts/mock-card --card-type unprogrammed', '')
     .example('$ ./scripts/mock-card --card-type no-card', '')
     .strict();
@@ -73,6 +89,8 @@ async function parseCommandLineArgs(): Promise<MockCardInput> {
     cardType?: CardType;
     electionDefinition?: string;
     help?: boolean;
+    key?: string;
+    cert?: string;
   };
 
   if (args.help || process.argv.length === 2) {
@@ -100,13 +118,34 @@ async function parseCommandLineArgs(): Promise<MockCardInput> {
     electionHash = sha256(electionData);
   }
 
+  if (args.cardType === 'cac') {
+    if (!args.key) {
+      throw new Error(`Must specify key for CAC card\n\n${helpMessage}`);
+    }
+    if (!args.cert) {
+      throw new Error(`Must specify cert for CAC card\n\n${helpMessage}`);
+    }
+
+    const keyBuffer = fs.readFileSync(args.key);
+    const certBuffer = fs.readFileSync(args.cert);
+
+    return {
+      cardType: 'cac',
+      certPair: { key: keyBuffer, certificate: certBuffer },
+    };
+  }
+
   return {
     cardType: args.cardType,
     electionHash,
   };
 }
 
-function mockCardWrapper({ cardType, electionHash }: MockCardInput) {
+async function mockCardWrapper({
+  cardType,
+  electionHash,
+  certPair,
+}: MockCardInput) {
   switch (cardType) {
     case 'system-administrator': {
       mockCard({
@@ -175,12 +214,35 @@ function mockCardWrapper({ cardType, electionHash }: MockCardInput) {
       });
       break;
     }
+    case 'cac': {
+      assert(certPair !== undefined);
+      const cardDetails = await cac.parseCardDetailsFromCert(
+        certPair.certificate
+      );
+
+      cac.mockCard({
+        cardStatus: {
+          status: 'ready',
+          cardDetails,
+        },
+        certificateMap: new Map([[cac.CARD_DOD_CERT.OBJECT_ID, certPair]]),
+        pin: '00000000',
+      });
+      break;
+    }
     case 'unprogrammed': {
       mockCard({
         cardStatus: {
           status: 'ready',
           cardDetails: undefined,
         },
+      });
+      cac.mockCard({
+        cardStatus: {
+          status: 'ready',
+          cardDetails: undefined,
+        },
+        certificateMap: new Map(),
       });
       break;
     }
@@ -189,6 +251,12 @@ function mockCardWrapper({ cardType, electionHash }: MockCardInput) {
         cardStatus: {
           status: 'no_card',
         },
+      });
+      cac.mockCard({
+        cardStatus: {
+          status: 'no_card',
+        },
+        certificateMap: new Map(),
       });
       break;
     }
@@ -205,7 +273,7 @@ function mockCardWrapper({ cardType, electionHash }: MockCardInput) {
 export async function main(): Promise<void> {
   try {
     const mockCardInput = await parseCommandLineArgs();
-    mockCardWrapper(mockCardInput);
+    await mockCardWrapper(mockCardInput);
   } catch (error) {
     console.error(`❌ ${extractErrorMessage(error)}`);
     process.exit(1);

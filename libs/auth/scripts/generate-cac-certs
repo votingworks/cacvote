@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Generate a random 10-digit number
+cac_id=$(shuf -i 1000000000-9999999999 -n 1)
+private_key_path="${cac_id}-private_key.pem"
+csr_path="${cac_id}-certificate.csr"
+certificate_path="${cac_id}-certificate.pem"
+
+# Generate a private key
+openssl genpkey -algorithm RSA -out "${private_key_path}"
+
+# Generate a certificate signing request (CSR)
+openssl req -new -key "${private_key_path}" -out "${csr_path}" -subj "/C=US/O=U.S. Government/OU=DoD/OU=PKI/OU=USA/CN=AIKINS.ROBERT.EDDIE.$cac_id"
+
+# Generate a self-signed certificate
+openssl x509 -req -in "${csr_path}" -signkey "${private_key_path}" -out "${certificate_path}"
+
+# Print the subject of the generated certificate
+openssl x509 -in "${certificate_path}" -noout -subject
