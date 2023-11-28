@@ -21,8 +21,7 @@ export interface StartOptions {
 }
 
 function getDefaultAuth(store: Store): Auth {
-  // const card: cac.CommonAccessCardCompatibleCard = new cac.CommonAccessCard();
-  const card: cac.CommonAccessCardCompatibleCard = new cac.MockFileCard();
+  const card: cac.CommonAccessCardCompatibleCard = new cac.CommonAccessCard();
 
   return {
     async checkPin(pin) {
