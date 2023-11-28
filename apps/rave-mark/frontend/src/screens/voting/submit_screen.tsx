@@ -50,7 +50,7 @@ export function SubmitScreen({
   }
 
   return (
-    <Screen white>
+    <Screen>
       <Main centerChild>
         <Prose
           textCenter
