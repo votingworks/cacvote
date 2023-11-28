@@ -245,7 +245,7 @@ function buildApi({
       const ballotId = ClientId();
       const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
       const castVoteRecord = buildCastVoteRecord({
-        election: electionDefinition.election,
+        electionDefinition,
         electionId: electionDefinition.electionHash,
         scannerId: VX_MACHINE_ID,
         // TODO: what should the batch ID be?
