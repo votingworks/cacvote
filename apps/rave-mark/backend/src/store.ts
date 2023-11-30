@@ -280,6 +280,15 @@ export class Store {
   }
 
   /**
+   * Delete recently cast ballots (just for testing).
+   */
+  deleteRecentlyCastBallots(): void {
+    this.client.run(
+      'delete from printed_ballots where unixepoch(current_timestamp) - unixepoch(created_at) > 300'
+    );
+  }
+
+  /**
    * Gets all the registrations for a given voter by CAC ID.
    */
   getRegistrationRequests(commonAccessCardId: Id): RegistrationRequest[] {
