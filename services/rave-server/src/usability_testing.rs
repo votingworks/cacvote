@@ -91,6 +91,15 @@ pub(crate) async fn automatically_link_pending_registration_requests_with_latest
 async fn automatically_link_pending_registration_requests_with_latest_election(
     executor: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<usize> {
+    sqlx::query!(
+        r#"
+        delete from printed_ballots where
+        now() - created_at > '5 minutes'
+        "#,
+    )
+    .execute(&mut *executor)
+    .await?;
+
     let pending_registrations = sqlx::query!(
         r#"
         SELECT
