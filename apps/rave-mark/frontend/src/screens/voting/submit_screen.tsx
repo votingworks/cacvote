@@ -8,7 +8,7 @@ import {
   Screen,
   fontSizeTheme,
 } from '@votingworks/ui';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { castBallot } from '../../api';
 import { PinPadModal } from '../../components/pin_pad_modal';
 import { COMMON_ACCESS_CARD_PIN_LENGTH } from '../../globals';
@@ -22,32 +22,20 @@ export function SubmitScreen({
   votes,
   onSubmitted,
 }: SubmitScreenProps): JSX.Element {
-  const [pinError, setPinError] = useState<string>();
   const [isShowingPinModal, setIsShowingPinModal] = useState(false);
   const castBallotMutation = castBallot.useMutation();
-  const castBallotMutationMutateAsync = castBallotMutation.mutateAsync;
+  const castBallotMutationMutate = castBallotMutation.mutate;
   const isCheckingPin = castBallotMutation.isLoading;
 
-  async function submitBallot(pin: string) {
-    setPinError(undefined);
-    try {
-      await castBallotMutationMutateAsync(
-        { votes, pin },
-        {
-          onError(err) {
-            setPinError(err instanceof Error ? err.message : `${err}`);
-          },
-        }
-      );
-      onSubmitted();
-    } catch (err) {
-      setPinError(err instanceof Error ? err.message : `${err}`);
-    }
+  function submitBallot(pin: string) {
+    castBallotMutationMutate({ votes, pin });
   }
 
-  async function handleEnter(pin: string) {
-    await submitBallot(pin);
-  }
+  useEffect(() => {
+    if (castBallotMutation.data?.ok()) {
+      onSubmitted();
+    }
+  }, [castBallotMutation.data, onSubmitted]);
 
   return (
     <Screen>
@@ -73,10 +61,10 @@ export function SubmitScreen({
                 isCheckingPin ? 'Checking…' : 'Cast My Ballot'
               }
               dismissButtonLabel="Go Back"
-              onEnter={handleEnter}
+              onEnter={submitBallot}
               onDismiss={() => setIsShowingPinModal(false)}
               disabled={isCheckingPin}
-              error={pinError}
+              error={castBallotMutation.data?.err()?.message}
             />
           )}
         </Prose>
