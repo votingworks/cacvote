@@ -82,7 +82,7 @@ export function MarkScreen({
           onPress={goNext ?? noop}
           disabled={!goNext}
           icon="Next"
-          variant={hasFinishedVotingInThisContest ? 'primary' : 'secondary'}
+          variant={hasFinishedVotingInThisContest ? 'primary' : undefined}
         >
           Next
         </Button>
