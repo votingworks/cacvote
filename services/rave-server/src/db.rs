@@ -282,6 +282,26 @@ impl From<ScannedBallot> for client::output::ScannedBallot {
     }
 }
 
+pub(crate) async fn add_jurisdiction(
+    executor: &mut sqlx::PgConnection,
+    jurisdiction: client::input::Jurisdiction,
+) -> color_eyre::Result<ServerId> {
+    let jurisdiction_id = ServerId::new();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO jurisdictions (id, name)
+        VALUES ($1, $2)
+        "#,
+        jurisdiction_id.as_uuid(),
+        jurisdiction.name
+    )
+    .execute(&mut *executor)
+    .await?;
+
+    Ok(jurisdiction_id)
+}
+
 pub(crate) async fn add_admin(
     executor: &mut sqlx::PgConnection,
     admin: client::input::Admin,

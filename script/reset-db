@@ -10,13 +10,13 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 )
 (
     cd apps/rave-scan/backend
-    cargo sqlx database reset --source=db/migrations
+    cargo sqlx database reset -y --source=db/migrations
 )
 (
     cd apps/rave-jx-terminal/backend
-    cargo sqlx database reset --source=db/migrations
+    cargo sqlx database reset -y --source=db/migrations
 )
 (
     cd services/rave-server
-    cargo sqlx database reset --source=db/migrations
+    cargo sqlx database reset -y --source=db/migrations
 )

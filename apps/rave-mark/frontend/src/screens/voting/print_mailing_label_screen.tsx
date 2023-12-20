@@ -2,7 +2,7 @@ import { H1, Main, PrintingBallotImage, Prose, Screen } from '@votingworks/ui';
 
 export function PrintMailingLabelScreen(): JSX.Element {
   return (
-    <Screen white>
+    <Screen>
       <Main centerChild padded>
         <Prose textCenter id="audiofocus">
           <PrintingBallotImage />

@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
 import { cac } from '@votingworks/auth';
+import { Result } from '@votingworks/basics';
 
 export type AuthStatus =
   | { status: 'no_card' }
@@ -19,7 +20,10 @@ export interface Auth {
   /**
    * Signs a message with the current user's private key.
    */
-  generateSignature(message: Buffer, options: { pin: string }): Promise<Buffer>;
+  generateSignature(
+    message: Buffer,
+    options: { pin: string }
+  ): Promise<Result<Buffer, cac.GenerateSignatureError>>;
 
   /**
    * Gets the certificate for the current user.
