@@ -6,8 +6,8 @@ import {
   PrintOptions,
   VotesDict,
 } from '@votingworks/types';
-import { Button, H1, Main, P, Screen, printElement } from '@votingworks/ui';
-import { useEffect, useRef, useState } from 'react';
+import { printElement } from '@votingworks/ui';
+import { useEffect, useRef } from 'react';
 
 export interface PrintBallotScreenProps {
   electionDefinition: ElectionDefinition;
@@ -29,7 +29,6 @@ export function PrintBallotScreen({
   onPrintCompleted,
 }: PrintBallotScreenProps): JSX.Element {
   const printTimer = useRef<number>();
-  const [hasInsertedBallotPaper, setHasInsertedBallotPaper] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -45,27 +44,6 @@ export function PrintBallotScreen({
       ...printOptions,
       deviceName: process.env.REACT_APP_BALLOT_PRINTER,
     });
-  }
-
-  if (!hasInsertedBallotPaper) {
-    return (
-      <Screen>
-        <Main centerChild>
-          <H1>Insert Blank Ballot Sheet</H1>
-          <P>Insert a blank sheet of thermal ballot paper into the printer.</P>
-          <P>
-            After inserting the blank sheet, press the button below to print
-            your ballot.
-          </P>
-          <Button
-            variant="primary"
-            onPress={() => setHasInsertedBallotPaper(true)}
-          >
-            Sheet Inserted — Print Ballot
-          </Button>
-        </Main>
-      </Screen>
-    );
   }
 
   return (
