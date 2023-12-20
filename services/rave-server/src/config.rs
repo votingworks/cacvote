@@ -31,4 +31,8 @@ pub(crate) struct Config {
         env = "AUTOMATICALLY_LINK_PENDING_REGISTRATION_REQUESTS_WITH_LATEST_ELECTION"
     )]
     pub(crate) automatically_link_pending_registration_requests_with_latest_election: bool,
+
+    /// Automatically delete printed ballot records N minutes after they are printed.
+    #[arg(long, env = "DELETE_RECENTLY_CAST_BALLOTS_MINUTES")]
+    pub(crate) delete_recently_cast_ballots_minutes: Option<u16>,
 }

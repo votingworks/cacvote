@@ -75,3 +75,11 @@ export const MAILING_LABEL_PRINTER = unsafeParse(
   z.string(),
   process.env.MAILING_LABEL_PRINTER
 );
+
+/**
+ * Delete ballots cast in the last N minutes.
+ */
+export const DELETE_RECENTLY_CAST_BALLOTS_MINUTES = safeParseInt(
+  process.env.DELETE_RECENTLY_CAST_BALLOTS_MINUTES,
+  { min: 1 }
+).ok();

@@ -11,5 +11,6 @@ declare namespace NodeJS {
     readonly RAVE_MARK_WORKSPACE?: string;
     readonly RAVE_URL?: string;
     readonly MAILING_LABEL_PRINTER?: string;
+    readonly DELETE_RECENTLY_CAST_BALLOTS_MINUTES?: string;
   }
 }

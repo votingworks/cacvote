@@ -3,6 +3,8 @@
 //!
 //! It is not intended to be used in production.
 
+use std::time::Duration;
+
 use sqlx::PgPool;
 use tokio::time::sleep;
 use types_rs::{
@@ -53,10 +55,19 @@ pub(crate) async fn setup(config: &Config, pool: &PgPool) -> color_eyre::Result<
             .await;
     }
 
+    if let Some(delete_recently_cast_ballots_minutes) = config.delete_recently_cast_ballots_minutes {
+        let period = Duration::from_secs(delete_recently_cast_ballots_minutes as u64 * 60);
+        automatically_delete_recently_cast_ballots_periodically(
+            pool,
+            period
+        )
+        .await;
+    }
+
     Ok(())
 }
 
-const LINK_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
+const LINK_INTERVAL: Duration = Duration::from_secs(1);
 
 pub(crate) async fn automatically_link_pending_registration_requests_with_latest_election_periodically(
     pool: &PgPool,
@@ -91,15 +102,6 @@ pub(crate) async fn automatically_link_pending_registration_requests_with_latest
 async fn automatically_link_pending_registration_requests_with_latest_election(
     executor: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<usize> {
-    sqlx::query!(
-        r#"
-        delete from printed_ballots where
-        now() - created_at > '5 minutes'
-        "#,
-    )
-    .execute(&mut *executor)
-    .await?;
-
     let pending_registrations = sqlx::query!(
         r#"
         SELECT
@@ -150,4 +152,46 @@ async fn automatically_link_pending_registration_requests_with_latest_election(
     }
 
     Ok(count)
+}
+
+pub(crate) async fn automatically_delete_recently_cast_ballots_periodically(pool: &PgPool, period: Duration) {
+    let mut connection = pool
+        .acquire()
+        .await
+        .expect("failed to acquire database connection");
+
+    tokio::spawn(async move {
+        loop {
+            match automatically_delete_recently_cast_ballots(&mut connection, period).await {
+                Ok(0) => {
+                    tracing::info!("No recently cast ballots to delete");
+                }
+                Ok(n) => {
+                    tracing::info!("Deleted {n} recently cast ballot(s)");
+                }
+                Err(e) => {
+                    tracing::error!("Failed to delete recently cast ballots: {e}");
+                }
+            }
+            sleep(LINK_INTERVAL).await;
+        }
+    });
+}
+
+async fn automatically_delete_recently_cast_ballots(
+    executor: &mut sqlx::PgConnection,
+    period: Duration,
+) -> color_eyre::Result<usize> {
+    let minutes = period.as_secs_f64();
+    sqlx::query!(
+        r#"
+        DELETE FROM printed_ballots
+        WHERE now() - created_at > interval '1 second' * $1
+        "#,
+        minutes,
+    )
+    .execute(&mut *executor)
+    .await
+    .map_err(Into::into)
+    .map(|r| r.rows_affected() as usize)
 }
