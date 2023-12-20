@@ -282,9 +282,10 @@ export class Store {
   /**
    * Delete recently cast ballots (just for testing).
    */
-  deleteRecentlyCastBallots(): void {
+  deleteRecentlyCastBallots(ageInSeconds: number): void {
+    assert(ageInSeconds > 0, 'ageInSeconds must be positive');
     this.client.run(
-      'delete from printed_ballots where unixepoch(current_timestamp) - unixepoch(created_at) > 300'
+      `delete from printed_ballots where unixepoch(current_timestamp) - unixepoch(created_at) > ${ageInSeconds}`
     );
   }
 
