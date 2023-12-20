@@ -21,8 +21,7 @@ export interface StartOptions {
 }
 
 function getDefaultAuth(store: Store): Auth {
-  // const card: cac.CommonAccessCardCompatibleCard = new cac.CommonAccessCard();
-  const card: cac.CommonAccessCardCompatibleCard = new cac.MockFileCard();
+  const card: cac.CommonAccessCardCompatibleCard = new cac.CommonAccessCard();
 
   return {
     async checkPin(pin) {
@@ -131,6 +130,21 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
         disposition: 'failure',
       })
   );
+
+  function deleteRecentlyCastBallots() {
+    try {
+      workspace.store.deleteRecentlyCastBallots();
+    } catch (e) {
+      console.log(e);
+    }
+
+    console.log('===> CLEARED!');
+
+    // run again in 5 seconds
+    setTimeout(deleteRecentlyCastBallots, 1000 * 5);
+  }
+
+  void deleteRecentlyCastBallots();
 
   return app.listen(
     port,
