@@ -3,7 +3,11 @@ import { assertDefined, throwIllegalValue } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
 import { Server } from 'http';
 import { buildApp } from './app';
-import { RAVE_URL, USE_MOCK_RAVE_SERVER } from './globals';
+import {
+  DELETE_RECENTLY_CAST_BALLOTS_MINUTES,
+  RAVE_URL,
+  USE_MOCK_RAVE_SERVER,
+} from './globals';
 import {
   MockRaveServerClient,
   RaveServerClient,
@@ -131,11 +135,11 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
       })
   );
 
-  function deleteRecentlyCastBallots() {
+  function deleteRecentlyCastBallots(ageInSeconds: number) {
     try {
-      workspace.store.deleteRecentlyCastBallots();
+      workspace.store.deleteRecentlyCastBallots(ageInSeconds);
     } catch (e) {
-      console.log(e);
+      console.error('failed to delete recently cast ballots:', e);
     }
 
     console.log('===> CLEARED!');
@@ -144,7 +148,9 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
     setTimeout(deleteRecentlyCastBallots, 1000 * 5);
   }
 
-  void deleteRecentlyCastBallots();
+  if (DELETE_RECENTLY_CAST_BALLOTS_MINUTES) {
+    void deleteRecentlyCastBallots(DELETE_RECENTLY_CAST_BALLOTS_MINUTES * 60);
+  }
 
   return app.listen(
     port,
