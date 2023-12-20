@@ -20,4 +20,15 @@ pub(crate) struct Config {
     /// Log level.
     #[arg(long, env = "LOG_LEVEL", default_value = "info")]
     pub(crate) log_level: tracing::Level,
+
+    /// Optional path to an election definition to load on startup.
+    #[arg(long, env = "ELECTION_DEFINITION_PATH")]
+    pub(crate) election_definition_path: Option<String>,
+
+    /// Automatically link pending registration requests with the latest election.
+    #[arg(
+        long,
+        env = "AUTOMATICALLY_LINK_PENDING_REGISTRATION_REQUESTS_WITH_LATEST_ELECTION"
+    )]
+    pub(crate) automatically_link_pending_registration_requests_with_latest_election: bool,
 }

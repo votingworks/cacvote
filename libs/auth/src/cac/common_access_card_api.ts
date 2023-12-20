@@ -1,6 +1,8 @@
 import { Buffer } from 'buffer';
 import { Byte, Id } from '@votingworks/types';
+import { Result } from '@votingworks/basics';
 import { BaseCard, PinProtectedCard, StatefulCard } from '../card';
+import { ResponseApduError } from '../apdu';
 
 /**
  * Details about a Common Access Card.
@@ -19,8 +21,22 @@ export interface SigningCard {
   generateSignature(
     message: Buffer,
     options: { privateKeyId: Byte; pin?: string }
-  ): Promise<Buffer>;
+  ): Promise<Result<Buffer, GenerateSignatureError>>;
 }
+
+/**
+ * An error that can occur when generating a signature.
+ */
+export type GenerateSignatureError =
+  | {
+      type: 'card_error';
+      error: ResponseApduError;
+      message: string;
+    }
+  | {
+      type: 'incorrect_pin';
+      message: string;
+    };
 
 /**
  * The API for a smart card that has stored certificates.
