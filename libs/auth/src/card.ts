@@ -4,6 +4,7 @@ import {
   PollWorkerUser,
   SystemAdministratorUser,
 } from '@votingworks/types';
+import { ResponseApduError } from './apdu';
 
 interface SystemAdministratorCardDetails {
   user: SystemAdministratorUser;
@@ -92,11 +93,9 @@ interface CheckPinResponseIncorrect {
   numIncorrectPinAttempts: number;
 }
 
-/**
- * The base API any card should support
- */
-export interface BaseCard {
-  disconnect(): Promise<void>;
+interface CheckPinResponseError {
+  response: 'error';
+  error: ResponseApduError;
 }
 
 /**
@@ -104,7 +103,8 @@ export interface BaseCard {
  */
 export type CheckPinResponse =
   | CheckPinResponseCorrect
-  | CheckPinResponseIncorrect;
+  | CheckPinResponseIncorrect
+  | CheckPinResponseError;
 
 /**
  * The base API any card should support

@@ -4,6 +4,7 @@ import { Application } from 'express';
 import { Server } from 'http';
 import { AddressInfo } from 'net';
 import { dirSync } from 'tmp';
+import { ok } from '@votingworks/basics';
 import { Api, buildApp } from '../src/app';
 import { createWorkspace } from '../src/workspace';
 import { MockRaveServerClient } from '../src/rave_server_client';
@@ -47,7 +48,7 @@ export function buildMockAuth({
     },
 
     generateSignature() {
-      return Promise.resolve(Buffer.from('signature'));
+      return Promise.resolve(ok(Buffer.from('signature')));
     },
 
     getCertificate() {

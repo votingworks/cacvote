@@ -52,6 +52,7 @@ mod sync;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
+    let _ = dotenvy::from_filename(".env.local");
     dotenvy::dotenv()?;
     let config = config::Config::parse();
     log::setup(&config)?;

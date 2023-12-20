@@ -2,18 +2,10 @@ procs:
   rave-server:
     cwd: 'services/rave-server'
     shell: 'cargo watch -x run'
-    env:
-      PORT: '8000'
-      DATABASE_URL: 'postgres:rave'
 
   rave-scan-backend:
     cwd: 'apps/rave-scan/backend'
     shell: 'cargo watch -x run'
-    env:
-      PORT: '4001'
-      DATABASE_URL: 'postgres:rave_scan'
-      RAVE_URL: 'http://localhost:8000/'
-      VX_MACHINE_ID: 'rave-scan-dev'
   rave-scan-frontend:
     cwd: 'apps/rave-scan/frontend'
     shell: 'dx serve --port 4000'
@@ -24,11 +16,6 @@ procs:
   rave-jx-backend:
     cwd: 'apps/rave-jx-terminal/backend'
     shell: 'cargo watch -x run'
-    env:
-      PORT: '5001'
-      DATABASE_URL: 'postgres:rave_jx'
-      RAVE_URL: 'http://localhost:8000/'
-      VX_MACHINE_ID: 'rave-jx-dev'
   rave-jx-frontend:
     cwd: 'apps/rave-jx-terminal/frontend'
     shell: 'dx serve --port 5000'
@@ -39,6 +26,10 @@ procs:
   rave-mark:
     cwd: 'apps/rave-mark/frontend'
     shell: 'pnpm tsc --build && pnpm start'
-    env:
-      RAVE_URL: 'http://localhost:8000/'
-      VX_MACHINE_ID: 'rave-mark-dev'
+
+  kiosk-browser:
+    cwd: '../kiosk-browser'
+    shell: |
+      echo "Waiting for Rave Mark to start…"
+      while ! nc -z localhost 3000; do sleep 1; done
+      kiosk-browser http://localhost:3000/
