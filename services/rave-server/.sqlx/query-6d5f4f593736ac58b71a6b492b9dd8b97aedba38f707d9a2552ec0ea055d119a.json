@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO jurisdictions (id, name)\n        VALUES ($1, $2)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d5f4f593736ac58b71a6b492b9dd8b97aedba38f707d9a2552ec0ea055d119a"
+}

@@ -2,6 +2,8 @@
 
 ### Sets up a Debian system for running RAVE apps. ###
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 set -euo pipefail
 
 setup-prereqs() {
@@ -155,11 +157,11 @@ setup-global-devtools() {
    local PNPM_VERSION=8.1.0
    local EXISTING_PNPM_VERSION=$(pnpm --version 2>/dev/null || true)
 
-   if [ "${EXISTING_PNPM_VERSION}" != "${PNPM_VERSION}" ]; then
-     sudo npm install --global pnpm@${PNPM_VERSION}
+  if [ "${EXISTING_PNPM_VERSION}" != "${PNPM_VERSION}" ]; then
+    sudo npm install --global pnpm@${PNPM_VERSION}
   else
     echo -e "\e[1m[skip]\e[0m pnpm@${PNPM_VERSION} is already installed"
-   fi
+  fi
 }
 
 setup-postgresql() {
@@ -242,6 +244,44 @@ setup-app-db() {
   )
 }
 
+setup-kiosk-browser() {
+  if which kiosk-browser >/dev/null 2>&1; then
+    echo -e "\e[1m[skip]\e[0m kiosk-browser is already installed"
+    return
+  fi
+
+  if ! which yarn >/dev/null 2>&1; then
+    sudo npm install --global yarn
+  else
+    echo -e "\e[1m[skip]\e[0m yarn is already installed"
+  fi
+
+  if ! which fpm >/dev/null 2>&1; then
+    if ! which gem >/dev/null 2>&1; then
+      sudo apt-get install ruby --yes --quiet --no-upgrade
+    fi
+
+    sudo gem install fpm
+  else
+    echo -e "\e[1m[skip]\e[0m fpm is already installed"
+  fi
+
+  sudo apt-get install libudev-dev --yes --quiet --no-upgrade
+
+  local KIOSK_BROWSER_DIR="${DIR}/../../kiosk-browser"
+
+  if [ ! -d "${KIOSK_BROWSER_DIR}" ]; then
+    git clone https://github.com/votingworks/kiosk-browser.git "${KIOSK_BROWSER_DIR}"
+  fi
+
+  (
+    cd "${KIOSK_BROWSER_DIR}"
+    make install
+    make build
+    sudo dpkg -i dist/kiosk-browser_1.0.0_*.deb
+  )
+}
+
 setup-label-printer() {
   echo "🖨️ Label Printer Driver"
 
@@ -270,6 +310,7 @@ setup-thermal-printer() {
   sudo dpkg --add-architecture i386
   sudo apt update
   sudo apt install libc6:i386 libncurses5:i386 libstdc++6:i386 -y
+  sudo apt-get install cups-filters -y
 
   mkdir -p "${DIR}"
   (
@@ -288,6 +329,7 @@ setup-node
 setup-rust
 setup-global-devtools
 setup-postgresql
+setup-kiosk-browser
 setup-label-printer
 setup-thermal-printer
 

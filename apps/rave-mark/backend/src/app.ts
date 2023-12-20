@@ -3,6 +3,7 @@ import {
   Optional,
   Result,
   assert,
+  asyncResultBlock,
   err,
   find,
   iter,
@@ -22,7 +23,8 @@ import { Buffer } from 'buffer';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
 import { execFileSync } from 'child_process';
-import { IS_INTEGRATION_TEST } from './globals';
+import { cac } from '@votingworks/auth';
+import { IS_INTEGRATION_TEST, MAILING_LABEL_PRINTER } from './globals';
 import * as mailingLabel from './mailing_label';
 import { RaveServerClient } from './rave_server_client';
 import { Auth, AuthStatus } from './types/auth';
@@ -217,83 +219,87 @@ function buildApi({
       };
     },
 
-    async castBallot(input: { votes: VotesDict; pin: string }) {
-      const authStatus = await getAuthStatus();
+    castBallot(input: {
+      votes: VotesDict;
+      pin: string;
+    }): Promise<Result<ClientId, cac.GenerateSignatureError>> {
+      return asyncResultBlock<ClientId, cac.GenerateSignatureError>(
+        async (fail) => {
+          const authStatus = await getAuthStatus();
 
-      if (authStatus.status !== 'has_card') {
-        throw new Error('Not logged in');
-      }
+          if (authStatus.status !== 'has_card') {
+            throw new Error('Not logged in');
+          }
 
-      const { commonAccessCardId } = authStatus.card;
-      const registrations =
-        workspace.store.getRegistrations(commonAccessCardId);
-      // TODO: Handle multiple registrations
-      const registration = registrations[0];
+          const { commonAccessCardId } = authStatus.card;
+          const registrations =
+            workspace.store.getRegistrations(commonAccessCardId);
+          // TODO: Handle multiple registrations
+          const registration = registrations[0];
 
-      if (!registration) {
-        throw new Error('Not registered');
-      }
+          if (!registration) {
+            throw new Error('Not registered');
+          }
 
-      const electionDefinition = workspace.store.getRegistrationElection(
-        registration.id
+          const electionDefinition = workspace.store.getRegistrationElection(
+            registration.id
+          );
+
+          if (!electionDefinition) {
+            throw new Error('no election definition found for registration');
+          }
+
+          const ballotId = ClientId();
+          const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
+          const castVoteRecord = buildCastVoteRecord({
+            electionDefinition,
+            electionId: electionDefinition.electionHash,
+            scannerId: VX_MACHINE_ID,
+            // TODO: what should the batch ID be?
+            batchId: '',
+            castVoteRecordId,
+            interpretation: {
+              type: 'InterpretedBmdPage',
+              metadata: {
+                ballotStyleId: registration.ballotStyleId,
+                precinctId: registration.precinctId,
+                ballotType: BallotType.Absentee,
+                electionHash: electionDefinition.electionHash,
+                // TODO: support test mode
+                isTestMode: false,
+              },
+              votes: input.votes,
+            },
+            ballotMarkingMode: 'machine',
+          });
+
+          const commonAccessCardCertificate = await auth.getCertificate();
+          assert(commonAccessCardCertificate);
+          const castVoteRecordJson = JSON.stringify(castVoteRecord);
+          const signature = (
+            await auth.generateSignature(
+              Buffer.from(castVoteRecordJson, 'utf-8'),
+              { pin: input.pin }
+            )
+          ).okOrElse(fail);
+
+          const pdf = await mailingLabel.buildPdf();
+
+          execFileSync(
+            'lpr',
+            ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
+            { input: pdf }
+          );
+
+          return workspace.store.createCastBallot({
+            id: ballotId,
+            registrationId: registration.clientId,
+            commonAccessCardCertificate,
+            castVoteRecord: Buffer.from(castVoteRecordJson),
+            castVoteRecordSignature: signature,
+          });
+        }
       );
-
-      if (!electionDefinition) {
-        throw new Error('no election definition found for registration');
-      }
-
-      const ballotId = ClientId();
-      const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
-      const castVoteRecord = buildCastVoteRecord({
-        election: electionDefinition.election,
-        electionId: electionDefinition.electionHash,
-        scannerId: VX_MACHINE_ID,
-        // TODO: what should the batch ID be?
-        batchId: '',
-        castVoteRecordId,
-        interpretation: {
-          type: 'InterpretedBmdPage',
-          metadata: {
-            ballotStyleId: registration.ballotStyleId,
-            precinctId: registration.precinctId,
-            ballotType: BallotType.Absentee,
-            electionHash: electionDefinition.electionHash,
-            // TODO: support test mode
-            isTestMode: false,
-          },
-          votes: input.votes,
-        },
-        ballotMarkingMode: 'machine',
-      });
-
-      const commonAccessCardCertificate = await auth.getCertificate();
-      assert(commonAccessCardCertificate);
-      const castVoteRecordJson = JSON.stringify(castVoteRecord);
-      const signature = await auth.generateSignature(
-        Buffer.from(castVoteRecordJson, 'utf-8'),
-        { pin: input.pin }
-      );
-      assert(signature);
-
-      const pdf = await mailingLabel.buildPdf();
-
-      if (!process.env.MAILING_LABEL_PRINTER) {
-        throw new Error('MAILING_LABEL_PRINTER not set');
-      }
-
-      execFileSync(
-        'lpr',
-        ['-P', process.env.MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
-        { input: pdf }
-      );
-
-      return workspace.store.createCastBallot({
-        id: ballotId,
-        registrationId: registration.clientId,
-        commonAccessCardCertificate,
-        castVoteRecord: Buffer.from(castVoteRecordJson),
-        castVoteRecordSignature: signature,
-      });
     },
 
     async sync() {
