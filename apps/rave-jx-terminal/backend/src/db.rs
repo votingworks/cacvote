@@ -94,8 +94,15 @@ pub(crate) struct ScannedBallot {
 
 pub(crate) async fn get_app_data(
     executor: &mut sqlx::PgConnection,
-    jurisdiction_id: ServerId,
+    jurisdiction_code: String,
 ) -> color_eyre::Result<jx::LoggedInAppData> {
+    let jurisdiction_id = get_jurisdiction_id_for_code(executor, &jurisdiction_code)
+        .await?
+        .ok_or_else(|| {
+            color_eyre::eyre::eyre!(
+                "jurisdiction not found for jurisdiction code {jurisdiction_code}"
+            )
+        })?;
     let elections = get_elections(executor, None, jurisdiction_id).await?;
     let registration_requests = get_registration_requests(executor, jurisdiction_id).await?;
     let registrations = get_registrations(executor, jurisdiction_id).await?;
@@ -167,6 +174,24 @@ pub(crate) async fn get_app_data(
         printed_ballots,
         scanned_ballots,
     })
+}
+
+pub(crate) async fn get_jurisdiction_id_for_code(
+    executor: &mut sqlx::PgConnection,
+    jurisdiction_code: &str,
+) -> color_eyre::Result<Option<ServerId>> {
+    let jurisdiction = sqlx::query!(
+        r#"
+        SELECT id
+        FROM jurisdictions
+        WHERE code = $1
+        "#,
+        jurisdiction_code
+    )
+    .fetch_optional(executor)
+    .await?;
+
+    Ok(jurisdiction.map(|j| j.id.into()))
 }
 
 pub(crate) async fn get_last_synced_election_id(
@@ -245,6 +270,7 @@ pub(crate) async fn get_jurisdictions(
         r#"
         SELECT
             id as "id: _",
+            code,
             name,
             created_at
         FROM jurisdictions
@@ -670,16 +696,19 @@ pub(crate) async fn add_or_update_jurisdiction_from_rave_server(
         r#"
         INSERT INTO jurisdictions (
             id,
+            code,
             name,
             created_at
         )
-        VALUES ($1, $2, $3)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT (id)
         DO UPDATE SET
-            name = $2,
-            created_at = $3
+            code = $2,
+            name = $3,
+            created_at = $4
         "#,
         record.id.as_uuid(),
+        record.code,
         record.name,
         record.created_at
     )
@@ -1254,6 +1283,7 @@ mod test {
     fn build_rave_server_jurisdiction() -> client::output::Jurisdiction {
         client::output::Jurisdiction {
             id: ServerId::new(),
+            code: "st.test-jurisdiction".to_owned(),
             name: "Test Jurisdiction".to_owned(),
             created_at: OffsetDateTime::now_utc(),
         }
