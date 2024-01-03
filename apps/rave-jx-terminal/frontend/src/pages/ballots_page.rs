@@ -4,14 +4,14 @@ use ui_rs::DateOrDateTimeCell;
 
 use crate::components::ElectionConfigurationCell;
 
-#[derive(Debug, PartialEq, Props)]
-pub struct BallotsPageProps {
-    pub jurisdiction_id: String,
-}
+pub fn BallotsPage(cx: Scope) -> Element {
+    let app_data = use_shared_state::<jx::AppData>(cx).unwrap();
+    let app_data = &*app_data.read();
 
-pub fn BallotsPage(cx: Scope<BallotsPageProps>) -> Element {
-    let app_data = use_shared_state::<jx::LoggedInAppData>(cx).unwrap();
-    let app_data = app_data.read();
+    let jx::AppData::LoggedIn { app_data, .. } = app_data else {
+        return render!(div { "Not logged in" });
+    };
+
     let elections = app_data.elections.clone();
     let printed_ballots = app_data.printed_ballots.clone();
     let scanned_ballots = app_data.scanned_ballots.clone();

@@ -49,6 +49,7 @@ pub struct Registration {
 #[serde(rename_all = "camelCase")]
 pub struct Jurisdiction {
     pub id: ServerId,
+    pub code: String,
     pub name: String,
     #[serde(with = "time::serde::iso8601")]
     pub created_at: time::OffsetDateTime,

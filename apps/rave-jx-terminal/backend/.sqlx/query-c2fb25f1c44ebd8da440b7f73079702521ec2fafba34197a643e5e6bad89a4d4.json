@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id as \"id: _\",\n            name,\n            created_at\n        FROM jurisdictions\n        ORDER BY created_at DESC\n        ",
+  "query": "\n        SELECT\n            id as \"id: _\",\n            code,\n            name,\n            created_at\n        FROM jurisdictions\n        ORDER BY created_at DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,16 @@
       },
       {
         "ordinal": 1,
-        "name": "name",
+        "name": "code",
         "type_info": "Varchar"
       },
       {
         "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
@@ -25,8 +30,9 @@
     "nullable": [
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "e08dd35fdbe7b527adf02f31dafeb8adfb2a590a5268e629a4c58907deebf798"
+  "hash": "c2fb25f1c44ebd8da440b7f73079702521ec2fafba34197a643e5e6bad89a4d4"
 }
