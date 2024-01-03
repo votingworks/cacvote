@@ -7,6 +7,7 @@ members = [
     "apps/rave-jx-terminal/frontend",
     "apps/rave-scan/backend",
     "apps/rave-scan/frontend",
+    "libs/auth-rs",
     "libs/ballot-encoder-rs",
     "libs/central-scanner",
     "libs/logging",
@@ -17,6 +18,7 @@ members = [
 
 [workspace.dependencies]
 async-stream = "0.3.5"
+auth-rs = { path = "libs/auth-rs" }
 axum = { version = "0.6.20" }
 ballot-encoder-rs = { path = "libs/ballot-encoder-rs" }
 base64 = "0.21.4"
@@ -49,6 +51,7 @@ nanoid = "0.4.0"
 neon = { version = "0.10", default-features = false, features = ["napi-6"] }
 num_enum = "0.7.1"
 openssl = "0.10.56"
+pcsc = "2.8.0"
 pretty_assertions = "1.4.0"
 pretty_env_logger = "0.4.0"
 proptest = "1.2.0"

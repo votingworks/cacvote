@@ -2,6 +2,7 @@ use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    auth::User,
     cdf::cvr::Cvr,
     election::{BallotStyle, BallotStyleId, ElectionHash, PrecinctId},
 };
@@ -285,6 +286,33 @@ impl ScannedBallot {
     #[must_use]
     pub fn created_at(&self) -> &time::OffsetDateTime {
         &self.created_at
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub enum SmartcardStatus {
+    #[default]
+    NoReader,
+    NoCard,
+    Card,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum AppData {
+    #[serde(rename_all = "camelCase")]
+    LoggedOut { auth: SmartcardStatus },
+    #[serde(rename_all = "camelCase")]
+    LoggedIn {
+        auth: User,
+        app_data: LoggedInAppData,
+    },
+}
+
+impl Default for AppData {
+    fn default() -> Self {
+        Self::LoggedOut {
+            auth: SmartcardStatus::NoReader,
+        }
     }
 }
 

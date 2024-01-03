@@ -8,7 +8,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use async_stream::try_stream;
-use axum::extract::Query;
+use auth_rs::card_details::CardDetails;
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{Response, Sse};
 use axum::{
@@ -18,7 +18,6 @@ use axum::{
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use futures_core::Stream;
-use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
 use tokio::time::sleep;
@@ -26,16 +25,22 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
 use types_rs::election::ElectionDefinition;
+use types_rs::rave::jx::AppData;
 use types_rs::rave::{jx, ServerId};
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
 use crate::db::{self, get_app_data};
+use crate::smartcard::{self, StatusGetter};
 
-type AppState = (Config, PgPool);
+type AppState = (Config, PgPool, smartcard::StatusGetter);
 
 /// Prepares the application with all the routes. Run the application with
 /// `app::run(…)` once you have it.
-pub(crate) fn setup(pool: PgPool, config: Config) -> Router {
+pub(crate) fn setup(
+    pool: PgPool,
+    config: Config,
+    smartcard_status: smartcard::StatusGetter,
+) -> Router {
     let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
 
     let router = match &config.public_dir {
@@ -58,7 +63,7 @@ pub(crate) fn setup(pool: PgPool, config: Config) -> Router {
         .route("/api/registrations", post(create_registration))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
-        .with_state((config, pool))
+        .with_state((config, pool, smartcard_status))
 }
 
 /// Runs an application built by `app::setup(…)`.
@@ -71,29 +76,63 @@ pub(crate) async fn run(app: Router, config: &Config) -> color_eyre::Result<()> 
     Ok(())
 }
 
-#[derive(Debug, Deserialize)]
-struct Scope {
-    jurisdiction_id: ServerId,
-}
-
 async fn get_status() -> impl IntoResponse {
     StatusCode::OK
 }
 
 async fn get_status_stream(
-    State((_, pool)): State<AppState>,
-    Query(Scope { jurisdiction_id }): Query<Scope>,
+    State((_, pool, smartcard_status)): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let mut last_app_data = jx::LoggedInAppData::default();
+    let mut last_app_data: Option<AppData> = None;
+
+    fn data_to_yield<'a>(
+        last_app_data: &Option<AppData>,
+        current_app_data: &'a AppData,
+    ) -> Option<&'a AppData> {
+        match (last_app_data, current_app_data) {
+            (None, _) => Some(current_app_data),
+            (Some(last_app_data), current_app_data) if last_app_data != current_app_data => {
+                Some(current_app_data)
+            }
+            _ => None,
+        }
+    }
+
+    async fn get_current_app_data(
+        pool: &PgPool,
+        auth_status: Option<CardDetails>,
+        smartcard_status: &smartcard::StatusGetter,
+    ) -> color_eyre::Result<AppData> {
+        match auth_status {
+            Some(auth_status) => {
+                let mut connection = pool.acquire().await?;
+                let app_data =
+                    get_app_data(&mut connection, auth_status.jurisdiction_code()).await?;
+                Ok(AppData::LoggedIn {
+                    auth: auth_status.user(),
+                    app_data,
+                })
+            }
+            None => Ok(AppData::LoggedOut {
+                auth: smartcard_status.get(),
+            }),
+        }
+    }
 
     Sse::new(try_stream! {
         loop {
-            let mut connection = pool.acquire().await.unwrap();
-            let app_data = get_app_data(&mut connection, jurisdiction_id).await.unwrap();
+            let auth_status = smartcard_status.get_card_details();
+            let current_app_data = match get_current_app_data(&pool, auth_status, &smartcard_status).await {
+                Ok(current_app_data) => current_app_data,
+                Err(e) => {
+                    tracing::error!("error getting current app data: {e}");
+                    AppData::LoggedOut { auth: smartcard_status.get() }
+                }
+            };
 
-            if app_data != last_app_data {
-                yield Event::default().json_data(&app_data).unwrap();
-                last_app_data = app_data;
+            if let Some(new_app_data) = data_to_yield(&last_app_data, &current_app_data) {
+                yield Event::default().json_data(new_app_data).unwrap();
+                last_app_data = Some(current_app_data);
             }
 
             sleep(Duration::from_secs(1)).await;
@@ -102,7 +141,7 @@ async fn get_status_stream(
     .keep_alive(KeepAlive::default())
 }
 
-async fn get_jurisdictions(State((_, pool)): State<AppState>) -> impl IntoResponse {
+async fn get_jurisdictions(State((_, pool, _)): State<AppState>) -> impl IntoResponse {
     let mut connection = pool.acquire().await.map_err(into_internal_error)?;
 
     let jurisdictions = db::get_jurisdictions(&mut connection)
@@ -112,13 +151,24 @@ async fn get_jurisdictions(State((_, pool)): State<AppState>) -> impl IntoRespon
     Ok::<_, Response>(Json(json!({ "jurisdictions": jurisdictions })))
 }
 
+async fn authenticate(pool: &PgPool, status_getter: &StatusGetter) -> Option<ServerId> {
+    let mut connection = pool.acquire().await.ok()?;
+    let card_details = status_getter.get_card_details()?;
+    let jurisdiction_code = card_details.jurisdiction_code();
+    db::get_jurisdiction_id_for_code(&mut connection, &jurisdiction_code)
+        .await
+        .ok()?
+}
+
 async fn create_election(
-    State((config, pool)): State<AppState>,
-    Query(Scope { jurisdiction_id }): Query<Scope>,
+    State((config, pool, status_getter)): State<AppState>,
     election: String,
 ) -> impl IntoResponse {
     let election_definition: ElectionDefinition = election.parse().map_err(into_internal_error)?;
     let mut connection = pool.acquire().await.map_err(into_internal_error)?;
+    let Some(jurisdiction_id) = authenticate(&pool, &status_getter).await else {
+        return Ok::<_, Response>(StatusCode::UNAUTHORIZED);
+    };
 
     db::add_election(
         &mut connection,
@@ -133,7 +183,7 @@ async fn create_election(
 }
 
 async fn create_registration(
-    State((config, pool)): State<AppState>,
+    State((config, pool, _)): State<AppState>,
     registration: Json<jx::CreateRegistrationData>,
 ) -> impl IntoResponse {
     let ballot_style_id = &registration.ballot_style_id;
