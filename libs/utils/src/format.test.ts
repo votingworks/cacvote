@@ -1,6 +1,8 @@
 import { LanguageCode } from '@votingworks/types';
 import * as format from './format';
 
+import { countPhrase } from './format';
+
 test('formats counts properly', () => {
   expect(format.count(0)).toEqual('0');
   expect(format.count(1)).toEqual('1');
@@ -70,6 +72,44 @@ test('formats percentages properly', () => {
   expect(format.percent(0.591, { maximumFractionDigits: 1 })).toEqual('59.1%');
   expect(format.percent(0.591, { maximumFractionDigits: 2 })).toEqual('59.1%');
   expect(format.percent(0.5999, { maximumFractionDigits: 1 })).toEqual('60%');
+});
+
+test('countPhrase for zero count', () => {
+  const result = countPhrase({
+    value: 0,
+    one: '1 item',
+    many: '{{count}} items',
+    zero: 'no items',
+  });
+  expect(result).toEqual('no items');
+});
+
+test('countPhrase for one count', () => {
+  const result = countPhrase({
+    value: 1,
+    one: '1 item',
+    many: '{{count}} items',
+  });
+  expect(result).toEqual('1 item');
+});
+
+test('countPhrase for many count', () => {
+  const result = countPhrase({
+    value: 5,
+    one: '1 item',
+    many: '{{count}} items',
+  });
+  expect(result).toEqual('5 items');
+});
+
+test('countPhrase alternate locale', () => {
+  const result = countPhrase({
+    value: 1000,
+    one: '1 item',
+    many: '{{count}} 物品',
+    locale: LanguageCode.CHINESE_SIMPLIFIED,
+  });
+  expect(result).toEqual('1,000 物品');
 });
 
 describe('languageDisplayName()', () => {
