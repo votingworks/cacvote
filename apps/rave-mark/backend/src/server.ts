@@ -38,6 +38,7 @@ function getDefaultAuth(store: Store): Auth {
 
       switch (status.status) {
         case 'no_card':
+        case 'no_card_reader':
         case 'unknown_error':
         case 'card_error':
           return { status: 'no_card' };
