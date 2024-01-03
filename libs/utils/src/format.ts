@@ -12,15 +12,6 @@ export function count(
   return new Intl.NumberFormat(locale, { useGrouping: true }).format(value);
 }
 
-function interpolate(
-  template: string,
-  values: Record<string, string | number>
-): string {
-  return template.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_match, key) =>
-    Object.hasOwn(values, key) ? `${values[key]}` : ''
-  );
-}
-
 /**
  * Format a number as a count of something, with a phrase that depends on the
  * count.
@@ -50,9 +41,10 @@ export function countPhrase({
   } else {
     template = many;
   }
-  return interpolate(template, {
-    count: new Intl.NumberFormat(locale).format(value),
-  });
+  return template.replaceAll(
+    '{{count}}',
+    new Intl.NumberFormat(locale).format(value)
+  );
 }
 
 /**
