@@ -10,6 +10,7 @@ base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 #[serde(rename_all = "camelCase")]
 pub struct Jurisdiction {
     pub name: String,
+    pub code: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

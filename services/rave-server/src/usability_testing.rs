@@ -32,6 +32,7 @@ pub(crate) async fn setup(config: &Config, pool: &PgPool) -> color_eyre::Result<
                     &mut txn,
                     Jurisdiction {
                         name: "Test Jurisdiction".to_owned(),
+                        code: "test".to_owned(),
                     },
                 )
                 .await?
