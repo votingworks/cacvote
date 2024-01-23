@@ -290,10 +290,11 @@ pub(crate) async fn add_jurisdiction(
 
     sqlx::query!(
         r#"
-        INSERT INTO jurisdictions (id, name)
-        VALUES ($1, $2)
+        INSERT INTO jurisdictions (id, code, name)
+        VALUES ($1, $2, $3)
         "#,
         jurisdiction_id.as_uuid(),
+        jurisdiction.code,
         jurisdiction.name
     )
     .execute(&mut *executor)
