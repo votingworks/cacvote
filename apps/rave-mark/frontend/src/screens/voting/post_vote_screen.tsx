@@ -23,7 +23,7 @@ const InstructionStep = styled.div`
   align-items: center;
   justify-content: end;
   text-align: center;
-  width: 20%;
+  width: 30%;
 
   > * + * {
     margin-top: 20px;
