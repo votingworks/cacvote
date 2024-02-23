@@ -1,0 +1,20 @@
+{
+  "name": "@votingworks/cacvote-jx-terminal-backend",
+  "version": "1.0.0",
+  "description": "VotingWorks CACVote Jurisdiction Terminal",
+  "keywords": [],
+  "license": "GPL-3.0",
+  "author": "VotingWorks Eng <eng@voting.works>",
+  "scripts": {
+    "build": "script/build",
+    "lint": "script/lint",
+    "start": "cargo watch -x run",
+    "test:ci": "script/ci",
+    "test:dev": "cargo test",
+    "test": "is-ci test:ci test:dev"
+  },
+  "devDependencies": {
+    "is-ci-cli": "2.2.0"
+  },
+  "packageManager": "pnpm@8.1.0"
+}

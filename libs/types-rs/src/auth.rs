@@ -85,6 +85,6 @@ pub enum User {
     PollWorker(PollWorkerUser),
     #[serde(rename = "cardless_voter")]
     CardlessVoter(CardlessVoterUser),
-    #[serde(rename = "rave_admin")]
+    #[serde(rename = "cacvote_admin")]
     RaveAdministrator(RaveAdministratorUser),
 }

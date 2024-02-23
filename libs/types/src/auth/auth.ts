@@ -44,7 +44,7 @@ export const UserRoleSchema: z.ZodSchema<UserRole> = z.union([
 ]);
 
 export interface RaveVoterUser {
-  readonly role: 'rave_voter';
+  readonly role: 'cacvote_voter';
   readonly commonAccessCardId: Id;
   readonly givenName: string;
   readonly middleName?: string;

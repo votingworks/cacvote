@@ -3,17 +3,17 @@ resolver = "2"
 members = [
     "apps/mark-scan/accessible-controller",
     "apps/mark-scan/pat-device-input",
-    "apps/rave-jx-terminal/backend",
-    "apps/rave-jx-terminal/frontend",
-    "apps/rave-scan/backend",
-    "apps/rave-scan/frontend",
+    "apps/cacvote-jx-terminal/backend",
+    "apps/cacvote-jx-terminal/frontend",
+    "apps/cacvote-scan/backend",
+    "apps/cacvote-scan/frontend",
     "libs/auth-rs",
     "libs/ballot-encoder-rs",
     "libs/central-scanner",
     "libs/logging",
     "libs/types-rs",
     "libs/ui-rs",
-    "services/rave-server",
+    "services/cacvote-server",
 ]
 
 [workspace.dependencies]

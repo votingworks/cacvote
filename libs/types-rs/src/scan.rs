@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::rave::ClientId;
+use crate::cacvote::ClientId;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
 #[serde(rename_all = "camelCase")]

@@ -1,35 +1,35 @@
 procs:
-  rave-server:
-    cwd: 'services/rave-server'
+  cacvote-server:
+    cwd: 'services/cacvote-server'
     shell: 'cargo watch -x run'
 
-  rave-scan-backend:
-    cwd: 'apps/rave-scan/backend'
+  cacvote-scan-backend:
+    cwd: 'apps/cacvote-scan/backend'
     shell: 'cargo watch -x run'
-  rave-scan-frontend:
-    cwd: 'apps/rave-scan/frontend'
+  cacvote-scan-frontend:
+    cwd: 'apps/cacvote-scan/frontend'
     shell: 'dx serve --port 4000'
-  rave-scan-frontend-css:
-    cwd: 'apps/rave-scan/frontend'
+  cacvote-scan-frontend-css:
+    cwd: 'apps/cacvote-scan/frontend'
     shell: 'pnpm tailwindcss -i input.css -o ./public/styles.css --watch'
 
-  rave-jx-backend:
-    cwd: 'apps/rave-jx-terminal/backend'
+  cacvote-jx-backend:
+    cwd: 'apps/cacvote-jx-terminal/backend'
     shell: 'cargo watch -x run'
-  rave-jx-frontend:
-    cwd: 'apps/rave-jx-terminal/frontend'
+  cacvote-jx-frontend:
+    cwd: 'apps/cacvote-jx-terminal/frontend'
     shell: 'dx serve --port 5000'
-  rave-jx-frontend-css:
-    cwd: 'apps/rave-jx-terminal/frontend'
+  cacvote-jx-frontend-css:
+    cwd: 'apps/cacvote-jx-terminal/frontend'
     shell: 'pnpm tailwindcss -i input.css -o ./public/styles.css --watch'
 
-  rave-mark:
-    cwd: 'apps/rave-mark/frontend'
+  cacvote-mark:
+    cwd: 'apps/cacvote-mark/frontend'
     shell: 'pnpm tsc --build && pnpm start'
 
   kiosk-browser:
     cwd: '../kiosk-browser'
     shell: |
-      echo "Waiting for Rave Mark to start…"
+      echo "Waiting for CACVote Mark to start…"
       while ! nc -z localhost 3000; do sleep 1; done
       kiosk-browser http://localhost:3000/

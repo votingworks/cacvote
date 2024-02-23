@@ -56,7 +56,7 @@ export function fakeRaveVoterUser(
   props: Partial<RaveVoterUser> = {}
 ): RaveVoterUser {
   return {
-    role: 'rave_voter',
+    role: 'cacvote_voter',
     commonAccessCardId: 'test-common-access-card-id',
     givenName: 'Bob',
     familyName: 'Smith',
