@@ -7,17 +7,21 @@ require('esbuild-runner/register');
 const { join } = require('path');
 const { generateConfig, CIRCLECI_CONFIG_PATH } = require('../src/circleci');
 const { getWorkspacePackageInfo } = require('../src/pnpm');
-const { getRustPackageIds } = require('../src/cargo');
-const { writeFileSync } = require('fs');
+const { getCargoCrates } = require('../src/cargo');
+const { createWriteStream } = require('fs');
+const { pipeline } = require('stream/promises');
 
 const workspaceRoot = join(__dirname, '..', '..', '..');
 
 async function main() {
-  const rustPackageIds = await getRustPackageIds(workspaceRoot);
-  writeFileSync(
-    join(workspaceRoot, '.circleci', 'config.yml'),
-    generateConfig(getWorkspacePackageInfo(workspaceRoot), rustPackageIds)
+  const rustCrates = await getCargoCrates(workspaceRoot);
+  const input = generateConfig(
+    getWorkspacePackageInfo(workspaceRoot),
+    rustCrates
   );
+  const output = createWriteStream(CIRCLECI_CONFIG_PATH);
+
+  await pipeline(input, output);
 }
 
 main();

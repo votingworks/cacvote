@@ -871,12 +871,6 @@ jobs:
           command: |
             apt-get install libssl-dev -y
       - run:
-          name: Setup Database
-          command: |
-            cd auth-rs
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
-      - run:
           name: Build
           command: |
             cargo build -p auth-rs
@@ -894,12 +888,6 @@ jobs:
           name: Install OpenSSL
           command: |
             apt-get install libssl-dev -y
-      - run:
-          name: Setup Database
-          command: |
-            cd ballot-encoder-rs
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
       - run:
           name: Build
           command: |
@@ -921,7 +909,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
-            cd cacvote-jx-terminal-backend
+            cd 'apps/cacvote-jx-terminal/backend'
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -943,12 +931,6 @@ jobs:
           command: |
             apt-get install libssl-dev -y
       - run:
-          name: Setup Database
-          command: |
-            cd cacvote-jx-terminal-frontend
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
-      - run:
           name: Build
           command: |
             cargo build -p cacvote-jx-terminal-frontend
@@ -969,7 +951,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
-            cd cacvote-scan-backend
+            cd 'apps/cacvote-scan/backend'
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -991,12 +973,6 @@ jobs:
           command: |
             apt-get install libssl-dev -y
       - run:
-          name: Setup Database
-          command: |
-            cd cacvote-scan-frontend
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
-      - run:
           name: Build
           command: |
             cargo build -p cacvote-scan-frontend
@@ -1017,7 +993,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
-            cd cacvote-server
+            cd 'services/cacvote-server'
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -1039,12 +1015,6 @@ jobs:
           command: |
             apt-get install libssl-dev -y
       - run:
-          name: Setup Database
-          command: |
-            cd central-scanner
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
-      - run:
           name: Build
           command: |
             cargo build -p central-scanner
@@ -1062,12 +1032,6 @@ jobs:
           name: Install OpenSSL
           command: |
             apt-get install libssl-dev -y
-      - run:
-          name: Setup Database
-          command: |
-            cd controllerd
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
       - run:
           name: Build
           command: |
@@ -1087,12 +1051,6 @@ jobs:
           command: |
             apt-get install libssl-dev -y
       - run:
-          name: Setup Database
-          command: |
-            cd types-rs
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
-      - run:
           name: Build
           command: |
             cargo build -p types-rs
@@ -1111,12 +1069,6 @@ jobs:
           command: |
             apt-get install libssl-dev -y
       - run:
-          name: Setup Database
-          command: |
-            cd ui-rs
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
-      - run:
           name: Build
           command: |
             cargo build -p ui-rs
@@ -1134,12 +1086,6 @@ jobs:
           name: Install OpenSSL
           command: |
             apt-get install libssl-dev -y
-      - run:
-          name: Setup Database
-          command: |
-            cd vx-logging
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
       - run:
           name: Build
           command: |
