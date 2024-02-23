@@ -9,7 +9,7 @@ import { assertDefined } from '@votingworks/basics';
 import { LanguageCode } from '@votingworks/types';
 
 import { act, render, screen, waitFor } from '../test/react_testing_library';
-import { US_ENGLISH_KEYMAP, VirtualKeyboard } from './virtual_keyboard';
+import { US_ENGLISH_ALNUM_KEYMAP, VirtualKeyboard } from './virtual_keyboard';
 import { newTestContext as newUiStringsTestContext } from '../test/test_context';
 import { AudioOnly } from './ui_strings/audio_only';
 import { useCurrentLanguage } from './hooks/use_current_language';
@@ -63,7 +63,7 @@ test('fires key events', async () => {
 
   const keysSpokenInVoterLanguage = new Set([',', '.', "'", '"', '-']);
 
-  for (const row of US_ENGLISH_KEYMAP.rows) {
+  for (const row of US_ENGLISH_ALNUM_KEYMAP.rows) {
     for (const key of row) {
       const expectedLanguageCode = keysSpokenInVoterLanguage.has(key.value)
         ? SPANISH
