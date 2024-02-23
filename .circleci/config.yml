@@ -872,29 +872,6 @@ jobs:
       - store_test_results:
           path: libs/utils/reports/
 
-  # @votingworks/cacvote-server
-  test-services-cacvote-server:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir services/cacvote-server build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir services/cacvote-server lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir services/cacvote-server test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: services/cacvote-server/reports/
-
   test-crate-auth-rs:
     executor: 'nodejs'
     resource_class: xlarge
@@ -903,10 +880,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p auth-rs
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p auth-rs
 
   test-crate-ballot-encoder-rs:
@@ -917,10 +896,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p ballot-encoder-rs
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p ballot-encoder-rs
 
   test-crate-cacvote-jx-terminal-backend:
@@ -931,10 +912,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p cacvote-jx-terminal-backend
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p cacvote-jx-terminal-backend
 
   test-crate-cacvote-jx-terminal-frontend:
@@ -945,10 +928,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p cacvote-jx-terminal-frontend
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p cacvote-jx-terminal-frontend
 
   test-crate-cacvote-scan-backend:
@@ -959,10 +944,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p cacvote-scan-backend
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p cacvote-scan-backend
 
   test-crate-cacvote-scan-frontend:
@@ -973,10 +960,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p cacvote-scan-frontend
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p cacvote-scan-frontend
 
   test-crate-cacvote-server:
@@ -987,10 +976,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p cacvote-server
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p cacvote-server
 
   test-crate-central-scanner:
@@ -1001,10 +992,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p central-scanner
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p central-scanner
 
   test-crate-controllerd:
@@ -1015,10 +1008,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p controllerd
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p controllerd
 
   test-crate-types-rs:
@@ -1029,10 +1024,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p types-rs
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p types-rs
 
   test-crate-ui-rs:
@@ -1043,10 +1040,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p ui-rs
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p ui-rs
 
   test-crate-vx-logging:
@@ -1057,10 +1056,12 @@ jobs:
       - run:
           name: Build
           command: |
+            export SQLX_OFFLINE=true
             cargo build -p vx-logging
       - run:
           name: Test
           command: |
+            export SQLX_OFFLINE=true
             cargo test -p vx-logging
 
   validate-monorepo:
@@ -1117,7 +1118,6 @@ workflows:
       - test-libs-ui-rs
       - test-libs-usb-drive
       - test-libs-utils
-      - test-services-cacvote-server
       - test-crate-auth-rs
       - test-crate-ballot-encoder-rs
       - test-crate-cacvote-jx-terminal-backend
