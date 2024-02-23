@@ -83,6 +83,7 @@ function generateTestJobForRustCrate(pkgId: string): string[] {
     `    - run:`,
     `        name: Setup Database`,
     `        command: |`,
+    `          cd ${pkgId}`,
     `          cargo install sqlx-cli`,
     `          cargo sqlx migrate run --source db/migrations`,
     `    - run:`,
