@@ -450,6 +450,139 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
 
 [[package]]
+name = "cacvote-jx-terminal-backend"
+version = "0.1.0"
+dependencies = [
+ "async-stream",
+ "auth-rs",
+ "axum",
+ "base64",
+ "base64-serde",
+ "clap",
+ "color-eyre",
+ "dotenvy",
+ "futures-core",
+ "openssl",
+ "pcsc",
+ "pretty_assertions",
+ "proptest",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "time",
+ "tokio",
+ "tokio-stream",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "types-rs",
+ "uuid",
+]
+
+[[package]]
+name = "cacvote-jx-terminal-frontend"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "chrono",
+ "chrono-humanize",
+ "console_error_panic_hook",
+ "dioxus",
+ "dioxus-logger",
+ "dioxus-router",
+ "dioxus-web",
+ "getrandom",
+ "js-sys",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "time",
+ "types-rs",
+ "ui-rs",
+ "wasm-bindgen",
+ "wasm-logger",
+ "web-sys",
+]
+
+[[package]]
+name = "cacvote-scan-backend"
+version = "0.1.0"
+dependencies = [
+ "async-stream",
+ "axum",
+ "ballot-encoder-rs",
+ "base64",
+ "central-scanner",
+ "clap",
+ "color-eyre",
+ "dotenvy",
+ "env_logger",
+ "futures-core",
+ "image",
+ "pretty_assertions",
+ "rayon",
+ "reqwest",
+ "rqrr",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "types-rs",
+ "uuid",
+]
+
+[[package]]
+name = "cacvote-scan-frontend"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "dioxus",
+ "dioxus-logger",
+ "dioxus-web",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "types-rs",
+ "ui-rs",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "cacvote-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "base64",
+ "base64-serde",
+ "clap",
+ "color-eyre",
+ "dotenvy",
+ "pretty_assertions",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "types-rs",
+ "uuid",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2608,139 +2741,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d25bf25ec5ae4a3f1b92f929810509a2f53d7dca2f50b794ff57e3face536c8f"
 dependencies = [
  "rand_core",
-]
-
-[[package]]
-name = "rave-jx-terminal-backend"
-version = "0.1.0"
-dependencies = [
- "async-stream",
- "auth-rs",
- "axum",
- "base64",
- "base64-serde",
- "clap",
- "color-eyre",
- "dotenvy",
- "futures-core",
- "openssl",
- "pcsc",
- "pretty_assertions",
- "proptest",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "time",
- "tokio",
- "tokio-stream",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "types-rs",
- "uuid",
-]
-
-[[package]]
-name = "rave-jx-terminal-frontend"
-version = "0.1.0"
-dependencies = [
- "base64",
- "chrono",
- "chrono-humanize",
- "console_error_panic_hook",
- "dioxus",
- "dioxus-logger",
- "dioxus-router",
- "dioxus-web",
- "getrandom",
- "js-sys",
- "log",
- "reqwest",
- "serde",
- "serde_json",
- "time",
- "types-rs",
- "ui-rs",
- "wasm-bindgen",
- "wasm-logger",
- "web-sys",
-]
-
-[[package]]
-name = "rave-scan-backend"
-version = "0.1.0"
-dependencies = [
- "async-stream",
- "axum",
- "ballot-encoder-rs",
- "base64",
- "central-scanner",
- "clap",
- "color-eyre",
- "dotenvy",
- "env_logger",
- "futures-core",
- "image",
- "pretty_assertions",
- "rayon",
- "reqwest",
- "rqrr",
- "serde",
- "serde_json",
- "sqlx",
- "time",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "types-rs",
- "uuid",
-]
-
-[[package]]
-name = "rave-scan-frontend"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "dioxus",
- "dioxus-logger",
- "dioxus-web",
- "log",
- "reqwest",
- "serde",
- "serde_json",
- "types-rs",
- "ui-rs",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "rave-server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "base64",
- "base64-serde",
- "clap",
- "color-eyre",
- "dotenvy",
- "pretty_assertions",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "sqlx",
- "time",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "types-rs",
- "uuid",
 ]
 
 [[package]]

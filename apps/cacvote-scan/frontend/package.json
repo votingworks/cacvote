@@ -1,0 +1,24 @@
+{
+  "name": "@votingworks/cacvote-scan-frontend",
+  "version": "1.0.0",
+  "description": "CACVote Scan frontend",
+  "keywords": [],
+  "license": "GPL-3.0",
+  "author": "VotingWorks Eng <eng@voting.works>",
+  "scripts": {
+    "build": "script/build",
+    "lint": "cargo fmt -- --check && cargo clippy -- -D warnings",
+    "start": "concurrently 'npm:start:*' 'npm:build:css:watch'",
+    "start:frontend": "dx serve --port 3000",
+    "start:backend": "pnpm --dir ../backend start",
+    "build:css:watch": "tailwindcss -i input.css -o ./public/styles.css --watch",
+    "test": "cargo test"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.3.3"
+  },
+  "devDependencies": {
+    "concurrently": "7.6.0"
+  },
+  "packageManager": "pnpm@8.1.0"
+}

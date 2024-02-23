@@ -71,7 +71,7 @@ interface TransformableForEach extends ForEach {
   /**
    * The `return`s inside `callback` that should be transformed into
    * `continue`s. This array will be updated as the callback function is
-   * traversed.
+   * tcacvotersed.
    */
   readonly returns: TSESTree.ReturnStatement[];
 

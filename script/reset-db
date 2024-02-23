@@ -5,18 +5,18 @@ set -euo pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 (
-    cd apps/rave-mark/backend
+    cd apps/cacvote-mark/backend
     rm -rf dev-workspace
 )
 (
-    cd apps/rave-scan/backend
+    cd apps/cacvote-scan/backend
     cargo sqlx database reset -y --source=db/migrations
 )
 (
-    cd apps/rave-jx-terminal/backend
+    cd apps/cacvote-jx-terminal/backend
     cargo sqlx database reset -y --source=db/migrations
 )
 (
-    cd services/rave-server
+    cd services/cacvote-server
     cargo sqlx database reset -y --source=db/migrations
 )

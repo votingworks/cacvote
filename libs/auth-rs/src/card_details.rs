@@ -105,7 +105,7 @@ impl TryFrom<X509> for CardDetails {
                     has_pin: true,
                 }))
             }
-            "rave-admin" => {
+            "cacvote-admin" => {
                 let user = RaveAdministratorUser::new(jurisdiction);
                 Ok(Self::RaveAdministratorCard(RaveAdministratorCardDetails {
                     user,
