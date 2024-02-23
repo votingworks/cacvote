@@ -1140,6 +1140,10 @@ commands:
           name: Ensure rust is in the PATH variable
           command: |
             echo 'export PATH="/root/.cargo/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: Update Rust
+          command: |
+            rustup update stable
       - checkout
       # Edit this comment somehow in order to invalidate the CircleCI cache.
       # Since the contents of this file affect the cache key, editing only a
