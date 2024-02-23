@@ -867,6 +867,10 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
+      - run:
           name: Setup Database
           command: |
             cargo install sqlx-cli
@@ -885,6 +889,10 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
+      - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
@@ -905,6 +913,10 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
+      - run:
           name: Setup Database
           command: |
             cargo install sqlx-cli
@@ -923,6 +935,10 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
+      - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
@@ -943,6 +959,10 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
+      - run:
           name: Setup Database
           command: |
             cargo install sqlx-cli
@@ -961,6 +981,10 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
+      - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
@@ -981,6 +1005,10 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
+      - run:
           name: Setup Database
           command: |
             cargo install sqlx-cli
@@ -999,6 +1027,10 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
+      - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
@@ -1019,6 +1051,10 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
+      - run:
           name: Setup Database
           command: |
             cargo install sqlx-cli
@@ -1037,6 +1073,10 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
+      - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
@@ -1057,6 +1097,10 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
+      - run:
           name: Setup Database
           command: |
             cargo install sqlx-cli
@@ -1075,6 +1119,10 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
+      - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
