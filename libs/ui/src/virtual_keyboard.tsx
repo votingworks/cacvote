@@ -70,7 +70,7 @@ interface KeyMap {
 // This assumes all current and future VxSuite supported languages have names
 // for these punctuation symbols. We may need to update this logic if we find
 // that to not be true for a language we add in the future.
-export const US_ENGLISH_KEYMAP: KeyMap = {
+export const US_ENGLISH_ALNUM_KEYMAP: KeyMap = {
   rows: [
     [
       {
@@ -232,7 +232,7 @@ export function VirtualKeyboard({
   onBackspace,
   onKeyPress,
   keyDisabled,
-  keyMap = US_ENGLISH_KEYMAP,
+  keyMap = US_ENGLISH_ALNUM_KEYMAP,
 }: VirtualKeyboardProps): JSX.Element {
   function renderKey(key: Key) {
     const {
