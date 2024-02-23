@@ -79,10 +79,12 @@ function generateTestJobForRustCrate(pkgId: string): string[] {
     `    - run:`,
     `        name: Build`,
     `        command: |`,
+    `          export SQLX_OFFLINE=true`,
     `          cargo build -p ${pkgId}`,
     `    - run:`,
     `        name: Test`,
     `        command: |`,
+    `          export SQLX_OFFLINE=true`,
     `          cargo test -p ${pkgId}`,
   ];
 }
