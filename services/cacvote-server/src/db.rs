@@ -1,11 +1,11 @@
 //! Database access for the application.
 //!
 //! All direct use of [SQLx][`sqlx`] queries should be in this module. When
-//! modifying this file, be sure to run `cargo sqlx prepare` in the application
-//! root to regenerate the query metadata for offline builds.
+//! modifying this file, be sure to run `cargo sqlx prepare --workspace` in the
+//! workspace root to regenerate the query metadata for offline builds.
 //!
-//! To enable `cargo sqlx prepare`, install it via `cargo install --locked
-//! sqlx-cli`.
+//! To enable `cargo sqlx prepare --workspace`, install it via `cargo install
+//! --locked sqlx-cli`.
 
 use std::{str::FromStr, time::Duration};
 
