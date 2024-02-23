@@ -873,6 +873,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd auth-rs
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -896,6 +897,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd ballot-encoder-rs
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -919,6 +921,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd cacvote-jx-terminal-backend
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -942,6 +945,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd cacvote-jx-terminal-frontend
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -965,6 +969,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd cacvote-scan-backend
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -988,6 +993,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd cacvote-scan-frontend
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -1011,6 +1017,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd cacvote-server
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -1034,6 +1041,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd central-scanner
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -1057,6 +1065,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd controllerd
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -1080,6 +1089,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd types-rs
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -1103,6 +1113,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd ui-rs
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
@@ -1126,6 +1137,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
+            cd vx-logging
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:
