@@ -185,10 +185,6 @@ commands:
           name: Ensure rust is in the PATH variable
           command: |
             echo 'export PATH="/root/.cargo/bin:$PATH"' >> $BASH_ENV
-      - run:
-          name: Update Rust
-          command: |
-            rustup update stable
       - checkout
       # Edit this comment somehow in order to invalidate the CircleCI cache.
       # Since the contents of this file affect the cache key, editing only a
@@ -198,6 +194,11 @@ commands:
           key:
             dotcache-cache-{{checksum ".circleci/config.yml" }}-{{ checksum
             "pnpm-lock.yaml" }}
+      - run:
+          name: Update Rust
+          command: |
+            rustup update stable
+            rustup default stable
       - run:
           name: Setup Dependencies
           command: |
