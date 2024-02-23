@@ -1,34 +1,54 @@
-import { promisify } from 'node:util';
-import { execFile } from 'child_process';
+import { spawn } from 'child_process';
+import { lines } from '@votingworks/basics';
+import { relative } from 'path';
 import { getAbsoluteRootPath } from './dependencies';
-
-const exec = promisify(execFile);
 
 // Ballot interpreter tests are already run by the pnpm package test job
 // patinputd has no tests currently
 const EXCLUDED_PACKAGE_IDS = ['ballot-interpreter', 'patinputd'];
 
 /**
- * Get all Rust crate paths.
+ * Information about Rust cargo crates in the monorepo.
  */
-export async function getRustPackageIds(root: string): Promise<string[]> {
+export interface CargoCrate {
+  name: string;
+  version: string;
+  absolutePath: string;
+  workspacePath: string;
+}
+
+/**
+ * Get all Rust crate info.
+ */
+export function getCargoCrates(root: string): Promise<CargoCrate[]> {
   const absoluteRootPath = getAbsoluteRootPath(root);
   // Output is formatted like
   // "package-id v0.1.2 (/path/to/package)"
   // <newline>
   // "another-package-id v3.4.5 (/path/to/other-package)"
-  const { stdout } = await exec(
+  const { stdout } = spawn(
     'cargo',
     ['tree', '-e', 'no-normal', '-e', 'no-dev', '-e', 'no-build'],
-    { cwd: absoluteRootPath, encoding: 'utf-8' }
+    { cwd: absoluteRootPath }
   );
 
-  return stdout
-    .split('\n')
-    .filter((str) => !!str)
-    .map((pkg) => pkg.split(' ')[0])
-    .filter(
-      (packageId): packageId is string =>
-        packageId !== undefined && !EXCLUDED_PACKAGE_IDS.includes(packageId)
-    );
+  return lines(stdout)
+    .filterMap((line) => {
+      const match = line.match(/^(\S+) v(\S+) \((.+)\)$/);
+      if (!match) {
+        return;
+      }
+
+      const name = match[1] as string;
+      const version = match[2] as string;
+      const absolutePath = match[3] as string;
+
+      if (EXCLUDED_PACKAGE_IDS.includes(name)) {
+        return;
+      }
+
+      const workspacePath = relative(absoluteRootPath, absolutePath);
+      return { name, version, absolutePath, workspacePath };
+    })
+    .toArray();
 }
