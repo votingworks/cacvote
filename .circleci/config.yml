@@ -228,6 +228,29 @@ jobs:
       - store_test_results:
           path: libs/auth/reports/
 
+  # @votingworks/auth-rs
+  test-libs-auth-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/auth-rs build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/auth-rs lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/auth-rs test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/auth-rs/reports/
+
   # @votingworks/backend
   test-libs-backend:
     executor: nodejs
@@ -898,6 +921,7 @@ workflows:
       - test-apps-rave-track-frontend
       - test-docs-exercises
       - test-libs-auth
+      - test-libs-auth-rs
       - test-libs-backend
       - test-libs-ballot-encoder
       - test-libs-ballot-encoder-rs
