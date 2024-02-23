@@ -72,7 +72,7 @@ function generateTestJobForRustCrate(pkgId: string): string[] {
   return [
     `${jobIdForRustPackageId(pkgId)}:`,
     // Executors are either nodejs or nodejs-browser. Both have Rust deps installed.
-    `  executor: 'nodejs'`,
+    `  executor: rust-db`,
     `  resource_class: xlarge`,
     `  steps:`,
     `    - checkout-and-install`,
