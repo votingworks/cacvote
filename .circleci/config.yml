@@ -19,6 +19,18 @@ executors:
         auth:
           username: $VX_DOCKER_USERNAME
           password: $VX_DOCKER_PASSWORD
+  rust-db:
+    docker:
+      - image: votingworks/cimg-debian12:3.0.1
+        auth:
+          username: $VX_DOCKER_USERNAME
+          password: $VX_DOCKER_PASSWORD
+        environment:
+          DATABASE_URL: postgresql://root@localhost:5432/cacvote-test
+      - image: cimg/postgres:15.6
+        environment:
+          POSTGRES_USER: root
+          POSTGRES_DB: cacvote-test
 
 jobs:
   # @votingworks/cacvote-jx-terminal-backend
@@ -227,29 +239,6 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: libs/auth/reports/
-
-  # @votingworks/auth-rs
-  test-libs-auth-rs:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir libs/auth-rs build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir libs/auth-rs lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir libs/auth-rs test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: libs/auth-rs/reports/
 
   # @votingworks/backend
   test-libs-backend:
@@ -878,14 +867,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p auth-rs
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p auth-rs
 
   test-crate-ballot-encoder-rs:
@@ -894,14 +886,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p ballot-encoder-rs
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p ballot-encoder-rs
 
   test-crate-cacvote-jx-terminal-backend:
@@ -910,14 +905,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p cacvote-jx-terminal-backend
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p cacvote-jx-terminal-backend
 
   test-crate-cacvote-jx-terminal-frontend:
@@ -926,14 +924,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p cacvote-jx-terminal-frontend
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p cacvote-jx-terminal-frontend
 
   test-crate-cacvote-scan-backend:
@@ -942,14 +943,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p cacvote-scan-backend
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p cacvote-scan-backend
 
   test-crate-cacvote-scan-frontend:
@@ -958,14 +962,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p cacvote-scan-frontend
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p cacvote-scan-frontend
 
   test-crate-cacvote-server:
@@ -974,14 +981,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p cacvote-server
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p cacvote-server
 
   test-crate-central-scanner:
@@ -990,14 +1000,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p central-scanner
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p central-scanner
 
   test-crate-controllerd:
@@ -1006,14 +1019,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p controllerd
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p controllerd
 
   test-crate-types-rs:
@@ -1022,14 +1038,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p types-rs
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p types-rs
 
   test-crate-ui-rs:
@@ -1038,14 +1057,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p ui-rs
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p ui-rs
 
   test-crate-vx-logging:
@@ -1054,14 +1076,17 @@ jobs:
     steps:
       - checkout-and-install
       - run:
+          name: Setup Database
+          command: |
+            cargo install sqlx-cli
+            script/reset-db
+      - run:
           name: Build
           command: |
-            export SQLX_OFFLINE=true
             cargo build -p vx-logging
       - run:
           name: Test
           command: |
-            export SQLX_OFFLINE=true
             cargo test -p vx-logging
 
   validate-monorepo:
@@ -1090,7 +1115,6 @@ workflows:
       - test-apps-cacvote-track-frontend
       - test-docs-exercises
       - test-libs-auth
-      - test-libs-auth-rs
       - test-libs-backend
       - test-libs-ballot-encoder
       - test-libs-ballot-encoder-rs

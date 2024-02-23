@@ -77,14 +77,17 @@ function generateTestJobForRustCrate(pkgId: string): string[] {
     `  steps:`,
     `    - checkout-and-install`,
     `    - run:`,
+    `        name: Setup Database`,
+    `        command: |`,
+    `          cargo install sqlx-cli`,
+    `          script/reset-db`,
+    `    - run:`,
     `        name: Build`,
     `        command: |`,
-    `          export SQLX_OFFLINE=true`,
     `          cargo build -p ${pkgId}`,
     `    - run:`,
     `        name: Test`,
     `        command: |`,
-    `          export SQLX_OFFLINE=true`,
     `          cargo test -p ${pkgId}`,
   ];
 }
@@ -150,6 +153,18 @@ executors:
         auth:
           username: $VX_DOCKER_USERNAME
           password: $VX_DOCKER_PASSWORD
+  rust-db:
+    docker:
+      - image: votingworks/cimg-debian12:3.0.1
+        auth:
+          username: $VX_DOCKER_USERNAME
+          password: $VX_DOCKER_PASSWORD
+        environment:
+          DATABASE_URL: postgresql://root@localhost:5432/cacvote-test
+      - image: cimg/postgres:15.6
+        environment:
+          POSTGRES_USER: root
+          POSTGRES_DB: cacvote-test
 
 jobs:
 ${[...pnpmJobs.values()]
