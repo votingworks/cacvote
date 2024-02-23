@@ -21,8 +21,8 @@ executors:
           password: $VX_DOCKER_PASSWORD
 
 jobs:
-  # @votingworks/rave-jx-terminal-backend
-  test-apps-rave-jx-terminal-backend:
+  # @votingworks/cacvote-jx-terminal-backend
+  test-apps-cacvote-jx-terminal-backend:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -30,22 +30,22 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir apps/rave-jx-terminal/backend build
+            pnpm --dir apps/cacvote-jx-terminal/backend build
       - run:
           name: Lint
           command: |
-            pnpm --dir apps/rave-jx-terminal/backend lint
+            pnpm --dir apps/cacvote-jx-terminal/backend lint
       - run:
           name: Test
           command: |
-            pnpm --dir apps/rave-jx-terminal/backend test
+            pnpm --dir apps/cacvote-jx-terminal/backend test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: apps/rave-jx-terminal/backend/reports/
+          path: apps/cacvote-jx-terminal/backend/reports/
 
-  # @votingworks/rave-jx-terminal-frontend
-  test-apps-rave-jx-terminal-frontend:
+  # @votingworks/cacvote-jx-terminal-frontend
+  test-apps-cacvote-jx-terminal-frontend:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -53,22 +53,22 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir apps/rave-jx-terminal/frontend build
+            pnpm --dir apps/cacvote-jx-terminal/frontend build
       - run:
           name: Lint
           command: |
-            pnpm --dir apps/rave-jx-terminal/frontend lint
+            pnpm --dir apps/cacvote-jx-terminal/frontend lint
       - run:
           name: Test
           command: |
-            pnpm --dir apps/rave-jx-terminal/frontend test
+            pnpm --dir apps/cacvote-jx-terminal/frontend test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: apps/rave-jx-terminal/frontend/reports/
+          path: apps/cacvote-jx-terminal/frontend/reports/
 
-  # @votingworks/rave-mark-backend
-  test-apps-rave-mark-backend:
+  # @votingworks/cacvote-mark-backend
+  test-apps-cacvote-mark-backend:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -76,22 +76,22 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir apps/rave-mark/backend build
+            pnpm --dir apps/cacvote-mark/backend build
       - run:
           name: Lint
           command: |
-            pnpm --dir apps/rave-mark/backend lint
+            pnpm --dir apps/cacvote-mark/backend lint
       - run:
           name: Test
           command: |
-            pnpm --dir apps/rave-mark/backend test
+            pnpm --dir apps/cacvote-mark/backend test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: apps/rave-mark/backend/reports/
+          path: apps/cacvote-mark/backend/reports/
 
-  # @votingworks/rave-mark-frontend
-  test-apps-rave-mark-frontend:
+  # @votingworks/cacvote-mark-frontend
+  test-apps-cacvote-mark-frontend:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -99,22 +99,22 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir apps/rave-mark/frontend build
+            pnpm --dir apps/cacvote-mark/frontend build
       - run:
           name: Lint
           command: |
-            pnpm --dir apps/rave-mark/frontend lint
+            pnpm --dir apps/cacvote-mark/frontend lint
       - run:
           name: Test
           command: |
-            pnpm --dir apps/rave-mark/frontend test
+            pnpm --dir apps/cacvote-mark/frontend test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: apps/rave-mark/frontend/reports/
+          path: apps/cacvote-mark/frontend/reports/
 
-  # @votingworks/rave-scan-backend
-  test-apps-rave-scan-backend:
+  # @votingworks/cacvote-scan-backend
+  test-apps-cacvote-scan-backend:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -122,22 +122,22 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir apps/rave-scan/backend build
+            pnpm --dir apps/cacvote-scan/backend build
       - run:
           name: Lint
           command: |
-            pnpm --dir apps/rave-scan/backend lint
+            pnpm --dir apps/cacvote-scan/backend lint
       - run:
           name: Test
           command: |
-            pnpm --dir apps/rave-scan/backend test
+            pnpm --dir apps/cacvote-scan/backend test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: apps/rave-scan/backend/reports/
+          path: apps/cacvote-scan/backend/reports/
 
-  # @votingworks/rave-scan-frontend
-  test-apps-rave-scan-frontend:
+  # @votingworks/cacvote-scan-frontend
+  test-apps-cacvote-scan-frontend:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -145,22 +145,22 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir apps/rave-scan/frontend build
+            pnpm --dir apps/cacvote-scan/frontend build
       - run:
           name: Lint
           command: |
-            pnpm --dir apps/rave-scan/frontend lint
+            pnpm --dir apps/cacvote-scan/frontend lint
       - run:
           name: Test
           command: |
-            pnpm --dir apps/rave-scan/frontend test
+            pnpm --dir apps/cacvote-scan/frontend test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: apps/rave-scan/frontend/reports/
+          path: apps/cacvote-scan/frontend/reports/
 
-  # @votingworks/rave-track-frontend
-  test-apps-rave-track-frontend:
+  # @votingworks/cacvote-track-frontend
+  test-apps-cacvote-track-frontend:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -168,19 +168,19 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir apps/rave-track/frontend build
+            pnpm --dir apps/cacvote-track/frontend build
       - run:
           name: Lint
           command: |
-            pnpm --dir apps/rave-track/frontend lint
+            pnpm --dir apps/cacvote-track/frontend lint
       - run:
           name: Test
           command: |
-            pnpm --dir apps/rave-track/frontend test
+            pnpm --dir apps/cacvote-track/frontend test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: apps/rave-track/frontend/reports/
+          path: apps/cacvote-track/frontend/reports/
 
   # @votingworks/exercises
   test-docs-exercises:
@@ -872,8 +872,8 @@ jobs:
       - store_test_results:
           path: libs/utils/reports/
 
-  # @votingworks/rave-server
-  test-services-rave-server:
+  # @votingworks/cacvote-server
+  test-services-cacvote-server:
     executor: nodejs
     resource_class: xlarge
     steps:
@@ -881,19 +881,33 @@ jobs:
       - run:
           name: Build
           command: |
-            pnpm --dir services/rave-server build
+            pnpm --dir services/cacvote-server build
       - run:
           name: Lint
           command: |
-            pnpm --dir services/rave-server lint
+            pnpm --dir services/cacvote-server lint
       - run:
           name: Test
           command: |
-            pnpm --dir services/rave-server test
+            pnpm --dir services/cacvote-server test
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
-          path: services/rave-server/reports/
+          path: services/cacvote-server/reports/
+
+  test-crate-auth-rs:
+    executor: 'nodejs'
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p auth-rs
+      - run:
+          name: Test
+          command: |
+            cargo test -p auth-rs
 
   test-crate-ballot-encoder-rs:
     executor: 'nodejs'
@@ -908,6 +922,76 @@ jobs:
           name: Test
           command: |
             cargo test -p ballot-encoder-rs
+
+  test-crate-cacvote-jx-terminal-backend:
+    executor: 'nodejs'
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p cacvote-jx-terminal-backend
+      - run:
+          name: Test
+          command: |
+            cargo test -p cacvote-jx-terminal-backend
+
+  test-crate-cacvote-jx-terminal-frontend:
+    executor: 'nodejs'
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p cacvote-jx-terminal-frontend
+      - run:
+          name: Test
+          command: |
+            cargo test -p cacvote-jx-terminal-frontend
+
+  test-crate-cacvote-scan-backend:
+    executor: 'nodejs'
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p cacvote-scan-backend
+      - run:
+          name: Test
+          command: |
+            cargo test -p cacvote-scan-backend
+
+  test-crate-cacvote-scan-frontend:
+    executor: 'nodejs'
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p cacvote-scan-frontend
+      - run:
+          name: Test
+          command: |
+            cargo test -p cacvote-scan-frontend
+
+  test-crate-cacvote-server:
+    executor: 'nodejs'
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p cacvote-server
+      - run:
+          name: Test
+          command: |
+            cargo test -p cacvote-server
 
   test-crate-central-scanner:
     executor: 'nodejs'
@@ -936,76 +1020,6 @@ jobs:
           name: Test
           command: |
             cargo test -p controllerd
-
-  test-crate-rave-jx-terminal-backend:
-    executor: 'nodejs'
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p rave-jx-terminal-backend
-      - run:
-          name: Test
-          command: |
-            cargo test -p rave-jx-terminal-backend
-
-  test-crate-rave-jx-terminal-frontend:
-    executor: 'nodejs'
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p rave-jx-terminal-frontend
-      - run:
-          name: Test
-          command: |
-            cargo test -p rave-jx-terminal-frontend
-
-  test-crate-rave-scan-backend:
-    executor: 'nodejs'
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p rave-scan-backend
-      - run:
-          name: Test
-          command: |
-            cargo test -p rave-scan-backend
-
-  test-crate-rave-scan-frontend:
-    executor: 'nodejs'
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p rave-scan-frontend
-      - run:
-          name: Test
-          command: |
-            cargo test -p rave-scan-frontend
-
-  test-crate-rave-server:
-    executor: 'nodejs'
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p rave-server
-      - run:
-          name: Test
-          command: |
-            cargo test -p rave-server
 
   test-crate-types-rs:
     executor: 'nodejs'
@@ -1066,13 +1080,13 @@ jobs:
 workflows:
   test:
     jobs:
-      - test-apps-rave-jx-terminal-backend
-      - test-apps-rave-jx-terminal-frontend
-      - test-apps-rave-mark-backend
-      - test-apps-rave-mark-frontend
-      - test-apps-rave-scan-backend
-      - test-apps-rave-scan-frontend
-      - test-apps-rave-track-frontend
+      - test-apps-cacvote-jx-terminal-backend
+      - test-apps-cacvote-jx-terminal-frontend
+      - test-apps-cacvote-mark-backend
+      - test-apps-cacvote-mark-frontend
+      - test-apps-cacvote-scan-backend
+      - test-apps-cacvote-scan-frontend
+      - test-apps-cacvote-track-frontend
       - test-docs-exercises
       - test-libs-auth
       - test-libs-auth-rs
@@ -1103,15 +1117,16 @@ workflows:
       - test-libs-ui-rs
       - test-libs-usb-drive
       - test-libs-utils
-      - test-services-rave-server
+      - test-services-cacvote-server
+      - test-crate-auth-rs
       - test-crate-ballot-encoder-rs
+      - test-crate-cacvote-jx-terminal-backend
+      - test-crate-cacvote-jx-terminal-frontend
+      - test-crate-cacvote-scan-backend
+      - test-crate-cacvote-scan-frontend
+      - test-crate-cacvote-server
       - test-crate-central-scanner
       - test-crate-controllerd
-      - test-crate-rave-jx-terminal-backend
-      - test-crate-rave-jx-terminal-frontend
-      - test-crate-rave-scan-backend
-      - test-crate-rave-scan-frontend
-      - test-crate-rave-server
       - test-crate-types-rs
       - test-crate-ui-rs
       - test-crate-vx-logging

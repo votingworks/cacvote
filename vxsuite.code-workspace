@@ -1,32 +1,32 @@
 {
   "folders": [
     {
-      "path": "apps/rave-jx-terminal/backend",
-      "name": "apps/rave-jx-terminal/backend"
+      "path": "apps/cacvote-jx-terminal/backend",
+      "name": "apps/cacvote-jx-terminal/backend"
     },
     {
-      "path": "apps/rave-jx-terminal/frontend",
-      "name": "apps/rave-jx-terminal/frontend"
+      "path": "apps/cacvote-jx-terminal/frontend",
+      "name": "apps/cacvote-jx-terminal/frontend"
     },
     {
-      "path": "apps/rave-mark/backend",
-      "name": "apps/rave-mark/backend"
+      "path": "apps/cacvote-mark/backend",
+      "name": "apps/cacvote-mark/backend"
     },
     {
-      "path": "apps/rave-mark/frontend",
-      "name": "apps/rave-mark/frontend"
+      "path": "apps/cacvote-mark/frontend",
+      "name": "apps/cacvote-mark/frontend"
     },
     {
-      "path": "apps/rave-scan/backend",
-      "name": "apps/rave-scan/backend"
+      "path": "apps/cacvote-scan/backend",
+      "name": "apps/cacvote-scan/backend"
     },
     {
-      "path": "apps/rave-scan/frontend",
-      "name": "apps/rave-scan/frontend"
+      "path": "apps/cacvote-scan/frontend",
+      "name": "apps/cacvote-scan/frontend"
     },
     {
-      "path": "apps/rave-track/frontend",
-      "name": "apps/rave-track/frontend"
+      "path": "apps/cacvote-track/frontend",
+      "name": "apps/cacvote-track/frontend"
     },
     {
       "path": "docs",
@@ -161,8 +161,8 @@
       "name": "script"
     },
     {
-      "path": "services/rave-server",
-      "name": "services/rave-server"
+      "path": "services/cacvote-server",
+      "name": "services/cacvote-server"
     }
   ],
   "settings": {

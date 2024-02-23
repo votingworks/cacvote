@@ -1,1 +1,1 @@
-web: ./services/rave-server/target/release/rave-server
+web: ./services/cacvote-server/target/release/cacvote-server

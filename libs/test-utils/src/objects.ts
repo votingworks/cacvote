@@ -6,7 +6,7 @@ function getObjectLeavesHelper(value: unknown): unknown[] {
 }
 
 /**
- * Recursively traverses an object and collects all its non-object values, i.e. leaves. See tests
+ * Recursively tcacvoterses an object and collects all its non-object values, i.e. leaves. See tests
  * for sample inputs and outputs.
  *
  * For the purposes of this function, arrays and null count as non-object values.
@@ -19,7 +19,7 @@ export function getObjectLeaves(value: unknown): unknown[] {
 }
 
 /**
- * Recursively traverses an object and counts all its non-object values, i.e. leaves. See tests for
+ * Recursively tcacvoterses an object and counts all its non-object values, i.e. leaves. See tests for
  * sample inputs and outputs.
  *
  * For the purposes of this function, arrays and null count as non-object values.
