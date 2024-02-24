@@ -1,5 +1,8 @@
 import { join } from 'path';
-import { getRustPackageIds, getWorkspacePackageInfo } from '@votingworks/monorepo-utils';
+import {
+  getCargoCrates,
+  getWorkspacePackageInfo,
+} from '@votingworks/monorepo-utils';
 import * as circleci from './circleci';
 import * as pkgs from './packages';
 import * as tsconfig from './tsconfig';
@@ -12,7 +15,7 @@ export type ValidationIssue =
 export async function* validateMonorepo(): AsyncGenerator<ValidationIssue> {
   const root = join(__dirname, '../../../..');
   const workspacePackages = getWorkspacePackageInfo(root);
-  const rustPackageIds = await getRustPackageIds(root);
+  const rustCrates = await getCargoCrates(root);
 
   yield* pkgs.checkConfig({
     pinnedPackages: [
@@ -31,5 +34,5 @@ export async function* validateMonorepo(): AsyncGenerator<ValidationIssue> {
     workspacePackages,
   });
   yield* tsconfig.checkConfig(workspacePackages);
-  yield* circleci.checkConfig(workspacePackages, rustPackageIds);
+  yield* circleci.checkConfig(workspacePackages, rustCrates);
 }

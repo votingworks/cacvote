@@ -358,7 +358,7 @@ pub fn encode_write_in_name<E: Endianness>(
 
 pub fn encode_yesno_selections<E: Endianness>(
     contest: &YesNoContest,
-    selections: &Vec<CVRContestSelection>,
+    selections: &[CVRContestSelection],
     writer: &mut BitWriter<&mut Vec<u8>, E>,
 ) -> std::io::Result<()> {
     if selections.len() != 1 {
