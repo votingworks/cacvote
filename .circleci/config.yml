@@ -33,29 +33,6 @@ executors:
           POSTGRES_DB: cacvote-test
 
 jobs:
-  # @votingworks/cacvote-jx-terminal-backend
-  test-apps-cacvote-jx-terminal-backend:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir apps/cacvote-jx-terminal/backend build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir apps/cacvote-jx-terminal/backend lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir apps/cacvote-jx-terminal/backend test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: apps/cacvote-jx-terminal/backend/reports/
-
   # @votingworks/cacvote-jx-terminal-frontend
   test-apps-cacvote-jx-terminal-frontend:
     executor: nodejs
@@ -124,29 +101,6 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: apps/cacvote-mark/frontend/reports/
-
-  # @votingworks/cacvote-scan-backend
-  test-apps-cacvote-scan-backend:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir apps/cacvote-scan/backend build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir apps/cacvote-scan/backend lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir apps/cacvote-scan/backend test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: apps/cacvote-scan/backend/reports/
 
   # @votingworks/cacvote-scan-frontend
   test-apps-cacvote-scan-frontend:
@@ -1064,11 +1018,9 @@ jobs:
 workflows:
   test:
     jobs:
-      - test-apps-cacvote-jx-terminal-backend
       - test-apps-cacvote-jx-terminal-frontend
       - test-apps-cacvote-mark-backend
       - test-apps-cacvote-mark-frontend
-      - test-apps-cacvote-scan-backend
       - test-apps-cacvote-scan-frontend
       - test-apps-cacvote-track-frontend
       - test-docs-exercises
