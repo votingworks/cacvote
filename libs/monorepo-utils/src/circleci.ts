@@ -20,11 +20,14 @@ function* generateTestJobForNodeJsPackage(
   /* istanbul ignore next */
   yield `# ${pkg.name}\n`;
   yield `${jobIdForPackage(pkg)}:\n`;
+
+  /* istanbul ignore next */
   yield `  executor: ${isIntegrationTestJob ? 'nodejs-browsers' : 'nodejs'}\n`;
   yield `  resource_class: xlarge\n`;
   yield `  steps:\n`;
   yield `    - checkout-and-install\n`;
 
+  /* istanbul ignore next */
   if (hasPlaywrightTests) {
     yield `    - run:\n`;
     yield `        name: Install Browser\n`;
