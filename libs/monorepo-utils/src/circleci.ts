@@ -61,7 +61,7 @@ function* generateTestJobForRustCrate(crate: CargoCrate): Iterable<string> {
   const hasDatabase = existsSync(join(crate.absolutePath, 'db/migrations'));
 
   yield `${jobIdForRustCrate(crate)}:\n`;
-  yield `  executor: rust-db\n`;
+  yield `  executor: ${hasDatabase ? 'rust-db' : 'nodejs'}\n`;
   yield `  resource_class: xlarge\n`;
   yield `  steps:\n`;
   yield `    - checkout-and-install\n`;

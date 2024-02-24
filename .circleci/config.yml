@@ -862,7 +862,7 @@ jobs:
           path: libs/utils/reports/
 
   test-crate-auth-rs:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
@@ -876,7 +876,7 @@ jobs:
             cargo test -p auth-rs
 
   test-crate-ballot-encoder-rs:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
@@ -910,7 +910,7 @@ jobs:
             cargo test -p cacvote-jx-terminal-backend
 
   test-crate-cacvote-jx-terminal-frontend:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
@@ -944,7 +944,7 @@ jobs:
             cargo test -p cacvote-scan-backend
 
   test-crate-cacvote-scan-frontend:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
@@ -978,7 +978,7 @@ jobs:
             cargo test -p cacvote-server
 
   test-crate-central-scanner:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
@@ -992,7 +992,7 @@ jobs:
             cargo test -p central-scanner
 
   test-crate-controllerd:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
@@ -1006,7 +1006,7 @@ jobs:
             cargo test -p controllerd
 
   test-crate-types-rs:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
@@ -1020,7 +1020,7 @@ jobs:
             cargo test -p types-rs
 
   test-crate-ui-rs:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
@@ -1034,7 +1034,7 @@ jobs:
             cargo test -p ui-rs
 
   test-crate-vx-logging:
-    executor: rust-db
+    executor: nodejs
     resource_class: xlarge
     steps:
       - checkout-and-install
