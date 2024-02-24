@@ -1134,6 +1134,7 @@ commands:
       - run:
           name: Install OpenSSL
           command: |
+            apt-get update
             apt-get install libssl-dev -y
       - run:
           name: Update Rust
