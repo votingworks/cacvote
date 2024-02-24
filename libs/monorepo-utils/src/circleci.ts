@@ -216,6 +216,7 @@ export function* generateConfig(
   yield `      - run:\n`;
   yield `          name: Install OpenSSL\n`;
   yield `          command: |\n`;
+  yield `            apt-get update\n`;
   yield `            apt-get install libssl-dev -y\n`;
   yield `      - run:\n`;
   yield `          name: Update Rust\n`;
