@@ -112,6 +112,16 @@ test('countPhrase alternate locale', () => {
   expect(result).toEqual('1,000 物品');
 });
 
+test('countPhrase avoids injection of prototype properties', () => {
+  const result = countPhrase({
+    value: 4,
+    one: '1 item',
+    many: '{{toString}} items',
+    zero: 'no items',
+  });
+  expect(result).toEqual(' items');
+});
+
 describe('languageDisplayName()', () => {
   const { ENGLISH, SPANISH } = LanguageCode;
 

@@ -164,7 +164,7 @@ fn establish_batch_scanimage_duplex_channel(
         // request to scan
         wait_for_action()?;
 
-        for line in stdout_reader.lines().flatten() {
+        for line in stdout_reader.lines().map_while(Result::ok) {
             debug!("[scanimage] stdout: {}", line);
             if let Some(first_line) = first_line.take() {
                 card_tx

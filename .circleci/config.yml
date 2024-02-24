@@ -867,10 +867,6 @@ jobs:
     steps:
       - checkout-and-install
       - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
-      - run:
           name: Build
           command: |
             cargo build -p auth-rs
@@ -885,10 +881,6 @@ jobs:
     steps:
       - checkout-and-install
       - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
-      - run:
           name: Build
           command: |
             cargo build -p ballot-encoder-rs
@@ -902,10 +894,6 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
-      - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
@@ -927,10 +915,6 @@ jobs:
     steps:
       - checkout-and-install
       - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
-      - run:
           name: Build
           command: |
             cargo build -p cacvote-jx-terminal-frontend
@@ -944,10 +928,6 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
-      - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
@@ -969,10 +949,6 @@ jobs:
     steps:
       - checkout-and-install
       - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
-      - run:
           name: Build
           command: |
             cargo build -p cacvote-scan-frontend
@@ -986,10 +962,6 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
-      - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
       - run:
           name: Setup Database
           command: |
@@ -1011,10 +983,6 @@ jobs:
     steps:
       - checkout-and-install
       - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
-      - run:
           name: Build
           command: |
             cargo build -p central-scanner
@@ -1028,10 +996,6 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
-      - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
       - run:
           name: Build
           command: |
@@ -1047,10 +1011,6 @@ jobs:
     steps:
       - checkout-and-install
       - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
-      - run:
           name: Build
           command: |
             cargo build -p types-rs
@@ -1065,10 +1025,6 @@ jobs:
     steps:
       - checkout-and-install
       - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
-      - run:
           name: Build
           command: |
             cargo build -p ui-rs
@@ -1082,10 +1038,6 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout-and-install
-      - run:
-          name: Install OpenSSL
-          command: |
-            apt-get install libssl-dev -y
       - run:
           name: Build
           command: |
@@ -1179,6 +1131,10 @@ commands:
           key:
             dotcache-cache-{{checksum ".circleci/config.yml" }}-{{ checksum
             "pnpm-lock.yaml" }}
+      - run:
+          name: Install OpenSSL
+          command: |
+            apt-get install libssl-dev -y
       - run:
           name: Update Rust
           command: |

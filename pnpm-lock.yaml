@@ -176,11 +176,11 @@ importers:
         specifier: 4.3.4
         version: 4.3.4(supports-color@5.5.0)
       dotenv:
-        specifier: ^16.1.4
+        specifier: 16.3.1
         version: 16.3.1
       dotenv-expand:
-        specifier: ^10.0.0
-        version: 10.0.0
+        specifier: 9.0.0
+        version: 9.0.0
       express:
         specifier: 4.18.2
         version: 4.18.2
@@ -771,8 +771,6 @@ importers:
       wait-for-expect:
         specifier: ^3.0.2
         version: 3.0.2
-
-  libs/auth-rs: {}
 
   libs/backend:
     dependencies:
@@ -2969,12 +2967,6 @@ importers:
         specifier: 5.2.2
         version: 5.2.2
 
-  services/cacvote-server:
-    devDependencies:
-      is-ci-cli:
-        specifier: 2.2.0
-        version: 2.2.0
-
 packages:
 
   /@aashutoshrathi/word-wrap@1.2.6:
@@ -3133,24 +3125,6 @@ packages:
       '@babel/helper-replace-supers': 7.22.20(@babel/core@7.20.12)
       '@babel/helper-skip-transparent-expression-wrappers': 7.22.5
       '@babel/helper-split-export-declaration': 7.22.6
-    dev: true
-
-  /@babel/helper-create-class-features-plugin@7.22.10(@babel/core@7.20.12):
-    resolution: {integrity: sha512-5IBb77txKYQPpOEdUdIhBx8VrZyDCQ+H82H0+5dX1TmuscP5vJKEE3cKurjtIw/vFwzbVH48VweE78kVDBrqjA==}
-    engines: {node: '>=6.9.0'}
-    peerDependencies:
-      '@babel/core': ^7.0.0
-    dependencies:
-      '@babel/core': 7.20.12
-      '@babel/helper-annotate-as-pure': 7.22.5
-      '@babel/helper-environment-visitor': 7.22.20
-      '@babel/helper-function-name': 7.22.5
-      '@babel/helper-member-expression-to-functions': 7.22.5
-      '@babel/helper-optimise-call-expression': 7.22.5
-      '@babel/helper-replace-supers': 7.22.20(@babel/core@7.20.12)
-      '@babel/helper-skip-transparent-expression-wrappers': 7.22.5
-      '@babel/helper-split-export-declaration': 7.22.6
-      semver: 6.3.1
     dev: true
 
   /@babel/helper-create-class-features-plugin@7.22.10(@babel/core@7.22.9):
@@ -3588,7 +3562,7 @@ packages:
       '@babel/core': ^7.0.0-0
     dependencies:
       '@babel/core': 7.20.12
-      '@babel/helper-create-class-features-plugin': 7.22.10(@babel/core@7.20.12)
+      '@babel/helper-create-class-features-plugin': 7.22.15(@babel/core@7.20.12)
       '@babel/helper-plugin-utils': 7.22.5
     dev: true
 
@@ -4769,7 +4743,7 @@ packages:
     dependencies:
       '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.22.5
-      '@babel/helper-replace-supers': 7.22.20(@babel/core@7.20.12)
+      '@babel/helper-replace-supers': 7.22.9(@babel/core@7.20.12)
     dev: true
 
   /@babel/plugin-transform-object-super@7.22.5(@babel/core@7.22.9):
@@ -11613,6 +11587,7 @@ packages:
   /dotenv-expand@10.0.0:
     resolution: {integrity: sha512-GopVGCpVS1UKH75VKHGuQFqS1Gusej0z4FyQkPdwjil2gNIv+LNsqBlboOzpJFZKVT95GkCyWJbBSdFEFUWI2A==}
     engines: {node: '>=12'}
+    dev: true
 
   /dotenv-expand@9.0.0:
     resolution: {integrity: sha512-uW8Hrhp5ammm9x7kBLR6jDfujgaDarNA02tprvZdyrJ7MpdzD1KyrIHG4l+YoC2fJ2UcdFdNWNWIjt+sexBHJw==}

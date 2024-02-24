@@ -1,5 +1,7 @@
+import { iter } from '@votingworks/basics/src';
 import {
   CIRCLECI_CONFIG_PATH,
+  CargoCrate,
   PnpmPackageInfo,
   generateCircleCiConfig,
 } from '@votingworks/monorepo-utils';
@@ -30,15 +32,15 @@ export interface OutdatedConfig {
  */
 export function* checkConfig(
   workspacePackages: ReadonlyMap<string, PnpmPackageInfo>,
-  rustPackageIds: string[]
+  rustCrates: readonly CargoCrate[]
 ): Generator<ValidationIssue> {
   const expectedCircleCiConfig = generateCircleCiConfig(
     workspacePackages,
-    rustPackageIds
+    rustCrates
   );
   const actualConfig = readFileSync(CIRCLECI_CONFIG_PATH, 'utf-8');
 
-  if (expectedCircleCiConfig !== actualConfig) {
+  if (iter(expectedCircleCiConfig).join() !== actualConfig) {
     yield {
       kind: ValidationIssueKind.OutdatedConfig,
       configPath: CIRCLECI_CONFIG_PATH,

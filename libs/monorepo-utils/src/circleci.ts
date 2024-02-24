@@ -65,10 +65,6 @@ function* generateTestJobForRustCrate(crate: CargoCrate): Iterable<string> {
   yield `  resource_class: xlarge\n`;
   yield `  steps:\n`;
   yield `    - checkout-and-install\n`;
-  yield `    - run:\n`;
-  yield `        name: Install OpenSSL\n`;
-  yield `        command: |\n`;
-  yield `          apt-get install libssl-dev -y\n`;
 
   if (hasDatabase) {
     yield `    - run:\n`;
@@ -217,6 +213,10 @@ export function* generateConfig(
   yield `          key:\n`;
   yield `            dotcache-cache-{{checksum ".circleci/config.yml" }}-{{ checksum\n`;
   yield `            "pnpm-lock.yaml" }}\n`;
+  yield `      - run:\n`;
+  yield `          name: Install OpenSSL\n`;
+  yield `          command: |\n`;
+  yield `            apt-get install libssl-dev -y\n`;
   yield `      - run:\n`;
   yield `          name: Update Rust\n`;
   yield `          command: |\n`;
