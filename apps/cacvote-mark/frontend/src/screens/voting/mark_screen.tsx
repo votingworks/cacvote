@@ -7,7 +7,7 @@ import {
   OptionalVote,
   VotesDict,
 } from '@votingworks/types';
-import { Button, DisplaySettings, Modal, Screen } from '@votingworks/ui';
+import { Button, VoterSettings, Modal, Screen } from '@votingworks/ui';
 import { useState } from 'react';
 import { ButtonFooter } from '../../components/button_footer';
 import { DisplaySettingsButton } from '../../components/display_settings_button';
@@ -60,7 +60,7 @@ export function MarkScreen({
       {isShowingDisplaySettings && (
         <Modal
           title="Display Settings"
-          content={<DisplaySettings onClose={onCloseDisplaySettings} />}
+          content={<VoterSettings onClose={onCloseDisplaySettings} />}
         />
       )}
       <MarkFlowContest

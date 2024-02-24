@@ -1,5 +1,8 @@
 import React from 'react';
-import { ThemeManagerContext, useQueryChangeListener } from '@votingworks/ui';
+import {
+  VoterSettingsManagerContext,
+  useQueryChangeListener,
+} from '@votingworks/ui';
 import { DefaultTheme, ThemeContext } from 'styled-components';
 import { getAuthStatus } from '../api';
 
@@ -8,7 +11,7 @@ import { getAuthStatus } from '../api';
  * resetting/restoring voter display settings as needed.
  */
 export function DisplaySettingsManager(): JSX.Element | null {
-  const themeManager = React.useContext(ThemeManagerContext);
+  const themeManager = React.useContext(VoterSettingsManagerContext);
   const currentTheme = React.useContext(ThemeContext);
 
   const authStatusQuery = getAuthStatus.useQuery();
