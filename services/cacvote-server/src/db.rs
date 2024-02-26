@@ -69,6 +69,7 @@ pub(crate) struct Election {
     pub(crate) client_id: ClientId,
     pub(crate) machine_id: String,
     pub(crate) jurisdiction_id: ServerId,
+    pub(crate) return_address: String,
     pub(crate) definition: types_rs::election::ElectionDefinition,
     pub(crate) election_hash: ElectionHash,
     pub(crate) created_at: sqlx::types::time::OffsetDateTime,
@@ -81,6 +82,7 @@ impl From<Election> for client::output::Election {
             client_id,
             machine_id,
             jurisdiction_id,
+            return_address,
             definition,
             election_hash,
             created_at,
@@ -91,6 +93,7 @@ impl From<Election> for client::output::Election {
             client_id,
             machine_id,
             jurisdiction_id,
+            return_address,
             definition,
             election_hash,
             created_at,
@@ -375,6 +378,7 @@ pub(crate) async fn get_elections(
         client_id: ClientId,
         machine_id: String,
         jurisdiction_id: ServerId,
+        return_address: String,
         definition: Vec<u8>,
         election_hash: String,
         created_at: time::OffsetDateTime,
@@ -406,6 +410,7 @@ pub(crate) async fn get_elections(
                     client_id as "client_id: _",
                     machine_id,
                     jurisdiction_id,
+                    return_address,
                     definition,
                     election_hash,
                     created_at
@@ -427,6 +432,7 @@ pub(crate) async fn get_elections(
                     client_id as "client_id: _",
                     machine_id,
                     jurisdiction_id,
+                    return_address,
                     definition,
                     election_hash,
                     created_at
@@ -447,6 +453,7 @@ pub(crate) async fn get_elections(
                 client_id: r.client_id,
                 machine_id: r.machine_id,
                 jurisdiction_id: r.jurisdiction_id,
+                return_address: r.return_address,
                 definition: r.definition.as_slice().try_into()?,
                 election_hash: ElectionHash::from_str(&r.election_hash)?,
                 created_at: r.created_at,
@@ -622,10 +629,9 @@ pub(crate) async fn add_registration_request_from_client(
 
 pub(crate) async fn add_election(
     executor: &mut sqlx::PgConnection,
-    election: client::input::Election,
+    election: &client::input::Election,
 ) -> Result<ServerId, color_eyre::eyre::Error> {
     let election_id = ServerId::new();
-    let election_definition = election.definition;
 
     sqlx::query!(
         r#"
@@ -635,16 +641,18 @@ pub(crate) async fn add_election(
             client_id,
             machine_id,
             election_hash,
-            definition
+            definition,
+            return_address
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
         election_id.as_uuid(),
         election.jurisdiction_id.as_uuid(),
         election.client_id.as_uuid(),
         election.machine_id,
-        election_definition.election_hash.as_str(),
-        election_definition.election_data
+        election.definition.election_hash.as_str(),
+        election.definition.election_data,
+        election.return_address,
     )
     .execute(executor)
     .await?;
@@ -654,7 +662,7 @@ pub(crate) async fn add_election(
 
 pub(crate) async fn add_registration_from_client(
     executor: &mut sqlx::PgConnection,
-    registration: client::input::Registration,
+    registration: &client::input::Registration,
 ) -> color_eyre::Result<ServerId> {
     let registration_id = ServerId::new();
 

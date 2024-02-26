@@ -28,11 +28,16 @@ pub fn ElectionsPage(cx: Scope) -> Element {
         |election_data: Vec<u8>| async move {
             is_uploading.set(true);
 
+            let body = jx::CreateElectionData {
+                election_data: std::str::from_utf8(&election_data).unwrap().to_string(),
+                return_address: "123 Main St, Anytown, USA".to_string(),
+            };
+
             let url = get_url("/api/elections");
             let client = reqwest::Client::new();
             let res = client
                 .post(url)
-                .body(election_data)
+                .body(serde_json::to_string(&body).unwrap())
                 .header("Content-Type", "application/json")
                 .send()
                 .await;
