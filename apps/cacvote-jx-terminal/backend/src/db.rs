@@ -397,6 +397,7 @@ pub(crate) async fn add_election(
     config: &Config,
     jurisdiction_id: ServerId,
     election: ElectionDefinition,
+    return_address: &str,
 ) -> color_eyre::Result<ClientId> {
     let client_id = ClientId::new();
 
@@ -408,9 +409,10 @@ pub(crate) async fn add_election(
             client_id,
             machine_id,
             election_hash,
-            definition
+            definition,
+            return_address
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
         client_id.as_uuid(),
         jurisdiction_id.as_uuid(),
@@ -418,6 +420,7 @@ pub(crate) async fn add_election(
         config.machine_id.clone(),
         election.election_hash.as_str(),
         election.election_data,
+        return_address,
     )
     .execute(&mut *executor)
     .await?;
@@ -740,15 +743,17 @@ pub(crate) async fn add_election_from_cacvote_server(
             machine_id,
             jurisdiction_id,
             election_hash,
-            definition
+            definition,
+            return_address
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (machine_id, client_id)
         DO UPDATE SET
             server_id = $2,
             jurisdiction_id = $5,
             election_hash = $6,
-            definition = $7
+            definition = $7,
+            return_address = $8
         "#,
         ClientId::new().as_uuid(),
         record.server_id.as_uuid(),
@@ -756,7 +761,8 @@ pub(crate) async fn add_election_from_cacvote_server(
         record.machine_id,
         record.jurisdiction_id.as_uuid(),
         record.definition.election_hash.as_str(),
-        record.definition as _
+        record.definition as _,
+        record.return_address,
     )
     .execute(&mut *executor)
     .await?;
@@ -1091,7 +1097,8 @@ pub(crate) async fn get_elections_to_sync_to_cacvote_server(
             jurisdiction_id as "jurisdiction_id: ServerId",
             client_id as "client_id: ClientId",
             machine_id,
-            definition
+            definition,
+            return_address
         FROM elections
         WHERE server_id IS NULL
         ORDER BY created_at ASC
@@ -1108,6 +1115,7 @@ pub(crate) async fn get_elections_to_sync_to_cacvote_server(
                 client_id: e.client_id,
                 machine_id: e.machine_id,
                 definition: String::from_utf8(e.definition)?.parse()?,
+                return_address: e.return_address,
             })
         })
         .collect()
@@ -1322,6 +1330,7 @@ mod test {
             client_id: ClientId::new(),
             machine_id: "mark-terminal-001".to_owned(),
             jurisdiction_id,
+            return_address: "123 Main St., Anytown, USA".to_owned(),
             election_hash: election_definition.election_hash.clone(),
             definition: election_definition,
             created_at: OffsetDateTime::now_utc(),
@@ -1433,6 +1442,7 @@ mod test {
             &build_config(),
             jurisdiction_id,
             election_definition.clone(),
+            "123 Main St.\nAnytown, USA",
         )
         .await
         .unwrap();

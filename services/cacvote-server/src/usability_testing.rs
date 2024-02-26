@@ -40,11 +40,12 @@ pub(crate) async fn setup(config: &Config, pool: &PgPool) -> color_eyre::Result<
         };
         crate::db::add_election(
             &mut txn,
-            Election {
+            &Election {
                 client_id: ClientId::new(),
                 machine_id: "cacvote-server".to_owned(),
                 jurisdiction_id,
                 definition: election_definition,
+                return_address: "123 Main St, Anytown, USA".to_owned(),
             },
         )
         .await?;
@@ -135,7 +136,7 @@ async fn automatically_link_pending_registration_requests_with_latest_election(
     for pending_registration in pending_registrations {
         db::add_registration_from_client(
             &mut *executor,
-            Registration {
+            &Registration {
                 client_id: ClientId::new(),
                 machine_id: "cacvote-server (automatic link)".to_owned(),
                 common_access_card_id: pending_registration.common_access_card_id,

@@ -162,9 +162,12 @@ async fn authenticate(pool: &PgPool, status_getter: &StatusGetter) -> Option<Ser
 
 async fn create_election(
     State((config, pool, status_getter)): State<AppState>,
-    election: String,
+    create_election_data: Json<jx::CreateElectionData>,
 ) -> impl IntoResponse {
-    let election_definition: ElectionDefinition = election.parse().map_err(into_internal_error)?;
+    let election_definition: ElectionDefinition = create_election_data
+        .election_data
+        .parse()
+        .map_err(into_internal_error)?;
     let mut connection = pool.acquire().await.map_err(into_internal_error)?;
     let Some(jurisdiction_id) = authenticate(&pool, &status_getter).await else {
         return Ok::<_, Response>(StatusCode::UNAUTHORIZED);
@@ -175,6 +178,7 @@ async fn create_election(
         &config,
         jurisdiction_id,
         election_definition,
+        &create_election_data.return_address,
     )
     .await
     .map_err(into_internal_error)?;

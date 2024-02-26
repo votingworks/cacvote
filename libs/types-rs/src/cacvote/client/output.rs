@@ -62,6 +62,7 @@ pub struct Election {
     pub client_id: ClientId,
     pub machine_id: String,
     pub jurisdiction_id: ServerId,
+    pub return_address: String,
     pub definition: ElectionDefinition,
     pub election_hash: ElectionHash,
     #[serde(with = "time::serde::iso8601")]

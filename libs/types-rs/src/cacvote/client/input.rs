@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
@@ -31,13 +33,25 @@ pub struct RegistrationRequest {
     pub family_name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Election {
     pub jurisdiction_id: ServerId,
     pub client_id: ClientId,
     pub machine_id: String,
     pub definition: ElectionDefinition,
+    pub return_address: String,
+}
+
+impl Debug for Election {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Election")
+            .field("jurisdiction_id", &self.jurisdiction_id)
+            .field("client_id", &self.client_id)
+            .field("machine_id", &self.machine_id)
+            .field("return_address", &self.return_address)
+            .finish()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
