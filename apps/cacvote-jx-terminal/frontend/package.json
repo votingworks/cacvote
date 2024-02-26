@@ -10,7 +10,7 @@
     "lint": "cargo fmt -- --check && cargo clippy -- -D warnings",
     "start": "concurrently 'npm:start:*' 'npm:build:css:watch'",
     "start:frontend": "dx serve --port 5000",
-    "start:backend": "pnpm --dir ../backend start",
+    "start:backend": "cd ../backend && cargo watch -x run",
     "build:css:watch": "tailwindcss -i input.css -o ./public/styles.css --watch",
     "test": "cargo test"
   },
