@@ -124,12 +124,6 @@ importers:
         specifier: 5.2.2
         version: 5.2.2
 
-  apps/cacvote-jx-terminal/backend:
-    devDependencies:
-      is-ci-cli:
-        specifier: 2.2.0
-        version: 2.2.0
-
   apps/cacvote-jx-terminal/frontend:
     dependencies:
       tailwindcss:
@@ -447,12 +441,6 @@ importers:
       http-proxy-middleware:
         specifier: 1.0.6
         version: 1.0.6
-
-  apps/cacvote-scan/backend:
-    devDependencies:
-      is-ci-cli:
-        specifier: 2.2.0
-        version: 2.2.0
 
   apps/cacvote-scan/frontend:
     dependencies:
