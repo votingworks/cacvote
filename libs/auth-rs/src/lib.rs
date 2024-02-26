@@ -3,6 +3,7 @@ pub mod card_details;
 mod card_reader;
 mod certs;
 mod command_apdu;
+mod hex_debug;
 mod tlv;
 
 pub use card_command::CardCommand;
