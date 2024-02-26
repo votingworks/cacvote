@@ -9,12 +9,13 @@ use pcsc::{Card, ReaderState, State, PNP_NOTIFICATION};
 
 use crate::{
     card_details::{self, CardDetails},
+    hex_debug::hex_debug,
     tlv::{ConstructError, ParseError, Tlv},
     CardCommand, CommandApdu,
 };
 
 /// The OpenFIPS201 applet ID
-const OPEN_FIPS_201_AID: [u8; 11] = [
+pub(crate) const OPEN_FIPS_201_AID: [u8; 11] = [
     0xa0, 0x00, 0x00, 0x03, 0x08, 0x00, 0x00, 0x10, 0x00, 0x01, 0x00,
 ];
 
@@ -294,6 +295,7 @@ impl CardReader {
         &self.name
     }
 
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn read_card_details(&self) -> Result<CardDetails, CardReaderError> {
         let card = self.get_card()?;
 
@@ -308,6 +310,7 @@ impl CardReader {
     }
 
     fn get_card(&self) -> Result<Card, CardReaderError> {
+        tracing::debug!("connecting to card reader: {}", self.name);
         Ok(self.ctx.connect(
             &std::ffi::CString::new(self.name.as_bytes()).unwrap(),
             pcsc::ShareMode::Exclusive,
@@ -315,6 +318,7 @@ impl CardReader {
         )?)
     }
 
+    #[tracing::instrument(level = "debug", skip(self, card))]
     fn select_applet(&self, card: &Card) -> Result<(), CardReaderError> {
         let command = CardCommand::select(OPEN_FIPS_201_AID);
         self.transmit(card, command)?;
@@ -326,6 +330,8 @@ impl CardReader {
         card: &Card,
         cert_object_id: impl Into<Vec<u8>>,
     ) -> Result<X509, CardReaderError> {
+        let cert_object_id = cert_object_id.into();
+        tracing::debug!("retrieving cert with object ID: {cert_object_id:02x?}");
         let data = self.get_data(card, cert_object_id)?;
         let cert_tlv = data[0..data.len() - 5].to_vec(); // trim metadata
         let cert_tlv: Tlv = cert_tlv.try_into()?;
@@ -344,6 +350,7 @@ impl CardReader {
         Ok(tlv.value().to_vec())
     }
 
+    #[tracing::instrument(level = "debug", skip(self, card), fields(card_command = hex_debug(&card_command)))]
     fn transmit(&self, card: &Card, card_command: CardCommand) -> Result<Vec<u8>, pcsc::Error> {
         let mut data: Vec<u8> = vec![];
         let mut more_data = false;
@@ -361,9 +368,8 @@ impl CardReader {
         }
 
         while more_data {
-            let get_response_command = CardCommand::get_response(more_data_length);
-            let apdu = get_response_command.to_command_apdu();
-            let response = self.transmit_helper(card, apdu)?;
+            let response =
+                self.transmit_helper(card, CommandApdu::get_response(more_data_length))?;
             data.extend(response.data);
             more_data = response.more_data;
             more_data_length = response.more_data_length;
@@ -372,6 +378,7 @@ impl CardReader {
         Ok(data)
     }
 
+    #[tracing::instrument(level = "debug", skip(self, card), fields(apdu = hex_debug(&apdu)))]
     fn transmit_helper(
         &self,
         card: &Card,
@@ -379,7 +386,9 @@ impl CardReader {
     ) -> Result<TransmitResponse, pcsc::Error> {
         let mut receive_buffer = [0; 1024];
         let send_buffer = apdu.to_bytes();
+        tracing::debug!("sending: {:02x?}", send_buffer);
         let response_apdu = card.transmit(&send_buffer, &mut receive_buffer)?;
+        tracing::debug!("received: {:02x?}", response_apdu);
 
         response_apdu.try_into()
     }
