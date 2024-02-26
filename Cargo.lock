@@ -234,10 +234,13 @@ dependencies = [
 name = "auth-rs"
 version = "0.1.0"
 dependencies = [
+ "color-eyre",
  "openssl",
  "pcsc",
  "serde",
  "thiserror",
+ "tracing",
+ "tracing-subscriber",
  "types-rs",
 ]
 
