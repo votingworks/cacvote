@@ -607,7 +607,8 @@ pub(crate) async fn get_elections_to_sync_to_cacvote_server(
             client_id as "client_id: ClientId",
             machine_id,
             jurisdiction_id as "jurisdiction_id: ServerId",
-            definition as "definition: String"
+            definition as "definition: String",
+            return_address
         FROM elections
         WHERE server_id IS NULL
         ORDER BY created_at ASC
@@ -624,6 +625,7 @@ pub(crate) async fn get_elections_to_sync_to_cacvote_server(
                 machine_id: e.machine_id,
                 jurisdiction_id: e.jurisdiction_id,
                 definition: e.definition.parse()?,
+                return_address: e.return_address,
             })
         })
         .collect()
@@ -920,6 +922,7 @@ mod test {
             server_id: ServerId::new(),
             client_id: ClientId::new(),
             jurisdiction_id,
+            return_address: "123 Main St, Anytown, USA".to_owned(),
             machine_id: "mark-terminal-001".to_owned(),
             election_hash: election_definition.election_hash.clone(),
             definition: election_definition,

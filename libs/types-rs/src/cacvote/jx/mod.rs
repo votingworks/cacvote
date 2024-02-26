@@ -334,3 +334,10 @@ pub struct CreateRegistrationData {
     pub ballot_style_id: BallotStyleId,
     pub precinct_id: PrecinctId,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateElectionData {
+    pub election_data: String,
+    pub return_address: String,
+}

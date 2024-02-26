@@ -1,0 +1,1 @@
+ALTER TABLE elections DROP COLUMN return_address;
