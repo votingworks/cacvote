@@ -14,7 +14,7 @@ pub const MAX_RESPONSE_APDU_DATA_LENGTH: usize = MAX_APDU_LENGTH - 2;
 ///
 /// The CLA also indicates whether the APDU is being sent over a GlobalPlatform Secure Channel,
 /// typically used for initial card configuration.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Cla {
     Standard = 0x00,
     Chained = 0x10,
@@ -22,13 +22,24 @@ pub enum Cla {
     SecureChained = 0x1c,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CommandApdu {
+    /// Class byte
     cla: Cla,
+
+    /// Instruction byte
     ins: u8,
+
+    /// Parameter 1 byte
     p1: u8,
+
+    /// Parameter 2 byte
     p2: u8,
+
+    /// Length of the data field
     lc: u8,
+
+    /// Data field
     data: Vec<u8>,
 }
 
@@ -48,6 +59,20 @@ impl CommandApdu {
             lc: lc as u8,
             data,
         })
+    }
+
+    /// The GET RESPONSE command is a standard command for retrieving additional
+    /// APDU response data.
+    #[must_use]
+    pub fn get_response(length: u8) -> CommandApdu {
+        CommandApdu {
+            cla: Cla::Standard,
+            ins: 0xc0,
+            p1: 0x00,
+            p2: 0x00,
+            lc: length,
+            data: Vec::new(),
+        }
     }
 
     pub fn data(&self) -> &[u8] {
