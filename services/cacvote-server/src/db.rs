@@ -40,30 +40,6 @@ pub(crate) async fn setup(config: &Config) -> color_eyre::Result<PgPool> {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct Admin {
-    pub(crate) machine_id: String,
-    pub(crate) common_access_card_id: String,
-    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
-}
-
-impl From<Admin> for client::output::Admin {
-    fn from(admin: Admin) -> Self {
-        let Admin {
-            machine_id,
-            common_access_card_id,
-            created_at,
-        } = admin;
-
-        Self {
-            machine_id,
-            common_access_card_id,
-            created_at,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub(crate) struct Election {
     pub(crate) id: ServerId,
     pub(crate) client_id: ClientId,
@@ -306,30 +282,6 @@ pub(crate) async fn add_jurisdiction(
     Ok(jurisdiction_id)
 }
 
-pub(crate) async fn add_admin(
-    executor: &mut sqlx::PgConnection,
-    admin: client::input::Admin,
-) -> color_eyre::Result<()> {
-    let client::input::Admin {
-        machine_id,
-        common_access_card_id,
-    } = admin;
-
-    sqlx::query!(
-        r#"
-        INSERT INTO admins (machine_id, common_access_card_id)
-        VALUES ($1, $2)
-        ON CONFLICT (common_access_card_id) DO NOTHING
-        "#,
-        machine_id,
-        common_access_card_id,
-    )
-    .execute(&mut *executor)
-    .await?;
-
-    Ok(())
-}
-
 pub(crate) async fn get_jurisdictions(
     executor: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<Vec<Jurisdiction>> {
@@ -342,25 +294,6 @@ pub(crate) async fn get_jurisdictions(
             name,
             created_at
         FROM jurisdictions
-        ORDER BY created_at ASC
-        "#
-    )
-    .fetch_all(&mut *executor)
-    .await
-    .map_err(Into::into)
-}
-
-pub(crate) async fn get_admins(
-    executor: &mut sqlx::PgConnection,
-) -> color_eyre::Result<Vec<Admin>> {
-    sqlx::query_as!(
-        Admin,
-        r#"
-        SELECT
-            machine_id,
-            common_access_card_id,
-            created_at
-        FROM admins
         ORDER BY created_at ASC
         "#
     )
@@ -931,36 +864,5 @@ pub(crate) async fn get_scanned_ballots(
         .fetch_all(&mut *executor)
         .await
         .map_err(Into::into),
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[sqlx::test(migrations = "db/migrations")]
-    async fn test_admins(pool: sqlx::PgPool) -> color_eyre::Result<()> {
-        let mut db = pool.acquire().await?;
-
-        add_admin(
-            &mut db,
-            client::input::Admin {
-                machine_id: "machine-id".to_owned(),
-                common_access_card_id: "1234567890".to_owned(),
-            },
-        )
-        .await?;
-
-        let admins = get_admins(&mut db).await?;
-
-        assert_eq!(
-            admins
-                .into_iter()
-                .map(|a| a.common_access_card_id)
-                .collect::<Vec<_>>(),
-            vec!["1234567890".to_owned()]
-        );
-
-        Ok(())
     }
 }

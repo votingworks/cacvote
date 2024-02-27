@@ -17,13 +17,6 @@ pub struct Jurisdiction {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Admin {
-    pub machine_id: String,
-    pub common_access_card_id: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct RegistrationRequest {
     pub client_id: ClientId,
     pub machine_id: String,

@@ -156,12 +156,6 @@ export const ScannedBallotOutputSchema: z.ZodSchema<ScannedBallotOutput> =
     castVoteRecord: Base64Buffer,
   });
 
-export interface AdminInput {
-  machineId: string;
-  commonAccessCardId: string;
-  createdAt: DateTime;
-}
-
 export interface JurisdictionInput {
   name: string;
 }
@@ -178,14 +172,6 @@ export const JurisdictionOutputSchema: z.ZodSchema<JurisdictionOutput> =
     name: z.string().nonempty(),
     createdAt: DateTimeSchema,
   });
-
-export type AdminOutput = AdminInput;
-
-export const AdminOutputSchema: z.ZodSchema<AdminOutput> = z.object({
-  machineId: z.string(),
-  commonAccessCardId: z.string(),
-  createdAt: DateTimeSchema,
-});
 
 export interface ElectionInput {
   jurisdictionId: ServerId;
@@ -224,7 +210,6 @@ export interface RaveServerSyncInput {
 
 export interface RaveServerSyncOutput {
   jurisdictions: JurisdictionOutput[];
-  admins: AdminOutput[];
   elections: ElectionOutput[];
   registrationRequests: RegistrationRequestOutput[];
   registrations: RegistrationOutput[];
@@ -235,7 +220,6 @@ export interface RaveServerSyncOutput {
 export const RaveMarkSyncOutputSchema: z.ZodSchema<RaveServerSyncOutput> =
   z.object({
     jurisdictions: z.array(JurisdictionOutputSchema),
-    admins: z.array(AdminOutputSchema),
     elections: z.array(ElectionOutputSchema),
     registrationRequests: z.array(RegistrationRequestOutputSchema),
     registrations: z.array(RegistrationOutputSchema),

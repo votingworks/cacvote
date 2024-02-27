@@ -177,12 +177,6 @@ export class RaveServerClientImpl {
   }
 
   private updateLocalStoreFromSyncOutput(output: RaveServerSyncOutput): void {
-    this.store.resetAdmins();
-    for (const admin of output.admins) {
-      this.store.createAdmin(admin);
-    }
-    debug('reset and replaced admins; count: %d', output.admins.length);
-
     for (const jurisdiction of output.jurisdictions) {
       const jurisdictionId = this.store.createJurisdiction(jurisdiction);
       debug('created or replaced jurisdiction %s', jurisdictionId);

@@ -26,7 +26,6 @@ import { execFileSync } from 'child_process';
 import { cac } from '@votingworks/auth';
 import { IS_INTEGRATION_TEST, MAILING_LABEL_PRINTER } from './globals';
 import * as mailingLabel from './mailing_label';
-import { RaveServerClient } from './cacvote_server_client';
 import { Auth, AuthStatus } from './types/auth';
 import { ClientId, RegistrationRequest, ServerId } from './types/db';
 import { Workspace } from './workspace';
@@ -38,11 +37,6 @@ export type VoterStatus =
   | 'voted';
 
 export interface CreateTestVoterInput {
-  /**
-   * Whether or not the voter should be an admin.
-   */
-  isAdmin?: boolean;
-
   jurisdictionId?: string;
 
   registrationRequest?: {
@@ -75,15 +69,7 @@ export interface CreateTestVoterInput {
   };
 }
 
-function buildApi({
-  auth,
-  workspace,
-  cacvoteServerClient,
-}: {
-  auth: Auth;
-  workspace: Workspace;
-  cacvoteServerClient: RaveServerClient;
-}) {
+function buildApi({ auth, workspace }: { auth: Auth; workspace: Workspace }) {
   async function getAuthStatus(): Promise<AuthStatus> {
     return await auth.getAuthStatus();
   }
@@ -105,9 +91,7 @@ function buildApi({
       return auth.checkPin(input.pin);
     },
 
-    async getVoterStatus(): Promise<
-      Optional<{ status: VoterStatus; isAdmin: boolean }>
-    > {
+    async getVoterStatus(): Promise<Optional<{ status: VoterStatus }>> {
       const authStatus: AuthStatus = await getAuthStatus();
 
       if (authStatus.status !== 'has_card') {
@@ -115,7 +99,6 @@ function buildApi({
       }
 
       const { commonAccessCardId } = authStatus.card;
-      const isAdmin = workspace.store.isAdmin(commonAccessCardId);
       const registrations =
         workspace.store.getRegistrations(commonAccessCardId);
 
@@ -128,7 +111,6 @@ function buildApi({
             registrationRequests.length > 0
               ? 'registration_pending'
               : 'unregistered',
-          isAdmin,
         };
       }
 
@@ -140,7 +122,7 @@ function buildApi({
           registration.id
         );
 
-      return { status: selection ? 'voted' : 'registered', isAdmin };
+      return { status: selection ? 'voted' : 'registered' };
     },
 
     async getRegistrationRequests(): Promise<RegistrationRequest[]> {
@@ -302,16 +284,6 @@ function buildApi({
       );
     },
 
-    async sync() {
-      const authStatus = await getAuthStatus();
-      assert(
-        authStatus.status === 'has_card' && authStatus.isAdmin,
-        'not logged in as admin'
-      );
-
-      void cacvoteServerClient.sync({ authStatus });
-    },
-
     getServerSyncStatus() {
       return {
         attempts: workspace.store.getServerSyncAttempts(),
@@ -332,12 +304,6 @@ function buildApi({
       }
 
       const commonAccessCardId = createUniqueCommonAccessCardId();
-      if (input.isAdmin) {
-        workspace.store.createAdmin({
-          machineId: VX_MACHINE_ID,
-          commonAccessCardId,
-        });
-      }
 
       const jurisdictionId = input.jurisdictionId
         ? (input.jurisdictionId as ServerId)
@@ -447,14 +413,12 @@ export type Api = ReturnType<typeof buildApi>;
 export function buildApp({
   auth,
   workspace,
-  cacvoteServerClient,
 }: {
   auth: Auth;
   workspace: Workspace;
-  cacvoteServerClient: RaveServerClient;
 }): Application {
   const app: Application = express();
-  const api = buildApi({ auth, workspace, cacvoteServerClient });
+  const api = buildApi({ auth, workspace });
 
   app.use('/api/watchAuthStatus', (req, res) => {
     res.set({

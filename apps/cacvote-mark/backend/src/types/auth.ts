@@ -4,7 +4,7 @@ import { Result } from '@votingworks/basics';
 
 export type AuthStatus =
   | { status: 'no_card' }
-  | { status: 'has_card'; card: cac.CommonAccessCardDetails; isAdmin: boolean };
+  | { status: 'has_card'; card: cac.CommonAccessCardDetails };
 
 export interface Auth {
   /**

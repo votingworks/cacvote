@@ -39,7 +39,6 @@ export function buildMockAuth({
             familyName: 'Smith',
             commonAccessCardId: '1234567890',
           },
-          isAdmin: false,
         };
         return Promise.resolve(true);
       }

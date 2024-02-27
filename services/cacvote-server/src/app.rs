@@ -33,7 +33,6 @@ pub(crate) async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
     let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
     Ok(Router::new()
         .route("/api/status", get(get_status))
-        .route("/api/admins", post(create_admin))
         .route("/api/sync", post(do_sync))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
@@ -138,15 +137,6 @@ pub(crate) async fn do_sync(
         Ok(jurisdictions) => jurisdictions,
     };
 
-    let get_admins_result = db::get_admins(&mut txn).await;
-    let admins = match get_admins_result {
-        Err(e) => {
-            tracing::error!("Failed to get admins: {e}");
-            return Err(Json(json!({ "error": e.to_string() })));
-        }
-        Ok(admins) => admins,
-    };
-
     let get_elections_result = db::get_elections(&mut txn, last_synced_election_id).await;
     let elections = match get_elections_result {
         Err(e) => {
@@ -196,7 +186,6 @@ pub(crate) async fn do_sync(
 
     let output = RaveServerSyncOutput {
         jurisdictions: jurisdictions.into_iter().map(Into::into).collect(),
-        admins: admins.into_iter().map(Into::into).collect(),
         elections: elections.into_iter().map(Into::into).collect(),
         registration_requests: registration_requests.into_iter().map(Into::into).collect(),
         registrations: registrations.into_iter().map(Into::into).collect(),
@@ -210,29 +199,4 @@ pub(crate) async fn do_sync(
     }
 
     Ok(Json(output))
-}
-
-/// Creates an admin user. Admins have elevated privileges when logged into
-/// client machines.
-pub(crate) async fn create_admin(
-    State(pool): State<AppState>,
-    Json(input): Json<client::input::Admin>,
-) -> impl IntoResponse {
-    let input = input;
-    let mut connection = match pool.acquire().await {
-        Ok(connection) => connection,
-        Err(err) => {
-            tracing::error!("Failed to acquire connection: {err}");
-            return Err(Json(json!({ "error": err.to_string() })));
-        }
-    };
-    let result = db::add_admin(&mut connection, input).await;
-
-    result.map_or_else(
-        |err| {
-            tracing::error!("Failed to create admin: {err}");
-            Err(Json(json!({ "error": err.to_string() })))
-        },
-        |_| Ok(StatusCode::CREATED),
-    )
 }
