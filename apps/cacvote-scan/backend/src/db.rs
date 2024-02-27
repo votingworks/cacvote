@@ -258,15 +258,17 @@ pub(crate) async fn add_election_from_cacvote_server(
             machine_id,
             jurisdiction_id,
             election_hash,
-            definition
+            definition,
+            return_address
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (machine_id, client_id)
         DO UPDATE SET
             server_id = $2,
             jurisdiction_id = $5,
             election_hash = $6,
-            definition = $7
+            definition = $7,
+            return_address = $8
         "#,
         ClientId::new().as_uuid(),
         record.server_id.as_uuid(),
@@ -275,6 +277,7 @@ pub(crate) async fn add_election_from_cacvote_server(
         record.jurisdiction_id.as_uuid(),
         record.definition.election_hash.as_str(),
         record.definition.election_data,
+        record.return_address,
     )
     .execute(&mut *executor)
     .await?;
