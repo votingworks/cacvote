@@ -1,0 +1,42 @@
+msc {
+    js [ label="Jurisdiction Station", textbgcolor="red", textcolor="white" ],
+    s [ label="Server", textbgcolor="yellow" ],
+    vs [ label="Voter Station", textbgcolor="green" ];
+
+    vs rbox vs   [ label="Load user info from CAC cert" ];
+    vs rbox vs   [ label="Prompt for user jurisdiction" ];
+    vs rbox vs   [ label="Sign registration request with CAC" ];
+    vs rbox vs   [ label="VoterInfo=(name,dob,address,CAC ID)" ];
+
+    vs=>s   [ label="REGISTER\nVoterInfo,Jx,\nSigCAC(VoterInfo, Jx),\nCACCert" ];
+
+    s rbox s   [ label="Verify CAC sig & cert" ];
+
+    s=>vs   [ label="Registration Request ID" ];
+
+    |||;
+
+    js abox s   [ label="sync protocol based on Jx and last updated\nyields registration request IDs" ];
+
+    js=>s   [ label="GET REGISTRATION\nREQUEST by ID" ];
+    s=>js   [ label="VoterInfo,\nSigCAC(VoterInfo, Jx),\nCACCert" ];
+
+    js rbox js   [ label="check against VRDB, approve" ];
+    js rbox js   [ label="assign ballot style" ];    
+
+    js=>s   [ label="APPROVE REGISTRATION\nCAC ID, Elec ID, Ballot Style\nSigJS(CAC ID, Elec ID, Ballot Style), JSCert" ];
+
+    s rbox s   [ label="Verify reg signature & jx cert" ] ;
+
+    |||;
+
+    s abox vs   [ label="sync protocol based on last updated\nyields registration IDs" ];
+
+    vs=>s   [ label="GET REGISTRATION by ID\nts,Reg ID,\nSigVS(ts, Reg ID),VSCert" ];
+
+    s rbox s   [ label="Verify VS sig" ];
+    
+    s=>vs   [ label="CAC ID, Elec ID, Ballot Style\nSigJS(CAC ID, Elec ID, Ballot Style), JSCert" ];
+
+    vs rbox vs   [ label="Verify reg signature & jx cert" ] ;
+}

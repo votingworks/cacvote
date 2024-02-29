@@ -1,0 +1,15 @@
+msc {
+    js [ label="Jurisdiction Station", textbgcolor="red", textcolor="white" ],
+    s [ label="Server", textbgcolor="yellow" ],
+    vs [ label="Voter Station", textbgcolor="green" ];
+
+    js rbox js  [ label="homomorphic tabulation of all ballots" ];
+    js rbox js  [ label="decryption of tally\nand proof generation" ];
+
+    js=>s   [label="POST RESULTS\nTally,Proof(Tally),\nSigJS(Everything)"];
+
+    js rbox js  [ label="mix ballots" ];
+    js rbox js  [ label="decrypt ballot IDs" ];
+
+    js=>s   [label="POST MIXED BALLOTS\nmixed ballots, ballot IDs\nSigJS(Everything)"];
+}

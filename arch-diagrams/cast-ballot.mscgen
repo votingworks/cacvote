@@ -1,0 +1,35 @@
+msc {
+    js [ label="Jurisdiction Station", textbgcolor="red", textcolor="white" ],
+    s [ label="Server", textbgcolor="yellow" ],
+    vs [ label="Voter Station", textbgcolor="green" ];
+
+    vs rbox vs   [ label="Print and review paper ballot"];
+    vs rbox vs   [ label="Encrypt ballot with ElecPK => Enc(Ballot)"];
+    vs rbox vs   [ label="Sign EncBallot with CAC (domain electronic) => SigCAC_E(Enc(Ballot))"];
+    vs rbox vs   [ label="Sign EncBallot with CAC (domain paper) => SigCAC_P(Enc(Ballot))"];
+
+    vs rbox vs   [ label="Print SigCAC_P(Enc(Ballot)) on mailing label"] ;
+
+    vs=>>js   [ label="Paper Ballot in Envelope with mailing label\nincluding SigCAC_P(Enc(Ballot))" ];
+
+    vs=>s    [ label="CAST BALLOT\nEnc(Ballot),\nSigCAC_E(Enc(Ballot)),\nCACCert" ];
+
+    s rbox s  [ label="verify CAC sig and cert on ballot" ];
+    s rbox s  [ label="verify matches reg record for ballot style and election" ];
+
+    s=>vs    [ label="BALLOT ID" ];
+
+    |||;
+
+    js abox s   [ label = "synchronization protocol based on last updated\nyield ballot IDs that need to be downloaded" ];
+
+    js=>s   [ label = "GET BALLOT\nBallotID,timestamp,\nSigJS(BallotID,timestamp),JSCert" ];
+
+    s rbox s [ label="verify JS signature and cert" ];
+
+    s=>js   [ label = "Enc(Ballot),\nSigCAC_E(Enc(Ballot)),\nCACCert" ];
+
+    js rbox js  [ label="verify CAC sig and cert on ballot" ];
+    js rbox js  [ label="verify matches reg record for ballot style and election" ];
+
+}

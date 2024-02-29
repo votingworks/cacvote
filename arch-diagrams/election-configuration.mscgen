@@ -1,0 +1,29 @@
+msc {
+    js [ label="Jurisdiction Station", textbgcolor="red", textcolor="white" ],
+    s [ label="Server", textbgcolor="yellow" ],
+    vs [ label="Voter Station", textbgcolor="green" ];
+
+    js rbox js [ label = "Define election parameters,\nGenerate Election Keypair" ];
+    js rbox js [ label = "Bundle election definition and election public key" ];
+    js rbox js [ label = "Sign election definition & public key with JS key" ];
+
+    js=>s   [ label = "CREATE ELECTION\nElecDef, sigJS(ElecDef,ElecPK), JSCert" ];
+
+    s rbox s   [ label ="Verify election definition & public key"];
+    s rbox s   [ label = "Verify JS cert"];
+
+    s=>js   [ label = "Election ID" ];
+
+    |||;
+    
+    s abox vs   [ label = "synchronization protocol based on last updated\nyield election IDs that need to be downloaded" ];
+
+    vs=>s   [ label="GET ELECTION\nElectionID,timestamp,\nSigVS(ElectionID,timestamp),VSCert" ];
+
+    s rbox s  [ label = "Verify timestamp freshness and signature" ];
+    s rbox s  [ label = "Verify VS signature on election ID and timestamp" ];
+    s rbox s  [ label = "Verify VSCert" ];
+
+    s=>vs   [ label = "ElecDef, sigJS(ElecDef, ElecPK),\nJSCert" ];
+
+}
