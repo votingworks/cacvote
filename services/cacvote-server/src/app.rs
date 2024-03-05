@@ -78,12 +78,10 @@ pub(crate) async fn do_sync(
         last_synced_registration_id,
         last_synced_election_id,
         last_synced_printed_ballot_id,
-        last_synced_scanned_ballot_id,
         registration_requests,
         elections,
         registrations,
         printed_ballots,
-        scanned_ballots,
     } = input;
 
     for client_request in registration_requests.into_iter() {
@@ -118,14 +116,6 @@ pub(crate) async fn do_sync(
 
         if let Err(e) = result {
             tracing::error!("Failed to insert printed ballot: {e}");
-        }
-    }
-
-    for scanned_ballot in scanned_ballots.into_iter() {
-        let result = db::add_scanned_ballot_from_client(&mut txn, scanned_ballot).await;
-
-        if let Err(e) = result {
-            tracing::error!("Failed to insert scanned ballot: {e}");
         }
     }
 
@@ -185,15 +175,6 @@ pub(crate) async fn do_sync(
             Ok(ballots) => ballots,
         };
 
-    let scanned_ballots =
-        match db::get_scanned_ballots(&mut txn, last_synced_scanned_ballot_id).await {
-            Err(e) => {
-                tracing::error!("Failed to get scanned ballots: {e}");
-                return Err(Json(json!({ "error": e.to_string() })));
-            }
-            Ok(ballots) => ballots,
-        };
-
     let output = RaveServerSyncOutput {
         jurisdictions: jurisdictions.into_iter().map(Into::into).collect(),
         admins: admins.into_iter().map(Into::into).collect(),
@@ -201,7 +182,6 @@ pub(crate) async fn do_sync(
         registration_requests: registration_requests.into_iter().map(Into::into).collect(),
         registrations: registrations.into_iter().map(Into::into).collect(),
         printed_ballots: printed_ballots.into_iter().map(Into::into).collect(),
-        scanned_ballots: scanned_ballots.into_iter().map(Into::into).collect(),
     };
 
     if let Err(err) = txn.commit().await {

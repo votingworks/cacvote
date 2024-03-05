@@ -18,7 +18,6 @@ use tracing::Level;
 use types_rs::cacvote::client::output::Jurisdiction;
 use types_rs::cacvote::jx;
 use types_rs::cacvote::{client, ClientId, ServerId};
-use types_rs::cdf::cvr::Cvr;
 use types_rs::election::{BallotStyleId, ElectionDefinition, ElectionHash, PrecinctId};
 use uuid::Uuid;
 
@@ -87,20 +86,6 @@ pub(crate) struct Registration {
     pub(crate) created_at: sqlx::types::time::OffsetDateTime,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ScannedBallot {
-    pub(crate) id: ClientId,
-    pub(crate) server_id: Option<ServerId>,
-    pub(crate) client_id: ClientId,
-    pub(crate) machine_id: String,
-    pub(crate) election_id: ClientId,
-    #[serde(with = "Base64Standard")]
-    pub(crate) cast_vote_record: Vec<u8>,
-    #[serde(with = "time::serde::iso8601")]
-    pub(crate) created_at: sqlx::types::time::OffsetDateTime,
-}
-
 pub(crate) async fn get_app_data(
     executor: &mut sqlx::PgConnection,
     jurisdiction_code: String,
@@ -116,7 +101,6 @@ pub(crate) async fn get_app_data(
     let registration_requests = get_registration_requests(executor, jurisdiction_id).await?;
     let registrations = get_registrations(executor, jurisdiction_id).await?;
     let printed_ballots = get_printed_ballots(executor, jurisdiction_id).await?;
-    let scanned_ballots = get_scanned_ballots(executor, jurisdiction_id).await?;
 
     Ok(jx::LoggedInAppData {
         registrations: registrations
@@ -181,7 +165,6 @@ pub(crate) async fn get_app_data(
             })
             .collect(),
         printed_ballots,
-        scanned_ballots,
     })
 }
 
@@ -569,46 +552,6 @@ pub(crate) async fn get_printed_ballots(
         .collect::<Result<Vec<_>, _>>()
 }
 
-pub(crate) async fn get_scanned_ballots(
-    executor: &mut sqlx::PgConnection,
-    jurisdiction_id: ServerId,
-) -> color_eyre::Result<Vec<jx::ScannedBallot>> {
-    let records = sqlx::query!(
-        r#"
-        SELECT
-            scanned_ballots.id as "id: ClientId",
-            scanned_ballots.server_id as "server_id: ServerId",
-            scanned_ballots.election_id as "election_id: ClientId",
-            scanned_ballots.cast_vote_record,
-            scanned_ballots.created_at
-        FROM scanned_ballots
-        INNER JOIN elections ON elections.id = scanned_ballots.election_id
-        WHERE elections.jurisdiction_id = $1
-        ORDER BY created_at DESC
-        "#,
-        jurisdiction_id.as_uuid(),
-    )
-    .fetch_all(&mut *executor)
-    .await?;
-
-    records
-        .into_iter()
-        .map(|record| {
-            let cast_vote_record: Cvr = serde_json::from_slice(&record.cast_vote_record)?;
-
-            Ok(jx::ScannedBallot {
-                id: record.id,
-                server_id: record.server_id,
-                election_id: record.election_id,
-                precinct_id: PrecinctId::from(cast_vote_record.ballot_style_unit_id.unwrap()),
-                ballot_style_id: BallotStyleId::from(cast_vote_record.ballot_style_id.unwrap()),
-                cast_vote_record: record.cast_vote_record,
-                created_at: record.created_at,
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()
-}
-
 pub(crate) async fn create_registration(
     executor: &mut sqlx::PgConnection,
     config: &Config,
@@ -939,67 +882,6 @@ pub(crate) async fn add_or_update_printed_ballot_from_cacvote_server(
     Ok(id)
 }
 
-pub(crate) async fn add_or_update_scanned_ballot_from_cacvote_server(
-    executor: &mut sqlx::PgConnection,
-    scanned_ballot: client::output::ScannedBallot,
-) -> color_eyre::Result<ClientId> {
-    let election_id = sqlx::query!(
-        r#"
-        SELECT id as "id: ClientId"
-        FROM elections
-        WHERE server_id = $1
-        "#,
-        scanned_ballot.election_id.as_uuid(),
-    )
-    .fetch_one(&mut *executor)
-    .await?
-    .id;
-
-    sqlx::query!(
-        r#"
-        INSERT INTO scanned_ballots (
-            id,
-            server_id,
-            client_id,
-            machine_id,
-            election_id,
-            cast_vote_record,
-            created_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (client_id, machine_id)
-        DO UPDATE SET
-            server_id = $2,
-            election_id = $5,
-            cast_vote_record = $6,
-            created_at = $7
-        "#,
-        ClientId::new().as_uuid(),
-        scanned_ballot.server_id.as_uuid(),
-        scanned_ballot.client_id.as_uuid(),
-        scanned_ballot.machine_id,
-        election_id.as_uuid(),
-        scanned_ballot.cast_vote_record,
-        scanned_ballot.created_at
-    )
-    .execute(&mut *executor)
-    .await?;
-
-    let id = sqlx::query!(
-        r#"
-        SELECT id as "id: ClientId"
-        FROM scanned_ballots
-        WHERE server_id = $1
-        "#,
-        scanned_ballot.server_id.as_uuid(),
-    )
-    .fetch_one(&mut *executor)
-    .await?
-    .id;
-
-    Ok(id)
-}
-
 pub(crate) async fn add_or_update_registration_request_from_cacvote_server(
     executor: &mut sqlx::PgConnection,
     registration_request: client::output::RegistrationRequest,
@@ -1197,94 +1079,6 @@ pub(crate) async fn get_printed_ballots_to_sync_to_cacvote_server(
         .collect()
 }
 
-pub(crate) async fn get_scanned_ballots_to_sync_to_cacvote_server(
-    executor: &mut sqlx::PgConnection,
-) -> color_eyre::Result<Vec<client::input::ScannedBallot>> {
-    let records = sqlx::query!(
-        r#"
-        SELECT
-            client_id as "client_id: ClientId",
-            machine_id,
-            election_id as "election_id: ClientId",
-            cast_vote_record,
-            created_at
-        FROM scanned_ballots
-        WHERE server_id IS NULL
-        ORDER BY created_at DESC
-        "#
-    )
-    .fetch_all(&mut *executor)
-    .await?;
-
-    Ok(records
-        .into_iter()
-        .map(|r| client::input::ScannedBallot {
-            client_id: r.client_id,
-            machine_id: r.machine_id,
-            election_id: r.election_id,
-            cast_vote_record: r.cast_vote_record,
-        })
-        .collect::<Vec<_>>())
-}
-
-#[allow(dead_code)]
-pub(crate) async fn add_scanned_ballot(
-    executor: &mut sqlx::PgConnection,
-    scanned_ballot: ScannedBallot,
-) -> Result<(), sqlx::Error> {
-    let ScannedBallot {
-        id,
-        server_id,
-        client_id,
-        machine_id,
-        election_id,
-        cast_vote_record,
-        created_at,
-    } = scanned_ballot;
-    sqlx::query!(
-        r#"
-        INSERT INTO scanned_ballots (
-            id,
-            server_id,
-            client_id,
-            machine_id,
-            election_id,
-            cast_vote_record,
-            created_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        "#,
-        id.as_uuid(),
-        server_id.map(|id| id.as_uuid()),
-        client_id.as_uuid(),
-        machine_id,
-        election_id.as_uuid(),
-        cast_vote_record,
-        created_at
-    )
-    .execute(executor)
-    .await?;
-
-    Ok(())
-}
-
-pub(crate) async fn get_last_synced_scanned_ballot_id(
-    executor: &mut sqlx::PgConnection,
-) -> color_eyre::Result<Option<ServerId>> {
-    Ok(sqlx::query!(
-        r#"
-        SELECT server_id as "server_id!: ServerId"
-        FROM scanned_ballots
-        WHERE server_id IS NOT NULL
-        ORDER BY created_at DESC
-        LIMIT 1
-        "#
-    )
-    .fetch_optional(&mut *executor)
-    .await?
-    .map(|r| r.server_id))
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -1375,20 +1169,6 @@ mod test {
         }
     }
 
-    fn build_cacvote_server_scanned_ballot(
-        election: &client::output::Election,
-        cast_vote_record: Cvr,
-    ) -> client::output::ScannedBallot {
-        client::output::ScannedBallot {
-            server_id: election.server_id,
-            client_id: election.client_id,
-            machine_id: election.machine_id.clone(),
-            cast_vote_record: serde_json::to_vec(&cast_vote_record).unwrap(),
-            election_id: election.server_id,
-            created_at: OffsetDateTime::now_utc(),
-        }
-    }
-
     fn build_config() -> Config {
         Config {
             cacvote_url: reqwest::Url::parse("http://localhost:8000").unwrap(),
@@ -1475,7 +1255,6 @@ mod test {
             &election_definition,
         );
         let printed_ballot = build_cacvote_server_printed_ballot(&registration, Cvr::default());
-        let scanned_ballot = build_cacvote_server_scanned_ballot(&election, Cvr::default());
 
         add_or_update_jurisdiction_from_cacvote_server(&mut db, jurisdiction)
             .await
@@ -1494,10 +1273,6 @@ mod test {
             .unwrap();
 
         add_or_update_printed_ballot_from_cacvote_server(&mut db, printed_ballot)
-            .await
-            .unwrap();
-
-        add_or_update_scanned_ballot_from_cacvote_server(&mut db, scanned_ballot)
             .await
             .unwrap();
 

@@ -4,6 +4,5 @@ pub mod cacvote;
 pub mod cdf;
 pub mod election;
 pub mod geometry;
-pub mod scan;
 pub mod util;
 pub mod votes;

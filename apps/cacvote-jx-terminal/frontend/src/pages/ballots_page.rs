@@ -14,7 +14,6 @@ pub fn BallotsPage(cx: Scope) -> Element {
 
     let elections = app_data.elections.clone();
     let printed_ballots = app_data.printed_ballots.clone();
-    let scanned_ballots = app_data.scanned_ballots.clone();
 
     render!(
         h1 { class: "text-2xl font-bold mb-4", "Printed Ballots" }
@@ -25,17 +24,6 @@ pub fn BallotsPage(cx: Scope) -> Element {
             rsx!(PrintedBallotsTable {
                 elections: elections,
                 printed_ballots: printed_ballots,
-            })
-        }
-
-        h1 { class: "text-2xl font-bold mt-4 mb-4", "Scanned Ballots" }
-        if scanned_ballots.is_empty() {
-            rsx!("No scanned ballots")
-        } else {
-            to_owned![elections, scanned_ballots];
-            rsx!(ScannedBallotsTable {
-                elections: elections,
-                scanned_ballots: scanned_ballots,
             })
         }
     )
@@ -195,48 +183,6 @@ fn PrintedBallotsTable(cx: Scope<PendingRegistrationsTableProps>) -> Element {
                     }
                 }
             )
-        }
-    )
-}
-
-#[derive(Debug, PartialEq, Props)]
-struct RegistrationsTableProps {
-    elections: Vec<jx::Election>,
-    scanned_ballots: Vec<jx::ScannedBallot>,
-}
-
-fn ScannedBallotsTable(cx: Scope<RegistrationsTableProps>) -> Element {
-    render!(
-        table { class: "table-auto w-full",
-            thead {
-                tr {
-                    th { class: "px-4 py-2 text-left", "Election" }
-                    th { class: "px-4 py-2 text-left", "Created At" }
-                }
-            }
-            tbody {
-                for scanned_ballot in cx.props.scanned_ballots.iter() {
-                    tr {
-                        {
-                            let election = cx
-                                .props
-                                .elections
-                                .iter()
-                                .find(|election| *election.id() == scanned_ballot.election_id)
-                                .unwrap();
-                            rsx!(ElectionConfigurationCell {
-                                election_title: election.title.clone(),
-                                election_hash: election.election_hash.clone(),
-                                precinct_id: scanned_ballot.precinct_id.clone(),
-                                ballot_style_id: scanned_ballot.ballot_style_id.clone(),
-                            })
-                        }
-                        DateOrDateTimeCell {
-                            date_or_datetime: scanned_ballot.created_at()
-                        }
-                    }
-                }
-            }
         }
     )
 }

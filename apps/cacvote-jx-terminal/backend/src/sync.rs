@@ -60,11 +60,6 @@ pub(crate) async fn sync(
             .map_err(|e| {
                 color_eyre::Report::msg(format!("failed to get last synced registration ID: {e}"))
             })?,
-        last_synced_scanned_ballot_id: db::get_last_synced_scanned_ballot_id(executor)
-            .await
-            .map_err(|e| {
-                color_eyre::Report::msg(format!("failed to get last synced scanned ballot ID: {e}"))
-            })?,
         last_synced_printed_ballot_id: db::get_last_synced_printed_ballot_id(executor)
             .await
             .map_err(|e| {
@@ -98,13 +93,6 @@ pub(crate) async fn sync(
                     "failed to get printed ballots to sync to CACVote Server: {e}"
                 ))
             })?,
-        scanned_ballots: db::get_scanned_ballots_to_sync_to_cacvote_server(executor)
-            .await
-            .map_err(|e| {
-                color_eyre::Report::msg(format!(
-                    "failed to get scanned ballots to sync to CACVote Server: {e}"
-                ))
-            })?,
     };
 
     let sync_endpoint = config
@@ -119,7 +107,6 @@ pub(crate) async fn sync(
         registration_requests,
         registrations,
         printed_ballots,
-        scanned_ballots,
         ..
     } = sync_output.clone();
 
@@ -167,15 +154,6 @@ pub(crate) async fn sync(
 
         if let Err(e) = result {
             tracing::error!("Failed to insert or update printed ballot: {e}");
-        }
-    }
-
-    for scanned_ballot in scanned_ballots {
-        let result =
-            db::add_or_update_scanned_ballot_from_cacvote_server(executor, scanned_ballot).await;
-
-        if let Err(e) = result {
-            tracing::error!("Failed to insert or update scanned ballot: {e}");
         }
     }
 

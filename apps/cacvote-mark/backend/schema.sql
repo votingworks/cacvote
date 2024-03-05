@@ -106,18 +106,3 @@ create table printed_ballots (
 
   unique (client_id, machine_id)
 );
-
-create table scanned_ballots (
-  id uuid primary key,
-  -- generated on the server, present only if the record has been synced
-  server_id uuid unique,
-  -- generated on a client machine
-  client_id uuid not null,
-  -- ID of the machine this record was originally created on
-  machine_id varchar(255) not null,
-  election_id uuid not null references elections(id) on update cascade on delete cascade,
-  cast_vote_record bytea not null,
-  created_at timestamptz not null default current_timestamp,
-
-  unique (client_id, machine_id)
-);

@@ -81,13 +81,3 @@ pub struct PrintedBallot {
     #[serde(with = "Base64Standard")]
     pub cast_vote_record_signature: Vec<u8>,
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ScannedBallot {
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub election_id: ClientId,
-    #[serde(with = "Base64Standard")]
-    pub cast_vote_record: Vec<u8>,
-}
