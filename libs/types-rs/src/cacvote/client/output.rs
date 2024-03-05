@@ -8,15 +8,6 @@ base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct Admin {
-    pub machine_id: String,
-    pub common_access_card_id: String,
-    #[serde(with = "time::serde::iso8601")]
-    pub created_at: time::OffsetDateTime,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct RegistrationRequest {
     pub server_id: ServerId,
     pub client_id: ClientId,

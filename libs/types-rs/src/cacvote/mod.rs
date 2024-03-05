@@ -105,7 +105,6 @@ pub struct RaveServerSyncInput {
 #[serde(rename_all = "camelCase")]
 pub struct RaveServerSyncOutput {
     pub jurisdictions: Vec<client::output::Jurisdiction>,
-    pub admins: Vec<client::output::Admin>,
     pub elections: Vec<client::output::Election>,
     pub registration_requests: Vec<client::output::RegistrationRequest>,
     pub registrations: Vec<client::output::Registration>,

@@ -13,7 +13,6 @@ import {
   RaveServerClient,
   RaveServerClientImpl,
 } from './cacvote_server_client';
-import { Store } from './store';
 import { Auth } from './types/auth';
 import { Workspace } from './workspace';
 
@@ -24,7 +23,7 @@ export interface StartOptions {
   port: number;
 }
 
-function getDefaultAuth(store: Store): Auth {
+function getDefaultAuth(): Auth {
   const card: cac.CommonAccessCardCompatibleCard = new cac.CommonAccessCard();
 
   return {
@@ -45,11 +44,9 @@ function getDefaultAuth(store: Store): Auth {
 
         case 'ready': {
           const cardDetails = assertDefined(status.cardDetails);
-          const isAdmin = store.isAdmin(cardDetails.commonAccessCardId);
           return {
             status: 'has_card',
             card: cardDetails,
-            isAdmin,
           };
         }
 
@@ -97,11 +94,10 @@ function getRaveServerClient(workspace: Workspace): RaveServerClient {
  */
 export function start({ auth, logger, port, workspace }: StartOptions): Server {
   const cacvoteServerClient = getRaveServerClient(workspace);
-  const resolvedAuth = auth ?? getDefaultAuth(workspace.store);
+  const resolvedAuth = auth ?? getDefaultAuth();
   const app = buildApp({
     workspace,
     auth: resolvedAuth,
-    cacvoteServerClient,
   });
 
   async function doRaveServerSync() {

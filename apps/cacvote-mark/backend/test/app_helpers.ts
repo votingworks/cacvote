@@ -7,8 +7,6 @@ import { dirSync } from 'tmp';
 import { ok } from '@votingworks/basics';
 import { Api, buildApp } from '../src/app';
 import { createWorkspace } from '../src/workspace';
-import { MockRaveServerClient } from '../src/cacvote_server_client';
-import { Store } from '../src/store';
 import { Auth, AuthStatus } from '../src/types/auth';
 
 interface MockAppContents {
@@ -39,7 +37,6 @@ export function buildMockAuth({
             familyName: 'Smith',
             commonAccessCardId: '1234567890',
           },
-          isAdmin: false,
         };
         return Promise.resolve(true);
       }
@@ -71,7 +68,6 @@ export function createApp(): MockAppContents {
   const app = buildApp({
     auth: mockAuth,
     workspace: createWorkspace(workdir),
-    cacvoteServerClient: new MockRaveServerClient(Store.memoryStore()),
   });
 
   const server = app.listen();

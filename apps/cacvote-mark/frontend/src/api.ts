@@ -146,18 +146,6 @@ export const castBallot = {
   },
 } as const;
 
-export const sync = {
-  useMutation() {
-    const apiClient = useApiClient();
-    const queryClient = useQueryClient();
-    return useMutation(apiClient.sync, {
-      async onSuccess() {
-        await queryClient.invalidateQueries();
-      },
-    });
-  },
-} as const;
-
 export const getServerSyncStatus = {
   queryKey(): QueryKey {
     return ['getServerSyncStatus'];
