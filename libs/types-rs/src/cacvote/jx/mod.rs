@@ -269,26 +269,6 @@ impl PrintedBallot {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ScannedBallot {
-    pub id: ClientId,
-    pub server_id: ServerId,
-    pub election_id: ClientId,
-    pub precinct_id: PrecinctId,
-    pub ballot_style_id: BallotStyleId,
-    #[serde(with = "Base64Standard")]
-    pub cast_vote_record: Vec<u8>,
-    #[serde(with = "time::serde::iso8601")]
-    pub created_at: time::OffsetDateTime,
-}
-
-impl ScannedBallot {
-    #[must_use]
-    pub fn created_at(&self) -> &time::OffsetDateTime {
-        &self.created_at
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum SmartcardStatus {
     #[default]
@@ -323,7 +303,6 @@ pub struct LoggedInAppData {
     pub registration_requests: Vec<RegistrationRequest>,
     pub registrations: Vec<Registration>,
     pub printed_ballots: Vec<PrintedBallot>,
-    pub scanned_ballots: Vec<ScannedBallot>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

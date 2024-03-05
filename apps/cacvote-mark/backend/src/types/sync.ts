@@ -109,13 +109,6 @@ export interface PrintedBallotInput {
   castVoteRecord: Base64String;
 }
 
-export interface ScannedBallotInput {
-  clientId: ClientId;
-  machineId: Id;
-  electionId: ClientId;
-  castVoteRecord: Base64String;
-}
-
 export interface PrintedBallotOutput {
   serverId: ServerId;
   clientId: ClientId;
@@ -137,23 +130,6 @@ export const PrintedBallotOutputSchema: z.ZodSchema<PrintedBallotOutput> =
     registrationId: ServerIdSchema,
     castVoteRecord: Base64StringSchema,
     castVoteRecordSignature: Base64StringSchema,
-  });
-
-export interface ScannedBallotOutput {
-  serverId: ServerId;
-  clientId: ClientId;
-  machineId: Id;
-  electionId: ServerId;
-  castVoteRecord: Buffer;
-}
-
-export const ScannedBallotOutputSchema: z.ZodSchema<ScannedBallotOutput> =
-  z.object({
-    serverId: ServerIdSchema,
-    clientId: ClientIdSchema,
-    machineId: z.string(),
-    electionId: ServerIdSchema,
-    castVoteRecord: Base64Buffer,
   });
 
 export interface AdminInput {
@@ -213,13 +189,11 @@ export interface RaveServerSyncInput {
   lastSyncedRegistrationId?: ServerId;
   lastSyncedElectionId?: ServerId;
   lastSyncedPrintedBallotId?: ServerId;
-  lastSyncedScannedBallotId?: ServerId;
   jurisdictions?: JurisdictionInput[];
   registrationRequests?: RegistrationRequestInput[];
   elections?: ElectionInput[];
   registrations?: RegistrationInput[];
   printedBallots?: PrintedBallotInput[];
-  scannedBallots?: ScannedBallotInput[];
 }
 
 export interface RaveServerSyncOutput {
@@ -229,7 +203,6 @@ export interface RaveServerSyncOutput {
   registrationRequests: RegistrationRequestOutput[];
   registrations: RegistrationOutput[];
   printedBallots: PrintedBallotOutput[];
-  scannedBallots: ScannedBallotOutput[];
 }
 
 export const RaveMarkSyncOutputSchema: z.ZodSchema<RaveServerSyncOutput> =
@@ -240,5 +213,4 @@ export const RaveMarkSyncOutputSchema: z.ZodSchema<RaveServerSyncOutput> =
     registrationRequests: z.array(RegistrationRequestOutputSchema),
     registrations: z.array(RegistrationOutputSchema),
     printedBallots: z.array(PrintedBallotOutputSchema),
-    scannedBallots: z.array(ScannedBallotOutputSchema),
   });

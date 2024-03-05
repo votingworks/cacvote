@@ -32,8 +32,6 @@ import {
   ServerId,
   ServerSyncAttempt,
   ServerSyncAttemptRow,
-  ScannedBallotRow,
-  deserializeScannedBallot,
   Jurisdiction,
   JurisdictionRow,
   deserializeJurisdiction,
@@ -43,7 +41,6 @@ import {
   ElectionInput,
   JurisdictionInput,
   PrintedBallotInput,
-  ScannedBallotInput,
 } from './types/sync';
 
 const SchemaPath = join(__dirname, '../schema.sql');
@@ -613,55 +610,6 @@ export class Store {
     return id;
   }
 
-  createScannedBallot({
-    id,
-    serverId,
-    clientId,
-    machineId,
-    electionId,
-    castVoteRecord,
-  }: {
-    id: ClientId;
-    serverId: ServerId;
-    clientId: ClientId;
-    machineId: string;
-    electionId: ClientId;
-    castVoteRecord: Buffer;
-  }): ClientId {
-    assert(
-      (serverId === undefined) === (clientId === undefined),
-      'ballot serverId must be defined if and only if clientId is defined'
-    );
-    assert(
-      (machineId === VX_MACHINE_ID) === (clientId === id || !clientId),
-      'ballot machineId must be VX_MACHINE_ID if and only if ID equals clientId'
-    );
-
-    // TODO: validate votes against election definition
-    this.client.run(
-      `
-      insert or replace into scanned_ballots (
-        id,
-        server_id,
-        client_id,
-        machine_id,
-        election_id,
-        cast_vote_record
-      ) values (
-        ?, ?, ?, ?, ?, ?
-      )
-      `,
-      id,
-      serverId ?? null,
-      clientId ?? id,
-      machineId,
-      electionId,
-      castVoteRecord
-    );
-
-    return id;
-  }
-
   /**
    * Records a cast ballot for a voter registration.
    */
@@ -964,20 +912,6 @@ export class Store {
     return result ? result.serverId : undefined;
   }
 
-  getLastSyncedScannedBallotId(): Optional<ServerId> {
-    const result = this.client.one(
-      `
-      select
-        server_id as serverId
-      from scanned_ballots
-      where server_id is not null
-      order by created_at desc
-      `
-    ) as Optional<{ serverId: ServerId }>;
-
-    return result ? result.serverId : undefined;
-  }
-
   getRegistrationRequestsToSync(): RegistrationRequest[] {
     const result = this.client.all(
       `
@@ -1100,34 +1034,6 @@ export class Store {
         castVoteRecordSignature: unsafeParse(
           Base64StringSchema,
           record.castVoteRecordSignature.toString('base64')
-        ),
-      };
-    });
-  }
-
-  getScannedBallotsToSync(): ScannedBallotInput[] {
-    const result = this.client.all(
-      `
-      select
-        id,
-        server_id as serverId,
-        client_id as clientId,
-        machine_id as machineId,
-        (select client_id from elections where id = election_id) as electionId,
-        cast_vote_record as castVoteRecord,
-        created_at as createdAt
-      from scanned_ballots
-      where server_id is null
-      `
-    ) as ScannedBallotRow[];
-
-    return result.map((row) => {
-      const record = deserializeScannedBallot(row);
-      return {
-        ...record,
-        castVoteRecord: unsafeParse(
-          Base64StringSchema,
-          record.castVoteRecord.toString('base64')
         ),
       };
     });

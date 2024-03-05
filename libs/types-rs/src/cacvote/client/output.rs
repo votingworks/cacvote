@@ -87,19 +87,6 @@ pub struct PrintedBallot {
     pub created_at: time::OffsetDateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ScannedBallot {
-    pub server_id: ServerId,
-    pub client_id: ClientId,
-    pub machine_id: String,
-    pub election_id: ServerId,
-    #[serde(with = "Base64Standard")]
-    pub cast_vote_record: Vec<u8>,
-    #[serde(with = "time::serde::iso8601")]
-    pub created_at: time::OffsetDateTime,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

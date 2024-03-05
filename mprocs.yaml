@@ -3,16 +3,6 @@ procs:
     cwd: 'services/cacvote-server'
     shell: 'cargo watch -x run'
 
-  cacvote-scan-backend:
-    cwd: 'apps/cacvote-scan/backend'
-    shell: 'cargo watch -x run'
-  cacvote-scan-frontend:
-    cwd: 'apps/cacvote-scan/frontend'
-    shell: 'dx serve --port 4000'
-  cacvote-scan-frontend-css:
-    cwd: 'apps/cacvote-scan/frontend'
-    shell: 'pnpm tailwindcss -i input.css -o ./public/styles.css --watch'
-
   cacvote-jx-backend:
     cwd: 'apps/cacvote-jx-terminal/backend'
     shell: 'cargo watch -x run'

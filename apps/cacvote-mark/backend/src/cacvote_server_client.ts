@@ -37,16 +37,6 @@ function describeSyncInputOrOutput(
     );
   }
 
-  if (data.scannedBallots?.length) {
-    parts.push(
-      format.countPhrase({
-        value: data.scannedBallots.length,
-        one: '1 scanned ballot',
-        many: `${data.scannedBallots.length} scanned ballots`,
-      })
-    );
-  }
-
   if (data.jurisdictions?.length) {
     parts.push(
       format.countPhrase({
@@ -136,13 +126,11 @@ export class RaveServerClientImpl {
       lastSyncedRegistrationId: this.store.getLastSyncedRegistrationId(),
       lastSyncedElectionId: this.store.getLastSyncedElectionId(),
       lastSyncedPrintedBallotId: this.store.getLastSyncedPrintedBallotId(),
-      lastSyncedScannedBallotId: this.store.getLastSyncedScannedBallotId(),
       registrationRequests: this.store.getRegistrationRequestsToSync(),
       jurisdictions: this.store.getJurisdictionsToSync(),
       elections: this.store.getElectionsToSync(),
       registrations: this.store.getRegistrationsToSync(),
       printedBallots: this.store.getPrintedBallotsToSync(),
-      scannedBallots: this.store.getScannedBallotsToSync(),
     };
     debug('CACVote sync input: %O', input);
     return input;
@@ -278,31 +266,6 @@ export class RaveServerClientImpl {
       });
 
       debug('created or replaced printed ballot %s', ballotId);
-    }
-
-    for (const scannedBallot of output.scannedBallots) {
-      const localElection = this.store.getElection({
-        serverId: scannedBallot.electionId,
-      });
-
-      assert(
-        localElection,
-        `could not find local election with server id ${scannedBallot.electionId}`
-      );
-
-      const ballotId = this.store.createScannedBallot({
-        id:
-          scannedBallot.machineId === VX_MACHINE_ID
-            ? scannedBallot.clientId
-            : ClientId(),
-        serverId: scannedBallot.serverId,
-        clientId: scannedBallot.clientId,
-        machineId: scannedBallot.machineId,
-        electionId: localElection.id,
-        castVoteRecord: scannedBallot.castVoteRecord,
-      });
-
-      debug('created or replaced scanned ballot %s', ballotId);
     }
   }
 

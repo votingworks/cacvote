@@ -92,8 +92,6 @@ pub struct RaveServerSyncInput {
     #[serde(default)]
     pub last_synced_printed_ballot_id: Option<ServerId>,
     #[serde(default)]
-    pub last_synced_scanned_ballot_id: Option<ServerId>,
-    #[serde(default)]
     pub registration_requests: Vec<client::input::RegistrationRequest>,
     #[serde(default)]
     pub elections: Vec<client::input::Election>,
@@ -101,8 +99,6 @@ pub struct RaveServerSyncInput {
     pub registrations: Vec<client::input::Registration>,
     #[serde(default)]
     pub printed_ballots: Vec<client::input::PrintedBallot>,
-    #[serde(default)]
-    pub scanned_ballots: Vec<client::input::ScannedBallot>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,5 +110,4 @@ pub struct RaveServerSyncOutput {
     pub registration_requests: Vec<client::output::RegistrationRequest>,
     pub registrations: Vec<client::output::Registration>,
     pub printed_ballots: Vec<client::output::PrintedBallot>,
-    pub scanned_ballots: Vec<client::output::ScannedBallot>,
 }
