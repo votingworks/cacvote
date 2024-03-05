@@ -3,16 +3,6 @@ import { assertDefined, throwIllegalValue } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
 import { Server } from 'http';
 import { buildApp } from './app';
-import {
-  DELETE_RECENTLY_CAST_BALLOTS_MINUTES,
-  CACVOTE_URL,
-  USE_MOCK_CACVOTE_SERVER,
-} from './globals';
-import {
-  MockRaveServerClient,
-  RaveServerClient,
-  RaveServerClientImpl,
-} from './cacvote_server_client';
 import { Auth } from './types/auth';
 import { Workspace } from './workspace';
 
@@ -73,36 +63,19 @@ function getDefaultAuth(): Auth {
   };
 }
 
-function getRaveServerClient(workspace: Workspace): RaveServerClient {
-  if (USE_MOCK_CACVOTE_SERVER) {
-    return new MockRaveServerClient(workspace.store);
-  }
-  const baseUrl = CACVOTE_URL;
-
-  if (!baseUrl) {
-    throw new Error('CACVOTE_URL is not set');
-  }
-
-  return new RaveServerClientImpl({
-    store: workspace.store,
-    baseUrl,
-  });
-}
-
 /**
  * Starts the server with all the default options.
  */
 export function start({ auth, logger, port, workspace }: StartOptions): Server {
-  const cacvoteServerClient = getRaveServerClient(workspace);
   const resolvedAuth = auth ?? getDefaultAuth();
   const app = buildApp({
     workspace,
     auth: resolvedAuth,
   });
 
-  async function doRaveServerSync() {
+  async function doCacvoteServerSync() {
     try {
-      await cacvoteServerClient.sync();
+      // TODO: sync with CACVote Server
 
       await logger.log(LogEventId.ApplicationStartup, 'system', {
         message: 'CACVote Server sync succeeded',
@@ -116,10 +89,10 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
     }
 
     // run again in 5 seconds
-    setTimeout(doRaveServerSync, 1000 * 5);
+    setTimeout(doCacvoteServerSync, 1000 * 5);
   }
 
-  void doRaveServerSync().then(
+  void doCacvoteServerSync().then(
     () =>
       logger.log(LogEventId.ApplicationStartup, 'system', {
         message: 'Started CACVote Server sync',
@@ -131,23 +104,6 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
         disposition: 'failure',
       })
   );
-
-  function deleteRecentlyCastBallots(ageInSeconds: number) {
-    try {
-      workspace.store.deleteRecentlyCastBallots(ageInSeconds);
-    } catch (e) {
-      console.error('failed to delete recently cast ballots:', e);
-    }
-
-    console.log('===> CLEARED!');
-
-    // run again in 5 seconds
-    setTimeout(deleteRecentlyCastBallots, 1000 * 5);
-  }
-
-  if (DELETE_RECENTLY_CAST_BALLOTS_MINUTES) {
-    void deleteRecentlyCastBallots(DELETE_RECENTLY_CAST_BALLOTS_MINUTES * 60);
-  }
 
   return app.listen(
     port,

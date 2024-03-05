@@ -1,31 +1,15 @@
-import { buildCastVoteRecord, VX_MACHINE_ID } from '@votingworks/backend';
-import {
-  Optional,
-  Result,
-  assert,
-  asyncResultBlock,
-  err,
-  find,
-  iter,
-  ok,
-} from '@votingworks/basics';
+import { cac } from '@votingworks/auth';
+import { err, ok, Optional, Result } from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
 import {
-  BallotIdSchema,
   BallotStyleId,
-  BallotType,
+  ElectionDefinition,
   Id,
   PrecinctId,
   VotesDict,
-  unsafeParse,
 } from '@votingworks/types';
-import { Buffer } from 'buffer';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
-import { execFileSync } from 'child_process';
-import { cac } from '@votingworks/auth';
-import { IS_INTEGRATION_TEST, MAILING_LABEL_PRINTER } from './globals';
-import * as mailingLabel from './mailing_label';
 import { Auth, AuthStatus } from './types/auth';
 import { ClientId, RegistrationRequest, ServerId } from './types/db';
 import { Workspace } from './workspace';
@@ -69,22 +53,12 @@ export interface CreateTestVoterInput {
   };
 }
 
-function buildApi({ auth, workspace }: { auth: Auth; workspace: Workspace }) {
+function buildApi({ auth }: { auth: Auth; workspace: Workspace }) {
   async function getAuthStatus(): Promise<AuthStatus> {
     return await auth.getAuthStatus();
   }
 
-  function assertIsIntegrationTest() {
-    if (!IS_INTEGRATION_TEST) {
-      throw new Error('This is not an integration test');
-    }
-  }
-
   return grout.createApi({
-    getJurisdictions() {
-      return workspace.store.getJurisdictions();
-    },
-
     getAuthStatus,
 
     checkPin(input: { pin: string }) {
@@ -98,31 +72,8 @@ function buildApi({ auth, workspace }: { auth: Auth; workspace: Workspace }) {
         return undefined;
       }
 
-      const { commonAccessCardId } = authStatus.card;
-      const registrations =
-        workspace.store.getRegistrations(commonAccessCardId);
-
-      if (registrations.length === 0) {
-        const registrationRequests =
-          workspace.store.getRegistrationRequests(commonAccessCardId);
-
-        return {
-          status:
-            registrationRequests.length > 0
-              ? 'registration_pending'
-              : 'unregistered',
-        };
-      }
-
-      // TODO: support multiple registrations
-      const registration = registrations[0];
-      assert(registration);
-      const selection =
-        workspace.store.getPrintedBallotCastVoteRecordForRegistration(
-          registration.id
-        );
-
-      return { status: selection ? 'voted' : 'registered' };
+      // TODO: get voter status for the user
+      return undefined;
     },
 
     async getRegistrationRequests(): Promise<RegistrationRequest[]> {
@@ -132,9 +83,8 @@ function buildApi({ auth, workspace }: { auth: Auth; workspace: Workspace }) {
         return [];
       }
 
-      return workspace.store.getRegistrationRequests(
-        authStatus.card.commonAccessCardId
-      );
+      // TODO: get registration requests for the user
+      return [];
     },
 
     async createVoterRegistration(input: {
@@ -159,250 +109,40 @@ function buildApi({ auth, workspace }: { auth: Auth; workspace: Workspace }) {
       }
 
       const id = ClientId();
-      workspace.store.createRegistrationRequest({
-        id,
-        jurisdictionId: input.jurisdictionId,
-        commonAccessCardId: authStatus.card.commonAccessCardId,
-        givenName: input.givenName,
-        familyName: input.familyName,
-      });
+
+      // TODO: create registration request
+
       return ok({ id });
     },
 
-    async getElectionConfiguration() {
+    async getElectionConfiguration(): Promise<
+      Optional<{
+        electionDefinition: ElectionDefinition;
+        ballotStyleId: BallotStyleId;
+        precinctId: PrecinctId;
+      }>
+    > {
       const authStatus = await getAuthStatus();
 
       if (authStatus.status !== 'has_card') {
         return undefined;
       }
 
-      const { commonAccessCardId } = authStatus.card;
-      const registrations =
-        workspace.store.getRegistrations(commonAccessCardId);
-      // TODO: Handle multiple registrations
-      const registration = registrations[0];
-
-      if (!registration) {
-        return undefined;
-      }
-
-      const electionDefinition = workspace.store.getRegistrationElection(
-        registration.id
-      );
-
-      if (!electionDefinition) {
-        return undefined;
-      }
-
-      return {
-        electionDefinition,
-        ballotStyleId: registration.ballotStyleId,
-        precinctId: registration.precinctId,
-      };
+      // TODO: get election configuration for the user
+      return undefined;
     },
 
-    castBallot(input: {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    castBallot(_input: {
       votes: VotesDict;
       pin: string;
     }): Promise<Result<ClientId, cac.GenerateSignatureError>> {
-      return asyncResultBlock<ClientId, cac.GenerateSignatureError>(
-        async (fail) => {
-          const authStatus = await getAuthStatus();
-
-          if (authStatus.status !== 'has_card') {
-            throw new Error('Not logged in');
-          }
-
-          const { commonAccessCardId } = authStatus.card;
-          const registrations =
-            workspace.store.getRegistrations(commonAccessCardId);
-          // TODO: Handle multiple registrations
-          const registration = registrations[0];
-
-          if (!registration) {
-            throw new Error('Not registered');
-          }
-
-          const electionDefinition = workspace.store.getRegistrationElection(
-            registration.id
-          );
-
-          if (!electionDefinition) {
-            throw new Error('no election definition found for registration');
-          }
-
-          const ballotId = ClientId();
-          const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
-          const castVoteRecord = buildCastVoteRecord({
-            electionDefinition,
-            electionId: electionDefinition.electionHash,
-            scannerId: VX_MACHINE_ID,
-            // TODO: what should the batch ID be?
-            batchId: '',
-            castVoteRecordId,
-            interpretation: {
-              type: 'InterpretedBmdPage',
-              metadata: {
-                ballotStyleId: registration.ballotStyleId,
-                precinctId: registration.precinctId,
-                ballotType: BallotType.Absentee,
-                electionHash: electionDefinition.electionHash,
-                // TODO: support test mode
-                isTestMode: false,
-              },
-              votes: input.votes,
-            },
-            ballotMarkingMode: 'machine',
-          });
-
-          const commonAccessCardCertificate = await auth.getCertificate();
-          assert(commonAccessCardCertificate);
-          const castVoteRecordJson = JSON.stringify(castVoteRecord);
-          const signature = (
-            await auth.generateSignature(
-              Buffer.from(castVoteRecordJson, 'utf-8'),
-              { pin: input.pin }
-            )
-          ).okOrElse(fail);
-
-          const pdf = await mailingLabel.buildPdf();
-
-          execFileSync(
-            'lpr',
-            ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
-            { input: pdf }
-          );
-
-          return workspace.store.createCastBallot({
-            id: ballotId,
-            registrationId: registration.clientId,
-            commonAccessCardCertificate,
-            castVoteRecord: Buffer.from(castVoteRecordJson),
-            castVoteRecordSignature: signature,
-          });
-        }
-      );
-    },
-
-    getServerSyncStatus() {
-      return {
-        attempts: workspace.store.getServerSyncAttempts(),
-        status: workspace.store.getSyncStatus(),
-      };
+      // TODO: cast and print the ballot
+      return Promise.resolve(ok(ClientId()));
     },
 
     logOut() {
       return auth.logOut();
-    },
-
-    createTestVoter(input: CreateTestVoterInput) {
-      assertIsIntegrationTest();
-
-      function createUniqueCommonAccessCardId(): Id {
-        const tenRandomDigits = Math.floor(Math.random() * 1e10).toString();
-        return `test-${tenRandomDigits.toString().padStart(10, '0')}`;
-      }
-
-      const commonAccessCardId = createUniqueCommonAccessCardId();
-      const jurisdictionId = input.jurisdictionId
-        ? (input.jurisdictionId as ServerId)
-        : ServerId();
-
-      if (input.registrationRequest || input.registration) {
-        const registrationRequestId = ClientId();
-
-        workspace.store.createRegistrationRequest({
-          id: registrationRequestId,
-          jurisdictionId,
-          commonAccessCardId,
-          givenName: input.registrationRequest?.givenName ?? 'Rebecca',
-          familyName: input.registrationRequest?.familyName ?? 'Welton',
-        });
-
-        if (input.registration?.electionData) {
-          const electionId = ClientId();
-          workspace.store.createElection({
-            id: electionId,
-            jurisdictionId,
-            definition: Buffer.from(input.registration.electionData),
-          });
-          const electionRecord = workspace.store.getElection({
-            clientId: electionId,
-          });
-          assert(electionRecord);
-
-          const { registration } = input;
-          const ballotStyle = registration.ballotStyleId
-            ? find(
-                electionRecord.electionDefinition.election.ballotStyles,
-                ({ id }) => id === registration.ballotStyleId
-              )
-            : electionRecord.electionDefinition.election.ballotStyles[0];
-          assert(ballotStyle);
-
-          const precinctId = registration.precinctId
-            ? find(
-                ballotStyle.precincts,
-                (id) => id === registration.precinctId
-              )
-            : ballotStyle.precincts[0];
-          assert(typeof precinctId === 'string');
-
-          workspace.store.createRegistration({
-            id: ClientId(),
-            registrationRequestId,
-            jurisdictionId,
-            electionId,
-            precinctId,
-            ballotStyleId: ballotStyle.id,
-          });
-        }
-      }
-
-      return { commonAccessCardId };
-    },
-
-    async getTestVoterCastVoteRecord() {
-      assertIsIntegrationTest();
-
-      const authStatus = await getAuthStatus();
-
-      if (authStatus.status !== 'has_card') {
-        throw new Error('Not logged in');
-      }
-
-      const { commonAccessCardId } = authStatus.card;
-      const mostRecentVotes = iter(
-        workspace.store.getRegistrations(commonAccessCardId)
-      )
-        .flatMap((registration) => {
-          const selection =
-            workspace.store.getPrintedBallotCastVoteRecordForRegistration(
-              registration.id
-            );
-          return selection ? [selection] : [];
-        })
-        .first();
-
-      if (!mostRecentVotes) {
-        throw new Error('No votes found');
-      }
-
-      return mostRecentVotes;
-    },
-
-    /**
-     * For testing purposes only.
-     *
-     * ```sh
-     * curl -d '{}' -H 'Content-Type: application/json' http://localhost:3000/api/createMailingLabel \
-     * | jq -r '.__grout_value' \
-     * | base64 -d \
-     * > /tmp/label.pdf
-     * ```
-     */
-    async createMailingLabel() {
-      return await mailingLabel.buildPdf();
     },
   });
 }

@@ -79,34 +79,3 @@ macro_rules! uuid_newtype {
 
 uuid_newtype!(ServerId);
 uuid_newtype!(ClientId);
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct RaveServerSyncInput {
-    #[serde(default)]
-    pub last_synced_registration_request_id: Option<ServerId>,
-    #[serde(default)]
-    pub last_synced_registration_id: Option<ServerId>,
-    #[serde(default)]
-    pub last_synced_election_id: Option<ServerId>,
-    #[serde(default)]
-    pub last_synced_printed_ballot_id: Option<ServerId>,
-    #[serde(default)]
-    pub registration_requests: Vec<client::input::RegistrationRequest>,
-    #[serde(default)]
-    pub elections: Vec<client::input::Election>,
-    #[serde(default)]
-    pub registrations: Vec<client::input::Registration>,
-    #[serde(default)]
-    pub printed_ballots: Vec<client::input::PrintedBallot>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RaveServerSyncOutput {
-    pub jurisdictions: Vec<client::output::Jurisdiction>,
-    pub elections: Vec<client::output::Election>,
-    pub registration_requests: Vec<client::output::RegistrationRequest>,
-    pub registrations: Vec<client::output::Registration>,
-    pub printed_ballots: Vec<client::output::PrintedBallot>,
-}

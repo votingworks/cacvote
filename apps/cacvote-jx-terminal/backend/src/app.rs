@@ -24,13 +24,14 @@ use tokio::time::sleep;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
+use types_rs::cacvote::client::JurisdictionCode;
+use types_rs::cacvote::jx;
 use types_rs::cacvote::jx::AppData;
-use types_rs::cacvote::{jx, ServerId};
 use types_rs::election::ElectionDefinition;
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
 use crate::db::{self, get_app_data};
-use crate::smartcard::{self, StatusGetter};
+use crate::smartcard;
 
 type AppState = (Config, PgPool, smartcard::StatusGetter);
 
@@ -58,7 +59,6 @@ pub(crate) fn setup(
     router
         .route("/api/status", get(get_status))
         .route("/api/status-stream", get(get_status_stream))
-        .route("/api/jurisdictions", get(get_jurisdictions))
         .route("/api/elections", post(create_election))
         .route("/api/registrations", post(create_registration))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
@@ -141,27 +141,13 @@ async fn get_status_stream(
     .keep_alive(KeepAlive::default())
 }
 
-async fn get_jurisdictions(State((_, pool, _)): State<AppState>) -> impl IntoResponse {
-    let mut connection = pool.acquire().await.map_err(into_internal_error)?;
-
-    let jurisdictions = db::get_jurisdictions(&mut connection)
-        .await
-        .map_err(into_internal_error)?;
-
-    Ok::<_, Response>(Json(json!({ "jurisdictions": jurisdictions })))
-}
-
-async fn authenticate(pool: &PgPool, status_getter: &StatusGetter) -> Option<ServerId> {
-    let mut connection = pool.acquire().await.ok()?;
+async fn authenticate(status_getter: &smartcard::StatusGetter) -> Option<JurisdictionCode> {
     let card_details = status_getter.get_card_details()?;
-    let jurisdiction_code = card_details.jurisdiction_code();
-    db::get_jurisdiction_id_for_code(&mut connection, &jurisdiction_code)
-        .await
-        .ok()?
+    Some(card_details.jurisdiction_code())
 }
 
 async fn create_election(
-    State((config, pool, status_getter)): State<AppState>,
+    State((_, pool, status_getter)): State<AppState>,
     create_election_data: Json<jx::CreateElectionData>,
 ) -> impl IntoResponse {
     let election_definition: ElectionDefinition = create_election_data
@@ -169,14 +155,13 @@ async fn create_election(
         .parse()
         .map_err(into_internal_error)?;
     let mut connection = pool.acquire().await.map_err(into_internal_error)?;
-    let Some(jurisdiction_id) = authenticate(&pool, &status_getter).await else {
+    let Some(jurisdiction_code) = authenticate(&status_getter).await else {
         return Ok::<_, Response>(StatusCode::UNAUTHORIZED);
     };
 
     db::add_election(
         &mut connection,
-        &config,
-        jurisdiction_id,
+        jurisdiction_code,
         election_definition,
         &create_election_data.return_address,
     )
