@@ -12,7 +12,6 @@
 ## Structure
 
 - `apps/cacvote-mark`: the CACVote Mark voter-facing application
-- `apps/cacvote-scan`: the CACVote Scan application for ballot scanning
 - `apps/cacvote-jx`: the CACVote Jurisdiction application for election
   management
 - `services/cacvote-server`: the CACVote server providing sync services for the

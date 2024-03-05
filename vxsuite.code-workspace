@@ -1,10 +1,6 @@
 {
   "folders": [
     {
-      "path": "apps/cacvote-jx-terminal/backend",
-      "name": "apps/cacvote-jx-terminal/backend"
-    },
-    {
       "path": "apps/cacvote-jx-terminal/frontend",
       "name": "apps/cacvote-jx-terminal/frontend"
     },
@@ -15,18 +11,6 @@
     {
       "path": "apps/cacvote-mark/frontend",
       "name": "apps/cacvote-mark/frontend"
-    },
-    {
-      "path": "apps/cacvote-scan/backend",
-      "name": "apps/cacvote-scan/backend"
-    },
-    {
-      "path": "apps/cacvote-scan/frontend",
-      "name": "apps/cacvote-scan/frontend"
-    },
-    {
-      "path": "apps/cacvote-track/frontend",
-      "name": "apps/cacvote-track/frontend"
     },
     {
       "path": "docs",
@@ -41,10 +25,6 @@
       "name": "libs/auth"
     },
     {
-      "path": "libs/auth-rs",
-      "name": "libs/auth-rs"
-    },
-    {
       "path": "libs/backend",
       "name": "libs/backend"
     },
@@ -53,20 +33,12 @@
       "name": "libs/ballot-encoder"
     },
     {
-      "path": "libs/ballot-encoder-rs",
-      "name": "libs/ballot-encoder-rs"
-    },
-    {
       "path": "libs/basics",
       "name": "libs/basics"
     },
     {
       "path": "libs/cdf-schema-builder",
       "name": "libs/cdf-schema-builder"
-    },
-    {
-      "path": "libs/central-scanner",
-      "name": "libs/central-scanner"
     },
     {
       "path": "libs/db",
@@ -133,16 +105,8 @@
       "name": "libs/types"
     },
     {
-      "path": "libs/types-rs",
-      "name": "libs/types-rs"
-    },
-    {
       "path": "libs/ui",
       "name": "libs/ui"
-    },
-    {
-      "path": "libs/ui-rs",
-      "name": "libs/ui-rs"
     },
     {
       "path": "libs/usb-drive",
@@ -159,10 +123,6 @@
     {
       "path": "script",
       "name": "script"
-    },
-    {
-      "path": "services/cacvote-server",
-      "name": "services/cacvote-server"
     }
   ],
   "settings": {

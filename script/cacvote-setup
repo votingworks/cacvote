@@ -228,7 +228,6 @@ setup-postgresql() {
 
   setup-app-db services/cacvote-server postgres:cacvote
   setup-app-db apps/cacvote-jx-terminal/backend postgres:cacvote_jx
-  setup-app-db apps/cacvote-scan/backend postgres:cacvote_scan
 }
 
 setup-app-db() {

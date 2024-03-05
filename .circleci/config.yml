@@ -102,52 +102,6 @@ jobs:
       - store_test_results:
           path: apps/cacvote-mark/frontend/reports/
 
-  # @votingworks/cacvote-scan-frontend
-  test-apps-cacvote-scan-frontend:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir apps/cacvote-scan/frontend build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir apps/cacvote-scan/frontend lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir apps/cacvote-scan/frontend test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: apps/cacvote-scan/frontend/reports/
-
-  # @votingworks/cacvote-track-frontend
-  test-apps-cacvote-track-frontend:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir apps/cacvote-track/frontend build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir apps/cacvote-track/frontend lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir apps/cacvote-track/frontend test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: apps/cacvote-track/frontend/reports/
-
   # @votingworks/exercises
   test-docs-exercises:
     executor: nodejs
@@ -240,29 +194,6 @@ jobs:
       - store_test_results:
           path: libs/ballot-encoder/reports/
 
-  # ballot-encoder-rs
-  test-libs-ballot-encoder-rs:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir libs/ballot-encoder-rs build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir libs/ballot-encoder-rs lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir libs/ballot-encoder-rs test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: libs/ballot-encoder-rs/reports/
-
   # @votingworks/basics
   test-libs-basics:
     executor: nodejs
@@ -308,29 +239,6 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: libs/cdf-schema-builder/reports/
-
-  # central-scanner
-  test-libs-central-scanner:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            pnpm --dir libs/central-scanner build
-      - run:
-          name: Lint
-          command: |
-            pnpm --dir libs/central-scanner lint
-      - run:
-          name: Test
-          command: |
-            pnpm --dir libs/central-scanner test
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: ./reports/
-      - store_test_results:
-          path: libs/central-scanner/reports/
 
   # @votingworks/db
   test-libs-db:
@@ -783,20 +691,6 @@ jobs:
           command: |
             cargo test -p auth-rs
 
-  test-crate-ballot-encoder-rs:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p ballot-encoder-rs
-      - run:
-          name: Test
-          command: |
-            cargo test -p ballot-encoder-rs
-
   test-crate-cacvote-jx-terminal-backend:
     executor: rust-db
     resource_class: xlarge
@@ -831,40 +725,6 @@ jobs:
           command: |
             cargo test -p cacvote-jx-terminal-frontend
 
-  test-crate-cacvote-scan-backend:
-    executor: rust-db
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Setup Database
-          command: |
-            cd 'apps/cacvote-scan/backend'
-            cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
-      - run:
-          name: Build
-          command: |
-            cargo build -p cacvote-scan-backend
-      - run:
-          name: Test
-          command: |
-            cargo test -p cacvote-scan-backend
-
-  test-crate-cacvote-scan-frontend:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p cacvote-scan-frontend
-      - run:
-          name: Test
-          command: |
-            cargo test -p cacvote-scan-frontend
-
   test-crate-cacvote-server:
     executor: rust-db
     resource_class: xlarge
@@ -884,20 +744,6 @@ jobs:
           name: Test
           command: |
             cargo test -p cacvote-server
-
-  test-crate-central-scanner:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p central-scanner
-      - run:
-          name: Test
-          command: |
-            cargo test -p central-scanner
 
   test-crate-controllerd:
     executor: nodejs
@@ -975,16 +821,12 @@ workflows:
       - test-apps-cacvote-jx-terminal-frontend
       - test-apps-cacvote-mark-backend
       - test-apps-cacvote-mark-frontend
-      - test-apps-cacvote-scan-frontend
-      - test-apps-cacvote-track-frontend
       - test-docs-exercises
       - test-libs-auth
       - test-libs-backend
       - test-libs-ballot-encoder
-      - test-libs-ballot-encoder-rs
       - test-libs-basics
       - test-libs-cdf-schema-builder
-      - test-libs-central-scanner
       - test-libs-db
       - test-libs-dev-dock-backend
       - test-libs-dev-dock-frontend
@@ -1005,13 +847,9 @@ workflows:
       - test-libs-usb-drive
       - test-libs-utils
       - test-crate-auth-rs
-      - test-crate-ballot-encoder-rs
       - test-crate-cacvote-jx-terminal-backend
       - test-crate-cacvote-jx-terminal-frontend
-      - test-crate-cacvote-scan-backend
-      - test-crate-cacvote-scan-frontend
       - test-crate-cacvote-server
-      - test-crate-central-scanner
       - test-crate-controllerd
       - test-crate-types-rs
       - test-crate-ui-rs

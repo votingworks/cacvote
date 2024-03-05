@@ -5,11 +5,7 @@ members = [
     "apps/mark-scan/pat-device-input",
     "apps/cacvote-jx-terminal/backend",
     "apps/cacvote-jx-terminal/frontend",
-    "apps/cacvote-scan/backend",
-    "apps/cacvote-scan/frontend",
     "libs/auth-rs",
-    "libs/ballot-encoder-rs",
-    "libs/central-scanner",
     "libs/logging",
     "libs/types-rs",
     "libs/ui-rs",
@@ -20,12 +16,10 @@ members = [
 async-stream = "0.3.5"
 auth-rs = { path = "libs/auth-rs" }
 axum = { version = "0.6.20" }
-ballot-encoder-rs = { path = "libs/ballot-encoder-rs" }
 base64 = "0.21.4"
 base64-serde = "0.7.0"
 bitstream-io = "1.7.0"
 bitter = "0.6.1"
-central-scanner = { path = "libs/central-scanner" }
 clap = { version = "4.3.23", features = ["cargo", "derive", "env"] }
 color-eyre = "0.6.2"
 crc16 = "0.4.0"

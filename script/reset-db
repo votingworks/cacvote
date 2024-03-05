@@ -9,10 +9,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
     rm -rf dev-workspace
 )
 (
-    cd apps/cacvote-scan/backend
-    cargo sqlx database reset -y --source=db/migrations
-)
-(
     cd apps/cacvote-jx-terminal/backend
     cargo sqlx database reset -y --source=db/migrations
 )
