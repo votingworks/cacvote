@@ -39,10 +39,14 @@ export const getJurisdictions = {
     return ['getJurisdictions'];
   },
   useQuery() {
-    const apiClient = useApiClient();
-    return useQuery(this.queryKey(), () => apiClient.getJurisdictions(), {
-      staleTime: Infinity,
-    });
+    // const apiClient = useApiClient();
+    return useQuery(
+      this.queryKey(),
+      () => Array.of<{ id: string; name: string }>(),
+      {
+        staleTime: Infinity,
+      }
+    );
   },
 } as const;
 
@@ -142,19 +146,6 @@ export const castBallot = {
       async onSuccess() {
         await queryClient.invalidateQueries();
       },
-    });
-  },
-} as const;
-
-export const getServerSyncStatus = {
-  queryKey(): QueryKey {
-    return ['getServerSyncStatus'];
-  },
-  useQuery() {
-    const apiClient = useApiClient();
-    return useQuery(this.queryKey(), () => apiClient.getServerSyncStatus(), {
-      staleTime: 0,
-      refetchInterval: 1000,
     });
   },
 } as const;

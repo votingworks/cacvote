@@ -1,7 +1,13 @@
 import { cac } from '@votingworks/auth';
 import { err, ok, Optional, Result } from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
-import { BallotStyleId, Id, PrecinctId, VotesDict } from '@votingworks/types';
+import {
+  BallotStyleId,
+  ElectionDefinition,
+  Id,
+  PrecinctId,
+  VotesDict,
+} from '@votingworks/types';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
 import { Auth, AuthStatus } from './types/auth';
@@ -109,7 +115,13 @@ function buildApi({ auth }: { auth: Auth; workspace: Workspace }) {
       return ok({ id });
     },
 
-    async getElectionConfiguration() {
+    async getElectionConfiguration(): Promise<
+      Optional<{
+        electionDefinition: ElectionDefinition;
+        ballotStyleId: BallotStyleId;
+        precinctId: PrecinctId;
+      }>
+    > {
       const authStatus = await getAuthStatus();
 
       if (authStatus.status !== 'has_card') {
