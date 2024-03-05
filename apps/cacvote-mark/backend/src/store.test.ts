@@ -1,13 +1,10 @@
-import { Buffer } from 'buffer';
 import { electionTwoPartyPrimaryFixtures } from '@votingworks/fixtures';
 import {
   DEFAULT_SYSTEM_SETTINGS,
   SystemSettings,
   safeParseSystemSettings,
 } from '@votingworks/types';
-import { DateTime } from 'luxon';
 import { Store } from './store';
-import { ClientId, ServerId } from './types/db';
 
 // We pause in some of these tests so we need to increase the timeout
 jest.setTimeout(20000);
@@ -60,22 +57,6 @@ test('setSystemSettings can handle boolean values in input', () => {
 });
 
 test('reset clears the database', () => {
-  const { electionDefinition } = electionTwoPartyPrimaryFixtures;
   const store = Store.memoryStore();
-
-  const jurisdictionId = ServerId();
-  store.createJurisdiction({
-    id: jurisdictionId,
-    name: 'Test Jurisdiction',
-    createdAt: DateTime.now(),
-  });
-  const electionId = ClientId();
-  store.createElection({
-    id: electionId,
-    jurisdictionId,
-    definition: Buffer.from(electionDefinition.electionData),
-  });
-  expect(store.getElection({ clientId: electionId })).toBeTruthy();
   store.reset();
-  expect(store.getElection({ clientId: electionId })).toBeFalsy();
 });

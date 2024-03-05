@@ -1,6 +1,9 @@
 use openssl::x509::X509;
 use serde::{Deserialize, Serialize};
-use types_rs::auth::{ElectionManagerUser, PollWorkerUser, SystemAdministratorUser, User};
+use types_rs::{
+    auth::{ElectionManagerUser, PollWorkerUser, SystemAdministratorUser, User},
+    cacvote::client::JurisdictionCode,
+};
 
 use crate::certs::{
     VX_CUSTOM_CERT_FIELD_CARD_TYPE, VX_CUSTOM_CERT_FIELD_ELECTION_HASH,
@@ -25,7 +28,7 @@ impl CardDetails {
         }
     }
 
-    pub fn jurisdiction_code(&self) -> String {
+    pub fn jurisdiction_code(&self) -> JurisdictionCode {
         match self {
             Self::SystemAdministratorCard(details) => details.user.jurisdiction.clone(),
             Self::ElectionManagerCard(details) => details.user.jurisdiction.clone(),
@@ -53,7 +56,9 @@ impl TryFrom<X509> for CardDetails {
             .ok_or(ParseError::MissingCardTypeField)?;
 
         let jurisdiction = extract_field_value(&value, VX_CUSTOM_CERT_FIELD_JURISDICTION)?
-            .ok_or(ParseError::MissingJurisdictionField)?;
+            .ok_or(ParseError::MissingJurisdictionField)?
+            .try_into()
+            .map_err(ParseError::InvalidJurisdictionField)?;
 
         match card_type.as_str() {
             "system-administrator" => {
@@ -113,6 +118,8 @@ pub enum ParseError {
     MissingJurisdictionField,
     #[error("missing election hash field")]
     MissingElectionHashField,
+    #[error("invalid jurisdiction field: {0}")]
+    InvalidJurisdictionField(String),
     #[error("openssl error: {0}")]
     OpenSSL(#[from] openssl::error::ErrorStack),
     #[error("unknown card type: {0}")]

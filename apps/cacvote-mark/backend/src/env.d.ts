@@ -11,6 +11,5 @@ declare namespace NodeJS {
     readonly CACVOTE_MARK_WORKSPACE?: string;
     readonly CACVOTE_URL?: string;
     readonly MAILING_LABEL_PRINTER?: string;
-    readonly DELETE_RECENTLY_CAST_BALLOTS_MINUTES?: string;
   }
 }

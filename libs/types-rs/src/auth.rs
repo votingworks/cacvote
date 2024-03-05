@@ -1,28 +1,31 @@
 use serde::{Deserialize, Serialize};
 
-use crate::election::{BallotStyleId, PrecinctId};
+use crate::{
+    cacvote::client::JurisdictionCode,
+    election::{BallotStyleId, PrecinctId},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SystemAdministratorUser {
-    pub jurisdiction: String,
+    pub jurisdiction: JurisdictionCode,
 }
 
 impl SystemAdministratorUser {
     #[must_use]
-    pub const fn new(jurisdiction: String) -> Self {
+    pub const fn new(jurisdiction: JurisdictionCode) -> Self {
         Self { jurisdiction }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ElectionManagerUser {
-    pub jurisdiction: String,
+    pub jurisdiction: JurisdictionCode,
     pub election_hash: String,
 }
 
 impl ElectionManagerUser {
     #[must_use]
-    pub const fn new(jurisdiction: String, election_hash: String) -> Self {
+    pub const fn new(jurisdiction: JurisdictionCode, election_hash: String) -> Self {
         Self {
             jurisdiction,
             election_hash,
@@ -32,13 +35,13 @@ impl ElectionManagerUser {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PollWorkerUser {
-    pub jurisdiction: String,
+    pub jurisdiction: JurisdictionCode,
     pub election_hash: String,
 }
 
 impl PollWorkerUser {
     #[must_use]
-    pub const fn new(jurisdiction: String, election_hash: String) -> Self {
+    pub const fn new(jurisdiction: JurisdictionCode, election_hash: String) -> Self {
         Self {
             jurisdiction,
             election_hash,
