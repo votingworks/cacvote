@@ -9,7 +9,7 @@ msc {
     js=>s   [label="POST RESULTS\nTally,Proof(Tally),\nSigJS(Everything)"];
 
     js rbox js  [ label="mix ballots" ];
-    js rbox js  [ label="decrypt ballot IDs" ];
+    js rbox js  [ label="decrypt sns" ];
 
-    js=>s   [label="POST MIXED BALLOTS\nmixed ballots, ballot IDs\nSigJS(Everything)"];
+    js=>s   [label="POST MIXED BALLOTS\nmixed ballots, ballots sn\nSigJS(Everything)"];
 }

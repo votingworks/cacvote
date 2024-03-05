@@ -4,15 +4,19 @@ msc {
     vs [ label="Voter Station", textbgcolor="green" ];
 
     vs rbox vs   [ label="Print and review paper ballot"];
-    vs rbox vs   [ label="Encrypt ballot with ElecPK => Enc(Ballot)"];
-    vs rbox vs   [ label="Sign EncBallot with CAC (domain electronic) => SigCAC_E(Enc(Ballot))"];
-    vs rbox vs   [ label="Sign EncBallot with CAC (domain paper) => SigCAC_P(Enc(Ballot))"];
+    vs rbox vs   [ label="Encrypt ballot and sn with ElecPK => Enc(Ballot),Enc(sn)"];
+    vs rbox vs   [ label="Sign EncBallot with CAC => SigCAC(Enc(Ballot),Enc(sn))"];
 
-    vs rbox vs   [ label="Print SigCAC_P(Enc(Ballot)) on mailing label"] ;
+    vs rbox vs   [ label="Hash EncBallot => BallotHash=Hash(SigVS(Enc(Ballot),Enc(sn)))"];
 
-    vs=>>js   [ label="Paper Ballot in Envelope with mailing label\nincluding SigCAC_P(Enc(Ballot))" ];
+    vs rbox vs   [ label="Sign EncBallot => SigVS(Enc(Ballot),Enc(sn))"];
 
-    vs=>s    [ label="CAST BALLOT\nEnc(Ballot),\nSigCAC_E(Enc(Ballot)),\nCACCert" ];
+
+    vs rbox vs   [ label="Print SigVS(CAC ID, Election ID, BallotHash) on mailing label"] ;
+
+    vs=>>js   [ label="Paper Ballot in Envelope with mailing label\nincluding SigVS(CAC ID, Election ID, BallotHash)" ];
+
+    vs=>s    [ label="CAST BALLOT\nEnc(Ballot),Enc(sn),\nSigCAC(Enc(Ballot),Enc(sn)),\nCACCert" ];
 
     s rbox s  [ label="verify CAC sig and cert on ballot" ];
     s rbox s  [ label="verify matches reg record for ballot style and election" ];
