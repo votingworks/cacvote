@@ -1,8 +1,6 @@
 use openssl::x509::X509;
 use serde::{Deserialize, Serialize};
-use types_rs::auth::{
-    ElectionManagerUser, PollWorkerUser, RaveAdministratorUser, SystemAdministratorUser, User,
-};
+use types_rs::auth::{ElectionManagerUser, PollWorkerUser, SystemAdministratorUser, User};
 
 use crate::certs::{
     VX_CUSTOM_CERT_FIELD_CARD_TYPE, VX_CUSTOM_CERT_FIELD_ELECTION_HASH,
@@ -14,7 +12,6 @@ pub enum CardDetails {
     SystemAdministratorCard(SystemAdministratorCardDetails),
     ElectionManagerCard(ElectionManagerCardDetails),
     PollWorkerCard(PollWorkerCardDetails),
-    RaveAdministratorCard(RaveAdministratorCardDetails),
 }
 
 impl CardDetails {
@@ -25,7 +22,6 @@ impl CardDetails {
             }
             Self::ElectionManagerCard(details) => User::ElectionManager(details.user.clone()),
             Self::PollWorkerCard(details) => User::PollWorker(details.user.clone()),
-            Self::RaveAdministratorCard(details) => User::RaveAdministrator(details.user.clone()),
         }
     }
 
@@ -34,7 +30,6 @@ impl CardDetails {
             Self::SystemAdministratorCard(details) => details.user.jurisdiction.clone(),
             Self::ElectionManagerCard(details) => details.user.jurisdiction.clone(),
             Self::PollWorkerCard(details) => details.user.jurisdiction.clone(),
-            Self::RaveAdministratorCard(details) => details.user.jurisdiction.clone(),
         }
     }
 }
@@ -105,12 +100,6 @@ impl TryFrom<X509> for CardDetails {
                     has_pin: true,
                 }))
             }
-            "cacvote-admin" => {
-                let user = RaveAdministratorUser::new(jurisdiction);
-                Ok(Self::RaveAdministratorCard(RaveAdministratorCardDetails {
-                    user,
-                }))
-            }
             _ => Err(ParseError::UnknownCardType(card_type)),
         }
     }
@@ -151,9 +140,4 @@ pub struct PollWorkerCardDetails {
     /// have PINs, poll worker cards by default don't have PINs but can if the
     /// relevant system setting is enabled.
     pub has_pin: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RaveAdministratorCardDetails {
-    pub user: RaveAdministratorUser,
 }

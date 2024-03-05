@@ -53,8 +53,6 @@ mod app;
 mod config;
 mod db;
 mod log;
-#[cfg(debug_assertions)]
-mod usability_testing;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -63,11 +61,6 @@ async fn main() -> color_eyre::Result<()> {
     let config = config::Config::parse();
     log::setup(&config)?;
     let pool = db::setup(&config).await?;
-
-    if cfg!(debug_assertions) {
-        // Setup usability testing data.
-        usability_testing::setup(&config, &pool).await?;
-    }
 
     app::run(app::setup(pool).await?, &config).await
 }

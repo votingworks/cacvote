@@ -63,18 +63,6 @@ impl CardlessVoterUser {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RaveAdministratorUser {
-    pub jurisdiction: String,
-}
-
-impl RaveAdministratorUser {
-    #[must_use]
-    pub const fn new(jurisdiction: String) -> Self {
-        Self { jurisdiction }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum User {
     #[serde(rename = "system_administrator")]
@@ -85,6 +73,4 @@ pub enum User {
     PollWorker(PollWorkerUser),
     #[serde(rename = "cardless_voter")]
     CardlessVoter(CardlessVoterUser),
-    #[serde(rename = "cacvote_admin")]
-    RaveAdministrator(RaveAdministratorUser),
 }

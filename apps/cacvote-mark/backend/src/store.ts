@@ -223,60 +223,6 @@ export class Store {
   }
 
   /**
-   * Gets basic information about a voter by CAC ID.
-   */
-  isAdmin(commonAccessCardId: Id): boolean {
-    const result = this.client.one(
-      `
-      select
-        count(*) as count
-      from admins
-      where machine_id = ?
-        and common_access_card_id = ?
-      `,
-      VX_MACHINE_ID,
-      commonAccessCardId
-    ) as { count: number };
-
-    return result.count > 0;
-  }
-
-  /**
-   * Makes a user with the given CAC ID an admin.
-   */
-  createAdmin({
-    machineId,
-    commonAccessCardId,
-    createdAt,
-  }: {
-    machineId: string;
-    commonAccessCardId: Id;
-    createdAt?: DateTime;
-  }): void {
-    this.client.run(
-      `
-      insert or replace into admins (
-        machine_id,
-        common_access_card_id,
-        created_at
-      ) values (
-        ?, ?, ?
-      )
-      `,
-      machineId,
-      commonAccessCardId,
-      (createdAt ?? DateTime.utc()).toSQL()
-    );
-  }
-
-  /**
-   * Clears all admin users.
-   */
-  resetAdmins(): void {
-    this.client.run('delete from admins');
-  }
-
-  /**
    * Delete recently cast ballots (just for testing).
    */
   deleteRecentlyCastBallots(ageInSeconds: number): void {

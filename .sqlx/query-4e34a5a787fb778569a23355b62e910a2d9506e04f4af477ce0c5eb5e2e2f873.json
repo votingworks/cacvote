@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    id as \"id: ServerId\",\n                    client_id as \"client_id: ClientId\",\n                    machine_id,\n                    jurisdiction_id as \"jurisdiction_id: ServerId\",\n                    common_access_card_id,\n                    given_name,\n                    family_name,\n                    created_at\n                FROM registration_requests\n                WHERE created_at > $1\n                ORDER BY created_at DESC\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: ServerId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id: ClientId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "machine_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "jurisdiction_id: ServerId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "common_access_card_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "given_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "family_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4e34a5a787fb778569a23355b62e910a2d9506e04f4af477ce0c5eb5e2e2f873"
+}

@@ -1,5 +1,4 @@
 import { getVoterStatus } from '../api';
-import { AdminFlowScreen } from './admin_flow_screen';
 import { VoterFlowScreen } from './voter_flow_screen';
 
 export function HasCardScreen(): JSX.Element | null {
@@ -10,5 +9,5 @@ export function HasCardScreen(): JSX.Element | null {
     return null;
   }
 
-  return voterStatus.isAdmin ? <AdminFlowScreen /> : <VoterFlowScreen />;
+  return <VoterFlowScreen />;
 }

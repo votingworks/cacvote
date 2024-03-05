@@ -37,13 +37,6 @@ create table elections (
   unique (client_id, machine_id)
 );
 
-create table admins (
-  machine_id varchar(255) not null,
-  -- CAC ID of the admin user
-  common_access_card_id uuid not null unique,
-  created_at timestamptz not null default current_timestamp
-);
-
 create table registration_requests (
   -- generated on this machine
   id uuid primary key,
