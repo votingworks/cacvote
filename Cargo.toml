@@ -71,6 +71,7 @@ tracing-subscriber = "0.3.17"
 types-rs = { path = "libs/types-rs" }
 ui-rs = { path = "libs/ui-rs" }
 uinput = "0.1.3"
+url = "2.5.0"
 uuid = { version = "1.4.0", features = ["serde", "v4", "js"] }
 
 [workspace.dependencies.sqlx]

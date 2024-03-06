@@ -491,24 +491,28 @@ dependencies = [
 name = "cacvote-server"
 version = "0.1.0"
 dependencies = [
+ "auth-rs",
  "axum",
  "base64",
  "base64-serde",
  "clap",
  "color-eyre",
  "dotenvy",
+ "openssl",
  "pretty_assertions",
  "regex",
  "reqwest",
  "serde",
  "serde_json",
  "sqlx",
+ "thiserror",
  "time",
  "tokio",
  "tower-http",
  "tracing",
  "tracing-subscriber",
  "types-rs",
+ "url",
  "uuid",
 ]
 

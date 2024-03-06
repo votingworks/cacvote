@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cacvote::client::JurisdictionCode,
+    cacvote::JurisdictionCode,
     election::{BallotStyleId, PrecinctId},
 };
 

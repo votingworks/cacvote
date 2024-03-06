@@ -47,18 +47,14 @@
 #![cfg_attr(test, allow(clippy::float_cmp))]
 #![cfg_attr(not(test), warn(clippy::print_stdout, clippy::dbg_macro))]
 
+use cacvote_server::{app, config::Config, db, log};
 use clap::Parser;
-
-mod app;
-mod config;
-mod db;
-mod log;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     let _ = dotenvy::from_filename(".env.local");
     dotenvy::dotenv()?;
-    let config = config::Config::parse();
+    let config = Config::parse();
     log::setup(&config)?;
     let pool = db::setup(&config).await?;
 

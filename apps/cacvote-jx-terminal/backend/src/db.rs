@@ -10,14 +10,9 @@
 use std::time::Duration;
 
 use base64_serde::base64_serde_type;
-use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use tracing::Level;
-use types_rs::cacvote::client::JurisdictionCode;
-use types_rs::cacvote::jx;
-use types_rs::cacvote::{ClientId, ServerId};
-use types_rs::election::{BallotStyleId, ElectionDefinition, ElectionHash, PrecinctId};
 
 use crate::config::Config;
 
@@ -35,31 +30,4 @@ pub(crate) async fn setup(config: &Config) -> color_eyre::Result<PgPool> {
     tracing::debug!("Running database migrations");
     sqlx::migrate!("db/migrations").run(&pool).await?;
     Ok(pool)
-}
-
-pub(crate) async fn get_app_data(
-    _executor: &mut sqlx::PgConnection,
-    _jurisdiction_code: JurisdictionCode,
-) -> color_eyre::Result<jx::LoggedInAppData> {
-    Ok(jx::LoggedInAppData::default())
-}
-
-pub(crate) async fn add_election(
-    _executor: &mut sqlx::PgConnection,
-    _jurisdiction_code: JurisdictionCode,
-    _election: ElectionDefinition,
-    _return_address: &str,
-) -> color_eyre::Result<ClientId> {
-    todo!("add election to database");
-}
-
-pub(crate) async fn create_registration(
-    _executor: &mut sqlx::PgConnection,
-    _config: &Config,
-    _registration_request_id: ClientId,
-    _election_id: ClientId,
-    _precinct_id: &PrecinctId,
-    _ballot_style_id: &BallotStyleId,
-) -> color_eyre::Result<ClientId> {
-    todo!("add registration to database")
 }

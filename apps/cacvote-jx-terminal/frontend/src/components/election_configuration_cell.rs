@@ -13,6 +13,7 @@ pub struct Props {
     ballot_style_id: BallotStyleId,
 }
 
+#[allow(dead_code)]
 pub fn ElectionConfigurationCell(cx: Scope<Props>) -> Element {
     let election_title = &cx.props.election_title;
     let election_hash = &cx.props.election_hash;

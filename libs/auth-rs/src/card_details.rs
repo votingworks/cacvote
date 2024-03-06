@@ -2,7 +2,7 @@ use openssl::x509::X509;
 use serde::{Deserialize, Serialize};
 use types_rs::{
     auth::{ElectionManagerUser, PollWorkerUser, SystemAdministratorUser, User},
-    cacvote::client::JurisdictionCode,
+    cacvote::JurisdictionCode,
 };
 
 use crate::certs::{
