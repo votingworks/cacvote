@@ -170,7 +170,7 @@ mod tests {
         let object_id = client
             .create_object(SignedObject {
                 payload: serde_json::to_vec(&payload)?,
-                certificate: vec![],
+                certificates: vec![],
                 signature: vec![],
             })
             .await?;
@@ -201,7 +201,7 @@ mod tests {
         let round_trip_payload = signed_object.try_to_inner()?;
         let round_trip_payload_data: serde_json::Value =
             serde_json::from_slice(&round_trip_payload.data)?;
-        assert!(signed_object.certificate.is_empty());
+        assert!(signed_object.certificates.is_empty());
         assert!(signed_object.signature.is_empty());
         assert_eq!(round_trip_payload_data, json!({ "hello": "world" }));
 

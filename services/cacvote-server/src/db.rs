@@ -36,7 +36,7 @@ pub async fn create_object(
     connection: &mut sqlx::PgConnection,
     object_type: &str,
     payload: &[u8],
-    certificate: &[u8],
+    certificates: &[u8],
     signature: &[u8],
 ) -> color_eyre::Result<Uuid> {
     let mut txn = connection.begin().await?;
@@ -47,14 +47,14 @@ pub async fn create_object(
     // TODO: verify that the public key was signed by VX
     let object = sqlx::query!(
         r#"
-        INSERT INTO objects (jurisdiction, object_type, payload, certificate, signature)
+        INSERT INTO objects (jurisdiction, object_type, payload, certificates, signature)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
         "#,
         jurisdiction_code.as_str(),
         object_type,
         payload,
-        certificate,
+        certificates,
         signature
     )
     .fetch_one(&mut *txn)
@@ -147,7 +147,7 @@ pub async fn get_object_by_id(
 ) -> color_eyre::Result<Option<SignedObject>> {
     let object = sqlx::query!(
         r#"
-        SELECT payload, certificate, signature
+        SELECT payload, certificates, signature
         FROM objects
         WHERE id = $1
         "#,
@@ -158,7 +158,7 @@ pub async fn get_object_by_id(
 
     Ok(object.map(|object| SignedObject {
         payload: object.payload,
-        certificate: object.certificate,
+        certificates: object.certificates,
         signature: object.signature,
     }))
 }
