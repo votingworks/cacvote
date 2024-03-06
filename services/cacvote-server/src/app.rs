@@ -62,18 +62,8 @@ async fn create_object(
     State(pool): State<PgPool>,
     object: Json<SignedObject>,
 ) -> Result<impl IntoResponse, Error> {
-    let payload = object.try_to_inner()?;
     let mut conn = pool.acquire().await?;
-
-    let object_id = db::create_object(
-        &mut conn,
-        &payload.object_type,
-        &object.payload,
-        &object.certificates,
-        &object.signature,
-    )
-    .await?;
-
+    let object_id = db::create_object(&mut conn, &object).await?;
     Ok((StatusCode::CREATED, object_id.to_string()))
 }
 

@@ -3641,6 +3641,7 @@ dependencies = [
  "hmac-sha256",
  "lazy_static",
  "nanoid",
+ "openssl",
  "pretty_assertions",
  "proptest",
  "regex",

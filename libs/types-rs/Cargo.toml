@@ -13,6 +13,7 @@ hex = { workspace = true }
 hmac-sha256 = { workspace = true }
 lazy_static = { workspace = true }
 nanoid = { workspace = true }
+openssl = { workspace = true, optional = true }
 regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -25,5 +26,6 @@ pretty_assertions = { workspace = true }
 proptest = { workspace = true }
 
 [features]
-backend = ["sqlx"]
+backend = ["openssl", "sqlx"]
 sqlx = ["dep:sqlx"]
+openssl = ["dep:openssl"]

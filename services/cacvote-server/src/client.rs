@@ -132,6 +132,12 @@ impl Client {
 mod tests {
     use std::net::TcpListener;
 
+    use openssl::{
+        hash::MessageDigest,
+        pkey::{PKey, Private, Public},
+        sign::{Signer, Verifier},
+        x509::X509,
+    };
     use serde_json::json;
     use types_rs::cacvote::Payload;
 
@@ -154,6 +160,34 @@ mod tests {
         Ok(Client::new(format!("http://{addr}").parse()?))
     }
 
+    fn load_keypair() -> color_eyre::Result<(Vec<u8>, PKey<Public>, PKey<Private>)> {
+        // uses the dev VxAdmin keypair because it has the Jurisdiction field
+        let private_key_pem =
+            include_bytes!("../../../libs/auth/certs/dev/vx-admin-private-key.pem");
+        let private_key = PKey::private_key_from_pem(private_key_pem)?;
+        let certificates =
+            include_bytes!("../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem")
+                .to_vec();
+        let x509 = X509::from_pem(&certificates)?;
+        let public_key = x509.public_key()?;
+        Ok((certificates, public_key, private_key))
+    }
+
+    fn sign_and_verify(
+        payload: &[u8],
+        private_key: &PKey<Private>,
+        public_key: &PKey<Public>,
+    ) -> color_eyre::Result<Vec<u8>> {
+        let mut signer = Signer::new(MessageDigest::sha256(), private_key)?;
+        signer.update(&payload)?;
+        let signature = signer.sign_to_vec()?;
+
+        let mut verifier = Verifier::new(MessageDigest::sha256(), public_key)?;
+        verifier.update(&payload)?;
+        assert!(verifier.verify(&signature)?);
+        Ok(signature)
+    }
+
     #[sqlx::test(migrations = "db/migrations")]
     async fn test_client(pool: sqlx::PgPool) -> color_eyre::Result<()> {
         let client = setup(pool)?;
@@ -165,13 +199,16 @@ mod tests {
             data: serde_json::to_vec(&json!({ "hello": "world" }))?,
             object_type: "test".to_owned(),
         };
+        let payload = serde_json::to_vec(&payload)?;
+        let (certificates, public_key, private_key) = load_keypair()?;
+        let signature = sign_and_verify(&payload, &private_key, &public_key)?;
 
         // create the object
         let object_id = client
             .create_object(SignedObject {
-                payload: serde_json::to_vec(&payload)?,
-                certificates: vec![],
-                signature: vec![],
+                payload,
+                certificates: certificates.clone(),
+                signature: signature.clone(),
             })
             .await?;
 
@@ -182,18 +219,14 @@ mod tests {
                 assert_eq!(entry.object_id, object_id);
                 assert_eq!(entry.action, "create");
                 assert_eq!(entry.object_type, "test");
-                // TODO: check jurisdiction matches certificate
+                assert_eq!(entry.jurisdiction.as_str(), "st.dev-jurisdiction");
                 entry
             }
             _ => panic!("expected one journal entry, got: {entries:?}"),
         };
 
         // check the journal since the last entry
-        let journal_entry_id = entry.id;
-        assert_eq!(
-            client.get_journal_entries(Some(journal_entry_id)).await?,
-            vec![]
-        );
+        assert_eq!(client.get_journal_entries(Some(entry.id)).await?, vec![]);
 
         // get the object
         let signed_object = client.get_object_by_id(object_id).await?.unwrap();
@@ -201,9 +234,35 @@ mod tests {
         let round_trip_payload = signed_object.try_to_inner()?;
         let round_trip_payload_data: serde_json::Value =
             serde_json::from_slice(&round_trip_payload.data)?;
-        assert!(signed_object.certificates.is_empty());
-        assert!(signed_object.signature.is_empty());
+        assert_eq!(signed_object.certificates, certificates);
+        assert_eq!(signed_object.signature, signature);
         assert_eq!(round_trip_payload_data, json!({ "hello": "world" }));
+
+        Ok(())
+    }
+
+    #[sqlx::test(migrations = "db/migrations")]
+    async fn test_invalid_certificate(pool: sqlx::PgPool) -> color_eyre::Result<()> {
+        let client = setup(pool)?;
+
+        let payload = Payload {
+            data: serde_json::to_vec(&json!({ "hello": "world" }))?,
+            object_type: "test".to_owned(),
+        };
+        let payload = serde_json::to_vec(&payload)?;
+
+        client
+            .create_object(SignedObject {
+                payload,
+                // invalid certificates and signature
+                certificates: vec![],
+                signature: vec![],
+            })
+            .await
+            .unwrap_err();
+
+        // check that there are no journal entries
+        assert_eq!(client.get_journal_entries(None).await?, vec![]);
 
         Ok(())
     }

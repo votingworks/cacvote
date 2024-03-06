@@ -10,9 +10,10 @@
 use std::time::Duration;
 
 use base64_serde::base64_serde_type;
+use color_eyre::eyre::bail;
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
-use types_rs::cacvote::{JournalEntry, JurisdictionCode, SignedObject};
+use types_rs::cacvote::{JournalEntry, SignedObject};
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -34,17 +35,20 @@ pub async fn setup(config: &Config) -> color_eyre::Result<PgPool> {
 
 pub async fn create_object(
     connection: &mut sqlx::PgConnection,
-    object_type: &str,
-    payload: &[u8],
-    certificates: &[u8],
-    signature: &[u8],
+    object: &SignedObject,
 ) -> color_eyre::Result<Uuid> {
+    if !object.verify()? {
+        bail!("Unable to verify signature/certificates")
+    }
+
+    let Some(jurisdiction_code) = object.jurisdiction_code() else {
+        bail!("No jurisdiction found in certificate");
+    };
+
+    let object_type = object.try_to_inner()?.object_type;
+
     let mut txn = connection.begin().await?;
 
-    // TODO: extract the jurisdiction code from the certificate
-    let jurisdiction_code = JurisdictionCode::try_from("st.dev-jurisdiction").unwrap();
-
-    // TODO: verify that the public key was signed by VX
     let object = sqlx::query!(
         r#"
         INSERT INTO objects (jurisdiction, object_type, payload, certificates, signature)
@@ -53,9 +57,9 @@ pub async fn create_object(
         "#,
         jurisdiction_code.as_str(),
         object_type,
-        payload,
-        certificates,
-        signature
+        &object.payload,
+        &object.certificates,
+        &object.signature
     )
     .fetch_one(&mut *txn)
     .await?;

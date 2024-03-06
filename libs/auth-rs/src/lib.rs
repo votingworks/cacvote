@@ -1,7 +1,7 @@
 mod card_command;
 pub mod card_details;
 mod card_reader;
-mod certs;
+pub mod certs;
 mod command_apdu;
 mod hex_debug;
 mod tlv;
