@@ -4,21 +4,21 @@ msc {
     vs [ label="Voter Station", textbgcolor="green" ];
 
     vs rbox vs   [ label="Print and review paper ballot"];
-    vs rbox vs   [ label="Encrypt ballot and sn with ElecPK => Enc(Ballot),Enc(sn)"];
-    vs rbox vs   [ label="Sign EncBallot with CAC => SigCAC(Enc(Ballot),Enc(sn))"];
+    vs rbox vs   [ label="Encrypt ballot and sn with ElecPK => E(Ballot),E(sn)"];
+    vs rbox vs   [ label="Sign Enc values with CAC => SigCAC(E(Ballot),E(sn))"];
 
-    vs rbox vs   [ label="Hash EncBallot => BallotHash=Hash(SigVS(Enc(Ballot),Enc(sn)))"];
+    vs rbox vs   [ label="Hash the CAC sig => Hash=H(CAC sig)"];
 
-    vs rbox vs   [ label="Sign EncBallot => SigVS(Enc(Ballot),Enc(sn))"];
+    vs rbox vs   [ label="Sign for mailing label => SigVS(CAC ID, Election ID, Hash)"];
 
 
-    vs rbox vs   [ label="Print SigVS(CAC ID, Election ID, BallotHash) on mailing label"] ;
+    vs rbox vs   [ label="Print VS sig on mailing label"] ;
 
-    vs=>>js   [ label="Paper Ballot in Envelope with mailing label\nincluding SigVS(CAC ID, Election ID, BallotHash)" ];
+    vs=>>js   [ label="Paper Ballot in Envelope with mailing label\nincluding SigVS(CAC ID, Election ID, Hash)" ];
 
-    vs=>s    [ label="CAST BALLOT\nEnc(Ballot),Enc(sn),\nSigCAC(Enc(Ballot),Enc(sn)),\nCACCert" ];
+    vs=>s    [ label="CAST BALLOT\nSigCAC(E(Ballot),E(sn)),\nCACCert" ];
 
-    s rbox s  [ label="verify CAC sig and cert on ballot" ];
+    s rbox s  [ label="verify CAC sig and cert" ];
     s rbox s  [ label="verify matches reg record for ballot style and election" ];
 
     s=>vs    [ label="BALLOT ID" ];
@@ -27,13 +27,13 @@ msc {
 
     js abox s   [ label = "synchronization protocol based on last updated\nyield ballot IDs that need to be downloaded" ];
 
-    js=>s   [ label = "GET BALLOT\nBallotID,timestamp,\nSigJS(BallotID,timestamp),JSCert" ];
+    js=>s   [ label = "GET BALLOT\nSigJS(BallotID,timestamp),JSCert" ];
 
-    s rbox s [ label="verify JS signature and cert" ];
+    s rbox s [ label="verify timestamp freshness & JS sig & cert" ];
 
-    s=>js   [ label = "Enc(Ballot),\nSigCAC_E(Enc(Ballot)),\nCACCert" ];
+    s=>js   [ label = "SigCAC(E(Ballot),E(sn)),\nCACCert" ];
 
-    js rbox js  [ label="verify CAC sig and cert on ballot" ];
+    js rbox js  [ label="verify CAC sig and CACCert" ];
     js rbox js  [ label="verify matches reg record for ballot style and election" ];
 
 }

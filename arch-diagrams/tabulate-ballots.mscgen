@@ -6,10 +6,11 @@ msc {
     js rbox js  [ label="homomorphic tabulation of all ballots" ];
     js rbox js  [ label="decryption of tally\nand proof generation" ];
 
-    js=>s   [label="POST RESULTS\nTally,Proof(Tally),\nSigJS(Everything)"];
+    js=>s   [label="POST RESULTS\nSigJS(Tally,Proof(Tally))"];
+    s rbox s  [ label="verify JS sig" ];
+    js rbox js  [ label="mix ballots and proof generation" ];
+    js rbox js  [ label="sn decryption and proof generation" ];
 
-    js rbox js  [ label="mix ballots" ];
-    js rbox js  [ label="decrypt sns" ];
-
-    js=>s   [label="POST MIXED BALLOTS\nmixed ballots, ballots sn\nSigJS(Everything)"];
+    js=>s   [label="POST MIXED BALLOTS\nmixed E(Ballot), sn,\nProof(Mix),Proof(sn decryption)  \nSigJS(Everything)"];
+        s rbox s  [ label="verify JS sig" ];
 }
