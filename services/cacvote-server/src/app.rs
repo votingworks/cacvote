@@ -69,7 +69,7 @@ async fn create_object(
         &mut conn,
         &payload.object_type,
         &object.payload,
-        &object.certificate,
+        &object.certificates,
         &object.signature,
     )
     .await?;

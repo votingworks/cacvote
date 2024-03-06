@@ -23,7 +23,7 @@ async fn main() -> color_eyre::Result<()> {
     };
     let signed_object = SignedObject {
         payload: serde_json::to_vec(&payload)?,
-        certificate: Vec::new(),
+        certificates: Vec::new(),
         signature: Vec::new(),
     };
 

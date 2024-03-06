@@ -40,7 +40,7 @@ pub struct SignedObject {
     #[serde(with = "Base64Standard")]
     pub payload: Vec<u8>,
     #[serde(with = "Base64Standard")]
-    pub certificate: Vec<u8>,
+    pub certificates: Vec<u8>,
     #[serde(with = "Base64Standard")]
     pub signature: Vec<u8>,
 }
