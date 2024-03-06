@@ -7,6 +7,7 @@ pub const MAX_COMMAND_APDU_DATA_LENGTH: usize = MAX_APDU_LENGTH - 5;
 
 /// The max length of a response APDU's data. The `- 2` accounts for the status word (see
 /// STATUS_WORD below).
+#[allow(dead_code)]
 pub const MAX_RESPONSE_APDU_DATA_LENGTH: usize = MAX_APDU_LENGTH - 2;
 
 /// Because APDUs have a max length, commands involving larger amounts of data have to be sent as

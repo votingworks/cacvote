@@ -1,7 +1,9 @@
 /// VotingWorks's IANA-assigned enterprise OID
+#[allow(dead_code)]
 pub const VX_IANA_ENTERPRISE_OID: &str = "1.3.6.1.4.1.59817";
 
 /// One of: admin, central-scan, mark, scan, card (the first four referring to machines)
+#[allow(dead_code)]
 pub const VX_CUSTOM_CERT_FIELD_COMPONENT: &str = "1.3.6.1.4.1.59817.1";
 
 /// Format: {state-2-letter-abbreviation}.{county-or-town} (e.g. ms.warren or ca.los-angeles)

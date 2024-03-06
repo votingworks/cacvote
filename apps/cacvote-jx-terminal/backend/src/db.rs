@@ -10,14 +10,13 @@
 use std::time::Duration;
 
 use base64_serde::base64_serde_type;
-use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use tracing::Level;
 use types_rs::cacvote::client::JurisdictionCode;
 use types_rs::cacvote::jx;
-use types_rs::cacvote::{ClientId, ServerId};
-use types_rs::election::{BallotStyleId, ElectionDefinition, ElectionHash, PrecinctId};
+use types_rs::cacvote::ClientId;
+use types_rs::election::{BallotStyleId, ElectionDefinition, PrecinctId};
 
 use crate::config::Config;
 

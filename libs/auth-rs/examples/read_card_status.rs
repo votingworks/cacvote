@@ -14,7 +14,7 @@ fn main() -> color_eyre::Result<()> {
                     format!(
                         "{}={}",
                         env!("CARGO_PKG_NAME").replace('-', "_"),
-                        Level::INFO.to_string()
+                        Level::INFO
                     )
                     .parse()?,
                 )

@@ -1,81 +1,103 @@
+use base64_serde::base64_serde_type;
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
 
-pub mod client;
-pub mod jx;
+base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
-macro_rules! uuid_newtype {
-    ($name:ident) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-        #[repr(transparent)]
-        pub struct $name(Uuid);
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct JurisdictionCode(String);
 
-        impl $name {
-            #[must_use]
-            pub fn new() -> Self {
-                Self::default()
-            }
-
-            #[must_use]
-            pub fn as_uuid(&self) -> Uuid {
-                self.0
-            }
-        }
-
-        impl Default for $name {
-            fn default() -> Self {
-                Self(Uuid::new_v4())
-            }
-        }
-
-        impl From<Uuid> for $name {
-            fn from(uuid: Uuid) -> Self {
-                Self(uuid)
-            }
-        }
-
-        impl std::str::FromStr for $name {
-            type Err = uuid::Error;
-
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                Uuid::from_str(s).map(Self)
-            }
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                self.0.fmt(f)
-            }
-        }
-
-        #[cfg(feature = "sqlx")]
-        impl sqlx::Type<sqlx::Postgres> for $name {
-            fn type_info() -> sqlx::postgres::PgTypeInfo {
-                <Uuid as sqlx::Type<sqlx::Postgres>>::type_info()
-            }
-        }
-
-        #[cfg(feature = "sqlx")]
-        impl<'r> sqlx::Decode<'r, sqlx::Postgres> for $name {
-            fn decode(
-                value: sqlx::postgres::PgValueRef<'r>,
-            ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
-                <Uuid as sqlx::Decode<sqlx::Postgres>>::decode(value).map(Self)
-            }
-        }
-
-        #[cfg(feature = "sqlx")]
-        impl<'q> sqlx::Encode<'q, sqlx::Postgres> for $name {
-            fn encode_by_ref(
-                &self,
-                buf: &mut <sqlx::Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-            ) -> sqlx::encode::IsNull {
-                <Uuid as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.0, buf)
-            }
-        }
-    };
+impl JurisdictionCode {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
-uuid_newtype!(ServerId);
-uuid_newtype!(ClientId);
+impl TryFrom<String> for JurisdictionCode {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        value.as_str().try_into()
+    }
+}
+
+impl TryFrom<&str> for JurisdictionCode {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.is_empty() {
+            Err("Jurisdiction code cannot be empty".to_owned())
+        } else {
+            Ok(Self(value.to_owned()))
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SignedObject {
+    #[serde(with = "Base64Standard")]
+    pub payload: Vec<u8>,
+    #[serde(with = "Base64Standard")]
+    pub certificate: Vec<u8>,
+    #[serde(with = "Base64Standard")]
+    pub signature: Vec<u8>,
+}
+
+impl SignedObject {
+    pub fn try_to_inner(&self) -> Result<Payload, serde_json::Error> {
+        serde_json::from_slice(&self.payload)
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Payload {
+    pub object_type: String,
+    #[serde(with = "Base64Standard")]
+    pub data: Vec<u8>,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct JournalEntry {
+    pub id: Uuid,
+    pub object_id: Uuid,
+    pub jurisdiction: JurisdictionCode,
+    pub object_type: String,
+    pub action: String,
+    pub created_at: time::OffsetDateTime,
+}
+
+#[derive(Debug)]
+pub enum JournalEntryAction {
+    Create,
+    Delete,
+    Unknown(String),
+}
+
+impl<'de> Deserialize<'de> for JournalEntryAction {
+    fn deserialize<D>(deserializer: D) -> Result<JournalEntryAction, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "create" => Ok(JournalEntryAction::Create),
+            "delete" => Ok(JournalEntryAction::Delete),
+            _ => Ok(JournalEntryAction::Unknown(s)),
+        }
+    }
+}
+
+impl Serialize for JournalEntryAction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            JournalEntryAction::Create => serializer.serialize_str("create"),
+            JournalEntryAction::Delete => serializer.serialize_str("delete"),
+            JournalEntryAction::Unknown(s) => serializer.serialize_str(s),
+        }
+    }
+}

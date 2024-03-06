@@ -49,8 +49,11 @@ type StatusWord = [u8; 2];
 
 const SUCCESS: StatusWord = [0x90, 0x00];
 const SUCCESS_MORE_DATA_AVAILABLE: StatusWord = [0x61, 0x00];
+#[allow(dead_code)]
 const VERIFY_FAIL: StatusWord = [0x63, 0x00];
+#[allow(dead_code)]
 const SECURITY_CONDITION_NOT_SATISFIED: StatusWord = [0x69, 0x82];
+#[allow(dead_code)]
 const FILE_NOT_FOUND: StatusWord = [0x6a, 0x82];
 
 pub type SharedCardReaders = Arc<Mutex<Vec<String>>>;

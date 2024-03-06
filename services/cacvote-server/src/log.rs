@@ -13,7 +13,7 @@ use crate::config::Config;
 
 /// Sets up logging for the application. Call this early in the process
 /// lifecycle to ensure logs are not silently ignored.
-pub(crate) fn setup(config: &Config) -> color_eyre::Result<()> {
+pub fn setup(config: &Config) -> color_eyre::Result<()> {
     color_eyre::install()?;
     let stdout_log = tracing_subscriber::fmt::layer().pretty();
     tracing_subscriber::registry()
