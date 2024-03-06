@@ -10,6 +10,13 @@
 use std::time::Duration;
 
 use base64_serde::base64_serde_type;
+use color_eyre::eyre::Context;
+use openssl::{
+    hash::MessageDigest,
+    pkey::{PKey, Public},
+    sign::Verifier,
+    x509::X509,
+};
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
 use types_rs::cacvote::{JournalEntry, JurisdictionCode, SignedObject};
@@ -39,12 +46,13 @@ pub async fn create_object(
     certificates: &[u8],
     signature: &[u8],
 ) -> color_eyre::Result<Uuid> {
+    let x509 =
+        X509::from_pem(certificates).context("Failed to parse certificates from PEM format")?;
+    verify_signature(payload, signature, &x509.public_key()?)?;
+    let jurisdiction_code = extract_jurisdiction_code_from_certificate(&x509)?;
+
     let mut txn = connection.begin().await?;
 
-    // TODO: extract the jurisdiction code from the certificate
-    let jurisdiction_code = JurisdictionCode::try_from("st.dev-jurisdiction").unwrap();
-
-    // TODO: verify that the public key was signed by VX
     let object = sqlx::query!(
         r#"
         INSERT INTO objects (jurisdiction, object_type, payload, certificates, signature)
@@ -161,4 +169,35 @@ pub async fn get_object_by_id(
         certificates: object.certificates,
         signature: object.signature,
     }))
+}
+
+fn extract_jurisdiction_code_from_certificate(x509: &X509) -> color_eyre::Result<JurisdictionCode> {
+    Ok(JurisdictionCode::try_from(
+        x509.subject_name()
+            .entries()
+            .find(|entry| {
+                entry.object().to_string() == auth_rs::certs::VX_CUSTOM_CERT_FIELD_JURISDICTION
+            })
+            .ok_or_else(|| color_eyre::eyre::eyre!("No jurisdiction found in certificate"))?
+            .data()
+            .as_utf8()?
+            .to_string(),
+    )
+    .map_err(|e| color_eyre::eyre::eyre!("Failed to parse jurisdiction from certificate: {e}"))?)
+}
+
+fn verify_signature(
+    payload: &[u8],
+    signature: &[u8],
+    public_key: &PKey<Public>,
+) -> color_eyre::Result<()> {
+    // TODO: verify that the public key was signed by VX
+    let mut verifier = Verifier::new(MessageDigest::sha256(), &public_key)?;
+    verifier.update(payload)?;
+
+    if verifier.verify(signature)? {
+        Ok(())
+    } else {
+        Err(color_eyre::eyre::eyre!("Signature verification failed"))
+    }
 }
