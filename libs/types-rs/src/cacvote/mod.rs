@@ -46,8 +46,71 @@ pub struct SignedObject {
 }
 
 impl SignedObject {
+    #[cfg(feature = "openssl")]
+    pub fn from_payload(
+        payload: &Payload,
+        certificates: Vec<openssl::x509::X509>,
+        private_key: &openssl::pkey::PKeyRef<openssl::pkey::Private>,
+    ) -> color_eyre::Result<Self> {
+        let mut signer =
+            openssl::sign::Signer::new(openssl::hash::MessageDigest::sha256(), private_key)?;
+        let payload = serde_json::to_vec(payload)?;
+        signer.update(&payload)?;
+        let signature = signer.sign_to_vec()?;
+
+        let certificates = certificates
+            .iter()
+            .map(|cert| cert.to_pem())
+            .collect::<Result<Vec<_>, _>>()?
+            .concat();
+
+        Ok(Self {
+            payload,
+            certificates,
+            signature,
+        })
+    }
+
     pub fn try_to_inner(&self) -> Result<Payload, serde_json::Error> {
         serde_json::from_slice(&self.payload)
+    }
+
+    #[cfg(feature = "openssl")]
+    pub fn to_x509(&self) -> Result<Vec<openssl::x509::X509>, openssl::error::ErrorStack> {
+        openssl::x509::X509::stack_from_pem(&self.certificates)
+    }
+
+    #[cfg(feature = "openssl")]
+    #[must_use]
+    pub fn verify(&self) -> Result<bool, openssl::error::ErrorStack> {
+        let public_key = match self.to_x509()?.first() {
+            Some(x509) => x509.public_key()?,
+            None => return Ok(false),
+        };
+        let digest = openssl::hash::MessageDigest::sha256();
+        let mut verifier = openssl::sign::Verifier::new(digest, &public_key)?;
+        verifier.update(&self.payload)?;
+        verifier.verify(&self.signature)
+    }
+
+    #[cfg(feature = "openssl")]
+    #[must_use]
+    pub fn jurisdiction_code(&self) -> Option<JurisdictionCode> {
+        /// Format: {state-2-letter-abbreviation}.{county-or-town} (e.g. ms.warren or ca.los-angeles)
+        const VX_CUSTOM_CERT_FIELD_JURISDICTION: &str = "1.3.6.1.4.1.59817.2";
+
+        self.to_x509()
+            .ok()?
+            .first()?
+            .subject_name()
+            .entries()
+            .find(|entry| entry.object().to_string() == VX_CUSTOM_CERT_FIELD_JURISDICTION)?
+            .data()
+            .as_utf8()
+            .ok()?
+            .to_string()
+            .try_into()
+            .ok()
     }
 }
 

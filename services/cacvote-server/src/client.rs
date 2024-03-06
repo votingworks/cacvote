@@ -219,18 +219,14 @@ mod tests {
                 assert_eq!(entry.object_id, object_id);
                 assert_eq!(entry.action, "create");
                 assert_eq!(entry.object_type, "test");
-                // TODO: check jurisdiction matches certificate
+                assert_eq!(entry.jurisdiction.as_str(), "st.dev-jurisdiction");
                 entry
             }
             _ => panic!("expected one journal entry, got: {entries:?}"),
         };
 
         // check the journal since the last entry
-        let journal_entry_id = entry.id;
-        assert_eq!(
-            client.get_journal_entries(Some(journal_entry_id)).await?,
-            vec![]
-        );
+        assert_eq!(client.get_journal_entries(Some(entry.id)).await?, vec![]);
 
         // get the object
         let signed_object = client.get_object_by_id(object_id).await?.unwrap();
