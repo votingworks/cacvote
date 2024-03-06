@@ -104,7 +104,7 @@ async fn get_object_by_id(
 
     match db::get_object_by_id(&mut conn, object_id).await? {
         Some(object) => Ok(Json(object)),
-        None => return Err(Error::NotFound),
+        None => Err(Error::NotFound),
     }
 }
 

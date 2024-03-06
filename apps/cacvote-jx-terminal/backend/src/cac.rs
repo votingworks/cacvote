@@ -2,7 +2,7 @@ use openssl::hash::MessageDigest;
 use openssl::pkey::{PKey, Public};
 use openssl::sign::Verifier;
 use openssl::x509::X509;
-use types_rs::cacvote::jx::VerificationStatus;
+use types_rs::cacvote::VerificationStatus;
 
 const DOD_TEST_CAC_CERTIFICATE_BYTES: &[u8] = include_bytes!("../certs/DODJITCEMAILCA_63.cer");
 

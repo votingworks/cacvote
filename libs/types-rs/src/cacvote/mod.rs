@@ -101,3 +101,23 @@ impl Serialize for JournalEntryAction {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub enum SmartcardStatus {
+    #[default]
+    NoReader,
+    NoCard,
+    Card,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub enum VerificationStatus {
+    Success {
+        common_access_card_id: String,
+        display_name: String,
+    },
+    Failure,
+    Error(String),
+    #[default]
+    Unknown,
+}

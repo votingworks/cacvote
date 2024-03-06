@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use auth_rs::card_details::CardDetails;
 use auth_rs::{CardReader, SharedCardReaders, Watcher};
-use types_rs::cacvote::jx::SmartcardStatus;
+use types_rs::cacvote::SmartcardStatus;
 
 /// Watches for smartcard events.
 pub fn watch() -> Watcher {
