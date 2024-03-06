@@ -3,14 +3,11 @@
 use std::sync::Arc;
 
 use dioxus::prelude::*;
-use dioxus_router::prelude::use_navigator;
 use ui_rs::FileButton;
 
 use crate::util::file::read_file_as_bytes;
 
 pub fn ElectionsPage(cx: Scope) -> Element {
-    let nav = use_navigator(cx);
-
     render! (
         div {
                 h1 { class: "text-2xl font-bold mb-4", "Elections" }

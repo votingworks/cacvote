@@ -14,8 +14,11 @@ pub fn watch() -> Watcher {
 /// Provides access to the current smartcard status.
 #[derive(Clone)]
 pub(crate) struct StatusGetter {
+    #[allow(dead_code)]
     ctx: pcsc::Context,
+    #[allow(dead_code)]
     readers_with_cards: SharedCardReaders,
+    #[allow(dead_code)]
     last_selected_card_reader_info: Arc<Mutex<Option<(String, CardDetails)>>>,
 }
 
@@ -28,6 +31,8 @@ impl Debug for StatusGetter {
 }
 
 impl StatusGetter {
+    #[allow(dead_code)]
+    #[must_use]
     pub(crate) fn new(readers_with_cards: SharedCardReaders) -> Self {
         Self {
             ctx: pcsc::Context::establish(pcsc::Scope::User).unwrap(),
@@ -37,6 +42,8 @@ impl StatusGetter {
     }
 
     /// Gets the current smartcard status.
+    #[allow(dead_code)]
+    #[must_use]
     pub(crate) fn get(&self) -> SmartcardStatus {
         let readers = self.readers_with_cards.lock().unwrap();
 
@@ -47,6 +54,8 @@ impl StatusGetter {
         }
     }
 
+    #[allow(dead_code)]
+    #[must_use]
     pub(crate) fn get_card_details(&self) -> Option<CardDetails> {
         let readers = self.readers_with_cards.lock().unwrap();
         let reader_name = readers.first()?;

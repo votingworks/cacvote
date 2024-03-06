@@ -4,13 +4,16 @@ use openssl::sign::Verifier;
 use openssl::x509::X509;
 use types_rs::cacvote::VerificationStatus;
 
+#[allow(dead_code)]
 const DOD_TEST_CAC_CERTIFICATE_BYTES: &[u8] = include_bytes!("../certs/DODJITCEMAILCA_63.cer");
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum CertificateAuthority {
+    #[allow(dead_code)]
     DodTest,
 }
 
+#[allow(dead_code)]
 pub(crate) fn verify_cast_vote_record(
     common_access_card_certificate: &[u8],
     cast_vote_record: &[u8],

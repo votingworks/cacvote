@@ -8,10 +8,7 @@ use web_sys::MessageEvent;
 use crate::route::Route;
 
 pub fn AppLayout(cx: Scope) -> Element {
-    let nav = use_navigator(cx);
-
     use_coroutine(cx, {
-        to_owned![nav];
         |_rx: UnboundedReceiver<i32>| async move {
             let eventsource = web_sys::EventSource::new("/api/status-stream").unwrap();
 
