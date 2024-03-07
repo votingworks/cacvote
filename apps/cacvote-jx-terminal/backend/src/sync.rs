@@ -1,10 +1,13 @@
 //! CACVote Server synchronization utilities.
 
+use cacvote_server::client::Client;
 use sqlx::PgPool;
 use tokio::time::sleep;
-use tracing::Level;
 
-use crate::config::{Config, SYNC_INTERVAL};
+use crate::{
+    config::{Config, SYNC_INTERVAL},
+    db,
+};
 
 /// Spawns an async loop that synchronizes with the CACVote Server on a fixed
 /// schedule.
@@ -14,9 +17,11 @@ pub(crate) async fn sync_periodically(pool: &PgPool, config: Config) {
         .await
         .expect("failed to acquire database connection");
 
+    let client = Client::new(config.cacvote_url.clone());
+
     tokio::spawn(async move {
         loop {
-            match sync(&mut connection, &config).await {
+            match sync(&mut connection, &client).await {
                 Ok(_) => {
                     tracing::info!("Successfully synced with CACVote Server");
                 }
@@ -29,31 +34,23 @@ pub(crate) async fn sync_periodically(pool: &PgPool, config: Config) {
     });
 }
 
+#[tracing::instrument(skip(executor, client), name = "Sync with CACVote Server")]
 pub(crate) async fn sync(
-    _executor: &mut sqlx::PgConnection,
-    config: &Config,
+    executor: &mut sqlx::PgConnection,
+    client: &Client,
 ) -> color_eyre::eyre::Result<()> {
-    let span = tracing::span!(Level::DEBUG, "Syncing with CACVote Server");
-    let _enter = span.enter();
+    client.check_status().await?;
 
-    check_status(config.cacvote_url.join("/api/status")?).await?;
-
-    // TODO: Implement sync logic
+    let latest_journal_entry_id = db::get_latest_journal_entry(executor)
+        .await?
+        .map(|entry| entry.id);
+    tracing::debug!("fetching journal entries since {latest_journal_entry_id:?}");
+    let new_entries = client.get_journal_entries(latest_journal_entry_id).await?;
+    tracing::debug!(
+        "fetched {count} new journal entries",
+        count = new_entries.len()
+    );
+    db::add_journal_entries(executor, new_entries).await?;
 
     Ok(())
-}
-
-pub(crate) async fn check_status(endpoint: reqwest::Url) -> color_eyre::eyre::Result<()> {
-    let client = reqwest::Client::new();
-    client
-        .get(endpoint.clone())
-        .send()
-        .await?
-        .error_for_status()
-        .map_err(|e| {
-            color_eyre::eyre::eyre!(
-                "CACVote Server responded with an error (status URL={endpoint}): {e}",
-            )
-        })
-        .map(|_| ())
 }

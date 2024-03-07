@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO journal_entries (id, object_id, jurisdiction, object_type, action, created_at)\n            VALUES ($1, $2, $3, $4, $5, $6)\n            ON CONFLICT (id) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b495b7cc99f06c85a9ee53414f28870c8ffcd617e76b03d6add56ece959179c4"
+}

@@ -437,6 +437,7 @@ dependencies = [
  "axum",
  "base64",
  "base64-serde",
+ "cacvote-server",
  "clap",
  "color-eyre",
  "dotenvy",

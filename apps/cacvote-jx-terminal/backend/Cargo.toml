@@ -11,6 +11,7 @@ auth-rs = { workspace = true }
 axum = { workspace = true }
 base64 = { workspace = true }
 base64-serde = { workspace = true }
+cacvote-server = { workspace = true }
 clap = { workspace = true }
 color-eyre = { workspace = true }
 dotenvy = { workspace = true }

@@ -13,7 +13,7 @@ use base64_serde::base64_serde_type;
 use color_eyre::eyre::bail;
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
-use types_rs::cacvote::{JournalEntry, SignedObject};
+use types_rs::cacvote::{JournalEntry, JournalEntryAction, SignedObject};
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -97,7 +97,7 @@ pub async fn get_journal_entries(
         object_id: Uuid,
         jurisdiction: String,
         object_type: String,
-        action: String,
+        action: JournalEntryAction,
         created_at: time::OffsetDateTime,
     }
 
@@ -106,7 +106,13 @@ pub async fn get_journal_entries(
             sqlx::query_as!(
                 Record,
                 r#"
-                SELECT id, object_id, jurisdiction, object_type, action, created_at
+                SELECT
+                  id,
+                  object_id,
+                  jurisdiction,
+                  object_type,
+                  action as "action: JournalEntryAction",
+                  created_at
                 FROM journal_entries
                 WHERE created_at > (SELECT created_at FROM journal_entries WHERE id = $1)
                 ORDER BY created_at
@@ -120,7 +126,13 @@ pub async fn get_journal_entries(
             sqlx::query_as!(
                 Record,
                 r#"
-                SELECT id, object_id, jurisdiction, object_type, action, created_at
+                SELECT
+                  id,
+                  object_id,
+                  jurisdiction,
+                  object_type,
+                  action as "action: JournalEntryAction",
+                  created_at
                 FROM journal_entries
                 ORDER BY created_at
                 "#,

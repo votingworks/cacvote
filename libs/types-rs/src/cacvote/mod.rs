@@ -35,6 +35,33 @@ impl TryFrom<&str> for JurisdictionCode {
     }
 }
 
+#[cfg(feature = "sqlx")]
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for JurisdictionCode
+where
+    sqlx::types::Json<Self>: sqlx::Decode<'r, sqlx::Postgres>,
+{
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        Ok(value.as_str()?.try_into()?)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for JurisdictionCode
+where
+    Vec<u8>: sqlx::Encode<'q, sqlx::Postgres>,
+{
+    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> sqlx::encode::IsNull {
+        self.0.encode_by_ref(buf)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl sqlx::Type<sqlx::Postgres> for JurisdictionCode {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("varchar")
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SignedObject {
     #[serde(with = "Base64Standard")]
@@ -127,15 +154,53 @@ pub struct JournalEntry {
     pub object_id: Uuid,
     pub jurisdiction: JurisdictionCode,
     pub object_type: String,
-    pub action: String,
+    pub action: JournalEntryAction,
     pub created_at: time::OffsetDateTime,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum JournalEntryAction {
     Create,
     Delete,
     Unknown(String),
+}
+
+impl JournalEntryAction {
+    pub fn as_str(&self) -> &str {
+        match self {
+            JournalEntryAction::Create => "create",
+            JournalEntryAction::Delete => "delete",
+            JournalEntryAction::Unknown(s) => s.as_str(),
+        }
+    }
+}
+
+impl From<&str> for JournalEntryAction {
+    fn from(s: &str) -> Self {
+        match s {
+            "create" => JournalEntryAction::Create,
+            "delete" => JournalEntryAction::Delete,
+            _ => JournalEntryAction::Unknown(s.to_owned()),
+        }
+    }
+}
+
+impl From<&JournalEntryAction> for String {
+    fn from(action: &JournalEntryAction) -> Self {
+        action.as_str().to_owned()
+    }
+}
+
+impl From<JournalEntryAction> for String {
+    fn from(action: JournalEntryAction) -> Self {
+        String::from(&action)
+    }
+}
+
+impl From<String> for JournalEntryAction {
+    fn from(s: String) -> Self {
+        s.as_str().into()
+    }
 }
 
 impl<'de> Deserialize<'de> for JournalEntryAction {
@@ -143,12 +208,7 @@ impl<'de> Deserialize<'de> for JournalEntryAction {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "create" => Ok(JournalEntryAction::Create),
-            "delete" => Ok(JournalEntryAction::Delete),
-            _ => Ok(JournalEntryAction::Unknown(s)),
-        }
+        Ok(String::deserialize(deserializer)?.into())
     }
 }
 
@@ -157,11 +217,34 @@ impl Serialize for JournalEntryAction {
     where
         S: serde::Serializer,
     {
-        match self {
-            JournalEntryAction::Create => serializer.serialize_str("create"),
-            JournalEntryAction::Delete => serializer.serialize_str("delete"),
-            JournalEntryAction::Unknown(s) => serializer.serialize_str(s),
-        }
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for JournalEntryAction
+where
+    sqlx::types::Json<Self>: sqlx::Decode<'r, sqlx::Postgres>,
+{
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        Ok(value.as_str()?.into())
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for JournalEntryAction
+where
+    Vec<u8>: sqlx::Encode<'q, sqlx::Postgres>,
+{
+    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> sqlx::encode::IsNull {
+        String::from(self).encode_by_ref(buf)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl sqlx::Type<sqlx::Postgres> for JournalEntryAction {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("varchar")
     }
 }
 
