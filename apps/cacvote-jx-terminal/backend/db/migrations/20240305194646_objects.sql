@@ -32,7 +32,7 @@ CREATE TABLE journal_entries (
     id UUID PRIMARY KEY,
 
     -- the object that was created or updated
-    object_id UUID NOT NULL REFERENCES objects(id),
+    object_id UUID NOT NULL,
 
     -- which jurisdiction owns the object, must match `jurisdiction` in `objects`
     jurisdiction varchar(255) NOT NULL,
