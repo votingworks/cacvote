@@ -10,5 +10,5 @@ test('generateConfig', async () => {
     generateConfig(getWorkspacePackageInfo(root), await getCargoCrates(root))
   ).join();
   expect(config).toContain('test-libs-basics');
-  expect(config).toContain('test-crate-controllerd');
+  expect(config).toContain('test-crate-types-rs');
 });
