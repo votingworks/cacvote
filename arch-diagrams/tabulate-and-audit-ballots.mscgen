@@ -15,6 +15,6 @@ msc {
 
     js rbox js  [ label="RLA discrepancies and calculations"];
 
-    js=>s   [label="POST RLA DATA\ndiscrepancies, calculated risks"];
+    js=>s   [label="POST RLA DATA\nSigJS(discrepancies)"];
         s rbox s  [ label="verify JS sig" ];
 }
