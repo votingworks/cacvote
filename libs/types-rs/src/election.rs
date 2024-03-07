@@ -272,6 +272,8 @@ pub struct Election {
     pub date: time::OffsetDateTime,
     pub ballot_styles: Vec<BallotStyle>,
     pub precincts: Vec<Precinct>,
+    pub districts: Vec<District>,
+    pub parties: Vec<Party>,
     pub contests: Vec<Contest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grid_layouts: Option<Vec<GridLayout>>,
@@ -310,6 +312,22 @@ pub struct BallotStyle {
 pub struct Precinct {
     pub id: PrecinctId,
     pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct District {
+    pub id: DistrictId,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Party {
+    pub id: PartyId,
+    pub name: String,
+    pub full_name: String,
+    pub abbrev: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
