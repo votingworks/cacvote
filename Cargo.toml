@@ -1,8 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "apps/mark-scan/accessible-controller",
-    "apps/mark-scan/pat-device-input",
     "apps/cacvote-jx-terminal/backend",
     "apps/cacvote-jx-terminal/frontend",
     "libs/auth-rs",
