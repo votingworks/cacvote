@@ -1,0 +1,20 @@
+msc {
+    js [ label="Jurisdiction Station", textbgcolor="red", textcolor="white" ],
+    s [ label="Server", textbgcolor="yellow" ],
+    vs [ label="Voter Station", textbgcolor="green" ];
+
+    js rbox js  [ label="homomorphic tabulation of all ballots" ];
+    js rbox js  [ label="decryption of tally\nand proof generation" ];
+
+    js=>s   [label="POST RESULTS\nSigJS(Tally,Proof(Tally))"];
+    s rbox s  [ label="verify JS sig" ];
+    js rbox js  [ label="paper-electronic matching: mixed ballots,\nsn decryption, un-matched\nsub-tallies, proofs"];
+
+    js=>s   [label="POST MIXED BALLOTS\nmixed E(Ballot), sn,\nun-matched sub-tallies,\n proofs, SigJS(Everything)"];
+        s rbox s  [ label="verify JS sig" ];
+
+    js rbox js  [ label="RLA discrepancies and calculations"];
+
+    js=>s   [label="POST RLA DATA\nSigJS(discrepancies)"];
+        s rbox s  [ label="verify JS sig" ];
+}
