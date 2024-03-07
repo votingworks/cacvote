@@ -48,6 +48,13 @@ impl Client {
         )
     }
 
+    /// Check that the server is responding.
+    pub async fn check_status(&self) -> Result<()> {
+        let response = self.get("/api/status").await?;
+        response.error_for_status()?;
+        Ok(())
+    }
+
     /// Create an object on the server.
     pub async fn create_object(&self, signed_object: SignedObject) -> Result<Uuid> {
         let response = self.post_json("/api/objects", &signed_object).await?;
@@ -139,7 +146,7 @@ mod tests {
         x509::X509,
     };
     use serde_json::json;
-    use types_rs::cacvote::Payload;
+    use types_rs::cacvote::{JournalEntryAction, Payload};
 
     use super::*;
     use crate::app;
@@ -217,7 +224,7 @@ mod tests {
         let entry = match entries.as_slice() {
             [entry] => {
                 assert_eq!(entry.object_id, object_id);
-                assert_eq!(entry.action, "create");
+                assert_eq!(entry.action, JournalEntryAction::Create);
                 assert_eq!(entry.object_type, "test");
                 assert_eq!(entry.jurisdiction.as_str(), "st.dev-jurisdiction");
                 entry
