@@ -63,6 +63,7 @@ impl sqlx::Type<sqlx::Postgres> for JurisdictionCode {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SignedObject {
     #[serde(with = "Base64Standard")]
     pub payload: Vec<u8>,
@@ -142,6 +143,7 @@ impl SignedObject {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Payload {
     pub object_type: String,
     #[serde(with = "Base64Standard")]
@@ -149,12 +151,14 @@ pub struct Payload {
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct JournalEntry {
     pub id: Uuid,
     pub object_id: Uuid,
     pub jurisdiction: JurisdictionCode,
     pub object_type: String,
     pub action: JournalEntryAction,
+    #[serde(with = "time::serde::iso8601")]
     pub created_at: time::OffsetDateTime,
 }
 

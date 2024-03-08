@@ -5,6 +5,8 @@ import { Server } from 'http';
 import { buildApp } from './app';
 import { Auth } from './types/auth';
 import { Workspace } from './workspace';
+import { Client } from './cacvote-server/client';
+import { CACVOTE_URL } from './globals';
 
 export interface StartOptions {
   auth?: Auth;
@@ -63,6 +65,14 @@ function getDefaultAuth(): Auth {
   };
 }
 
+function getCacvoteServerClient(): Client {
+  if (!CACVOTE_URL) {
+    throw new Error('CACVOTE_URL not set');
+  }
+
+  return new Client(CACVOTE_URL);
+}
+
 /**
  * Starts the server with all the default options.
  */
@@ -72,15 +82,52 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
     workspace,
     auth: resolvedAuth,
   });
+  const client = getCacvoteServerClient();
 
   async function doCacvoteServerSync() {
     try {
-      // TODO: sync with CACVote Server
+      const checkResult = await client.checkStatus();
 
-      await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: 'CACVote Server sync succeeded',
-        disposition: 'success',
-      });
+      if (checkResult.isErr()) {
+        await logger.log(LogEventId.ApplicationStartup, 'system', {
+          message: `Failed to check status of CACVote Server: ${checkResult.err()}`,
+          disposition: 'failure',
+        });
+      } else {
+        const latestJournalEntry = workspace.store.getLatestJournalEntry();
+
+        await logger.log(LogEventId.ApplicationStartup, 'system', {
+          message: `Checking for journal entries from CACVote Server since ${
+            latestJournalEntry?.getId() ?? 'the beginning of time'
+          }`,
+        });
+
+        const getEntriesResult = await client.getJournalEntries(
+          latestJournalEntry?.getId()
+        );
+
+        if (getEntriesResult.isErr()) {
+          await logger.log(LogEventId.ApplicationStartup, 'system', {
+            message: `Failed to get journal entries from CACVote Server: ${
+              getEntriesResult.err().message
+            }`,
+            disposition: 'failure',
+          });
+        } else {
+          const newEntries = getEntriesResult.ok();
+          await logger.log(LogEventId.ApplicationStartup, 'system', {
+            message: `Got ${newEntries.length} journal entries from CACVote Server`,
+            disposition: 'success',
+          });
+
+          workspace.store.addJournalEntries(newEntries);
+
+          await logger.log(LogEventId.ApplicationStartup, 'system', {
+            message: 'CACVote Server sync succeeded',
+            disposition: 'success',
+          });
+        }
+      }
     } catch (err) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
         message: `Failed to sync with CACVote Server: ${err}`,
