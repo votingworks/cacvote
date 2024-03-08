@@ -1,5 +1,11 @@
 import { Buffer } from 'buffer';
-import { Result, asyncResultBlock, err, ok } from '@votingworks/basics';
+import {
+  Optional,
+  Result,
+  asyncResultBlock,
+  err,
+  ok,
+} from '@votingworks/basics';
 import fetch, { Headers, Request } from 'cross-fetch';
 import { safeParse } from '@votingworks/types';
 import { ZodError, z } from 'zod';
@@ -31,55 +37,40 @@ export class Client {
    * Check that the server is responding.
    */
   async checkStatus(): Promise<ClientResult<void>> {
-    const statusResult = await this.get('/api/status');
+    return asyncResultBlock(async (bail) => {
+      const response = (await this.get('/api/status')).okOrElse(bail);
 
-    if (statusResult.isErr()) {
-      return statusResult;
-    }
-
-    const response = statusResult.ok();
-    if (!response.ok) {
-      return err({ type: 'network', message: response.statusText });
-    }
-
-    return ok();
+      if (!response.ok) {
+        bail({ type: 'network', message: response.statusText });
+      }
+    });
   }
 
   /**
    * Create an object on the server.
    */
   async createObject(signedObject: SignedObject): Promise<ClientResult<Uuid>> {
-    const postResult = await this.post(
-      '/api/objects',
-      JSON.stringify(signedObject)
-    );
+    return asyncResultBlock(async (bail) => {
+      const response = (
+        await this.post('/api/objects', JSON.stringify(signedObject))
+      ).okOrElse(bail);
 
-    if (postResult.isErr()) {
-      return postResult;
-    }
+      if (!response.ok) {
+        bail({ type: 'network', message: response.statusText });
+      }
 
-    const response = postResult.ok();
-    if (!response.ok) {
-      return err({ type: 'network', message: response.statusText });
-    }
-
-    const uuidResult = safeParse(UuidSchema, await response.text());
-
-    if (uuidResult.isErr()) {
-      return err({
-        type: 'schema',
-        error: uuidResult.err(),
-        message: uuidResult.err().message,
-      });
-    }
-
-    return uuidResult;
+      return safeParse(UuidSchema, await response.text()).okOrElse<ZodError>(
+        (error) => bail({ type: 'schema', error, message: error.message })
+      );
+    });
   }
 
   /**
    * Retrieve an object from the server.
    */
-  async getObjectById(uuid: Uuid): Promise<ClientResult<SignedObject>> {
+  async getObjectById(
+    uuid: Uuid
+  ): Promise<ClientResult<Optional<SignedObject>>> {
     const SignedObjectRawSchema = z.object({
       payload: z.string(),
       certificates: z.string(),
@@ -87,6 +78,11 @@ export class Client {
     });
     return asyncResultBlock(async (bail) => {
       const response = (await this.get(`/api/objects/${uuid}`)).okOrElse(bail);
+
+      if (response.status === 404) {
+        // not found
+        return undefined;
+      }
 
       if (!response.ok) {
         bail({ type: 'network', message: response.statusText });
@@ -133,7 +129,7 @@ export class Client {
       ).okOrElse(bail);
 
       if (!response.ok) {
-        return err({ type: 'network', message: response.statusText });
+        bail({ type: 'network', message: response.statusText });
       }
 
       const entries = safeParse(
