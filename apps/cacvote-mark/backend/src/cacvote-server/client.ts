@@ -80,26 +80,35 @@ export class Client {
    * Retrieve an object from the server.
    */
   async getObjectById(uuid: Uuid): Promise<ClientResult<SignedObject>> {
-    const getResult = await this.get(`/api/objects/${uuid}`);
+    const SignedObjectRawSchema = z.object({
+      payload: z.string(),
+      certificates: z.string(),
+      signature: z.string(),
+    });
+    return asyncResultBlock(async (bail) => {
+      const response = (await this.get(`/api/objects/${uuid}`)).okOrElse(bail);
 
-    if (getResult.isErr()) {
-      return getResult;
-    }
+      if (!response.ok) {
+        bail({ type: 'network', message: response.statusText });
+      }
 
-    const response = getResult.ok();
-    if (!response.ok) {
-      return err({ type: 'network', message: response.statusText });
-    }
+      const signedObject = safeParse(
+        SignedObjectRawSchema,
+        await response.json()
+      ).okOrElse<ZodError>((error) =>
+        bail({
+          type: 'schema',
+          error,
+          message: error.message,
+        })
+      );
 
-    const signedObject = await response.json();
-
-    return ok(
-      new SignedObject(
+      return new SignedObject(
         Buffer.from(signedObject.payload, 'base64'),
         Buffer.from(signedObject.certificates, 'base64'),
         Buffer.from(signedObject.signature, 'base64')
-      )
-    );
+      );
+    });
   }
 
   /**
