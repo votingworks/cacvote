@@ -2,7 +2,7 @@ import { Buffer } from 'buffer';
 import { Result, asyncResultBlock, err, ok } from '@votingworks/basics';
 import fetch, { Headers, Request } from 'cross-fetch';
 import { safeParse } from '@votingworks/types';
-import { ZodError } from 'zod';
+import { ZodError, z } from 'zod';
 import {
   JournalEntry,
   JournalEntrySchema,
@@ -127,17 +127,19 @@ export class Client {
         return err({ type: 'network', message: response.statusText });
       }
 
-      const journalEntriesRaw = await response.json();
-      const journalEntries: JournalEntry[] = [];
+      const entries = safeParse(
+        z.array(JournalEntrySchema),
+        await response.json()
+      ).okOrElse<ZodError>((error) =>
+        bail({
+          type: 'schema',
+          error,
+          message: error.message,
+        })
+      );
 
-      for (const entryRaw of journalEntriesRaw) {
-        const entry = safeParse(
-          JournalEntrySchema,
-          entryRaw
-        ).okOrElse<ZodError>((error) =>
-          bail({ type: 'schema', error, message: error.message })
-        );
-        journalEntries.push(
+      return entries.map(
+        (entry) =>
           new JournalEntry(
             entry.id,
             entry.objectId,
@@ -146,10 +148,7 @@ export class Client {
             entry.action,
             entry.createdAt
           )
-        );
-      }
-
-      return journalEntries;
+      );
     });
   }
 
