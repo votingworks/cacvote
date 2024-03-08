@@ -47,7 +47,7 @@
     "@votingworks/logging": "workspace:*",
     "@votingworks/types": "workspace:*",
     "@votingworks/utils": "workspace:*",
-    "cross-fetch": "^3.1.5",
+    "cross-fetch": "^4.0.0",
     "debug": "4.3.4",
     "dotenv": "16.3.1",
     "dotenv-expand": "9.0.0",

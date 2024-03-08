@@ -123,6 +123,12 @@
     {
       "path": "script",
       "name": "script"
+    },
+    {
+      "path": "services/cacvote-server"
+    },
+    {
+      "path": "."
     }
   ],
   "settings": {
