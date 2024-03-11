@@ -186,11 +186,11 @@ mod tests {
         public_key: &PKey<Public>,
     ) -> color_eyre::Result<Vec<u8>> {
         let mut signer = Signer::new(MessageDigest::sha256(), private_key)?;
-        signer.update(&payload)?;
+        signer.update(payload)?;
         let signature = signer.sign_to_vec()?;
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), public_key)?;
-        verifier.update(&payload)?;
+        verifier.update(payload)?;
         assert!(verifier.verify(&signature)?);
         Ok(signature)
     }
@@ -213,6 +213,7 @@ mod tests {
         // create the object
         let object_id = client
             .create_object(SignedObject {
+                id: Uuid::new_v4(),
                 payload,
                 certificates: certificates.clone(),
                 signature: signature.clone(),
@@ -260,6 +261,7 @@ mod tests {
 
         client
             .create_object(SignedObject {
+                id: Uuid::new_v4(),
                 payload,
                 // invalid certificates and signature
                 certificates: vec![],

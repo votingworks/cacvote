@@ -7,6 +7,7 @@ use openssl::{
 };
 use serde::{Deserialize, Serialize};
 use types_rs::cacvote::{Payload, SignedObject};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TestObject {
@@ -32,11 +33,11 @@ fn sign_and_verify(
     public_key: &PKey<Public>,
 ) -> color_eyre::Result<Vec<u8>> {
     let mut signer = Signer::new(MessageDigest::sha256(), private_key)?;
-    signer.update(&payload)?;
+    signer.update(payload)?;
     let signature = signer.sign_to_vec()?;
 
     let mut verifier = Verifier::new(MessageDigest::sha256(), public_key)?;
-    verifier.update(&payload)?;
+    verifier.update(payload)?;
     assert!(verifier.verify(&signature)?);
     Ok(signature)
 }
@@ -57,12 +58,13 @@ async fn main() -> color_eyre::Result<()> {
     let payload = serde_json::to_vec(&payload)?;
     let signature = sign_and_verify(&payload, &private_key, &public_key)?;
     let signed_object = SignedObject {
+        id: Uuid::new_v4(),
         payload,
         certificates,
         signature,
     };
 
-    let client = Client::new("http://localhost:8000".parse()?);
+    let client = Client::localhost();
     let object_id = client.create_object(signed_object).await?;
     println!("object_id: {object_id:?}");
 

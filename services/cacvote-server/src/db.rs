@@ -49,19 +49,19 @@ pub async fn create_object(
 
     let mut txn = connection.begin().await?;
 
-    let object = sqlx::query!(
+    sqlx::query!(
         r#"
-        INSERT INTO objects (jurisdiction, object_type, payload, certificates, signature)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id
+        INSERT INTO objects (id, jurisdiction, object_type, payload, certificates, signature)
+        VALUES ($1, $2, $3, $4, $5, $6)
         "#,
+        &object.id,
         jurisdiction_code.as_str(),
         object_type,
         &object.payload,
         &object.certificates,
         &object.signature
     )
-    .fetch_one(&mut *txn)
+    .execute(&mut *txn)
     .await?;
 
     tracing::debug!("Creating object with id {}", object.id);
@@ -173,6 +173,7 @@ pub async fn get_object_by_id(
     .await?;
 
     Ok(object.map(|object| SignedObject {
+        id: object_id,
         payload: object.payload,
         certificates: object.certificates,
         signature: object.signature,

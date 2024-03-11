@@ -13,7 +13,7 @@ const VX_IANA_ENTERPRISE_OID = '1.3.6.1.4.1.59817';
 /**
  * Instead of overloading existing X.509 cert fields, we're using our own custom cert fields.
  */
-const VX_CUSTOM_CERT_FIELD = {
+export const VX_CUSTOM_CERT_FIELD = {
   /**
    * One of: admin, central-scan, mark, mark-scan, scan, card (the first five referring to
    * machines)
@@ -175,32 +175,41 @@ export const CERT_EXPIRY_IN_DAYS = {
 } as const;
 
 /**
+ * Gets the subject of a cert.
+ */
+export async function getCertSubjectFields(
+  cert: Buffer
+): Promise<Map<string, string>> {
+  const response = await openssl(['x509', '-noout', '-subject', '-in', cert]);
+  const certSubject = response
+    .toString('utf-8')
+    .replace('subject=', '')
+    .trimEnd();
+  const certFieldsList = certSubject
+    .split(',')
+    .map((field) => field.trimStart());
+  const certFields = new Map<string, string>();
+  for (const certField of certFieldsList) {
+    const [fieldName, fieldValue] = certField.split(' = ');
+    if (fieldName && fieldValue) {
+      certFields.set(fieldName, fieldValue);
+    }
+  }
+  return certFields;
+}
+
+/**
  * Parses the provided cert and returns the custom cert fields. Throws an error if the cert doesn't
  * follow VotingWorks's cert format.
  */
 export async function parseCert(cert: Buffer): Promise<CustomCertFields> {
-  const response = await openssl(['x509', '-noout', '-subject', '-in', cert]);
-
-  const responseString = response.toString('utf-8');
-  assert(responseString.startsWith('subject='));
-  const certSubject = responseString.replace('subject=', '').trimEnd();
-
-  const certFieldsList = certSubject
-    .split(',')
-    .map((field) => field.trimStart());
-  const certFields: { [fieldName: string]: string } = {};
-  for (const certField of certFieldsList) {
-    const [fieldName, fieldValue] = certField.split(' = ');
-    if (fieldName && fieldValue) {
-      certFields[fieldName] = fieldValue;
-    }
-  }
+  const certFields = await getCertSubjectFields(cert);
 
   const certDetails = CustomCertFieldsSchema.parse({
-    component: certFields[VX_CUSTOM_CERT_FIELD.COMPONENT],
-    jurisdiction: certFields[VX_CUSTOM_CERT_FIELD.JURISDICTION],
-    cardType: certFields[VX_CUSTOM_CERT_FIELD.CARD_TYPE],
-    electionHash: certFields[VX_CUSTOM_CERT_FIELD.ELECTION_HASH],
+    component: certFields.get(VX_CUSTOM_CERT_FIELD.COMPONENT),
+    jurisdiction: certFields.get(VX_CUSTOM_CERT_FIELD.JURISDICTION),
+    cardType: certFields.get(VX_CUSTOM_CERT_FIELD.CARD_TYPE),
+    electionHash: certFields.get(VX_CUSTOM_CERT_FIELD.ELECTION_HASH),
   });
 
   return certDetails;
