@@ -17,7 +17,7 @@ const jurisdictionCode = unsafeParse(
 );
 
 test('checkStatus success', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -34,7 +34,7 @@ test('checkStatus success', async () => {
 });
 
 test('checkStatus failure', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -53,7 +53,7 @@ test('checkStatus failure', async () => {
 });
 
 test('createObject success', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'POST /api/objects': {
         expect(req.headers['content-type']).toEqual('application/json');
@@ -96,7 +96,7 @@ test('createObject success', async () => {
 });
 
 test('createObject network failure', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'POST /api/objects':
         expect(req.headers['content-type']).toEqual('application/json');
@@ -122,7 +122,7 @@ test('createObject network failure', async () => {
 });
 
 test('createObject schema failure', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'POST /api/objects':
         expect(req.headers['content-type']).toEqual('application/json');
@@ -150,7 +150,7 @@ test('createObject schema failure', async () => {
 });
 
 test('getObjectById success / no object', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case `GET /api/objects/${uuid}`:
         res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -167,7 +167,7 @@ test('getObjectById success / no object', async () => {
 });
 
 test('getObjectById success / with object', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case `GET /api/objects/${uuid}`:
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -199,7 +199,7 @@ test('getObjectById success / with object', async () => {
 });
 
 test('getObjectById network failure', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case `GET /api/objects/${uuid}`:
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -218,7 +218,7 @@ test('getObjectById network failure', async () => {
 });
 
 test('getObjectById schema failure', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case `GET /api/objects/${uuid}`:
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -239,7 +239,7 @@ test('getObjectById schema failure', async () => {
 });
 
 test('getJournalEntries success / no entries', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/journal-entries':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -257,7 +257,7 @@ test('getJournalEntries success / no entries', async () => {
 
 test('getJournalEntries success / with entries', async () => {
   const createdAt = DateTime.now();
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/journal-entries':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -296,7 +296,7 @@ test('getJournalEntries success / with entries', async () => {
 });
 
 test('getJournalEntries network failure', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/journal-entries':
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -316,7 +316,7 @@ test('getJournalEntries network failure', async () => {
 
 test('getJournalEntries schema failure', async () => {
   const createdAt = DateTime.now();
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/journal-entries':
         res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -19,7 +19,7 @@ import {
 
 test('syncPeriodically', async () => {
   const getJournalEntriesDeferred = deferred<void>();
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -55,7 +55,7 @@ test('syncPeriodically', async () => {
 test('syncPeriodically loops', async () => {
   let statusCount = 0;
   const done = deferred<void>();
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         statusCount += 1;
@@ -92,7 +92,7 @@ test('syncPeriodically loops', async () => {
 });
 
 test('sync / checkStatus failure', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -124,7 +124,7 @@ test('sync / checkStatus failure', async () => {
 
 test('sync / getJournalEntries failure', async () => {
   const getJournalEntriesDeferred = deferred<void>();
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -161,7 +161,7 @@ test('sync / getJournalEntries failure', async () => {
 });
 
 test('sync / getJournalEntries success / no entries', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -212,7 +212,7 @@ test('sync / getJournalEntries success / with entries', async () => {
     DateTime.now()
   );
 
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -251,7 +251,7 @@ test('sync / getJournalEntries success / with entries', async () => {
 });
 
 test('sync / createObject success / no objects', async () => {
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -300,7 +300,7 @@ test('sync / createObject success / with objects', async () => {
     Buffer.of(7, 8, 9)
   );
 
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -357,7 +357,7 @@ test('sync / createObject failure', async () => {
     Buffer.of(7, 8, 9)
   );
 
-  const server = mockCacvoteServer((req, res) => {
+  const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/status':
         res.writeHead(200, { 'Content-Type': 'application/json' });

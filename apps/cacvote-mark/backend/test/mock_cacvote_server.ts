@@ -6,6 +6,7 @@ import {
   createServer,
 } from 'http';
 import { AddressInfo } from 'net';
+import { deferred } from '@votingworks/basics';
 import { Client } from '../src/cacvote-server/client';
 
 export interface MockCacvoteServer {
@@ -14,13 +15,18 @@ export interface MockCacvoteServer {
   stop(): Promise<void>;
 }
 
-export function mockCacvoteServer<
+export async function mockCacvoteServer<
   Request extends typeof IncomingMessage,
   Response extends typeof ServerResponse,
->(handler: RequestListener<Request, Response>): MockCacvoteServer {
-  const server = createServer(handler).listen();
+>(handler: RequestListener<Request, Response>): Promise<MockCacvoteServer> {
+  const listening = deferred<void>();
+  const server = createServer(handler).listen(
+    { host: '127.0.0.1', port: 0 },
+    listening.resolve
+  );
+  await listening.promise;
   const address = server.address() as AddressInfo;
-  const url = new URL(`http://[${address.address}]:${address.port}`);
+  const url = new URL(`http://127.0.0.1:${address.port}`);
   const client = new Client(url);
   return {
     inner: server,
