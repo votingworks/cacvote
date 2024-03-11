@@ -41,6 +41,16 @@ pub(crate) async fn sync(
 ) -> color_eyre::eyre::Result<()> {
     client.check_status().await?;
 
+    push_objects(executor, client).await?;
+    pull_journal_entries(executor, client).await?;
+
+    Ok(())
+}
+
+async fn pull_journal_entries(
+    executor: &mut sqlx::PgConnection,
+    client: &Client,
+) -> color_eyre::eyre::Result<()> {
     let latest_journal_entry_id = db::get_latest_journal_entry(executor)
         .await?
         .map(|entry| entry.id);
@@ -51,6 +61,19 @@ pub(crate) async fn sync(
         count = new_entries.len()
     );
     db::add_journal_entries(executor, new_entries).await?;
+
+    Ok(())
+}
+
+async fn push_objects(
+    executor: &mut sqlx::PgConnection,
+    client: &Client,
+) -> color_eyre::eyre::Result<()> {
+    let objects = db::get_unsynced_objects(executor).await?;
+    for object in objects {
+        let object_id = client.create_object(object).await?;
+        db::mark_object_synced(executor, object_id).await?;
+    }
 
     Ok(())
 }

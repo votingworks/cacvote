@@ -115,23 +115,25 @@ enum Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        match self {
+        let (status, json) = match self {
             Error::Database(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": e.to_string() })),
-            )
-                .into_response(),
+            ),
             Error::Serde(e) => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({ "error": e.to_string() })),
-            )
-                .into_response(),
-            error @ Error::NotFound => (StatusCode::NOT_FOUND, error.to_string()).into_response(),
+            ),
+            error @ Error::NotFound => (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": error.to_string() })),
+            ),
             Error::Other(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": e.to_string() })),
-            )
-                .into_response(),
-        }
+            ),
+        };
+        tracing::error!("Responding with error: {status} {json:?}");
+        (status, json).into_response()
     }
 }

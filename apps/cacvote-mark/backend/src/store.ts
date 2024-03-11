@@ -1,15 +1,20 @@
-import { Optional } from '@votingworks/basics';
+import { Optional, Result, asyncResultBlock } from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
 import {
+  SystemSettings,
   safeParse,
   safeParseSystemSettings,
-  SystemSettings,
+  unsafeParse,
 } from '@votingworks/types';
-import { join } from 'path';
+import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
+import { join } from 'path';
+import { ZodError } from 'zod';
 import {
   JournalEntry,
   JurisdictionCodeSchema,
+  SignedObject,
+  Uuid,
   UuidSchema,
 } from './cacvote-server/types';
 
@@ -110,6 +115,33 @@ export class Store {
       : undefined;
   }
 
+  getJournalEntries(): JournalEntry[] {
+    const rows = this.client.all(
+      `select id, object_id, jurisdiction, object_type, action, created_at
+      from journal_entries
+      order by created_at`
+    ) as Array<{
+      id: string;
+      object_id: string;
+      jurisdiction: string;
+      object_type: string;
+      action: string;
+      created_at: string;
+    }>;
+
+    return rows.map(
+      (row) =>
+        new JournalEntry(
+          unsafeParse(UuidSchema, row.id),
+          unsafeParse(UuidSchema, row.object_id),
+          unsafeParse(JurisdictionCodeSchema, row.jurisdiction),
+          row.object_type,
+          row.action,
+          DateTime.fromSQL(row.created_at)
+        )
+    );
+  }
+
   /**
    * Adds journal entries to the store.
    */
@@ -131,5 +163,64 @@ export class Store {
         );
       }
     });
+  }
+
+  /**
+   * Adds an object to the store.
+   */
+  async addObject(
+    object: SignedObject
+  ): Promise<Result<Uuid, SyntaxError | ZodError>> {
+    return asyncResultBlock(async (bail) => {
+      const jurisdiction = (await object.getJurisdictionCode()).okOrElse(bail);
+      const payload = object.getPayload().okOrElse(bail);
+
+      this.client.run(
+        `insert into objects (id, jurisdiction, object_type, payload, certificates, signature)
+        values (?, ?, ?, ?, ?, ?)`,
+        object.getId(),
+        jurisdiction,
+        payload.getObjectType(),
+        object.getPayloadRaw(),
+        object.getCertificates(),
+        object.getSignature()
+      );
+
+      return object.getId();
+    });
+  }
+
+  /**
+   * Gets all unsynced objects from the store.
+   */
+  getUnsyncedObjects(): SignedObject[] {
+    const rows = this.client.all(
+      `select id, payload, certificates, signature from objects where server_synced_at is null`
+    ) as Array<{
+      id: string;
+      payload: Buffer;
+      certificates: Buffer;
+      signature: Buffer;
+    }>;
+
+    return rows.map(
+      (row) =>
+        new SignedObject(
+          unsafeParse(UuidSchema, row.id),
+          row.payload,
+          row.certificates,
+          row.signature
+        )
+    );
+  }
+
+  /**
+   * Marks an object as synced with the server.
+   */
+  markObjectAsSynced(id: Uuid): void {
+    this.client.run(
+      `update objects set server_synced_at = current_timestamp where id = ?`,
+      id
+    );
   }
 }

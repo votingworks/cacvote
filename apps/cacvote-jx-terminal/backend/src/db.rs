@@ -13,7 +13,7 @@ use base64_serde::base64_serde_type;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Connection, PgPool};
 use tracing::Level;
-use types_rs::cacvote::{JournalEntry, JurisdictionCode};
+use types_rs::cacvote::{JournalEntry, JurisdictionCode, SignedObject};
 
 use crate::config::Config;
 
@@ -80,4 +80,41 @@ pub(crate) async fn get_latest_journal_entry(
     )
     .fetch_optional(&mut *connection)
     .await?)
+}
+
+pub(crate) async fn get_unsynced_objects(
+    executor: &mut sqlx::PgConnection,
+) -> color_eyre::eyre::Result<Vec<SignedObject>> {
+    Ok(sqlx::query_as!(
+        SignedObject,
+        r#"
+        SELECT
+            id,
+            payload,
+            certificates,
+            signature
+        FROM objects
+        WHERE server_synced_at IS NULL
+        "#,
+    )
+    .fetch_all(&mut *executor)
+    .await?)
+}
+
+pub(crate) async fn mark_object_synced(
+    executor: &mut sqlx::PgConnection,
+    id: uuid::Uuid,
+) -> color_eyre::eyre::Result<()> {
+    sqlx::query!(
+        r#"
+        UPDATE objects
+        SET server_synced_at = now()
+        WHERE id = $1
+        "#,
+        id
+    )
+    .execute(&mut *executor)
+    .await?;
+
+    Ok(())
 }

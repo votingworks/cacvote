@@ -7,7 +7,7 @@ import {
   ok,
 } from '@votingworks/basics';
 import fetch, { Headers, Request } from 'cross-fetch';
-import { safeParse } from '@votingworks/types';
+import { safeParse, safeParseJson } from '@votingworks/types';
 import { ZodError, z } from 'zod';
 import {
   JournalEntry,
@@ -19,7 +19,7 @@ import {
 
 export type ClientError =
   | { type: 'network'; message: string }
-  | { type: 'schema'; error: ZodError; message: string };
+  | { type: 'schema'; error: SyntaxError | ZodError; message: string };
 
 export type ClientResult<T> = Result<T, ClientError>;
 
@@ -72,6 +72,7 @@ export class Client {
     uuid: Uuid
   ): Promise<ClientResult<Optional<SignedObject>>> {
     const SignedObjectRawSchema = z.object({
+      id: UuidSchema,
       payload: z.string(),
       certificates: z.string(),
       signature: z.string(),
@@ -88,9 +89,9 @@ export class Client {
         bail({ type: 'network', message: response.statusText });
       }
 
-      const signedObject = safeParse(
-        SignedObjectRawSchema,
-        await response.json()
+      const signedObject = safeParseJson(
+        await response.text(),
+        SignedObjectRawSchema
       ).okOrElse<ZodError>((error) =>
         bail({
           type: 'schema',
@@ -100,6 +101,7 @@ export class Client {
       );
 
       return new SignedObject(
+        signedObject.id,
         Buffer.from(signedObject.payload, 'base64'),
         Buffer.from(signedObject.certificates, 'base64'),
         Buffer.from(signedObject.signature, 'base64')

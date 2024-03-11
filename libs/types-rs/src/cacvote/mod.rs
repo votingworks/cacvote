@@ -65,6 +65,7 @@ impl sqlx::Type<sqlx::Postgres> for JurisdictionCode {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignedObject {
+    pub id: Uuid,
     #[serde(with = "Base64Standard")]
     pub payload: Vec<u8>,
     #[serde(with = "Base64Standard")]
@@ -93,6 +94,7 @@ impl SignedObject {
             .concat();
 
         Ok(Self {
+            id: Uuid::new_v4(),
             payload,
             certificates,
             signature,
@@ -109,7 +111,6 @@ impl SignedObject {
     }
 
     #[cfg(feature = "openssl")]
-    #[must_use]
     pub fn verify(&self) -> Result<bool, openssl::error::ErrorStack> {
         let public_key = match self.to_x509()?.first() {
             Some(x509) => x509.public_key()?,

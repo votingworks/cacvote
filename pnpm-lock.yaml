@@ -230,6 +230,9 @@ importers:
       '@votingworks/test-utils':
         specifier: workspace:*
         version: link:../../../libs/test-utils
+      esbuild-runner:
+        specifier: 2.2.2
+        version: 2.2.2(esbuild@0.17.11)
       eslint:
         specifier: 8.51.0
         version: 8.51.0
