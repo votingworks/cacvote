@@ -1,7 +1,6 @@
 //! CACVote Server synchronization utilities.
 
 use cacvote_server::client::Client;
-use sqlx::PgPool;
 use tokio::time::sleep;
 
 use crate::{
@@ -11,7 +10,7 @@ use crate::{
 
 /// Spawns an async loop that synchronizes with the CACVote Server on a fixed
 /// schedule.
-pub(crate) async fn sync_periodically(pool: &PgPool, config: Config) {
+pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
     let mut connection = pool
         .acquire()
         .await
@@ -43,6 +42,7 @@ pub(crate) async fn sync(
 
     push_objects(executor, client).await?;
     pull_journal_entries(executor, client).await?;
+    pull_objects(executor, client).await?;
 
     Ok(())
 }
@@ -73,6 +73,28 @@ async fn push_objects(
     for object in objects {
         let object_id = client.create_object(object).await?;
         db::mark_object_synced(executor, object_id).await?;
+    }
+
+    Ok(())
+}
+
+async fn pull_objects(
+    executor: &mut sqlx::PgConnection,
+    client: &Client,
+) -> color_eyre::eyre::Result<()> {
+    let journal_entries = db::get_journal_entries_for_objects_to_pull(executor).await?;
+    for journal_entry in journal_entries {
+        match client.get_object_by_id(journal_entry.object_id).await? {
+            Some(object) => {
+                db::add_object_from_server(executor, &object).await?;
+            }
+            None => {
+                tracing::warn!(
+                    "Object with id {} not found on CACVote Server",
+                    journal_entry.object_id
+                );
+            }
+        }
     }
 
     Ok(())

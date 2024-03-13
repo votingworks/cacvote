@@ -1,3 +1,6 @@
+import { deferred } from '@votingworks/basics';
+import { unsafeParse } from '@votingworks/types';
+import app, { Application, Request, Response } from 'express';
 import {
   IncomingMessage,
   RequestListener,
@@ -6,8 +9,13 @@ import {
   createServer,
 } from 'http';
 import { AddressInfo } from 'net';
-import { deferred } from '@votingworks/basics';
 import { Client } from '../src/cacvote-server/client';
+import {
+  JournalEntry,
+  SignedObject,
+  Uuid,
+  UuidSchema,
+} from '../src/cacvote-server/types';
 
 export interface MockCacvoteServer {
   inner: Server;
@@ -37,4 +45,98 @@ export async function mockCacvoteServer<
       });
     },
   };
+}
+
+export class MockCacvoteAppBuilder {
+  private journalEntries: JournalEntry[] = [];
+  private readonly objects = new Map<Uuid, SignedObject>();
+  private onGetJournalEntriesCallback: (res: Response) => void = () =>
+    undefined;
+  private onStatusCheckCallback: (res: Response) => void = () => undefined;
+  private onPostObjectCallback: (req: Request, res: Response) => void = () =>
+    undefined;
+  private onGetObjectByIdCallback: (req: Request, res: Response) => void = () =>
+    undefined;
+
+  withJournalEntries(journalEntries: JournalEntry[]): this {
+    this.journalEntries = journalEntries;
+    return this;
+  }
+
+  withObject(object: SignedObject): this {
+    this.objects.set(object.getId(), object);
+    return this;
+  }
+
+  onGetJournalEntries(cb: (res: Response) => void): this {
+    this.onGetJournalEntriesCallback = cb;
+    return this;
+  }
+
+  onStatusCheck(cb: (res: Response) => void): this {
+    this.onStatusCheckCallback = cb;
+    return this;
+  }
+
+  onPostObject(cb: (req: Request, res: Response) => void): this {
+    this.onPostObjectCallback = cb;
+    return this;
+  }
+
+  onGetObjectById(cb: (req: Request, res: Response) => void): this {
+    this.onGetObjectByIdCallback = cb;
+    return this;
+  }
+
+  build(): Application {
+    const server = app();
+
+    server.get('/api/status', (_req, res) => {
+      this.onStatusCheckCallback(res);
+
+      if (res.headersSent) {
+        return;
+      }
+
+      res.status(200).send('{}');
+    });
+
+    server.get('/api/journal-entries', (_req, res) => {
+      this.onGetJournalEntriesCallback(res);
+
+      if (res.headersSent) {
+        return;
+      }
+
+      res.status(200).json(this.journalEntries);
+    });
+
+    server.post('/api/objects', (req, res) => {
+      this.onPostObjectCallback(req, res);
+
+      if (res.headersSent) {
+        return;
+      }
+
+      res.status(201).end();
+    });
+
+    server.get('/api/objects/:id', (req, res) => {
+      this.onGetObjectByIdCallback(req, res);
+
+      if (res.headersSent) {
+        return;
+      }
+
+      const id = unsafeParse(UuidSchema, req.params.id);
+      const object = this.objects.get(id);
+      if (object) {
+        res.status(200).json(object);
+      } else {
+        res.status(404).end();
+      }
+    });
+
+    return server;
+  }
 }

@@ -191,9 +191,72 @@ export class Store {
   }
 
   /**
+   * Gets an object from the store by its ID.
+   */
+  getObjectById(objectId: Uuid): Optional<SignedObject> {
+    const row = this.client.one(
+      `select id, payload, certificates, signature from objects where id = ?`,
+      objectId
+    ) as Optional<{
+      id: string;
+      payload: Buffer;
+      certificates: Buffer;
+      signature: Buffer;
+    }>;
+
+    return row
+      ? new SignedObject(
+          unsafeParse(UuidSchema, row.id),
+          row.payload,
+          row.certificates,
+          row.signature
+        )
+      : undefined;
+  }
+
+  getJournalEntriesForObjectsToPull(): JournalEntry[] {
+    const objectTypesToPull = [
+      'RegistrationRequest',
+      'Registration',
+      'Election',
+    ];
+    const action = 'create';
+
+    const rows = this.client.all(
+      `select je.id, je.object_id, je.jurisdiction, je.object_type, je.created_at
+      from journal_entries je
+      left join objects o on je.object_id = o.id
+      where je.object_type in (${objectTypesToPull.map(() => '?').join(', ')})
+      and je.action = ?
+      and o.id is null
+      order by je.created_at`,
+      ...objectTypesToPull,
+      action
+    ) as Array<{
+      id: string;
+      object_id: string;
+      jurisdiction: string;
+      object_type: string;
+      created_at: string;
+    }>;
+
+    return rows.map(
+      (row) =>
+        new JournalEntry(
+          unsafeParse(UuidSchema, row.id),
+          unsafeParse(UuidSchema, row.object_id),
+          unsafeParse(JurisdictionCodeSchema, row.jurisdiction),
+          row.object_type,
+          action,
+          DateTime.fromSQL(row.created_at)
+        )
+    );
+  }
+
+  /**
    * Gets all unsynced objects from the store.
    */
-  getUnsyncedObjects(): SignedObject[] {
+  getObjectsToPush(): SignedObject[] {
     const rows = this.client.all(
       `select id, payload, certificates, signature from objects where server_synced_at is null`
     ) as Array<{

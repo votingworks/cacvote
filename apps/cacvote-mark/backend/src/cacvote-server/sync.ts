@@ -48,7 +48,7 @@ async function pushObjects(
   store: Store,
   logger: Logger
 ): Promise<void> {
-  const objects = store.getUnsyncedObjects();
+  const objects = store.getObjectsToPush();
 
   if (objects.length === 0) {
     await logger.log(LogEventId.ApplicationStartup, 'system', {
@@ -81,6 +81,54 @@ async function pushObjects(
   }
 }
 
+async function pullObjects(
+  client: Client,
+  store: Store,
+  logger: Logger
+): Promise<void> {
+  const journalEntriesForObjectsToFetch =
+    store.getJournalEntriesForObjectsToPull();
+
+  for (const journalEntry of journalEntriesForObjectsToFetch) {
+    const getObjectResult = await client.getObjectById(
+      journalEntry.getObjectId()
+    );
+
+    if (getObjectResult.isErr()) {
+      await logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: `Failed to get object with ID '${journalEntry.getObjectId()}' from CACVote Server: ${getObjectResult.err()}`,
+        disposition: 'failure',
+      });
+      continue;
+    }
+
+    const object = getObjectResult.ok();
+
+    if (!object) {
+      await logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: `Object with ID '${journalEntry.getObjectId()}' not found on CACVote Server`,
+        disposition: 'failure',
+      });
+      continue;
+    }
+
+    const addObjectResult = await store.addObject(object);
+
+    if (addObjectResult.isErr()) {
+      await logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: `Failed to add object with ID '${object.getId()}' to the store: ${addObjectResult.err()}`,
+        disposition: 'failure',
+      });
+      continue;
+    }
+
+    await logger.log(LogEventId.ApplicationStartup, 'system', {
+      message: `Got object with ID '${object.getId()}' from CACVote Server`,
+      disposition: 'success',
+    });
+  }
+}
+
 /**
  * Perform a sync with the CACVote Server now.
  */
@@ -104,6 +152,7 @@ export async function sync(
 
     await pushObjects(client, store, logger);
     await pullJournalEntries(client, store, logger);
+    await pullObjects(client, store, logger);
   } catch (err) {
     await logger.log(LogEventId.ApplicationStartup, 'system', {
       message: `Failed to sync with CACVote Server: ${err}`,
