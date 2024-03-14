@@ -3,9 +3,9 @@ import { PORT, CACVOTE_MARK_WORKSPACE } from './globals';
 import * as server from './server';
 import { Workspace, createWorkspace } from './workspace';
 
-export type { Api, CreateTestVoterInput } from './app';
+export type { Api } from './app';
 export type { AuthStatus } from './types/auth';
-export type { ServerId } from './types/db';
+export type { JurisdictionCode } from './cacvote-server/types';
 
 const logger = new Logger(LogSource.VxMarkBackend);
 

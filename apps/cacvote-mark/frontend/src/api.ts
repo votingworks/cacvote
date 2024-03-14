@@ -39,14 +39,10 @@ export const getJurisdictions = {
     return ['getJurisdictions'];
   },
   useQuery() {
-    // const apiClient = useApiClient();
-    return useQuery(
-      this.queryKey(),
-      () => Array.of<{ id: string; name: string }>(),
-      {
-        staleTime: Infinity,
-      }
-    );
+    const apiClient = useApiClient();
+    return useQuery(this.queryKey(), () => apiClient.getJurisdictions(), {
+      staleTime: Infinity,
+    });
   },
 } as const;
 

@@ -228,7 +228,7 @@ test('sync / createObject success / with objects', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Buffer.from(JSON.stringify(new Payload('objectType', Buffer.of(1, 2, 3)))),
+    Payload.of('objectType', {}).toBuffer(),
     await getCertificates(),
     Buffer.of(7, 8, 9)
   );
@@ -266,7 +266,7 @@ test('sync / createObject failure', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Buffer.from(JSON.stringify(new Payload('objectType', Buffer.of(1, 2, 3)))),
+    Payload.of('objectType', {}).toBuffer(),
     await getCertificates(),
     Buffer.of(7, 8, 9)
   );
@@ -307,9 +307,7 @@ test.each(['RegistrationRequest', 'Registration', 'Election'])(
     const objectId = unsafeParse(UuidSchema, v4());
     const object = new SignedObject(
       objectId,
-      Buffer.from(
-        JSON.stringify(new Payload('RegistrationRequest', Buffer.from('{}')))
-      ),
+      Payload.of('RegistrationRequest', {}).toBuffer(),
       await getCertificates(),
       Buffer.of(7, 8, 9)
     );
@@ -455,9 +453,7 @@ test('sync / fetch object but cannot add to store', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Buffer.from(
-      JSON.stringify(new Payload('Registration', Buffer.of(1, 2, 3)))
-    ),
+    Payload.of('Registration', {}).toBuffer(),
     await getCertificates(),
     Buffer.of(7, 8, 9)
   );
