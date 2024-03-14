@@ -40,6 +40,7 @@ js-sys = "0.3.64"
 lazy_static = "1.4.0"
 log = "0.4.19"
 logging_timer = "1.1.0"
+mockall = "0.12.1"
 nanoid = "0.4.0"
 neon = { version = "0.10", default-features = false, features = ["napi-6"] }
 num_enum = "0.7.1"

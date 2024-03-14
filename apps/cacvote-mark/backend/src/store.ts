@@ -1,4 +1,11 @@
-import { Optional, Result, asyncResultBlock } from '@votingworks/basics';
+import {
+  IteratorPlus,
+  Optional,
+  Result,
+  assert,
+  asyncResultBlock,
+  iter,
+} from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
 import {
   SystemSettings,
@@ -12,11 +19,20 @@ import { join } from 'path';
 import { ZodError } from 'zod';
 import {
   JournalEntry,
+  JurisdictionCode,
   JurisdictionCodeSchema,
+  Registration,
+  RegistrationRequest,
+  RegistrationRequestSchema,
+  RegistrationSchema,
   SignedObject,
+  SignedObjectSchema,
   Uuid,
   UuidSchema,
 } from './cacvote-server/types';
+
+export const RegistrationRequestObjectType = 'RegistrationRequest';
+export const RegistrationObjectType = 'Registration';
 
 const SchemaPath = join(__dirname, '../schema.sql');
 
@@ -216,7 +232,7 @@ export class Store {
 
   getJournalEntriesForObjectsToPull(): JournalEntry[] {
     const objectTypesToPull = [
-      'RegistrationRequest',
+      RegistrationRequestObjectType,
       'Registration',
       'Election',
     ];
@@ -284,6 +300,86 @@ export class Store {
     this.client.run(
       `update objects set server_synced_at = current_timestamp where id = ?`,
       id
+    );
+  }
+
+  forEachRegistrationRequest({
+    commonAccessCardId,
+  }: {
+    commonAccessCardId: string;
+  }): IteratorPlus<{
+    object: SignedObject;
+    registrationRequest: RegistrationRequest;
+  }> {
+    return this.forEachObjectOfType(RegistrationRequestObjectType).filterMap(
+      (object) => {
+        const registrationRequest = object
+          .parsePayloadAs(
+            RegistrationRequestObjectType,
+            RegistrationRequestSchema
+          )
+          .unsafeUnwrap();
+        assert(
+          registrationRequest,
+          'payload matches object type because we used forEachObjectType'
+        );
+        if (
+          registrationRequest.getCommonAccessCardId() === commonAccessCardId
+        ) {
+          return { object, registrationRequest };
+        }
+      }
+    );
+  }
+
+  forEachRegistration({
+    commonAccessCardId,
+    registrationRequestObjectId,
+  }: {
+    commonAccessCardId: string;
+    registrationRequestObjectId?: Uuid;
+  }): IteratorPlus<{
+    object: SignedObject;
+    registration: Registration;
+  }> {
+    return this.forEachObjectOfType(RegistrationObjectType).filterMap(
+      (object) => {
+        const registration = object
+          .parsePayloadAs(RegistrationObjectType, RegistrationSchema)
+          .unsafeUnwrap();
+        assert(
+          registration,
+          'payload matches object type because we used forEachObjectType'
+        );
+        if (
+          registration.getCommonAccessCardId() === commonAccessCardId &&
+          (!registrationRequestObjectId ||
+            registrationRequestObjectId ===
+              registration.getRegistrationRequestObjectId())
+        ) {
+          return { object, registration };
+        }
+      }
+    );
+  }
+
+  forEachObjectOfType(objectType: string): IteratorPlus<SignedObject> {
+    return iter(
+      this.client.each(
+        `select id, payload, certificates, signature from objects
+        where json_extract(payload, '$.objectType') = ?`,
+        objectType
+      )
+    ).map((row) => unsafeParse(SignedObjectSchema, row));
+  }
+
+  getJurisdictions(): JurisdictionCode[] {
+    const rows = this.client.all(
+      `select distinct jurisdiction from objects`
+    ) as Array<{ jurisdiction: string }>;
+
+    return rows.map((row) =>
+      unsafeParse(JurisdictionCodeSchema, row.jurisdiction)
     );
   }
 }

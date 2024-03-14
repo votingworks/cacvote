@@ -3,12 +3,15 @@ use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 
 use auth_rs::card_details::CardDetails;
-use auth_rs::{CardReader, SharedCardReaders, Watcher};
+use auth_rs::{CardReader, SharedCardReaders};
 use types_rs::cacvote::SmartcardStatus;
 
-/// Watches for smartcard events.
-pub fn watch() -> Watcher {
-    Watcher::watch()
+pub(crate) type DynStatusGetter = Arc<dyn StatusGetterTrait + Send + Sync>;
+
+#[cfg_attr(test, mockall::automock)]
+pub(crate) trait StatusGetterTrait {
+    fn get(&self) -> SmartcardStatus;
+    fn get_card_details(&self) -> Option<CardDetails>;
 }
 
 /// Provides access to the current smartcard status.
@@ -40,11 +43,13 @@ impl StatusGetter {
             last_selected_card_reader_info: Arc::new(Mutex::new(None)),
         }
     }
+}
 
+impl StatusGetterTrait for StatusGetter {
     /// Gets the current smartcard status.
     #[allow(dead_code)]
     #[must_use]
-    pub(crate) fn get(&self) -> SmartcardStatus {
+    fn get(&self) -> SmartcardStatus {
         let readers = self.readers_with_cards.lock().unwrap();
 
         if readers.is_empty() {
@@ -56,7 +61,7 @@ impl StatusGetter {
 
     #[allow(dead_code)]
     #[must_use]
-    pub(crate) fn get_card_details(&self) -> Option<CardDetails> {
+    fn get_card_details(&self) -> Option<CardDetails> {
         let readers = self.readers_with_cards.lock().unwrap();
         let reader_name = readers.first()?;
 

@@ -34,5 +34,6 @@ types-rs = { workspace = true, features = ["backend"] }
 uuid = { workspace = true }
 
 [dev-dependencies]
+mockall = { workspace = true }
 pretty_assertions = { workspace = true }
 proptest = { workspace = true }

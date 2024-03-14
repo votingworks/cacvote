@@ -99,3 +99,61 @@ async fn pull_objects(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{net::TcpListener, sync::Arc};
+
+    use reqwest::Url;
+    use tracing::Level;
+    use types_rs::cacvote::SmartcardStatus;
+
+    use crate::{
+        app,
+        smartcard::{DynStatusGetter, MockStatusGetterTrait},
+    };
+
+    use super::*;
+
+    fn setup(pool: sqlx::PgPool, smartcard_status: DynStatusGetter) -> color_eyre::Result<Client> {
+        let listener = TcpListener::bind("0.0.0.0:0")?;
+        let addr = listener.local_addr()?;
+        let cacvote_url: Url = format!("http://{addr}").parse()?;
+        let config = Config {
+            cacvote_url: cacvote_url.clone(),
+            database_url: "".to_string(),
+            machine_id: "".to_string(),
+            port: addr.port(),
+            public_dir: None,
+            log_level: Level::DEBUG,
+        };
+
+        tokio::spawn(async move {
+            let app = app::setup(pool, config, smartcard_status);
+            axum::Server::from_tcp(listener)
+                .unwrap()
+                .serve(app.into_make_service())
+                .await
+                .unwrap();
+        });
+
+        Ok(Client::new(cacvote_url))
+    }
+
+    #[sqlx::test(migrations = "db/migrations")]
+    async fn test_sync(pool: sqlx::PgPool) -> color_eyre::Result<()> {
+        let mut connection = pool.acquire().await?;
+
+        let mut smartcard_status = MockStatusGetterTrait::new();
+        smartcard_status
+            .expect_get()
+            .returning(|| SmartcardStatus::Card);
+
+        let client = setup(pool, Arc::new(smartcard_status))?;
+
+        // TODO: actually test `sync`
+        let _ = sync(&mut connection, &client).await;
+
+        Ok(())
+    }
+}

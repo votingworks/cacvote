@@ -134,7 +134,7 @@ export class Client {
         bail({ type: 'network', message: response.statusText });
       }
 
-      const entries = safeParse(
+      return safeParse(
         z.array(JournalEntrySchema),
         await response.json()
       ).okOrElse<ZodError>((error) =>
@@ -143,18 +143,6 @@ export class Client {
           error,
           message: error.message,
         })
-      );
-
-      return entries.map(
-        (entry) =>
-          new JournalEntry(
-            entry.id,
-            entry.objectId,
-            entry.jurisdiction,
-            entry.objectType,
-            entry.action,
-            entry.createdAt
-          )
       );
     });
   }

@@ -22,14 +22,15 @@ use tracing::Level;
 use crate::config::{Config, MAX_REQUEST_SIZE};
 use crate::smartcard;
 
-type AppState = (Config, PgPool, smartcard::StatusGetter);
+// type AppState = (Config, PgPool, smartcard::StatusGetter);
+type AppState = (Config, PgPool, smartcard::DynStatusGetter);
 
 /// Prepares the application with all the routes. Run the application with
 /// `app::run(…)` once you have it.
 pub(crate) fn setup(
     pool: PgPool,
     config: Config,
-    smartcard_status: smartcard::StatusGetter,
+    smartcard_status: smartcard::DynStatusGetter,
 ) -> Router {
     let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
 
