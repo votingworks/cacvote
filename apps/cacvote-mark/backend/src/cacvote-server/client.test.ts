@@ -5,10 +5,13 @@ import { DateTime } from 'luxon';
 import { mockCacvoteServer } from '../../test/mock_cacvote_server';
 import {
   JournalEntry,
+  JurisdictionCode,
   JurisdictionCodeSchema,
+  RegistrationRequestObjectType,
   SignedObject,
   UuidSchema,
 } from './types';
+import { ClientResult } from './client';
 
 const uuid = unsafeParse(UuidSchema, '123e4567-e89b-12d3-a456-426614174000');
 const jurisdictionCode = unsafeParse(
@@ -267,7 +270,7 @@ test('getJournalEntries success / with entries', async () => {
               uuid,
               uuid,
               jurisdictionCode,
-              'objectType',
+              RegistrationRequestObjectType,
               'action',
               createdAt
             ),
@@ -280,16 +283,18 @@ test('getJournalEntries success / with entries', async () => {
     }
   });
 
-  expect(await server.client.getJournalEntries()).toEqual(
+  expect(await server.client.getJournalEntries()).toEqual<
+    ClientResult<JournalEntry[]>
+  >(
     ok([
-      {
-        id: uuid,
-        objectId: uuid,
-        jurisdiction: jurisdictionCode,
-        objectType: 'objectType',
-        action: 'action',
-        createdAt,
-      },
+      new JournalEntry(
+        uuid,
+        uuid,
+        jurisdictionCode,
+        RegistrationRequestObjectType,
+        'action',
+        createdAt
+      ),
     ])
   );
   await server.stop();
@@ -322,14 +327,14 @@ test('getJournalEntries schema failure', async () => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(
           JSON.stringify([
-            {
-              id: uuid,
-              objectId: uuid,
-              jurisdiction: 'invalid jurisdiction',
-              objectType: 'objectType',
-              action: 'action',
-              createdAt: createdAt.toISO(),
-            },
+            new JournalEntry(
+              uuid,
+              uuid,
+              'invalid jurisdiction' as JurisdictionCode,
+              'objectType',
+              'action',
+              createdAt
+            ),
           ])
         );
         break;

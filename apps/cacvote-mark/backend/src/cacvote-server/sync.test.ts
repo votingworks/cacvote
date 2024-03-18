@@ -14,8 +14,11 @@ import { Store } from '../store';
 import { sync, syncPeriodically } from './sync';
 import {
   JournalEntry,
+  JurisdictionCode,
   JurisdictionCodeSchema,
   Payload,
+  RegistrationRequest,
+  RegistrationRequestObjectType,
   SignedObject,
   UuidSchema,
 } from './types';
@@ -228,7 +231,16 @@ test('sync / createObject success / with objects', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Payload.of('objectType', {}).toBuffer(),
+    Payload.of(
+      RegistrationRequestObjectType,
+      new RegistrationRequest(
+        '0123456789',
+        'st.test-jurisdiction' as JurisdictionCode,
+        'John',
+        'Smith',
+        DateTime.now()
+      )
+    ).toBuffer(),
     await getCertificates(),
     Buffer.of(7, 8, 9)
   );
@@ -266,7 +278,16 @@ test('sync / createObject failure', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Payload.of('objectType', {}).toBuffer(),
+    Payload.of(
+      RegistrationRequestObjectType,
+      new RegistrationRequest(
+        '0123456789',
+        'st.test-jurisdiction' as JurisdictionCode,
+        'John',
+        'Smith',
+        DateTime.now()
+      )
+    ).toBuffer(),
     await getCertificates(),
     Buffer.of(7, 8, 9)
   );
@@ -301,48 +322,54 @@ test('sync / createObject failure', async () => {
   expect(store.getObjectsToPush()).toHaveLength(1);
 });
 
-test.each(['RegistrationRequest', 'Registration', 'Election'])(
-  'sync / fetches %s objects',
-  async (objectType) => {
-    const objectId = unsafeParse(UuidSchema, v4());
-    const object = new SignedObject(
-      objectId,
-      Payload.of('RegistrationRequest', {}).toBuffer(),
-      await getCertificates(),
-      Buffer.of(7, 8, 9)
-    );
-    const journalEntry = new JournalEntry(
-      unsafeParse(UuidSchema, v4()),
-      objectId,
-      unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
-      objectType,
-      'create',
-      DateTime.now()
-    );
+test('sync / fetches RegistrationRequest objects', async () => {
+  const objectId = unsafeParse(UuidSchema, v4());
+  const object = new SignedObject(
+    objectId,
+    Payload.of(
+      RegistrationRequestObjectType,
+      new RegistrationRequest(
+        '0123456789',
+        'st.dev-jurisdiction' as JurisdictionCode,
+        'John',
+        'Smith',
+        DateTime.now()
+      )
+    ).toBuffer(),
+    await getCertificates(),
+    Buffer.of(7, 8, 9)
+  );
+  const journalEntry = new JournalEntry(
+    unsafeParse(UuidSchema, v4()),
+    objectId,
+    unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
+    RegistrationRequestObjectType,
+    'create',
+    DateTime.now()
+  );
 
-    const server = await mockCacvoteServer(
-      new MockCacvoteAppBuilder()
-        .withJournalEntries([journalEntry])
-        .onGetObjectById((req, res) => {
-          const requestObjectId = unsafeParse(UuidSchema, req.params['id']);
-          expect(requestObjectId).toEqual(objectId.toString());
-          res.json(object);
-        })
-        .build()
-    );
+  const server = await mockCacvoteServer(
+    new MockCacvoteAppBuilder()
+      .withJournalEntries([journalEntry])
+      .onGetObjectById((req, res) => {
+        const requestObjectId = unsafeParse(UuidSchema, req.params['id']);
+        expect(requestObjectId).toEqual(objectId.toString());
+        res.json(object);
+      })
+      .build()
+  );
 
-    const store = Store.memoryStore();
-    const logger = fakeLogger();
-    await sync(server.client, store, logger);
+  const store = Store.memoryStore();
+  const logger = fakeLogger();
+  await sync(server.client, store, logger);
 
-    // wait for the server to stop
-    await server.stop();
+  // wait for the server to stop
+  await server.stop();
 
-    const entries = store.getJournalEntries();
-    expect(entries).toEqual([journalEntry]);
-    expect(store.getObjectById(objectId)).toEqual(object);
-  }
-);
+  const entries = store.getJournalEntries();
+  expect(entries).toEqual([journalEntry]);
+  expect(store.getObjectById(objectId)).toEqual(object);
+});
 
 test('sync / fetch ignores unknown object types', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
@@ -477,7 +504,7 @@ test('sync / fetch object but cannot add to store', async () => {
   const logger = fakeLogger();
 
   jest
-    .spyOn(store, 'addObject')
+    .spyOn(store, 'addObjectFromServer')
     .mockResolvedValue(err(new SyntaxError('bad object!')));
 
   await sync(server.client, store, logger);
