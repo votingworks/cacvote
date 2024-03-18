@@ -1,6 +1,6 @@
 // eslint-disable-next-line max-classes-per-file
 import { certs } from '@votingworks/auth';
-import { Optional, Result, resultBlock } from '@votingworks/basics';
+import { Optional, Result, ok, resultBlock } from '@votingworks/basics';
 import {
   BallotStyleId,
   BallotStyleIdSchema,
@@ -15,6 +15,8 @@ import { DateTime } from 'luxon';
 import { validate } from 'uuid';
 import { ZodError, z } from 'zod';
 
+export const RegistrationRequestObjectType = 'RegistrationRequest';
+export const RegistrationObjectType = 'Registration';
 export type Uuid = NewType<string, 'Uuid'>;
 
 export const UuidSchema = z.string().refine(validate, {
@@ -39,7 +41,7 @@ export class JournalEntry {
   constructor(
     private readonly id: Uuid,
     private readonly objectId: Uuid,
-    private readonly jurisdiction: JurisdictionCode,
+    private readonly jurisdictionCode: JurisdictionCode,
     private readonly objectType: string,
     private readonly action: JournalEntryAction,
     private readonly createdAt: DateTime
@@ -53,8 +55,8 @@ export class JournalEntry {
     return this.objectId;
   }
 
-  getJurisdiction(): JurisdictionCode {
-    return this.jurisdiction;
+  getJurisdictionCode(): JurisdictionCode {
+    return this.jurisdictionCode;
   }
 
   getObjectType(): string {
@@ -73,7 +75,7 @@ export class JournalEntry {
     return {
       id: this.id.toString(),
       objectId: this.objectId.toString(),
-      jurisdiction: this.jurisdiction,
+      jurisdictionCode: this.jurisdictionCode,
       objectType: this.objectType,
       action: this.action,
       createdAt: this.createdAt.toISO(),
@@ -84,14 +86,14 @@ export class JournalEntry {
 export const RawJournalEntrySchema: z.ZodSchema<{
   id: Uuid;
   objectId: Uuid;
-  jurisdiction: JurisdictionCode;
+  jurisdictionCode: JurisdictionCode;
   objectType: string;
   action: string;
   createdAt: DateTime;
 }> = z.object({
   id: UuidSchema,
   objectId: UuidSchema,
-  jurisdiction: JurisdictionCodeSchema,
+  jurisdictionCode: JurisdictionCodeSchema,
   objectType: z.string(),
   action: z.string(),
   createdAt: DateTimeSchema,
@@ -103,12 +105,127 @@ export const JournalEntrySchema: z.ZodSchema<JournalEntry> =
       new JournalEntry(
         o.id,
         o.objectId,
-        o.jurisdiction,
+        o.jurisdictionCode,
         o.objectType,
         o.action,
         o.createdAt
       )
   ) as unknown as z.ZodSchema<JournalEntry>;
+
+export class RegistrationRequest {
+  constructor(
+    private readonly commonAccessCardId: string,
+    private readonly jurisdictionCode: JurisdictionCode,
+    private readonly givenName: string,
+    private readonly familyName: string,
+    private readonly createdAt: DateTime
+  ) {}
+
+  getCommonAccessCardId(): string {
+    return this.commonAccessCardId;
+  }
+
+  getJurisdictionCode(): JurisdictionCode {
+    return this.jurisdictionCode;
+  }
+
+  getGivenName(): string {
+    return this.givenName;
+  }
+
+  getFamilyName(): string {
+    return this.familyName;
+  }
+
+  getCreatedAt(): DateTime {
+    return this.createdAt;
+  }
+
+  toJSON(): unknown {
+    return {
+      commonAccessCardId: this.commonAccessCardId,
+      jurisdictionCode: this.jurisdictionCode,
+      givenName: this.givenName,
+      familyName: this.familyName,
+      createdAt: this.createdAt.toISO(),
+    };
+  }
+}
+
+export const RegistrationRequestSchema: z.ZodSchema<RegistrationRequest> = z
+  .object({
+    commonAccessCardId: z.string(),
+    jurisdictionCode: JurisdictionCodeSchema,
+    givenName: z.string(),
+    familyName: z.string(),
+    createdAt: DateTimeSchema,
+  })
+  .transform(
+    (o) =>
+      new RegistrationRequest(
+        o.commonAccessCardId,
+        o.jurisdictionCode,
+        o.givenName,
+        o.familyName,
+        o.createdAt
+      )
+  ) as unknown as z.ZodSchema<RegistrationRequest>;
+
+export class Registration {
+  constructor(
+    private readonly commonAccessCardId: string,
+    private readonly jurisdictionCode: JurisdictionCode,
+    private readonly registrationRequestObjectId: Uuid,
+    private readonly electionObjectId: Uuid,
+    private readonly ballotStyleId: BallotStyleId,
+    private readonly precinctId: PrecinctId
+  ) {}
+
+  getCommonAccessCardId(): string {
+    return this.commonAccessCardId;
+  }
+
+  getJurisdictionCode(): JurisdictionCode {
+    return this.jurisdictionCode;
+  }
+
+  getRegistrationRequestObjectId(): Uuid {
+    return this.registrationRequestObjectId;
+  }
+
+  getElectionObjectId(): Uuid {
+    return this.electionObjectId;
+  }
+
+  getBallotStyleId(): BallotStyleId {
+    return this.ballotStyleId;
+  }
+
+  getPrecinctId(): PrecinctId {
+    return this.precinctId;
+  }
+}
+
+export const RegistrationSchema: z.ZodSchema<Registration> = z
+  .object({
+    commonAccessCardId: z.string(),
+    jurisdictionCode: JurisdictionCodeSchema,
+    registrationRequestObjectId: UuidSchema,
+    electionObjectId: UuidSchema,
+    ballotStyleId: BallotStyleIdSchema,
+    precinctId: PrecinctIdSchema,
+  })
+  .transform(
+    (o) =>
+      new Registration(
+        o.commonAccessCardId,
+        o.jurisdictionCode,
+        o.registrationRequestObjectId,
+        o.electionObjectId,
+        o.ballotStyleId,
+        o.precinctId
+      )
+  ) as unknown as z.ZodSchema<Registration>;
 
 export class Payload {
   constructor(
@@ -140,6 +257,10 @@ export class Payload {
   }
 }
 
+export type PayloadData =
+  | { objectType: 'RegistrationRequest'; data: RegistrationRequest }
+  | { objectType: 'Registration'; data: Registration };
+
 export const PayloadSchema: z.ZodSchema<Payload> = z
   .object({
     objectType: z.string(),
@@ -148,6 +269,30 @@ export const PayloadSchema: z.ZodSchema<Payload> = z
   .transform(
     (o) => new Payload(o.objectType, o.data)
   ) as unknown as z.ZodSchema<Payload>;
+
+export const PayloadDataSchema: z.ZodSchema<PayloadData> =
+  PayloadSchema.transform((p): PayloadData => {
+    switch (p.getObjectType()) {
+      case RegistrationRequestObjectType:
+        return {
+          objectType: RegistrationRequestObjectType,
+          data: safeParseJson(
+            p.getData().toString(),
+            RegistrationRequestSchema
+          ).unsafeUnwrap(),
+        };
+      case RegistrationObjectType:
+        return {
+          objectType: RegistrationObjectType,
+          data: safeParseJson(
+            p.getData().toString(),
+            RegistrationSchema
+          ).unsafeUnwrap(),
+        };
+      default:
+        throw new Error(`Unknown object type: ${p.getObjectType()}`);
+    }
+  }) as unknown as z.ZodSchema<PayloadData>;
 
 export class SignedObject {
   constructor(
@@ -167,6 +312,10 @@ export class SignedObject {
 
   getPayload(): Result<Payload, ZodError | SyntaxError> {
     return safeParseJson(this.payload.toString(), PayloadSchema);
+  }
+
+  parsePayload(): Result<PayloadData, ZodError | SyntaxError> {
+    return safeParseJson(this.payload.toString(), PayloadDataSchema);
   }
 
   parsePayloadAs<T>(
@@ -191,7 +340,14 @@ export class SignedObject {
     return this.signature;
   }
 
-  async getJurisdictionCode(): Promise<Result<JurisdictionCode, ZodError>> {
+  async getJurisdictionCode(): Promise<
+    Result<JurisdictionCode, ZodError | SyntaxError>
+  > {
+    const parsePayloadResult = this.parsePayload();
+    if (parsePayloadResult.isOk()) {
+      return ok(parsePayloadResult.ok().data.getJurisdictionCode());
+    }
+
     const fields = await certs.getCertSubjectFields(this.certificates);
     return safeParse(
       JurisdictionCodeSchema,
@@ -219,118 +375,3 @@ export const SignedObjectSchema: z.ZodSchema<SignedObject> = z
   .transform(
     (o) => new SignedObject(o.id, o.payload, o.certificates, o.signature)
   ) as unknown as z.ZodSchema<SignedObject>;
-
-export class RegistrationRequest {
-  constructor(
-    private readonly commonAccessCardId: string,
-    private readonly jurisdiction: JurisdictionCode,
-    private readonly givenName: string,
-    private readonly familyName: string,
-    private readonly createdAt: DateTime
-  ) {}
-
-  getCommonAccessCardId(): string {
-    return this.commonAccessCardId;
-  }
-
-  getJurisdiction(): JurisdictionCode {
-    return this.jurisdiction;
-  }
-
-  getGivenName(): string {
-    return this.givenName;
-  }
-
-  getFamilyName(): string {
-    return this.familyName;
-  }
-
-  getCreatedAt(): DateTime {
-    return this.createdAt;
-  }
-
-  toJSON(): unknown {
-    return {
-      commonAccessCardId: this.commonAccessCardId,
-      jurisdiction: this.jurisdiction,
-      givenName: this.givenName,
-      familyName: this.familyName,
-      createdAt: this.createdAt.toISO(),
-    };
-  }
-}
-
-export const RegistrationRequestSchema: z.ZodSchema<RegistrationRequest> = z
-  .object({
-    commonAccessCardId: z.string(),
-    jurisdiction: JurisdictionCodeSchema,
-    givenName: z.string(),
-    familyName: z.string(),
-    createdAt: DateTimeSchema,
-  })
-  .transform(
-    (o) =>
-      new RegistrationRequest(
-        o.commonAccessCardId,
-        o.jurisdiction,
-        o.givenName,
-        o.familyName,
-        o.createdAt
-      )
-  ) as unknown as z.ZodSchema<RegistrationRequest>;
-
-export class Registration {
-  constructor(
-    private readonly commonAccessCardId: string,
-    private readonly jurisdiction: JurisdictionCode,
-    private readonly registrationRequestObjectId: Uuid,
-    private readonly electionObjectId: Uuid,
-    private readonly ballotStyleId: BallotStyleId,
-    private readonly precinctId: PrecinctId
-  ) {}
-
-  getCommonAccessCardId(): string {
-    return this.commonAccessCardId;
-  }
-
-  getJurisdiction(): JurisdictionCode {
-    return this.jurisdiction;
-  }
-
-  getRegistrationRequestObjectId(): Uuid {
-    return this.registrationRequestObjectId;
-  }
-
-  getElectionObjectId(): Uuid {
-    return this.electionObjectId;
-  }
-
-  getBallotStyleId(): BallotStyleId {
-    return this.ballotStyleId;
-  }
-
-  getPrecinctId(): PrecinctId {
-    return this.precinctId;
-  }
-}
-
-export const RegistrationSchema: z.ZodSchema<Registration> = z
-  .object({
-    commonAccessCardId: z.string(),
-    jurisdiction: JurisdictionCodeSchema,
-    registrationRequestObjectId: UuidSchema,
-    electionObjectId: UuidSchema,
-    ballotStyleId: BallotStyleIdSchema,
-    precinctId: PrecinctIdSchema,
-  })
-  .transform(
-    (o) =>
-      new Registration(
-        o.commonAccessCardId,
-        o.jurisdiction,
-        o.registrationRequestObjectId,
-        o.electionObjectId,
-        o.ballotStyleId,
-        o.precinctId
-      )
-  ) as unknown as z.ZodSchema<Registration>;

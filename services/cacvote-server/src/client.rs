@@ -146,7 +146,9 @@ mod tests {
         x509::X509,
     };
     use serde_json::json;
-    use types_rs::cacvote::{JournalEntryAction, Payload};
+    use types_rs::cacvote::{
+        JournalEntryAction, JurisdictionCode, Payload, PayloadData, RegistrationRequest,
+    };
 
     use super::*;
     use crate::app;
@@ -202,10 +204,15 @@ mod tests {
         let entries = client.get_journal_entries(None).await?;
         assert_eq!(entries, vec![]);
 
-        let payload = Payload {
-            data: serde_json::to_vec(&json!({ "hello": "world" }))?,
-            object_type: "test".to_owned(),
-        };
+        let payload = Payload::new(
+            "RegistrationRequest",
+            &RegistrationRequest {
+                common_access_card_id: "1234567890".to_owned(),
+                given_name: "John".to_owned(),
+                family_name: "Doe".to_owned(),
+                jurisdiction_code: JurisdictionCode::try_from("st.dev-jurisdiction").unwrap(),
+            },
+        )?;
         let payload = serde_json::to_vec(&payload)?;
         let (certificates, public_key, private_key) = load_keypair()?;
         let signature = sign_and_verify(&payload, &private_key, &public_key)?;
@@ -226,8 +233,8 @@ mod tests {
             [entry] => {
                 assert_eq!(entry.object_id, object_id);
                 assert_eq!(entry.action, JournalEntryAction::Create);
-                assert_eq!(entry.object_type, "test");
-                assert_eq!(entry.jurisdiction.as_str(), "st.dev-jurisdiction");
+                assert_eq!(entry.object_type, "RegistrationRequest");
+                assert_eq!(entry.jurisdiction_code.as_str(), "st.dev-jurisdiction");
                 entry
             }
             _ => panic!("expected one journal entry, got: {entries:?}"),
@@ -240,11 +247,22 @@ mod tests {
         let signed_object = client.get_object_by_id(object_id).await?.unwrap();
 
         let round_trip_payload = signed_object.try_to_inner()?;
-        let round_trip_payload_data: serde_json::Value =
-            serde_json::from_slice(&round_trip_payload.data)?;
+        let round_trip_registration_request = match round_trip_payload.try_to_inner_typed()? {
+            PayloadData::RegistrationRequest(registration_request) => registration_request,
+            other => panic!("expected RegistrationRequest, got: {:?}", other),
+        };
         assert_eq!(signed_object.certificates, certificates);
         assert_eq!(signed_object.signature, signature);
-        assert_eq!(round_trip_payload_data, json!({ "hello": "world" }));
+        assert_eq!(
+            round_trip_registration_request.common_access_card_id,
+            "1234567890"
+        );
+        assert_eq!(round_trip_registration_request.given_name, "John");
+        assert_eq!(round_trip_registration_request.family_name, "Doe");
+        assert_eq!(
+            round_trip_registration_request.jurisdiction_code.as_str(),
+            "st.dev-jurisdiction"
+        );
 
         Ok(())
     }

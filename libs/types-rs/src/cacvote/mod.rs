@@ -1,7 +1,12 @@
 use base64_serde::base64_serde_type;
+use serde::de::DeserializeOwned;
+use serde::de::Error;
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
+
+use crate::election::BallotStyleId;
+use crate::election::PrecinctId;
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
@@ -66,10 +71,16 @@ impl sqlx::Type<sqlx::Postgres> for JurisdictionCode {
 #[serde(rename_all = "camelCase")]
 pub struct SignedObject {
     pub id: Uuid,
+
+    /// Data to be signed. Must be JSON decodable as [`Payload`][crate::cacvote::Payload].
     #[serde(with = "Base64Standard")]
     pub payload: Vec<u8>,
+
+    /// A stack of PEM-encoded X.509 certificates.
     #[serde(with = "Base64Standard")]
     pub certificates: Vec<u8>,
+
+    /// The signature of the payload.
     #[serde(with = "Base64Standard")]
     pub signature: Vec<u8>,
 }
@@ -122,9 +133,27 @@ impl SignedObject {
         verifier.verify(&self.signature)
     }
 
-    #[cfg(feature = "openssl")]
     #[must_use]
     pub fn jurisdiction_code(&self) -> Option<JurisdictionCode> {
+        match self.try_to_inner() {
+            Ok(payload) => payload.jurisdiction_code(),
+            Err(_) => {
+                #[cfg(feature = "openssl")]
+                {
+                    self.jurisdiction_code_from_certificates()
+                }
+
+                #[cfg(not(feature = "openssl"))]
+                {
+                    None
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "openssl")]
+    #[must_use]
+    pub fn jurisdiction_code_from_certificates(&self) -> Option<JurisdictionCode> {
         /// Format: {state-2-letter-abbreviation}.{county-or-town} (e.g. ms.warren or ca.los-angeles)
         const VX_CUSTOM_CERT_FIELD_JURISDICTION: &str = "1.3.6.1.4.1.59817.2";
 
@@ -151,12 +180,63 @@ pub struct Payload {
     pub data: Vec<u8>,
 }
 
+impl Payload {
+    pub fn new<T: Serialize>(object_type: &str, data: &T) -> color_eyre::Result<Self> {
+        Ok(Self {
+            object_type: object_type.to_owned(),
+            data: serde_json::to_vec(data)?,
+        })
+    }
+
+    pub fn try_to_inner<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
+        serde_json::from_slice(&self.data)
+    }
+
+    pub fn try_to_inner_typed(&self) -> Result<PayloadData, serde_json::Error> {
+        match self.object_type.as_str() {
+            "RegistrationRequest" => {
+                Ok(PayloadData::RegistrationRequest(serde_json::from_slice::<
+                    RegistrationRequest,
+                >(
+                    &self.data
+                )?))
+            }
+            _ => Err(serde_json::Error::custom(format!(
+                "Unknown object type: {}",
+                self.object_type
+            ))),
+        }
+    }
+
+    pub fn jurisdiction_code(&self) -> Option<JurisdictionCode> {
+        match self.try_to_inner_typed() {
+            Ok(data) => Some(data.jurisdiction_code()),
+            Err(_) => None,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum PayloadData {
+    RegistrationRequest(RegistrationRequest),
+    Registration(Registration),
+}
+
+impl JurisdictionScoped for PayloadData {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        match self {
+            PayloadData::RegistrationRequest(request) => request.jurisdiction_code(),
+            PayloadData::Registration(registration) => registration.jurisdiction_code(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct JournalEntry {
     pub id: Uuid,
     pub object_id: Uuid,
-    pub jurisdiction: JurisdictionCode,
+    pub jurisdiction_code: JurisdictionCode,
     pub object_type: String,
     pub action: JournalEntryAction,
     #[serde(with = "time::serde::iso8601")]
@@ -271,4 +351,40 @@ pub enum VerificationStatus {
     Error(String),
     #[default]
     Unknown,
+}
+
+trait JurisdictionScoped {
+    fn jurisdiction_code(&self) -> JurisdictionCode;
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RegistrationRequest {
+    pub common_access_card_id: String,
+    pub jurisdiction_code: JurisdictionCode,
+    pub given_name: String,
+    pub family_name: String,
+}
+
+impl JurisdictionScoped for RegistrationRequest {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        self.jurisdiction_code.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Registration {
+    pub common_access_card_id: String,
+    pub jurisdiction_code: JurisdictionCode,
+    pub registration_request_object_id: Uuid,
+    pub election_object_id: Uuid,
+    pub ballot_style_id: BallotStyleId,
+    pub precinct_id: PrecinctId,
+}
+
+impl JurisdictionScoped for Registration {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        self.jurisdiction_code.clone()
+    }
 }
