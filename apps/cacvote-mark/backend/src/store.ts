@@ -22,7 +22,9 @@ import {
   JurisdictionCode,
   JurisdictionCodeSchema,
   Registration,
+  RegistrationObjectType,
   RegistrationRequest,
+  RegistrationRequestObjectType,
   RegistrationRequestSchema,
   RegistrationSchema,
   SignedObject,
@@ -30,9 +32,6 @@ import {
   Uuid,
   UuidSchema,
 } from './cacvote-server/types';
-
-export const RegistrationRequestObjectType = 'RegistrationRequest';
-export const RegistrationObjectType = 'Registration';
 
 const SchemaPath = join(__dirname, '../schema.sql');
 
@@ -172,7 +171,7 @@ export class Store {
         stmt.run(
           entry.getId(),
           entry.getObjectId(),
-          entry.getJurisdiction(),
+          entry.getJurisdictionCode(),
           entry.getObjectType(),
           entry.getAction(),
           entry.getCreatedAt().toSQL()
@@ -194,6 +193,31 @@ export class Store {
       this.client.run(
         `insert into objects (id, jurisdiction, object_type, payload, certificates, signature)
         values (?, ?, ?, ?, ?, ?)`,
+        object.getId(),
+        jurisdiction,
+        payload.getObjectType(),
+        object.getPayloadRaw(),
+        object.getCertificates(),
+        object.getSignature()
+      );
+
+      return object.getId();
+    });
+  }
+
+  /**
+   * Adds an object to the store from the server.
+   */
+  async addObjectFromServer(
+    object: SignedObject
+  ): Promise<Result<Uuid, SyntaxError | ZodError>> {
+    return asyncResultBlock(async (bail) => {
+      const jurisdiction = (await object.getJurisdictionCode()).okOrElse(bail);
+      const payload = object.getPayload().okOrElse(bail);
+
+      this.client.run(
+        `insert into objects (id, jurisdiction, object_type, payload, certificates, signature, server_synced_at)
+        values (?, ?, ?, ?, ?, ?, current_timestamp)`,
         object.getId(),
         jurisdiction,
         payload.getObjectType(),
@@ -365,7 +389,9 @@ export class Store {
 
   forEachObjectOfType(objectType: string): IteratorPlus<SignedObject> {
     return iter(
-      this.client.each(
+      // FIXME: this should be using `this.client.each`, but there seems to be a race condition
+      // that results in errors with "This database connection is busy executing a query"
+      this.client.all(
         `select id, payload, certificates, signature from objects
         where json_extract(payload, '$.objectType') = ?`,
         objectType
@@ -373,7 +399,7 @@ export class Store {
     ).map((row) => unsafeParse(SignedObjectSchema, row));
   }
 
-  getJurisdictions(): JurisdictionCode[] {
+  getJurisdictionCodes(): JurisdictionCode[] {
     const rows = this.client.all(
       `select distinct jurisdiction from objects`
     ) as Array<{ jurisdiction: string }>;

@@ -5,7 +5,7 @@ import { JurisdictionCode } from '@votingworks/cacvote-mark-backend';
 import {
   createVoterRegistration,
   getAuthStatus,
-  getJurisdictions,
+  getJurisdictionCodes,
 } from '../../api';
 import { PinPadModal } from '../../components/pin_pad_modal';
 import { InlineForm, TextInput } from '../../components/text_input';
@@ -13,7 +13,7 @@ import { COMMON_ACCESS_CARD_PIN_LENGTH } from '../../globals';
 
 export function StartScreen(): JSX.Element {
   const authStatusQuery = getAuthStatus.useQuery();
-  const getJurisdictionsQuery = getJurisdictions.useQuery();
+  const getJurisdictionsQuery = getJurisdictionCodes.useQuery();
   const cardDetails =
     authStatusQuery.data?.status === 'has_card'
       ? authStatusQuery.data.card
@@ -33,9 +33,9 @@ export function StartScreen(): JSX.Element {
     setIsShowingPinModal(true);
   }
 
-  function onEnterPin(pin: string, jxId: JurisdictionCode) {
+  function onEnterPin(pin: string, code: JurisdictionCode) {
     createVoterRegistrationMutation.mutate({
-      jurisdictionCode: jxId,
+      jurisdictionCode: code,
       givenName,
       familyName,
       pin,

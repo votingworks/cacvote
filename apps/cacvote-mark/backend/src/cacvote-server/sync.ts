@@ -1,4 +1,4 @@
-import { deferred, sleep } from '@votingworks/basics';
+import { deferred, extractErrorMessage, sleep } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
 import { Client } from './client';
 import { Store } from '../store';
@@ -8,6 +8,10 @@ async function pullJournalEntries(
   store: Store,
   logger: Logger
 ): Promise<void> {
+  await logger.log(LogEventId.ApplicationStartup, 'system', {
+    message: 'Pulling journal entries from CACVote Server',
+  });
+
   const latestJournalEntry = store.getLatestJournalEntry();
 
   await logger.log(LogEventId.ApplicationStartup, 'system', {
@@ -37,7 +41,7 @@ async function pullJournalEntries(
     store.addJournalEntries(newEntries);
 
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: 'CACVote Server sync succeeded',
+      message: 'Successfully pulled journal entries from CACVote Server',
       disposition: 'success',
     });
   }
@@ -48,6 +52,10 @@ async function pushObjects(
   store: Store,
   logger: Logger
 ): Promise<void> {
+  await logger.log(LogEventId.ApplicationStartup, 'system', {
+    message: 'Pushing objects to CACVote Server',
+  });
+
   const objects = store.getObjectsToPush();
 
   if (objects.length === 0) {
@@ -67,7 +75,9 @@ async function pushObjects(
 
     if (pushResult.isErr()) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Failed to push object '${object.getId()}' to CACVote Server: ${pushResult.err()}`,
+        message: `Failed to push object '${object.getId()}' to CACVote Server: ${
+          pushResult.err().message
+        }`,
         disposition: 'failure',
       });
       continue;
@@ -79,6 +89,10 @@ async function pushObjects(
       disposition: 'success',
     });
   }
+
+  await logger.log(LogEventId.ApplicationStartup, 'system', {
+    message: 'Finished pushing objects to CACVote Server',
+  });
 }
 
 async function pullObjects(
@@ -86,6 +100,10 @@ async function pullObjects(
   store: Store,
   logger: Logger
 ): Promise<void> {
+  await logger.log(LogEventId.ApplicationStartup, 'system', {
+    message: 'Pulling objects from CACVote Server',
+  });
+
   const journalEntriesForObjectsToFetch =
     store.getJournalEntriesForObjectsToPull();
 
@@ -112,7 +130,7 @@ async function pullObjects(
       continue;
     }
 
-    const addObjectResult = await store.addObject(object);
+    const addObjectResult = await store.addObjectFromServer(object);
 
     if (addObjectResult.isErr()) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
@@ -127,6 +145,10 @@ async function pullObjects(
       disposition: 'success',
     });
   }
+
+  await logger.log(LogEventId.ApplicationStartup, 'system', {
+    message: 'Finished pulling objects from CACVote Server',
+  });
 }
 
 /**
@@ -155,7 +177,9 @@ export async function sync(
     await pullObjects(client, store, logger);
   } catch (err) {
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: `Failed to sync with CACVote Server: ${err}`,
+      message: `Failed to sync with CACVote Server: ${extractErrorMessage(
+        err
+      )}`,
       disposition: 'failure',
     });
   }

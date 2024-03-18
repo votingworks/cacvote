@@ -38,7 +38,7 @@ async fn main() -> color_eyre::Result<()> {
     let payload: Payload = serde_json::from_slice(&signed_object.payload)?;
     println!("object payload: {payload:#?}");
 
-    let data: Value = serde_json::from_slice(&payload.data)?;
+    let data: Value = payload.try_to_inner()?;
     println!("payload data: {data:#?}");
 
     Ok(())

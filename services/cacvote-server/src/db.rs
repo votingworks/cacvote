@@ -42,14 +42,14 @@ pub async fn create_object(
     }
 
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
-        bail!("No jurisdiction found in certificate");
+        bail!("No jurisdiction found");
     };
 
     let object_type = object.try_to_inner()?.object_type;
 
     let mut txn = connection.begin().await?;
 
-    sqlx::query!(
+    match sqlx::query!(
         r#"
         INSERT INTO objects (id, jurisdiction, object_type, payload, certificates, signature)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -62,11 +62,18 @@ pub async fn create_object(
         &object.signature
     )
     .execute(&mut *txn)
-    .await?;
+    .await
+    {
+        Ok(_) => {}
+        Err(e) => {
+            txn.rollback().await?;
+            bail!("Error creating object: {e}");
+        }
+    }
 
     tracing::debug!("Creating object with id {}", object.id);
 
-    let journal_entry = sqlx::query!(
+    let journal_entry = match sqlx::query!(
         r#"
         INSERT INTO journal_entries (object_id, jurisdiction, object_type, action)
         VALUES ($1, $2, $3, 'create')
@@ -77,7 +84,14 @@ pub async fn create_object(
         object_type,
     )
     .fetch_one(&mut *txn)
-    .await?;
+    .await
+    {
+        Ok(journal_entry) => journal_entry,
+        Err(e) => {
+            txn.rollback().await?;
+            bail!("Error creating journal entry: {e}");
+        }
+    };
 
     tracing::debug!("Creating journal entry with id {}", journal_entry.id);
 
@@ -148,7 +162,7 @@ pub async fn get_journal_entries(
             Ok(JournalEntry {
                 id: entry.id,
                 object_id: entry.object_id,
-                jurisdiction: entry.jurisdiction.try_into().unwrap(),
+                jurisdiction_code: entry.jurisdiction.try_into().unwrap(),
                 object_type: entry.object_type,
                 action: entry.action,
                 created_at: entry.created_at,

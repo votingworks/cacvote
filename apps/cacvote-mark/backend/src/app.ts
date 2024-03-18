@@ -24,11 +24,11 @@ import {
   JurisdictionCode,
   Payload,
   RegistrationRequest,
+  RegistrationRequestObjectType,
   SignedObject,
   Uuid,
   UuidSchema,
 } from './cacvote-server/types';
-import { RegistrationRequestObjectType } from './store';
 
 export type VoterStatus =
   | 'unregistered'
@@ -54,8 +54,8 @@ function buildApi({
       return auth.checkPin(input.pin);
     },
 
-    getJurisdictions() {
-      return store.getJurisdictions();
+    getJurisdictionsCodes() {
+      return store.getJurisdictionCodes();
     },
 
     async getVoterStatus(): Promise<Optional<{ status: VoterStatus }>> {
@@ -102,7 +102,7 @@ function buildApi({
       return [];
     },
 
-    async createVoterRegistration(input: {
+    async createVoterRegistrationRequest(input: {
       jurisdictionCode: JurisdictionCode;
       givenName: string;
       familyName: string;
@@ -156,10 +156,6 @@ function buildApi({
         }
       }
 
-      // FIXME: this is wrong. the certificate does not have the jurisdiction field in it
-      // so the `store.addObject` call below will fail. we probably want a certificate
-      // that this machine has that is then used to sign the registration request, and
-      // the signature and certificate of the CAC get stored within the payload
       const certificates = await auth.getCertificate();
       const objectId = unsafeParse(UuidSchema, v4());
       const object = new SignedObject(

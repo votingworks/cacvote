@@ -45,7 +45,7 @@ pub async fn add_object_from_server(
     }
 
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
-        bail!("No jurisdiction found in certificate");
+        bail!("No jurisdiction found");
     };
 
     let object_type = object.try_to_inner()?.object_type;
@@ -85,7 +85,7 @@ pub(crate) async fn add_journal_entries(
             "#,
             entry.id,
             entry.object_id,
-            entry.jurisdiction.as_str(),
+            entry.jurisdiction_code.as_str(),
             entry.object_type,
             entry.action.as_str(),
             entry.created_at
@@ -106,7 +106,7 @@ pub(crate) async fn get_latest_journal_entry(
         SELECT
             id,
             object_id,
-            jurisdiction as "jurisdiction: JurisdictionCode",
+            jurisdiction as "jurisdiction_code: JurisdictionCode",
             object_type,
             action,
             created_at
@@ -165,7 +165,7 @@ pub(crate) async fn get_journal_entries_for_objects_to_pull(
         SELECT
             id,
             object_id,
-            jurisdiction as "jurisdiction: JurisdictionCode",
+            jurisdiction as "jurisdiction_code: JurisdictionCode",
             object_type,
             action,
             created_at

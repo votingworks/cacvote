@@ -11,13 +11,15 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { DateTime } from 'luxon';
 import {
+  JurisdictionCode,
   JurisdictionCodeSchema,
   Payload,
   RegistrationRequest,
+  RegistrationRequestObjectType,
   SignedObject,
   UuidSchema,
 } from './cacvote-server/types';
-import { RegistrationRequestObjectType, Store } from './store';
+import { Store } from './store';
 
 // We pause in some of these tests so we need to increase the timeout
 jest.setTimeout(20000);
@@ -85,11 +87,20 @@ test('reset clears the database', () => {
 
 test('forEachObjectOfType', async () => {
   const store = Store.memoryStore();
-  const objectType = 'Test';
+  const objectType = RegistrationRequestObjectType;
 
   const object = new SignedObject(
     unsafeParse(UuidSchema, v4()),
-    Payload.of(objectType, { test: 'data' }).toBuffer(),
+    Payload.of(
+      objectType,
+      new RegistrationRequest(
+        '0123456789',
+        'st.dev-jurisdiction' as JurisdictionCode,
+        'John',
+        'Smith',
+        DateTime.now()
+      )
+    ).toBuffer(),
     await getCertificates(),
     Buffer.from('signature')
   );
