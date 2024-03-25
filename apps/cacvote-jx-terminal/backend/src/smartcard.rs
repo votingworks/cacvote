@@ -12,7 +12,7 @@ pub(crate) type DynStatusGetter = Arc<dyn StatusGetterTrait + Send + Sync>;
 #[cfg_attr(test, mockall::automock)]
 pub(crate) trait StatusGetterTrait {
     fn get(&self) -> SmartcardStatus;
-    fn get_card_details(&self) -> Option<CardDetailsWithAuthInfo>;
+    fn get_card_details(&mut self) -> Option<CardDetailsWithAuthInfo>;
 }
 
 /// Provides access to the current smartcard status.
@@ -54,7 +54,7 @@ impl StatusGetter {
         };
 
         let mut cached_card_details = self.last_selected_card_reader_info.lock().unwrap();
-        if let Some((ref name, ref details)) = cached_card_details.deref() {
+        if let Some((ref name, _)) = cached_card_details.deref() {
             let same_reader_has_card = readers.iter().any(|reader| reader == name);
 
             if same_reader_has_card {
@@ -102,12 +102,12 @@ impl StatusGetterTrait for StatusGetter {
 
     #[allow(dead_code)]
     #[must_use]
-    fn get_card_details(&self) -> Option<CardDetailsWithAuthInfo> {
+    fn get_card_details(&mut self) -> Option<CardDetailsWithAuthInfo> {
         self.refresh_card_details();
         let Ok(cached_card_details) = self.last_selected_card_reader_info.lock() else {
             return None;
         };
 
-        cached_card_details.map(|(_, details)| details)
+        cached_card_details.clone().map(|(_, details)| details)
     }
 }
