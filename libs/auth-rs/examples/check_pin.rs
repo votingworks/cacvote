@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use tracing::Level;
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
@@ -27,7 +29,7 @@ fn main() -> color_eyre::Result<()> {
     let mut watcher = Watcher::watch();
     let mut card_reader: Option<CardReader> = None;
 
-    println!("Insert a card to read its status…");
+    println!("Insert a card to check its PIN…");
 
     for event in watcher.events() {
         match event {
@@ -46,9 +48,15 @@ fn main() -> color_eyre::Result<()> {
     if let Some(card_reader) = card_reader {
         watcher.stop();
         let card = card_reader.get_card()?;
-        match card.read_card_details() {
-            Ok(card_details) => {
-                println!("{card_details:#?}");
+        print!("Enter the PIN to check its validity: ");
+        std::io::stdout().flush()?;
+        let mut pin = String::new();
+        std::io::stdin().read_line(&mut pin).unwrap();
+        let pin = pin.trim();
+
+        match card.check_pin(pin) {
+            Ok(()) => {
+                println!("OK: PIN is valid");
             }
             Err(error) => {
                 eprintln!("Error: {error}");

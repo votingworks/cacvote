@@ -242,6 +242,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "types-rs",
+ "uuid",
 ]
 
 [[package]]
