@@ -3,6 +3,7 @@ use hmac_sha256::Hash;
 #[cfg(feature = "sqlx")]
 use sqlx::Type;
 use std::{fmt::Display, str::FromStr};
+use time::macros::format_description;
 
 use serde::{Deserialize, Serialize};
 
@@ -264,12 +265,39 @@ impl Serialize for PartialElectionHash {
     }
 }
 
+mod election_date {
+    use super::*;
+    use serde::{de, Deserialize, Deserializer, Serializer};
+    use time::format_description;
+
+    const DATE_FORMATTER: &[format_description::FormatItem] =
+        format_description!("[year]-[month]-[day]");
+
+    pub fn serialize<S>(date: &time::Date, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        date.format(DATE_FORMATTER)
+            .unwrap_or_default()
+            .serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<time::Date, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let date_str = String::deserialize(deserializer)?;
+        time::Date::parse(date_str.as_str(), DATE_FORMATTER)
+            .map_err(|e| de::Error::custom(format!("invalid date: {e}")))
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Election {
     pub title: String,
-    #[serde(with = "time::serde::iso8601")]
-    pub date: time::OffsetDateTime,
+    #[serde(with = "election_date")]
+    pub date: time::Date,
     pub ballot_styles: Vec<BallotStyle>,
     pub precincts: Vec<Precinct>,
     pub districts: Vec<District>,
