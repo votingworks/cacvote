@@ -54,7 +54,7 @@ mod log;
 mod smartcard;
 mod sync;
 
-use crate::smartcard::StatusGetter;
+use crate::smartcard::Smartcard;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -65,7 +65,7 @@ async fn main() -> color_eyre::Result<()> {
     let pool = db::setup(&config).await?;
     sync::sync_periodically(&pool, config.clone()).await;
     let smartcard_watcher = Watcher::watch();
-    let smartcard_status = StatusGetter::new(smartcard_watcher.readers_with_cards());
-    let smartcard_status = Arc::new(smartcard_status) as smartcard::DynStatusGetter;
-    app::run(app::setup(pool, config.clone(), smartcard_status), &config).await
+    let smartcard = Smartcard::new(smartcard_watcher.readers_with_cards());
+    let smartcard = Arc::new(smartcard) as smartcard::DynSmartcard;
+    app::run(app::setup(pool, config.clone(), smartcard), &config).await
 }

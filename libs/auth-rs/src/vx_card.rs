@@ -186,81 +186,32 @@ impl VxCard {
         Ok(())
     }
 
-    #[tracing::instrument(level = "debug", skip(self, cert_object, data, pin))]
-    pub fn sign(
-        &self,
-        cert_object: CertObject,
-        data: &[u8],
-        pin: Option<&str>,
-    ) -> Result<(Vec<u8>, X509), CardReaderError> {
-        self.select_applet()?;
-        let cert = self.retrieve_cert(cert_object.object_id())?;
-        let public_key = cert.public_key()?;
-        Ok((
-            self.sign_with_keys(cert_object, &public_key, data, pin)?,
-            cert,
-        ))
-    }
-
-    #[tracing::instrument(level = "debug", skip(self, private_key_cert, data, pin))]
-    fn sign_with_keys(
-        &self,
-        private_key_cert: CertObject,
-        public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
-        data: &[u8],
-        pin: Option<&str>,
-    ) -> Result<Vec<u8>, CardReaderError> {
-        if let Some(pin) = pin {
-            self.check_pin_internal(pin)?;
-        }
-
-        let data_hash = openssl::sha::sha256(data);
-        let command =
-            CardCommand::verify_card_private_key(private_key_cert.private_key_id, &data_hash)?;
-        let response = self.transmit(command)?;
-        let (remainder, response_tlv) =
-            Tlv::parse_partial(GENERAL_AUTHENTICATE_DYNAMIC_TEMPLATE_TAG, &response)?;
-
-        if !remainder.is_empty() {
-            tracing::error!(
-                "unexpected remainder after parsing GENERAL_AUTHENTICATE_DYNAMIC_TEMPLATE_TAG: {remainder:02x?}",
-            );
-            return Err(CardReaderError::Pcsc(pcsc::Error::InvalidValue));
-        }
-
-        let (remainder, general_authenticate_tlv) =
-            Tlv::parse_partial(GENERAL_AUTHENTICATE_RESPONSE_TAG, response_tlv.value())?;
-        if !remainder.is_empty() {
-            tracing::error!(
-                "unexpected remainder after parsing GENERAL_AUTHENTICATE_RESPONSE_TAG: {remainder:02x?}",
-            );
-            return Err(CardReaderError::Pcsc(pcsc::Error::InvalidValue));
-        }
-
-        let signature = general_authenticate_tlv.into_bytes()?;
-        let mut verifier =
-            openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), public_key)?;
-
-        verifier.update(data)?;
-
-        if !verifier.verify(&signature)? {
-            tracing::error!("signature did not verify");
-            return Err(CardReaderError::Pcsc(pcsc::Error::InvalidValue));
-        }
-
-        Ok(signature)
-    }
-
     fn check_pin_internal(&self, pin: &str) -> Result<(), CardReaderError> {
         let command = CardCommand::verify_pin(pin);
         self.transmit(command)?;
         Ok(())
     }
 
-    #[tracing::instrument(level = "debug", skip(self, private_key_cert, public_key, pin))]
-    pub fn verify_card_private_key(
+    #[tracing::instrument(level = "debug", skip(self, data, pin))]
+    pub fn sign(
         &self,
-        private_key_cert: CertObject,
+        signing_cert: CertObject,
+        data: &[u8],
+        pin: Option<&str>,
+    ) -> Result<(Vec<u8>, X509), CardReaderError> {
+        self.select_applet()?;
+        let cert = self.retrieve_cert(signing_cert.object_id())?;
+        let public_key = cert.public_key()?;
+        Ok((
+            self.sign_with_keys(signing_cert, &public_key, data, pin)?,
+            cert,
+        ))
+    }
+
+    #[tracing::instrument(level = "debug", skip(self, public_key, pin))]
+    fn verify_card_private_key(
+        &self,
+        signing_cert: CertObject,
         public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
         pin: Option<&str>,
     ) -> Result<(), CardReaderError> {
@@ -274,8 +225,39 @@ impl VxCard {
             uuid = Uuid::new_v4()
         );
         let challenge = challenge_string.as_bytes();
-        self.sign_with_keys(private_key_cert, public_key, challenge, pin)?;
+        self.sign_with_keys(signing_cert, public_key, challenge, pin)?;
         Ok(())
+    }
+
+    #[tracing::instrument(level = "debug", skip(self, public_key, data, pin))]
+    fn sign_with_keys(
+        &self,
+        signing_cert: CertObject,
+        public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
+        data: &[u8],
+        pin: Option<&str>,
+    ) -> Result<Vec<u8>, CardReaderError> {
+        self.check_pin_internal(pin.unwrap_or(DEFAULT_PIN))?;
+
+        let data_hash = openssl::sha::sha256(data);
+        let command =
+            CardCommand::verify_card_private_key(signing_cert.private_key_id, &data_hash)?;
+        let response = self.transmit(command)?;
+        let response_tlv = Tlv::parse(GENERAL_AUTHENTICATE_DYNAMIC_TEMPLATE_TAG, &response)?;
+        let general_authenticate_tlv =
+            Tlv::parse(GENERAL_AUTHENTICATE_RESPONSE_TAG, response_tlv.value())?;
+        let signature = general_authenticate_tlv.value();
+        let mut verifier =
+            openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), public_key)?;
+
+        verifier.update(data)?;
+
+        if !verifier.verify(signature)? {
+            tracing::error!("signature did not verify");
+            return Err(CardReaderError::Pcsc(pcsc::Error::InvalidValue));
+        }
+
+        Ok(signature.to_vec())
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
@@ -344,6 +326,7 @@ impl VxCard {
         Ok(result)
     }
 
+    #[tracing::instrument(level = "debug", skip(self, cert_object_id))]
     fn retrieve_cert(&self, cert_object_id: impl Into<Vec<u8>>) -> Result<X509, CardReaderError> {
         let cert_object_id = cert_object_id.into();
         tracing::debug!("retrieving cert with object ID: {cert_object_id:02x?}");

@@ -45,7 +45,7 @@ pub async fn create_object(
         bail!("No jurisdiction found");
     };
 
-    let object_type = object.try_to_inner()?.object_type;
+    let object_type = object.try_to_inner()?.object_type();
 
     let mut txn = connection.begin().await?;
 

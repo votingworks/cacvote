@@ -35,6 +35,46 @@ pub(crate) async fn setup(config: &Config) -> color_eyre::Result<PgPool> {
     Ok(pool)
 }
 
+pub(crate) async fn get_elections(
+    connection: &mut sqlx::PgConnection,
+) -> color_eyre::eyre::Result<Vec<types_rs::cacvote::Election>> {
+    let objects = sqlx::query_as!(
+        SignedObject,
+        r#"
+        SELECT
+            id,
+            payload,
+            certificates,
+            signature
+        FROM objects
+        WHERE object_type = 'Election'
+        "#,
+    )
+    .fetch_all(connection)
+    .await?;
+
+    let mut elections = Vec::new();
+
+    for object in objects {
+        let payload = match object.try_to_inner() {
+            Ok(payload) => {
+                tracing::debug!("got object payload: {payload:?}");
+                payload
+            }
+            Err(err) => {
+                tracing::error!("unable to parse object payload: {err:?}");
+                continue;
+            }
+        };
+
+        if let types_rs::cacvote::Payload::Election(election) = payload {
+            elections.push(election);
+        }
+    }
+
+    Ok(elections)
+}
+
 #[tracing::instrument(skip(connection, object))]
 pub async fn add_object_from_server(
     connection: &mut sqlx::PgConnection,
@@ -48,7 +88,7 @@ pub async fn add_object_from_server(
         bail!("No jurisdiction found");
     };
 
-    let object_type = object.try_to_inner()?.object_type;
+    let object_type = object.try_to_inner()?.object_type();
 
     sqlx::query!(
         r#"
@@ -66,6 +106,41 @@ pub async fn add_object_from_server(
     .await?;
 
     tracing::debug!("Created object with id {}", object.id);
+
+    Ok(object.id)
+}
+
+#[tracing::instrument(skip(connection, object))]
+pub async fn add_object(
+    connection: &mut sqlx::PgConnection,
+    object: &SignedObject,
+) -> color_eyre::Result<Uuid> {
+    if !object.verify()? {
+        bail!("Unable to verify signature/certificates")
+    }
+
+    let Some(jurisdiction_code) = object.jurisdiction_code() else {
+        bail!("No jurisdiction found");
+    };
+
+    let object_type = object.try_to_inner()?.object_type();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO objects (id, jurisdiction, object_type, payload, certificates, signature)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#,
+        &object.id,
+        jurisdiction_code.as_str(),
+        object_type,
+        &object.payload,
+        &object.certificates,
+        &object.signature
+    )
+    .execute(connection)
+    .await?;
+
+    tracing::info!("Created object with id {}", object.id);
 
     Ok(object.id)
 }

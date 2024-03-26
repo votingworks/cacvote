@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     sync::{mpsc, Arc, Mutex},
     thread::JoinHandle,
     time::Duration,
@@ -31,6 +32,17 @@ impl CertObject {
     #[must_use]
     pub fn object_id(&self) -> Vec<u8> {
         vec![0x5f, 0xc1, self.private_key_id]
+    }
+}
+
+impl fmt::Debug for CertObject {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CertObject")
+            .field(
+                "private_key_id",
+                &format_args!("{:#02x}", self.private_key_id),
+            )
+            .finish()
     }
 }
 

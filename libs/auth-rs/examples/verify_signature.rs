@@ -61,7 +61,6 @@ fn main() {
     match verifier.verify_oneshot(&signature_content, &payload_content) {
         Err(_) | Ok(false) => {
             println!("Signature verification failed");
-            return;
         }
         Ok(true) => {
             println!("Signature verified successfully");
