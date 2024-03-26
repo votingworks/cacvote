@@ -1,6 +1,10 @@
 {
   "folders": [
     {
+      "path": "apps/cacvote-jx-terminal/backend",
+      "name": "apps/cacvote-jx-terminal/backend"
+    },
+    {
       "path": "apps/cacvote-jx-terminal/frontend",
       "name": "apps/cacvote-jx-terminal/frontend"
     },
@@ -23,6 +27,10 @@
     {
       "path": "libs/auth",
       "name": "libs/auth"
+    },
+    {
+      "path": "libs/auth-rs",
+      "name": "libs/auth-rs"
     },
     {
       "path": "libs/backend",
@@ -103,6 +111,10 @@
     {
       "path": "libs/types",
       "name": "libs/types"
+    },
+    {
+      "path": "libs/types-rs",
+      "name": "libs/types-rs"
     },
     {
       "path": "libs/ui",

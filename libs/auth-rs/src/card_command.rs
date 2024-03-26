@@ -100,6 +100,11 @@ impl CardCommand {
         private_key_id: u8,
         challenge_hash: &[u8],
     ) -> Result<Self, tlv::ConstructError> {
+        Self::sign(private_key_id, challenge_hash)
+    }
+
+    #[tracing::instrument]
+    pub fn sign(private_key_id: u8, data: &[u8]) -> Result<Self, tlv::ConstructError> {
         Ok(Self::new(
             GENERAL_AUTHENTICATE_INS,
             CRYPTOGRAPHIC_ALGORITHM_ECC256,
@@ -107,7 +112,7 @@ impl CardCommand {
             tlv!(
                 GENERAL_AUTHENTICATE_DYNAMIC_TEMPLATE_TAG,
                 concat_bytes![
-                    tlv!(GENERAL_AUTHENTICATE_CHALLENGE_TAG, challenge_hash),
+                    tlv!(GENERAL_AUTHENTICATE_CHALLENGE_TAG, data),
                     tlv!(GENERAL_AUTHENTICATE_RESPONSE_TAG, Vec::new()),
                 ]
             ),

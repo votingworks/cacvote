@@ -186,36 +186,37 @@ impl VxCard {
         Ok(())
     }
 
-    fn check_pin_internal(&self, pin: &str) -> Result<(), CardReaderError> {
-        let command = CardCommand::verify_pin(pin);
-        self.transmit(command)?;
-        Ok(())
+    #[tracing::instrument(level = "debug", skip(self, cert_object, data, pin))]
+    pub fn sign(
+        &self,
+        cert_object: CertObject,
+        data: &[u8],
+        pin: Option<&str>,
+    ) -> Result<(Vec<u8>, X509), CardReaderError> {
+        self.select_applet()?;
+        let cert = self.retrieve_cert(cert_object.object_id())?;
+        let public_key = cert.public_key()?;
+        Ok((
+            self.sign_with_keys(cert_object, &public_key, data, pin)?,
+            cert,
+        ))
     }
 
-    #[tracing::instrument(level = "debug", skip(self, private_key_cert, public_key, pin))]
-    pub fn verify_card_private_key(
+    #[tracing::instrument(level = "debug", skip(self, private_key_cert, data, pin))]
+    fn sign_with_keys(
         &self,
         private_key_cert: CertObject,
         public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
+        data: &[u8],
         pin: Option<&str>,
-    ) -> Result<(), CardReaderError> {
+    ) -> Result<Vec<u8>, CardReaderError> {
         if let Some(pin) = pin {
             self.check_pin_internal(pin)?;
         }
 
-        // have the private key sign a "challenge"
-        let challenge_string = format!(
-            "VotingWorks/{seconds_since_epoch}/{uuid}",
-            seconds_since_epoch = SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
-            uuid = Uuid::new_v4()
-        );
-        let challenge = challenge_string.as_bytes();
-        let challenge_hash = openssl::sha::sha256(challenge);
+        let data_hash = openssl::sha::sha256(data);
         let command =
-            CardCommand::verify_card_private_key(private_key_cert.private_key_id, &challenge_hash)?;
+            CardCommand::verify_card_private_key(private_key_cert.private_key_id, &data_hash)?;
         let response = self.transmit(command)?;
         let (remainder, response_tlv) =
             Tlv::parse_partial(GENERAL_AUTHENTICATE_DYNAMIC_TEMPLATE_TAG, &response)?;
@@ -236,17 +237,44 @@ impl VxCard {
             return Err(CardReaderError::Pcsc(pcsc::Error::InvalidValue));
         }
 
-        let challenge_signature = general_authenticate_tlv.value();
+        let signature = general_authenticate_tlv.into_bytes()?;
         let mut verifier =
             openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), public_key)?;
 
-        verifier.update(challenge)?;
+        verifier.update(data)?;
 
-        if !verifier.verify(challenge_signature)? {
-            tracing::error!("challenge_signature did not verify");
+        if !verifier.verify(&signature)? {
+            tracing::error!("signature did not verify");
             return Err(CardReaderError::Pcsc(pcsc::Error::InvalidValue));
         }
 
+        Ok(signature)
+    }
+
+    fn check_pin_internal(&self, pin: &str) -> Result<(), CardReaderError> {
+        let command = CardCommand::verify_pin(pin);
+        self.transmit(command)?;
+        Ok(())
+    }
+
+    #[tracing::instrument(level = "debug", skip(self, private_key_cert, public_key, pin))]
+    pub fn verify_card_private_key(
+        &self,
+        private_key_cert: CertObject,
+        public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
+        pin: Option<&str>,
+    ) -> Result<(), CardReaderError> {
+        // have the private key sign a "challenge"
+        let challenge_string = format!(
+            "VotingWorks/{seconds_since_epoch}/{uuid}",
+            seconds_since_epoch = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            uuid = Uuid::new_v4()
+        );
+        let challenge = challenge_string.as_bytes();
+        self.sign_with_keys(private_key_cert, public_key, challenge, pin)?;
         Ok(())
     }
 
@@ -336,7 +364,7 @@ impl VxCard {
         }
 
         let cert_in_der_format = cert_tlv.value();
-        Ok(X509::from_der(&cert_in_der_format)?)
+        Ok(X509::from_der(cert_in_der_format)?)
     }
 
     fn get_data(&self, cert_object_id: impl Into<Vec<u8>>) -> Result<Vec<u8>, CardReaderError> {
