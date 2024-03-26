@@ -40,9 +40,18 @@ impl CardDetails {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CardDetailsWithAuthInfo {
     pub card_details: CardDetails,
+
+    /// The certificate for the card, issued by VotingWorks.
     pub card_vx_cert: X509,
+
+    /// The certificate for the card, issued by VxAdmin.
     pub card_vx_admin_cert: X509,
+
+    /// The certificate authority certificate for the VxAdmin that programmed
+    /// the card.
     pub vx_admin_cert_authority_cert: X509,
+
+    /// The number of incorrect PIN attempts, if the card has a PIN.
     pub num_incorrect_pin_attempts: Option<u8>,
 }
 

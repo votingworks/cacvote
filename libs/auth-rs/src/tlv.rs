@@ -25,7 +25,7 @@ impl Tlv {
     ///
     /// ```
     /// # use auth_rs::tlv::Tlv;
-    /// let bytes = Tlv::new(0x01, vec![0x02, 0x03]).to_bytes().unwrap();
+    /// let bytes = Tlv::new(0x01, vec![0x02, 0x03]).into_bytes().unwrap();
     /// assert_eq!(bytes, vec![0x01, 0x02, 0x02, 0x03]);
     /// ```
     pub fn new(tag: u8, value: Vec<u8>) -> Self {
@@ -148,7 +148,7 @@ impl Tlv {
     }
 
     /// Converts the TLV to a byte vector.
-    pub fn to_bytes(self) -> Result<Vec<u8>, ConstructError> {
+    pub fn into_bytes(self) -> Result<Vec<u8>, ConstructError> {
         let mut bytes = vec![self.tag];
         let value = self.value;
         if value.len() <= 0x80 {
@@ -192,7 +192,7 @@ pub enum ParseError {
 macro_rules! tlv {
     ($tag: expr, $value: expr) => {{
         $crate::tlv::Tlv::new($tag, $value.into())
-            .to_bytes()
+            .into_bytes()
             .unwrap()
     }};
 }
@@ -216,7 +216,7 @@ mod tests {
         (value_length = $len:expr, length_bytes = $($bytes:expr),*) => {
             let buffer = vec![0; $len];
             let tlv = Tlv::new(0x01, buffer.clone());
-            let serialized = tlv.to_bytes().unwrap();
+            let serialized = tlv.into_bytes().unwrap();
             let expected = vec![0x01, $($bytes),*].into_iter().chain(buffer.into_iter()).collect::<Vec<u8>>();
             assert_eq!(serialized, expected);
         };
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn test_construct() {
-        let bytes = Tlv::new(0x01, vec![0x02, 0x03]).to_bytes().unwrap();
+        let bytes = Tlv::new(0x01, vec![0x02, 0x03]).into_bytes().unwrap();
         assert_eq!(bytes, vec![0x01, 0x02, 0x02, 0x03]);
 
         let bytes = tlv!(0x01, vec![0x02, 0x03]);
