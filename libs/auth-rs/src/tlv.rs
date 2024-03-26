@@ -59,7 +59,6 @@ impl Tlv {
     /// let (remainder, tlv) = Tlv::parse_partial(0x04, &remainder).unwrap();
     /// assert!(remainder.is_empty());
     /// assert_eq!(tlv, Tlv::new(0x04, vec![0xfa]));
-
     /// assert_eq!(
     ///     Tlv::parse_partial(0x01, &[0x02, 0x01, 0x04]),
     ///     Err(ParseError::InvalidTag {
