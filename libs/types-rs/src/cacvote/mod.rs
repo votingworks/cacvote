@@ -143,20 +143,20 @@ impl SignedObject {
 
     #[must_use]
     pub fn jurisdiction_code(&self) -> Option<JurisdictionCode> {
-        self.try_to_inner()
+        let jurisdiction_code = self
+            .try_to_inner()
             .ok()
-            .map(|payload| payload.jurisdiction_code())
-            .or_else(|| {
-                #[cfg(feature = "openssl")]
-                {
-                    self.jurisdiction_code_from_certificates()
-                }
+            .map(|payload| payload.jurisdiction_code());
 
-                #[cfg(not(feature = "openssl"))]
-                {
-                    None
-                }
-            })
+        #[cfg(feature = "openssl")]
+        {
+            jurisdiction_code.or_else(|| self.jurisdiction_code_from_certificates())
+        }
+
+        #[cfg(not(feature = "openssl"))]
+        {
+            jurisdiction_code
+        }
     }
 
     #[cfg(feature = "openssl")]
