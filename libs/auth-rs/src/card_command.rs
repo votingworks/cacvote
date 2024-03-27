@@ -125,7 +125,7 @@ impl CardCommand {
         let pin_bytes = pin.as_bytes();
         assert!(pin_bytes.len() <= data.len(), "PIN too long");
         data[..pin_bytes.len()].copy_from_slice(pin_bytes);
-        tracing::debug!("PIN bytes: {:?}", pin_bytes);
+        tracing::debug!("PIN bytes: {pin_bytes:?}");
         Self::new(VERIFY_PIN_INS, VERIFY_PIN_P1, VERIFY_PIN_P2, data.to_vec())
     }
 

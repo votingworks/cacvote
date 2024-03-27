@@ -6,7 +6,7 @@ use openssl::{
     x509::X509,
 };
 use serde::{Deserialize, Serialize};
-use types_rs::cacvote::{Payload, SignedObject};
+use types_rs::cacvote::{JurisdictionCode, Payload, RegistrationRequest, SignedObject};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,16 +44,12 @@ fn sign_and_verify(
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
-    let object = TestObject {
-        name: "Test Object".to_string(),
-        description: "This is a test object".to_string(),
-        value: 42,
-    };
-
-    let payload = Payload {
-        data: serde_json::to_vec(&object)?,
-        object_type: "TestObject".to_string(),
-    };
+    let payload = Payload::RegistrationRequest(RegistrationRequest {
+        common_access_card_id: "1234567890".to_owned(),
+        given_name: "John".to_owned(),
+        family_name: "Doe".to_owned(),
+        jurisdiction_code: JurisdictionCode::try_from("st.dev-jurisdiction").unwrap(),
+    });
     let (certificates, public_key, private_key) = load_keypair()?;
     let payload = serde_json::to_vec(&payload)?;
     let signature = sign_and_verify(&payload, &private_key, &public_key)?;

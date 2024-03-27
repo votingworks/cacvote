@@ -1,5 +1,4 @@
 use clap::Parser;
-use serde_json::Value;
 use types_rs::cacvote::Payload;
 use url::Url;
 use uuid::Uuid;
@@ -37,9 +36,6 @@ async fn main() -> color_eyre::Result<()> {
 
     let payload: Payload = serde_json::from_slice(&signed_object.payload)?;
     println!("object payload: {payload:#?}");
-
-    let data: Value = payload.try_to_inner()?;
-    println!("payload data: {data:#?}");
 
     Ok(())
 }

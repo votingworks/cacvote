@@ -414,7 +414,6 @@ export class JavaCard implements Card {
 
     // Verify that the card VotingWorks cert was signed by VotingWorks
     const cardVxCert = await this.retrieveCert(CARD_VX_CERT.OBJECT_ID);
-    console.log('cardVxCert', cardVxCert.toString('utf8'));
     await verifyFirstCertWasSignedBySecondCert(
       cardVxCert,
       this.vxCertAuthorityCertPath
@@ -426,11 +425,6 @@ export class JavaCard implements Card {
     );
     const vxAdminCertAuthorityCert = await this.retrieveCert(
       VX_ADMIN_CERT_AUTHORITY_CERT.OBJECT_ID
-    );
-    console.log('cardVxAdminCert', cardVxAdminCert.toString('utf8'));
-    console.log(
-      'vxAdminCertAuthorityCert',
-      vxAdminCertAuthorityCert.toString('utf8')
     );
     await verifyFirstCertWasSignedBySecondCert(
       cardVxAdminCert,

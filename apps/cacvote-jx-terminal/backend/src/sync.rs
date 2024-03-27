@@ -110,19 +110,19 @@ mod tests {
 
     use crate::{
         app,
-        smartcard::{DynStatusGetter, MockStatusGetterTrait},
+        smartcard::{DynSmartcard, MockSmartcardTrait},
     };
 
     use super::*;
 
-    fn setup(pool: sqlx::PgPool, smartcard_status: DynStatusGetter) -> color_eyre::Result<Client> {
+    fn setup(pool: sqlx::PgPool, smartcard_status: DynSmartcard) -> color_eyre::Result<Client> {
         let listener = TcpListener::bind("0.0.0.0:0")?;
         let addr = listener.local_addr()?;
         let cacvote_url: Url = format!("http://{addr}").parse()?;
         let config = Config {
             cacvote_url: cacvote_url.clone(),
-            database_url: "".to_string(),
-            machine_id: "".to_string(),
+            database_url: "".to_owned(),
+            machine_id: "".to_owned(),
             port: addr.port(),
             public_dir: None,
             log_level: Level::DEBUG,
@@ -144,9 +144,9 @@ mod tests {
     async fn test_sync(pool: sqlx::PgPool) -> color_eyre::Result<()> {
         let mut connection = pool.acquire().await?;
 
-        let mut smartcard_status = MockStatusGetterTrait::new();
+        let mut smartcard_status = MockSmartcardTrait::new();
         smartcard_status
-            .expect_get()
+            .expect_get_status()
             .returning(|| SmartcardStatus::Card);
 
         let client = setup(pool, Arc::new(smartcard_status))?;

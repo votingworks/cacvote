@@ -1,11 +1,12 @@
+use std::fmt;
+
 use base64_serde::base64_serde_type;
-use serde::de::DeserializeOwned;
-use serde::de::Error;
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::election::BallotStyleId;
+use crate::election::ElectionDefinition;
 use crate::election::PrecinctId;
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
@@ -37,6 +38,12 @@ impl TryFrom<&str> for JurisdictionCode {
         } else {
             Ok(Self(value.to_owned()))
         }
+    }
+}
+
+impl fmt::Display for JurisdictionCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -127,27 +134,28 @@ impl SignedObject {
             Some(x509) => x509.public_key()?,
             None => return Ok(false),
         };
-        let digest = openssl::hash::MessageDigest::sha256();
-        let mut verifier = openssl::sign::Verifier::new(digest, &public_key)?;
+
+        let mut verifier =
+            openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), &public_key)?;
         verifier.update(&self.payload)?;
         verifier.verify(&self.signature)
     }
 
     #[must_use]
     pub fn jurisdiction_code(&self) -> Option<JurisdictionCode> {
-        match self.try_to_inner() {
-            Ok(payload) => payload.jurisdiction_code(),
-            Err(_) => {
-                #[cfg(feature = "openssl")]
-                {
-                    self.jurisdiction_code_from_certificates()
-                }
+        let jurisdiction_code = self
+            .try_to_inner()
+            .ok()
+            .map(|payload| payload.jurisdiction_code());
 
-                #[cfg(not(feature = "openssl"))]
-                {
-                    None
-                }
-            }
+        #[cfg(feature = "openssl")]
+        {
+            jurisdiction_code.or_else(|| self.jurisdiction_code_from_certificates())
+        }
+
+        #[cfg(not(feature = "openssl"))]
+        {
+            jurisdiction_code
         }
     }
 
@@ -173,60 +181,29 @@ impl SignedObject {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Payload {
-    pub object_type: String,
-    #[serde(with = "Base64Standard")]
-    pub data: Vec<u8>,
+#[serde(rename_all = "camelCase", tag = "objectType")]
+pub enum Payload {
+    RegistrationRequest(RegistrationRequest),
+    Registration(Registration),
+    Election(Election),
 }
 
 impl Payload {
-    pub fn new<T: Serialize>(object_type: &str, data: &T) -> color_eyre::Result<Self> {
-        Ok(Self {
-            object_type: object_type.to_owned(),
-            data: serde_json::to_vec(data)?,
-        })
-    }
-
-    pub fn try_to_inner<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
-        serde_json::from_slice(&self.data)
-    }
-
-    pub fn try_to_inner_typed(&self) -> Result<PayloadData, serde_json::Error> {
-        match self.object_type.as_str() {
-            "RegistrationRequest" => {
-                Ok(PayloadData::RegistrationRequest(serde_json::from_slice::<
-                    RegistrationRequest,
-                >(
-                    &self.data
-                )?))
-            }
-            _ => Err(serde_json::Error::custom(format!(
-                "Unknown object type: {}",
-                self.object_type
-            ))),
-        }
-    }
-
-    pub fn jurisdiction_code(&self) -> Option<JurisdictionCode> {
-        match self.try_to_inner_typed() {
-            Ok(data) => Some(data.jurisdiction_code()),
-            Err(_) => None,
+    pub fn object_type(&self) -> &'static str {
+        match self {
+            Self::RegistrationRequest(_) => "RegistrationRequest",
+            Self::Registration(_) => "Registration",
+            Self::Election(_) => "Election",
         }
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub enum PayloadData {
-    RegistrationRequest(RegistrationRequest),
-    Registration(Registration),
-}
-
-impl JurisdictionScoped for PayloadData {
+impl JurisdictionScoped for Payload {
     fn jurisdiction_code(&self) -> JurisdictionCode {
         match self {
-            PayloadData::RegistrationRequest(request) => request.jurisdiction_code(),
-            PayloadData::Registration(registration) => registration.jurisdiction_code(),
+            Self::RegistrationRequest(request) => request.jurisdiction_code(),
+            Self::Registration(registration) => registration.jurisdiction_code(),
+            Self::Election(election) => election.jurisdiction_code(),
         }
     }
 }
@@ -387,4 +364,23 @@ impl JurisdictionScoped for Registration {
     fn jurisdiction_code(&self) -> JurisdictionCode {
         self.jurisdiction_code.clone()
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Election {
+    pub jurisdiction_code: JurisdictionCode,
+    pub election_definition: ElectionDefinition,
+}
+
+impl JurisdictionScoped for Election {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        self.jurisdiction_code.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionData {
+    pub jurisdiction_code: Option<JurisdictionCode>,
 }
