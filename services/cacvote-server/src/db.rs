@@ -13,7 +13,7 @@ use base64_serde::base64_serde_type;
 use color_eyre::eyre::bail;
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
-use types_rs::cacvote::{JournalEntry, JournalEntryAction, SignedObject};
+use types_rs::cacvote::{JournalEntry, JournalEntryAction, JurisdictionCode, SignedObject};
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -42,6 +42,11 @@ pub async fn create_object(
     }
 
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
+        tracing::error!(
+            "no jurisdiction found in object: {:?} (try_to_inner={:?}",
+            object,
+            object.try_to_inner(),
+        );
         bail!("No jurisdiction found");
     };
 
@@ -105,6 +110,7 @@ pub async fn create_object(
 pub async fn get_journal_entries(
     connection: &mut sqlx::PgConnection,
     since_journal_entry_id: Option<Uuid>,
+    jurisdiction_code: Option<JurisdictionCode>,
 ) -> color_eyre::Result<Vec<types_rs::cacvote::JournalEntry>> {
     struct Record {
         id: Uuid,
@@ -115,8 +121,30 @@ pub async fn get_journal_entries(
         created_at: time::OffsetDateTime,
     }
 
-    let entries = match since_journal_entry_id {
-        Some(id) => {
+    let entries = match (since_journal_entry_id, jurisdiction_code) {
+        (Some(since_journal_entry_id), Some(jurisdiction_code)) => {
+            sqlx::query_as!(
+                Record,
+                r#"
+                SELECT
+                  id,
+                  object_id,
+                  jurisdiction,
+                  object_type,
+                  action as "action: JournalEntryAction",
+                  created_at
+                FROM journal_entries
+                WHERE created_at > (SELECT created_at FROM journal_entries WHERE id = $1)
+                  AND jurisdiction = $2
+                ORDER BY created_at
+                "#,
+                since_journal_entry_id,
+                jurisdiction_code.as_str()
+            )
+            .fetch_all(connection)
+            .await?
+        }
+        (Some(since_journal_entry_id), None) => {
             sqlx::query_as!(
                 Record,
                 r#"
@@ -131,12 +159,32 @@ pub async fn get_journal_entries(
                 WHERE created_at > (SELECT created_at FROM journal_entries WHERE id = $1)
                 ORDER BY created_at
                 "#,
-                id
+                since_journal_entry_id
             )
             .fetch_all(connection)
             .await?
         }
-        None => {
+        (None, Some(jurisdiction_code)) => {
+            sqlx::query_as!(
+                Record,
+                r#"
+                SELECT
+                  id,
+                  object_id,
+                  jurisdiction,
+                  object_type,
+                  action as "action: JournalEntryAction",
+                  created_at
+                FROM journal_entries
+                WHERE jurisdiction = $1
+                ORDER BY created_at
+                "#,
+                jurisdiction_code.as_str()
+            )
+            .fetch_all(connection)
+            .await?
+        }
+        (None, None) => {
             sqlx::query_as!(
                 Record,
                 r#"

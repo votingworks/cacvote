@@ -1,5 +1,5 @@
 use reqwest::{Response, Url};
-use types_rs::cacvote::{JournalEntry, SignedObject};
+use types_rs::cacvote::{JournalEntry, JurisdictionCode, SignedObject};
 use uuid::Uuid;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -91,20 +91,40 @@ impl Client {
     ///
     /// ```
     /// # use cacvote_server::client::Client;
+    /// # use types_rs::cacvote::JurisdictionCode;
     /// # async {
     /// # let client = Client::localhost();
     /// // get all journal entries ever
-    /// let entries = client.get_journal_entries(None).await.unwrap();
+    /// let entries = client.get_journal_entries(None, None).await.unwrap();
     ///
     /// // get all journal entries since a specific entry
-    /// let entries = client.get_journal_entries(Some("00000000-0000-0000-0000-000000000000".parse().unwrap())).await.unwrap();
+    /// let entries = client.get_journal_entries(
+    ///     Some(&"00000000-0000-0000-0000-000000000000".parse().unwrap()),
+    ///     None,
+    /// ).await.unwrap();
+    ///
+    /// // get all journal entries for a specific jurisdiction
+    /// let entries = client.get_journal_entries(
+    ///     None,
+    ///     Some(&JurisdictionCode::try_from("st.dev-jurisdiction").unwrap()),
+    /// ).await.unwrap();
     /// # };
     /// ```
-    pub async fn get_journal_entries(&self, since: Option<Uuid>) -> Result<Vec<JournalEntry>> {
-        let params = match since {
-            Some(since) => vec![("since", since.to_string())],
-            None => vec![],
-        };
+    pub async fn get_journal_entries(
+        &self,
+        since: Option<&Uuid>,
+        jurisdiction_code: Option<&JurisdictionCode>,
+    ) -> Result<Vec<JournalEntry>> {
+        let mut params = Vec::new();
+
+        if let Some(since) = since {
+            params.push(("since", since.to_string()));
+        }
+
+        if let Some(jurisdiction_code) = jurisdiction_code {
+            params.push(("jurisdiction", jurisdiction_code.to_string()));
+        }
+
         let url =
             Url::parse_with_params(self.base_url.join("/api/journal-entries")?.as_str(), params)?;
         Ok(self
@@ -198,7 +218,7 @@ mod tests {
     async fn test_client(pool: sqlx::PgPool) -> color_eyre::Result<()> {
         let client = setup(pool)?;
 
-        let entries = client.get_journal_entries(None).await?;
+        let entries = client.get_journal_entries(None, None).await?;
         assert_eq!(entries, vec![]);
 
         let payload = Payload::RegistrationRequest(RegistrationRequest {
@@ -222,7 +242,7 @@ mod tests {
             .await?;
 
         // check the journal
-        let entries = client.get_journal_entries(None).await?;
+        let entries = client.get_journal_entries(None, None).await?;
         let entry = match entries.as_slice() {
             [entry] => {
                 assert_eq!(entry.object_id, object_id);
@@ -234,8 +254,31 @@ mod tests {
             _ => panic!("expected one journal entry, got: {entries:?}"),
         };
 
+        // filter by jurisdiction code
+        assert_eq!(
+            client
+                .get_journal_entries(
+                    None,
+                    Some(&JurisdictionCode::try_from("st.dev-jurisdiction").unwrap())
+                )
+                .await?,
+            vec![entry.clone()]
+        );
+        assert_eq!(
+            client
+                .get_journal_entries(
+                    None,
+                    Some(&JurisdictionCode::try_from("st.other-jurisdiction").unwrap())
+                )
+                .await?,
+            vec![]
+        );
+
         // check the journal since the last entry
-        assert_eq!(client.get_journal_entries(Some(entry.id)).await?, vec![]);
+        assert_eq!(
+            client.get_journal_entries(Some(&entry.id), None).await?,
+            vec![]
+        );
 
         // get the object
         let signed_object = client.get_object_by_id(object_id).await?.unwrap();
@@ -284,7 +327,7 @@ mod tests {
             .unwrap_err();
 
         // check that there are no journal entries
-        assert_eq!(client.get_journal_entries(None).await?, vec![]);
+        assert_eq!(client.get_journal_entries(None, None).await?, vec![]);
 
         Ok(())
     }

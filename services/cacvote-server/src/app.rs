@@ -17,7 +17,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote::{JournalEntry, SignedObject};
+use types_rs::cacvote::{JournalEntry, JurisdictionCode, SignedObject};
 use uuid::Uuid;
 
 use crate::{
@@ -71,6 +71,9 @@ async fn create_object(
 struct GetJournalEntriesQuery {
     #[serde(rename = "since")]
     since_journal_entry_id: Option<Uuid>,
+
+    #[serde(rename = "jurisdiction")]
+    jurisdiction_code: Option<JurisdictionCode>,
 }
 
 async fn get_journal_entries(
@@ -79,11 +82,13 @@ async fn get_journal_entries(
 ) -> Result<Json<Vec<JournalEntry>>, Error> {
     let mut conn = pool.acquire().await?;
 
-    Ok(
-        db::get_journal_entries(&mut conn, query.since_journal_entry_id)
-            .await
-            .map(Json)?,
+    Ok(db::get_journal_entries(
+        &mut conn,
+        query.since_journal_entry_id,
+        query.jurisdiction_code,
     )
+    .await
+    .map(Json)?)
 }
 
 async fn get_object_by_id(
@@ -93,7 +98,10 @@ async fn get_object_by_id(
     let mut conn = pool.acquire().await?;
 
     match db::get_object_by_id(&mut conn, object_id).await? {
-        Some(object) => Ok(Json(object)),
+        Some(object) => {
+            tracing::info!("PAYLOAD: {}", std::str::from_utf8(&object.payload).unwrap());
+            Ok(Json(object))
+        }
         None => Err(Error::NotFound),
     }
 }

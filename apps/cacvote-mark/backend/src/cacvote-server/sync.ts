@@ -130,6 +130,24 @@ async function pullObjects(
       continue;
     }
 
+    const verifyResult = await object.verify();
+
+    if (verifyResult.isErr()) {
+      await logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: `An error occurred while verifying with ID '${object.getId()}': ${verifyResult.err()}`,
+        disposition: 'failure',
+      });
+      continue;
+    }
+
+    if (!verifyResult.ok()) {
+      await logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: `Object with ID '${object.getId()}' failed verification: signature did not match`,
+        disposition: 'failure',
+      });
+      continue;
+    }
+
     const addObjectResult = await store.addObjectFromServer(object);
 
     if (addObjectResult.isErr()) {
@@ -141,7 +159,10 @@ async function pullObjects(
     }
 
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: `Got object with ID '${object.getId()}' from CACVote Server`,
+      message: `Got object with ID '${object.getId()}' and type '${object
+        .getPayload()
+        .ok()
+        ?.getObjectType()}' from CACVote Server`,
       disposition: 'success',
     });
   }

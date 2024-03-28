@@ -1,8 +1,8 @@
 use std::fmt;
+use std::str::FromStr;
 
 use base64_serde::base64_serde_type;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::election::BallotStyleId;
@@ -38,6 +38,14 @@ impl TryFrom<&str> for JurisdictionCode {
         } else {
             Ok(Self(value.to_owned()))
         }
+    }
+}
+
+impl FromStr for JurisdictionCode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.try_into()
     }
 }
 
@@ -181,7 +189,7 @@ impl SignedObject {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase", tag = "objectType")]
+#[serde(rename_all = "PascalCase", tag = "objectType")]
 pub enum Payload {
     RegistrationRequest(RegistrationRequest),
     Registration(Registration),
@@ -208,7 +216,7 @@ impl JurisdictionScoped for Payload {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct JournalEntry {
     pub id: Uuid,
@@ -380,7 +388,16 @@ impl JurisdictionScoped for Election {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub enum AuthStatus {
+    #[default]
+    UnauthenticatedNoCard,
+    UnauthenticatedInvalidCard,
+    Authenticated,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionData {
+    pub auth_status: AuthStatus,
     pub jurisdiction_code: Option<JurisdictionCode>,
 }

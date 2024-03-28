@@ -18,6 +18,7 @@ import { DateTime } from 'luxon';
 import { join } from 'path';
 import { ZodError } from 'zod';
 import {
+  Election,
   JournalEntry,
   JurisdictionCode,
   JurisdictionCodeSchema,
@@ -25,10 +26,7 @@ import {
   RegistrationObjectType,
   RegistrationRequest,
   RegistrationRequestObjectType,
-  RegistrationRequestSchema,
-  RegistrationSchema,
   SignedObject,
-  SignedObjectSchema,
   Uuid,
   UuidSchema,
 } from './cacvote-server/types';
@@ -327,6 +325,20 @@ export class Store {
     );
   }
 
+  forEachElection(): IteratorPlus<{
+    object: SignedObject;
+    election: Election;
+  }> {
+    return this.forEachObjectOfType('Election').filterMap((object) => {
+      const election = object.getPayload().unsafeUnwrap().getData();
+      assert(
+        election instanceof Election,
+        'payload matches object type because we used forEachObjectOfType'
+      );
+      return { object, election };
+    });
+  }
+
   forEachRegistrationRequest({
     commonAccessCardId,
   }: {
@@ -338,13 +350,11 @@ export class Store {
     return this.forEachObjectOfType(RegistrationRequestObjectType).filterMap(
       (object) => {
         const registrationRequest = object
-          .parsePayloadAs(
-            RegistrationRequestObjectType,
-            RegistrationRequestSchema
-          )
-          .unsafeUnwrap();
+          .getPayload()
+          .unsafeUnwrap()
+          .getData();
         assert(
-          registrationRequest,
+          registrationRequest instanceof RegistrationRequest,
           'payload matches object type because we used forEachObjectType'
         );
         if (
@@ -368,11 +378,9 @@ export class Store {
   }> {
     return this.forEachObjectOfType(RegistrationObjectType).filterMap(
       (object) => {
-        const registration = object
-          .parsePayloadAs(RegistrationObjectType, RegistrationSchema)
-          .unsafeUnwrap();
+        const registration = object.getPayload().unsafeUnwrap().getData();
         assert(
-          registration,
+          registration instanceof Registration,
           'payload matches object type because we used forEachObjectType'
         );
         if (
@@ -388,15 +396,27 @@ export class Store {
   }
 
   forEachObjectOfType(objectType: string): IteratorPlus<SignedObject> {
-    return iter(
-      // FIXME: this should be using `this.client.each`, but there seems to be a race condition
-      // that results in errors with "This database connection is busy executing a query"
-      this.client.all(
-        `select id, payload, certificates, signature from objects
+    // FIXME: this should be using `this.client.each`, but there seems to be a race condition
+    // that results in errors with "This database connection is busy executing a query"
+    const rows = this.client.all(
+      `select id, payload, certificates, signature from objects
         where json_extract(payload, '$.objectType') = ?`,
-        objectType
-      )
-    ).map((row) => unsafeParse(SignedObjectSchema, row));
+      objectType
+    ) as Array<{
+      id: string;
+      payload: Buffer;
+      certificates: Buffer;
+      signature: Buffer;
+    }>;
+    return iter(rows).map(
+      (row) =>
+        new SignedObject(
+          unsafeParse(UuidSchema, row.id),
+          row.payload,
+          row.certificates,
+          row.signature
+        )
+    );
   }
 
   getJurisdictionCodes(): JurisdictionCode[] {

@@ -8,6 +8,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use async_stream::try_stream;
+use auth_rs::card_details::CardDetailsWithAuthInfo;
 use axum::body::Bytes;
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::Sse;
@@ -22,7 +23,7 @@ use tokio::time::sleep;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote::{Election, Payload, SessionData, SignedObject};
+use types_rs::cacvote::{AuthStatus, Election, Payload, SessionData, SignedObject};
 use types_rs::election::ElectionDefinition;
 use uuid::Uuid;
 
@@ -74,7 +75,7 @@ async fn get_status() -> impl IntoResponse {
 }
 
 async fn get_status_stream(
-    State((_, _pool, smartcard)): State<AppState>,
+    State((config, _, smartcard)): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     Sse::new(try_stream! {
         let mut last_card_details = None;
@@ -85,7 +86,12 @@ async fn get_status_stream(
             if new_card_details != last_card_details {
                 last_card_details = new_card_details.clone();
                 yield Event::default().json_data(SessionData {
-                    jurisdiction_code: new_card_details.map(|d| d.card_details.jurisdiction_code()),
+                    auth_status: match new_card_details {
+                        Some(CardDetailsWithAuthInfo { card_details, .. }) if card_details.jurisdiction_code() == config.jurisdiction_code => AuthStatus::Authenticated,
+                        Some(_) => AuthStatus::UnauthenticatedInvalidCard,
+                        None => AuthStatus::UnauthenticatedNoCard,
+                    },
+                    jurisdiction_code: Some(config.jurisdiction_code.clone()),
                 }).unwrap();
             }
 
