@@ -79,6 +79,7 @@ impl SmartcardInner {
     pub(crate) fn refresh_card_details(&mut self) {
         let readers = self.readers_with_cards.lock().unwrap();
         let Some(reader_name) = readers.first() else {
+            self.last_selected_card_reader_info = None;
             return;
         };
 
@@ -90,6 +91,11 @@ impl SmartcardInner {
                 return;
             }
         }
+
+        // we shouldn't be connecting to the same card, but just in case we drop
+        // the current card to kill the connection and avoid the new connection
+        // failing
+        drop(self.card.take());
 
         let reader = CardReader::new(self.ctx.clone(), reader_name.clone());
         match reader.get_card() {
@@ -106,12 +112,15 @@ impl SmartcardInner {
                 Ok(card_details_with_auth_info) => {
                     self.last_selected_card_reader_info =
                         Some((reader_name.to_string(), card_details_with_auth_info));
+                    return;
                 }
                 Err(e) => {
                     tracing::error!("error reading card details: {e}");
                 }
             }
         }
+
+        self.last_selected_card_reader_info = None;
     }
 }
 

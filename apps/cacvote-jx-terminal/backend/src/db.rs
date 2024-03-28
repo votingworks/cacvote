@@ -48,6 +48,7 @@ pub(crate) async fn get_elections(
             signature
         FROM objects
         WHERE object_type = 'Election'
+        ORDER BY created_at DESC
         "#,
     )
     .fetch_all(connection)
@@ -58,7 +59,7 @@ pub(crate) async fn get_elections(
     for object in objects {
         let payload = match object.try_to_inner() {
             Ok(payload) => {
-                tracing::debug!("got object payload: {payload:?}");
+                tracing::trace!("got object payload: {payload:?}");
                 payload
             }
             Err(err) => {

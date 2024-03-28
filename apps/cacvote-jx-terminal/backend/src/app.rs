@@ -7,7 +7,6 @@ use std::convert::Infallible;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
-use async_stream::try_stream;
 use auth_rs::card_details::CardDetailsWithAuthInfo;
 use axum::body::Bytes;
 use axum::response::sse::{Event, KeepAlive};
@@ -16,22 +15,27 @@ use axum::routing::post;
 use axum::Json;
 use axum::{extract::DefaultBodyLimit, routing::get, Router};
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
-use futures_core::Stream;
+use futures::stream::Stream;
 use serde_json::json;
 use sqlx::PgPool;
-use tokio::time::sleep;
+use tokio_stream::StreamExt;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote::{AuthStatus, Election, Payload, SessionData, SignedObject};
+use types_rs::cacvote::{Election, Payload, SessionData, SignedObject};
 use types_rs::election::ElectionDefinition;
 use uuid::Uuid;
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
 use crate::{db, smartcard};
+use tokio::sync::broadcast;
 
-// type AppState = (Config, PgPool, smartcard::StatusGetter);
-type AppState = (Config, PgPool, smartcard::DynSmartcard);
+#[derive(Clone)]
+struct AppState {
+    pool: PgPool,
+    smartcard: smartcard::DynSmartcard,
+    broadcast_tx: broadcast::Sender<SessionData>,
+}
 
 /// Prepares the application with all the routes. Run the application with
 /// `app::run(…)` once you have it.
@@ -50,6 +54,44 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
         }
     };
 
+    let (broadcast_tx, _) = broadcast::channel(1);
+
+    tokio::spawn({
+        let jurisdiction_code = config.jurisdiction_code.clone();
+        let pool = pool.clone();
+        let smartcard = smartcard.clone();
+        let broadcast_tx = broadcast_tx.clone();
+        async move {
+            loop {
+                let mut connection = pool.acquire().await.unwrap();
+
+                let session_data = match smartcard.get_card_details() {
+                    Some(CardDetailsWithAuthInfo { card_details, .. })
+                        if card_details.jurisdiction_code() == jurisdiction_code =>
+                    {
+                        let elections = db::get_elections(&mut connection).await.unwrap();
+                        SessionData::Authenticated {
+                            jurisdiction_code: jurisdiction_code.clone(),
+                            elections: elections
+                                .into_iter()
+                                .map(|e| e.election_definition)
+                                .collect(),
+                        }
+                    }
+                    Some(_) => SessionData::Unauthenticated {
+                        has_smartcard: true,
+                    },
+                    None => SessionData::Unauthenticated {
+                        has_smartcard: false,
+                    },
+                };
+
+                let _ = broadcast_tx.send(session_data);
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        }
+    });
+
     router
         .route("/api/status", get(get_status))
         .route("/api/status-stream", get(get_status_stream))
@@ -57,7 +99,11 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
         .route("/api/elections", post(create_election))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
-        .with_state((config, pool, smartcard))
+        .with_state(AppState {
+            pool,
+            smartcard,
+            broadcast_tx,
+        })
 }
 
 /// Runs an application built by `app::setup(…)`.
@@ -74,34 +120,33 @@ async fn get_status() -> impl IntoResponse {
     StatusCode::OK
 }
 
-async fn get_status_stream(
-    State((config, _, smartcard)): State<AppState>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    Sse::new(try_stream! {
-        let mut last_card_details = None;
-
-        loop {
-            let new_card_details = smartcard.get_card_details();
-
-            if new_card_details != last_card_details {
-                last_card_details = new_card_details.clone();
-                yield Event::default().json_data(SessionData {
-                    auth_status: match new_card_details {
-                        Some(CardDetailsWithAuthInfo { card_details, .. }) if card_details.jurisdiction_code() == config.jurisdiction_code => AuthStatus::Authenticated,
-                        Some(_) => AuthStatus::UnauthenticatedInvalidCard,
-                        None => AuthStatus::UnauthenticatedNoCard,
-                    },
-                    jurisdiction_code: Some(config.jurisdiction_code.clone()),
-                }).unwrap();
-            }
-
-            sleep(Duration::from_millis(100)).await;
-        }
+fn distinct_until_changed<S: Stream>(stream: S) -> impl Stream<Item = S::Item>
+where
+    S::Item: Clone + PartialEq,
+{
+    let mut last = None;
+    stream.filter(move |item| {
+        let changed = last.as_ref() != Some(item);
+        last = Some(item.clone());
+        changed
     })
-    .keep_alive(KeepAlive::default())
 }
 
-async fn get_elections(State((_, pool, _)): State<AppState>) -> impl IntoResponse {
+async fn get_status_stream(
+    State(AppState { broadcast_tx, .. }): State<AppState>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let broadcast_rx = broadcast_tx.subscribe();
+
+    let stream = distinct_until_changed(
+        tokio_stream::wrappers::BroadcastStream::new(broadcast_rx).filter_map(Result::ok),
+    )
+    .map(|data| Event::default().json_data(data).unwrap())
+    .map(Ok);
+
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+async fn get_elections(State(AppState { pool, .. }): State<AppState>) -> impl IntoResponse {
     let mut connection = match pool.acquire().await {
         Ok(connection) => connection,
         Err(e) => {
@@ -128,7 +173,9 @@ async fn get_elections(State((_, pool, _)): State<AppState>) -> impl IntoRespons
 }
 
 async fn create_election(
-    State((_, pool, smartcard)): State<AppState>,
+    State(AppState {
+        pool, smartcard, ..
+    }): State<AppState>,
     body: Bytes,
 ) -> impl IntoResponse {
     let jurisdiction_code = match smartcard.get_card_details() {
