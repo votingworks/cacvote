@@ -16,6 +16,7 @@ pub fn AppLayout(cx: Scope) -> Element {
     use_coroutine(cx, {
         to_owned![nav, session_data];
         |_rx: UnboundedReceiver<i32>| async move {
+            log::info!("starting status stream");
             let eventsource = web_sys::EventSource::new("/api/status-stream").unwrap();
 
             let callback = Closure::wrap(Box::new(move |event: MessageEvent| {
@@ -25,12 +26,15 @@ pub fn AppLayout(cx: Scope) -> Element {
                         Ok(new_session_data) => {
                             log::info!("updating session data: {:?}", new_session_data);
 
-                            if new_session_data.jurisdiction_code.is_none() {
-                                log::info!("redirecting to machine locked page");
-                                nav.push(Route::MachineLockedPage);
-                            } else {
-                                log::info!("redirecting to elections page");
-                                nav.push(Route::ElectionsPage);
+                            match new_session_data {
+                                SessionData::Authenticated { .. } => {
+                                    log::info!("redirecting to elections page");
+                                    nav.push(Route::ElectionsPage);
+                                }
+                                SessionData::Unauthenticated { .. } => {
+                                    log::info!("redirecting to machine locked page");
+                                    nav.push(Route::MachineLockedPage);
+                                }
                             }
 
                             *session_data.write() = new_session_data;

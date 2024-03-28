@@ -387,17 +387,22 @@ impl JurisdictionScoped for Election {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-pub enum AuthStatus {
-    #[default]
-    UnauthenticatedNoCard,
-    UnauthenticatedInvalidCard,
-    Authenticated,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SessionData {
+    Authenticated {
+        jurisdiction_code: JurisdictionCode,
+        elections: Vec<ElectionDefinition>,
+    },
+    Unauthenticated {
+        has_smartcard: bool,
+    },
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionData {
-    pub auth_status: AuthStatus,
-    pub jurisdiction_code: Option<JurisdictionCode>,
+impl Default for SessionData {
+    fn default() -> Self {
+        Self::Unauthenticated {
+            has_smartcard: false,
+        }
+    }
 }
