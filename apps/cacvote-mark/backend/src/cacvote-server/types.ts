@@ -14,13 +14,17 @@ import {
 } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
-import { validate } from 'uuid';
+import { v4, validate } from 'uuid';
 import { ZodError, z } from 'zod';
 
 export const ElectionObjectType = 'Election';
 export const RegistrationRequestObjectType = 'RegistrationRequest';
 export const RegistrationObjectType = 'Registration';
 export type Uuid = NewType<string, 'Uuid'>;
+
+export function Uuid(): Uuid {
+  return v4() as Uuid;
+}
 
 export const UuidSchema = z.string().refine(validate, {
   message: 'Invalid UUID',
