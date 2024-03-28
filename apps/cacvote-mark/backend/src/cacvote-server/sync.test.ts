@@ -505,7 +505,7 @@ test('sync / fetch object but cannot add to store', async () => {
     Uuid(),
     object.getId(),
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
-    'RegistrationRequest',
+    RegistrationRequestObjectType,
     'create',
     DateTime.now()
   );

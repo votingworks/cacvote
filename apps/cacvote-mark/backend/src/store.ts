@@ -19,6 +19,7 @@ import { join } from 'path';
 import { ZodError } from 'zod';
 import {
   Election,
+  ElectionObjectType,
   JournalEntry,
   JurisdictionCode,
   JurisdictionCodeSchema,
@@ -255,8 +256,8 @@ export class Store {
   getJournalEntriesForObjectsToPull(): JournalEntry[] {
     const objectTypesToPull = [
       RegistrationRequestObjectType,
-      'Registration',
-      'Election',
+      RegistrationObjectType,
+      ElectionObjectType,
     ];
     const action = 'create';
 
