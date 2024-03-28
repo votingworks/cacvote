@@ -5,7 +5,14 @@ import { v4 } from 'uuid';
 import { Readable } from 'stream';
 import { unsafeParse } from '@votingworks/types';
 import { join } from 'path';
-import { Payload, SignedObject, UuidSchema } from '../../cacvote-server/types';
+import { DateTime } from 'luxon';
+import {
+  JurisdictionCodeSchema,
+  Payload,
+  RegistrationRequest,
+  SignedObject,
+  UuidSchema,
+} from '../../cacvote-server/types';
 import { resolveWorkspace } from '../../workspace';
 
 const DEV_CERTS_PATH = join(__dirname, '../../../../../../libs/auth/certs/dev');
@@ -18,21 +25,14 @@ const VX_ADMIN_CERT_AUTHORITY_CERT_PATH = join(
 export async function main(): Promise<void> {
   const workspace = await resolveWorkspace();
 
-  interface TestObject {
-    name: string;
-    description: string;
-    value: number;
-  }
-
-  const object: TestObject = {
-    name: 'Test Object',
-    description: 'This is a test object',
-    value: 42,
-  };
-
-  const payload = new Payload(
-    'TestObject',
-    Buffer.from(JSON.stringify(object))
+  const payload = Payload.RegistrationRequest(
+    new RegistrationRequest(
+      '0123456789',
+      unsafeParse(JurisdictionCodeSchema, 'st.dev-jurisdiction'),
+      'Jane',
+      'Doe',
+      DateTime.now()
+    )
   );
 
   const certificatesPem = await readFile(VX_ADMIN_CERT_AUTHORITY_CERT_PATH);
@@ -51,5 +51,6 @@ export async function main(): Promise<void> {
     signature
   );
 
+  // eslint-disable-next-line no-console
   console.log(await workspace.store.addObject(signedObject));
 }

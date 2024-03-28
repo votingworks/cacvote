@@ -5,7 +5,8 @@ import { Buffer } from 'buffer';
 import { readFile } from 'fs/promises';
 import { DateTime } from 'luxon';
 import { join } from 'path';
-import { v4 } from 'uuid';
+import { cryptography } from '@votingworks/auth';
+import { Readable } from 'stream';
 import {
   MockCacvoteAppBuilder,
   mockCacvoteServer,
@@ -20,15 +21,42 @@ import {
   RegistrationRequest,
   RegistrationRequestObjectType,
   SignedObject,
+  Uuid,
   UuidSchema,
 } from './types';
 
-async function getCertificates(): Promise<Buffer> {
+async function getSigningKeyCertificateAuthority(): Promise<Buffer> {
   return await readFile(
     join(
       __dirname,
       '../../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem'
     )
+  );
+}
+
+function getSigningKeyPrivateKeyPath(): string {
+  return join(
+    __dirname,
+    '../../../../../libs/auth/certs/dev/vx-admin-private-key.pem'
+  );
+}
+
+async function getSignedObjectForPayload(
+  payload: Payload
+): Promise<SignedObject> {
+  const payloadBuffer = payload.toBuffer();
+  const signature = await cryptography.signMessage({
+    message: Readable.from(payloadBuffer),
+    signingPrivateKey: {
+      source: 'file',
+      path: getSigningKeyPrivateKeyPath(),
+    },
+  });
+  return new SignedObject(
+    Uuid(),
+    payloadBuffer,
+    await getSigningKeyCertificateAuthority(),
+    signature
   );
 }
 
@@ -166,8 +194,8 @@ test('sync / getJournalEntries success / no entries', async () => {
 });
 
 test('sync / getJournalEntries success / with entries', async () => {
-  const journalEntryId = unsafeParse(UuidSchema, v4());
-  const objectId = unsafeParse(UuidSchema, v4());
+  const journalEntryId = Uuid();
+  const objectId = Uuid();
   const jurisdictionCode = unsafeParse(
     JurisdictionCodeSchema,
     'st.test-jurisdiction'
@@ -228,11 +256,8 @@ test('sync / createObject success / no objects', async () => {
 });
 
 test('sync / createObject success / with objects', async () => {
-  const objectId = unsafeParse(UuidSchema, v4());
-  const object = new SignedObject(
-    objectId,
-    Payload.of(
-      RegistrationRequestObjectType,
+  const object = await getSignedObjectForPayload(
+    Payload.RegistrationRequest(
       new RegistrationRequest(
         '0123456789',
         'st.test-jurisdiction' as JurisdictionCode,
@@ -240,15 +265,13 @@ test('sync / createObject success / with objects', async () => {
         'Smith',
         DateTime.now()
       )
-    ).toBuffer(),
-    await getCertificates(),
-    Buffer.of(7, 8, 9)
+    )
   );
 
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
       .onPostObject((_req, res) => {
-        res.status(201).send(objectId);
+        res.status(201).send(object.getId());
       })
       .build()
   );
@@ -275,22 +298,16 @@ test('sync / createObject success / with objects', async () => {
 });
 
 test('sync / createObject failure', async () => {
-  const objectId = unsafeParse(UuidSchema, v4());
-  const object = new SignedObject(
-    objectId,
-    Payload.of(
-      RegistrationRequestObjectType,
-      new RegistrationRequest(
-        '0123456789',
-        'st.test-jurisdiction' as JurisdictionCode,
-        'John',
-        'Smith',
-        DateTime.now()
-      )
-    ).toBuffer(),
-    await getCertificates(),
-    Buffer.of(7, 8, 9)
+  const payload = Payload.RegistrationRequest(
+    new RegistrationRequest(
+      '0123456789',
+      'st.test-jurisdiction' as JurisdictionCode,
+      'John',
+      'Smith',
+      DateTime.now()
+    )
   );
+  const object = await getSignedObjectForPayload(payload);
 
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
@@ -323,26 +340,22 @@ test('sync / createObject failure', async () => {
 });
 
 test('sync / fetches RegistrationRequest objects', async () => {
-  const objectId = unsafeParse(UuidSchema, v4());
-  const object = new SignedObject(
-    objectId,
-    Payload.of(
-      RegistrationRequestObjectType,
+  const jurisdictionCode = 'st.dev-jurisdiction' as JurisdictionCode;
+  const object = await getSignedObjectForPayload(
+    Payload.RegistrationRequest(
       new RegistrationRequest(
         '0123456789',
-        'st.dev-jurisdiction' as JurisdictionCode,
+        jurisdictionCode,
         'John',
         'Smith',
         DateTime.now()
       )
-    ).toBuffer(),
-    await getCertificates(),
-    Buffer.of(7, 8, 9)
+    )
   );
   const journalEntry = new JournalEntry(
-    unsafeParse(UuidSchema, v4()),
-    objectId,
-    unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
+    Uuid(),
+    object.getId(),
+    jurisdictionCode,
     RegistrationRequestObjectType,
     'create',
     DateTime.now()
@@ -353,7 +366,7 @@ test('sync / fetches RegistrationRequest objects', async () => {
       .withJournalEntries([journalEntry])
       .onGetObjectById((req, res) => {
         const requestObjectId = unsafeParse(UuidSchema, req.params['id']);
-        expect(requestObjectId).toEqual(objectId.toString());
+        expect(requestObjectId).toEqual(object.getId());
         res.json(object);
       })
       .build()
@@ -368,13 +381,13 @@ test('sync / fetches RegistrationRequest objects', async () => {
 
   const entries = store.getJournalEntries();
   expect(entries).toEqual([journalEntry]);
-  expect(store.getObjectById(objectId)).toEqual(object);
+  expect(store.getObjectById(object.getId())).toEqual(object);
 });
 
 test('sync / fetch ignores unknown object types', async () => {
-  const objectId = unsafeParse(UuidSchema, v4());
+  const objectId = Uuid();
   const journalEntry = new JournalEntry(
-    unsafeParse(UuidSchema, v4()),
+    Uuid(),
     objectId,
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
     'UnknownType',
@@ -400,9 +413,9 @@ test('sync / fetch ignores unknown object types', async () => {
 });
 
 test('sync / fetch failing to get object', async () => {
-  const objectId = unsafeParse(UuidSchema, v4());
+  const objectId = Uuid();
   const journalEntry = new JournalEntry(
-    unsafeParse(UuidSchema, v4()),
+    Uuid(),
     objectId,
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
     'Registration',
@@ -441,9 +454,9 @@ test('sync / fetch failing to get object', async () => {
 });
 
 test('sync / fetch object but object does not exist', async () => {
-  const objectId = unsafeParse(UuidSchema, v4());
+  const objectId = Uuid();
   const journalEntry = new JournalEntry(
-    unsafeParse(UuidSchema, v4()),
+    Uuid(),
     objectId,
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
     'Registration',
@@ -477,18 +490,22 @@ test('sync / fetch object but object does not exist', async () => {
 });
 
 test('sync / fetch object but cannot add to store', async () => {
-  const objectId = unsafeParse(UuidSchema, v4());
-  const object = new SignedObject(
-    objectId,
-    Payload.of('Registration', {}).toBuffer(),
-    await getCertificates(),
-    Buffer.of(7, 8, 9)
+  const object = await getSignedObjectForPayload(
+    Payload.RegistrationRequest(
+      new RegistrationRequest(
+        '0123456789',
+        'st.dev-jurisdiction' as JurisdictionCode,
+        'John',
+        'Smith',
+        DateTime.now()
+      )
+    )
   );
   const journalEntry = new JournalEntry(
-    unsafeParse(UuidSchema, v4()),
-    objectId,
+    Uuid(),
+    object.getId(),
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
-    'Registration',
+    'RegistrationRequest',
     'create',
     DateTime.now()
   );
@@ -514,7 +531,7 @@ test('sync / fetch object but cannot add to store', async () => {
 
   const entries = store.getJournalEntries();
   expect(entries).toEqual([journalEntry]);
-  expect(store.getObjectById(objectId)).toBeUndefined();
+  expect(store.getObjectById(object.getId())).toBeUndefined();
 
   expect(logger.log).toHaveBeenCalledWith(
     expect.anything(),
