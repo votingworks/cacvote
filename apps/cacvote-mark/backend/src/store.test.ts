@@ -15,7 +15,6 @@ import {
   JurisdictionCodeSchema,
   Payload,
   RegistrationRequest,
-  RegistrationRequestObjectType,
   SignedObject,
   UuidSchema,
 } from './cacvote-server/types';
@@ -87,30 +86,33 @@ test('reset clears the database', () => {
 
 test('forEachObjectOfType', async () => {
   const store = Store.memoryStore();
-  const objectType = RegistrationRequestObjectType;
 
+  const payload = Payload.RegistrationRequest(
+    new RegistrationRequest(
+      '0123456789',
+      'st.dev-jurisdiction' as JurisdictionCode,
+      'John',
+      'Smith',
+      DateTime.now()
+    )
+  );
   const object = new SignedObject(
     unsafeParse(UuidSchema, v4()),
-    Payload.of(
-      objectType,
-      new RegistrationRequest(
-        '0123456789',
-        'st.dev-jurisdiction' as JurisdictionCode,
-        'John',
-        'Smith',
-        DateTime.now()
-      )
-    ).toBuffer(),
+    payload.toBuffer(),
     await getCertificates(),
     Buffer.from('signature')
   );
 
-  expect(store.forEachObjectOfType(objectType).isEmpty()).toBeTruthy();
+  expect(
+    store.forEachObjectOfType(payload.getObjectType()).isEmpty()
+  ).toBeTruthy();
 
   (await store.addObject(object)).unsafeUnwrap();
 
-  expect(store.forEachObjectOfType(objectType).count()).toEqual(1);
-  expect(store.forEachObjectOfType(objectType).first()).toEqual(object);
+  expect(store.forEachObjectOfType(payload.getObjectType()).count()).toEqual(1);
+  expect(store.forEachObjectOfType(payload.getObjectType()).first()).toEqual(
+    object
+  );
   expect(store.forEachObjectOfType('NonExistent').count()).toEqual(0);
 });
 
@@ -127,7 +129,7 @@ test('forEachRegistrationRequest', async () => {
   );
   const object = new SignedObject(
     unsafeParse(UuidSchema, v4()),
-    Payload.of(RegistrationRequestObjectType, registrationRequest).toBuffer(),
+    Payload.RegistrationRequest(registrationRequest).toBuffer(),
     await getCertificates(),
     Buffer.from('signature')
   );

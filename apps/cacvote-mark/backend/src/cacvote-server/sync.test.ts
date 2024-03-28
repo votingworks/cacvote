@@ -231,8 +231,7 @@ test('sync / createObject success / with objects', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Payload.of(
-      RegistrationRequestObjectType,
+    Payload.RegistrationRequest(
       new RegistrationRequest(
         '0123456789',
         'st.test-jurisdiction' as JurisdictionCode,
@@ -278,8 +277,7 @@ test('sync / createObject failure', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Payload.of(
-      RegistrationRequestObjectType,
+    Payload.RegistrationRequest(
       new RegistrationRequest(
         '0123456789',
         'st.test-jurisdiction' as JurisdictionCode,
@@ -326,8 +324,7 @@ test('sync / fetches RegistrationRequest objects', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Payload.of(
-      RegistrationRequestObjectType,
+    Payload.RegistrationRequest(
       new RegistrationRequest(
         '0123456789',
         'st.dev-jurisdiction' as JurisdictionCode,
@@ -480,7 +477,15 @@ test('sync / fetch object but cannot add to store', async () => {
   const objectId = unsafeParse(UuidSchema, v4());
   const object = new SignedObject(
     objectId,
-    Payload.of('Registration', {}).toBuffer(),
+    Payload.RegistrationRequest(
+      new RegistrationRequest(
+        '0123456789',
+        'st.dev-jurisdiction' as JurisdictionCode,
+        'John',
+        'Smith',
+        DateTime.now()
+      )
+    ).toBuffer(),
     await getCertificates(),
     Buffer.of(7, 8, 9)
   );
@@ -488,7 +493,7 @@ test('sync / fetch object but cannot add to store', async () => {
     unsafeParse(UuidSchema, v4()),
     objectId,
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
-    'Registration',
+    'RegistrationRequest',
     'create',
     DateTime.now()
   );

@@ -24,7 +24,6 @@ import {
   JurisdictionCode,
   Payload,
   RegistrationRequest,
-  RegistrationRequestObjectType,
   SignedObject,
   Uuid,
   UuidSchema,
@@ -131,10 +130,9 @@ function buildApi({
         DateTime.now()
       );
 
-      const payload = Payload.of(
-        RegistrationRequestObjectType,
-        registrationRequest
-      ).toBuffer();
+      const payload =
+        Payload.RegistrationRequest(registrationRequest).toBuffer();
+
       const generateSignatureResult = await auth.generateSignature(payload, {
         pin: input.pin,
       });

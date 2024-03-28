@@ -2,6 +2,7 @@
 
 use cacvote_server::client::Client;
 use tokio::time::sleep;
+use types_rs::cacvote::JurisdictionCode;
 
 use crate::{
     config::{Config, SYNC_INTERVAL},
@@ -16,11 +17,11 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
         .await
         .expect("failed to acquire database connection");
 
-    let client = Client::new(config.cacvote_url.clone());
+    let client = Client::new(config.cacvote_url);
 
     tokio::spawn(async move {
         loop {
-            match sync(&mut connection, &client).await {
+            match sync(&mut connection, &client, &config.jurisdiction_code).await {
                 Ok(_) => {
                     tracing::info!("Successfully synced with CACVote Server");
                 }
@@ -37,11 +38,12 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
 pub(crate) async fn sync(
     executor: &mut sqlx::PgConnection,
     client: &Client,
+    jurisdiction_code: &JurisdictionCode,
 ) -> color_eyre::eyre::Result<()> {
     client.check_status().await?;
 
     push_objects(executor, client).await?;
-    pull_journal_entries(executor, client).await?;
+    pull_journal_entries(executor, client, jurisdiction_code).await?;
     pull_objects(executor, client).await?;
 
     Ok(())
@@ -50,12 +52,15 @@ pub(crate) async fn sync(
 async fn pull_journal_entries(
     executor: &mut sqlx::PgConnection,
     client: &Client,
+    jurisdiction_code: &JurisdictionCode,
 ) -> color_eyre::eyre::Result<()> {
     let latest_journal_entry_id = db::get_latest_journal_entry(executor)
         .await?
         .map(|entry| entry.id);
     tracing::debug!("fetching journal entries since {latest_journal_entry_id:?}");
-    let new_entries = client.get_journal_entries(latest_journal_entry_id).await?;
+    let new_entries = client
+        .get_journal_entries(latest_journal_entry_id.as_ref(), Some(jurisdiction_code))
+        .await?;
     tracing::debug!(
         "fetched {count} new journal entries",
         count = new_entries.len()
@@ -115,6 +120,8 @@ mod tests {
 
     use super::*;
 
+    const JURISDICTION_CODE: &str = "st.test-jurisdiction";
+
     fn setup(pool: sqlx::PgPool, smartcard_status: DynSmartcard) -> color_eyre::Result<Client> {
         let listener = TcpListener::bind("0.0.0.0:0")?;
         let addr = listener.local_addr()?;
@@ -126,6 +133,7 @@ mod tests {
             port: addr.port(),
             public_dir: None,
             log_level: Level::DEBUG,
+            jurisdiction_code: JurisdictionCode::try_from(JURISDICTION_CODE).unwrap(),
         };
 
         tokio::spawn(async move {
@@ -152,7 +160,12 @@ mod tests {
         let client = setup(pool, Arc::new(smartcard_status))?;
 
         // TODO: actually test `sync`
-        let _ = sync(&mut connection, &client).await;
+        let _ = sync(
+            &mut connection,
+            &client,
+            &JurisdictionCode::try_from(JURISDICTION_CODE).unwrap(),
+        )
+        .await;
 
         Ok(())
     }

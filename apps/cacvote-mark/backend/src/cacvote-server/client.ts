@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import {
   Optional,
   Result,
@@ -13,6 +12,7 @@ import {
   JournalEntry,
   JournalEntrySchema,
   SignedObject,
+  SignedObjectSchema,
   Uuid,
   UuidSchema,
 } from './types';
@@ -71,12 +71,6 @@ export class Client {
   async getObjectById(
     uuid: Uuid
   ): Promise<ClientResult<Optional<SignedObject>>> {
-    const SignedObjectRawSchema = z.object({
-      id: UuidSchema,
-      payload: z.string(),
-      certificates: z.string(),
-      signature: z.string(),
-    });
     return asyncResultBlock(async (bail) => {
       const response = (await this.get(`/api/objects/${uuid}`)).okOrElse(bail);
 
@@ -89,22 +83,14 @@ export class Client {
         bail({ type: 'network', message: response.statusText });
       }
 
-      const signedObject = safeParseJson(
-        await response.text(),
-        SignedObjectRawSchema
-      ).okOrElse<ZodError>((error) =>
-        bail({
-          type: 'schema',
-          error,
-          message: error.message,
-        })
-      );
-
-      return new SignedObject(
-        signedObject.id,
-        Buffer.from(signedObject.payload, 'base64'),
-        Buffer.from(signedObject.certificates, 'base64'),
-        Buffer.from(signedObject.signature, 'base64')
+      const json = await response.text();
+      return safeParseJson(json, SignedObjectSchema).okOrElse<ZodError>(
+        (error) =>
+          bail({
+            type: 'schema',
+            error,
+            message: error.message,
+          })
       );
     });
   }
