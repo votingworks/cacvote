@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id,\n            object_id,\n            jurisdiction as \"jurisdiction: JurisdictionCode\",\n            object_type,\n            action,\n            created_at\n        FROM journal_entries\n        ORDER BY created_at DESC\n        LIMIT 1\n        ",
+  "query": "\n                SELECT\n                  id,\n                  object_id,\n                  jurisdiction,\n                  object_type,\n                  action as \"action: JournalEntryAction\",\n                  created_at\n                FROM journal_entries\n                WHERE jurisdiction = $1\n                ORDER BY created_at\n                ",
   "describe": {
     "columns": [
       {
@@ -15,7 +15,7 @@
       },
       {
         "ordinal": 2,
-        "name": "jurisdiction: JurisdictionCode",
+        "name": "jurisdiction",
         "type_info": "Varchar"
       },
       {
@@ -25,7 +25,7 @@
       },
       {
         "ordinal": 4,
-        "name": "action",
+        "name": "action: JournalEntryAction",
         "type_info": "Varchar"
       },
       {
@@ -35,7 +35,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Text"
+      ]
     },
     "nullable": [
       false,
@@ -46,5 +48,5 @@
       false
     ]
   },
-  "hash": "9a47bcd3a79ee448a5dbb8c2583c95868aca3dac148a9b7e4824b6d7be2bce3d"
+  "hash": "1b9228bc0c3c35aa800648da94038b700b8b1f4f514b022f6c45380d1e5cf73c"
 }
