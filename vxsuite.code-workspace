@@ -1,6 +1,10 @@
 {
   "folders": [
     {
+      "path": "apps/cacvote-jx-terminal/backend",
+      "name": "apps/cacvote-jx-terminal/backend"
+    },
+    {
       "path": "apps/cacvote-jx-terminal/frontend",
       "name": "apps/cacvote-jx-terminal/frontend"
     },
@@ -23,6 +27,10 @@
     {
       "path": "libs/auth",
       "name": "libs/auth"
+    },
+    {
+      "path": "libs/auth-rs",
+      "name": "libs/auth-rs"
     },
     {
       "path": "libs/backend",
@@ -105,6 +113,10 @@
       "name": "libs/types"
     },
     {
+      "path": "libs/types-rs",
+      "name": "libs/types-rs"
+    },
+    {
       "path": "libs/ui",
       "name": "libs/ui"
     },
@@ -123,6 +135,12 @@
     {
       "path": "script",
       "name": "script"
+    },
+    {
+      "path": "services/cacvote-server"
+    },
+    {
+      "path": "."
     }
   ],
   "settings": {
@@ -134,6 +152,8 @@
     "cSpell.words": [
       "accuvote",
       "AGPL",
+      "Apdu",
+      "cacvote",
       "canonicalization",
       "canonicalize",
       "Canonicalized",
@@ -149,14 +169,17 @@
       "overvote",
       "overvoted",
       "overvotes",
+      "pcsc",
       "plustek",
       "pollworker",
       "previewable",
       "qrcode",
+      "reqwest",
       "SEMS",
       "serializable",
       "smartcard",
       "smartcards",
+      "sqlx",
       "stylelint",
       "superadmin",
       "testid",
@@ -171,6 +194,7 @@
       "unprogram",
       "unprogramming",
       "unprograms",
+      "unsynced",
       "usbstick",
       "votingworks",
       "VVSG",

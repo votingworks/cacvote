@@ -122,6 +122,25 @@ test('read/write', () => {
   );
 });
 
+test('prepare', () => {
+  const client = Client.memoryClient();
+
+  client.exec(
+    'create table if not exists muppets (name varchar(255) unique not null)'
+  );
+
+  const insertStatement = client.prepare(
+    'insert into muppets (name) values (?)'
+  );
+  insertStatement.run('Kermit');
+  insertStatement.run('Fozzie');
+
+  expect(client.all('select * from muppets')).toEqual([
+    { name: 'Kermit' },
+    { name: 'Fozzie' },
+  ]);
+});
+
 test('transactions', async () => {
   const client = Client.memoryClient();
 

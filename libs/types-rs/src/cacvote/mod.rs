@@ -1,7 +1,13 @@
+use std::fmt;
+use std::str::FromStr;
+
 use base64_serde::base64_serde_type;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::election::BallotStyleId;
+use crate::election::ElectionDefinition;
+use crate::election::PrecinctId;
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
@@ -35,12 +41,61 @@ impl TryFrom<&str> for JurisdictionCode {
     }
 }
 
+impl FromStr for JurisdictionCode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.try_into()
+    }
+}
+
+impl fmt::Display for JurisdictionCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for JurisdictionCode
+where
+    sqlx::types::Json<Self>: sqlx::Decode<'r, sqlx::Postgres>,
+{
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        Ok(value.as_str()?.try_into()?)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for JurisdictionCode
+where
+    Vec<u8>: sqlx::Encode<'q, sqlx::Postgres>,
+{
+    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> sqlx::encode::IsNull {
+        self.0.encode_by_ref(buf)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl sqlx::Type<sqlx::Postgres> for JurisdictionCode {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("varchar")
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SignedObject {
+    pub id: Uuid,
+
+    /// Data to be signed. Must be JSON decodable as [`Payload`][crate::cacvote::Payload].
     #[serde(with = "Base64Standard")]
     pub payload: Vec<u8>,
+
+    /// A stack of PEM-encoded X.509 certificates.
     #[serde(with = "Base64Standard")]
     pub certificates: Vec<u8>,
+
+    /// The signature of the payload.
     #[serde(with = "Base64Standard")]
     pub signature: Vec<u8>,
 }
@@ -65,6 +120,7 @@ impl SignedObject {
             .concat();
 
         Ok(Self {
+            id: Uuid::new_v4(),
             payload,
             certificates,
             signature,
@@ -81,21 +137,39 @@ impl SignedObject {
     }
 
     #[cfg(feature = "openssl")]
-    #[must_use]
     pub fn verify(&self) -> Result<bool, openssl::error::ErrorStack> {
         let public_key = match self.to_x509()?.first() {
             Some(x509) => x509.public_key()?,
             None => return Ok(false),
         };
-        let digest = openssl::hash::MessageDigest::sha256();
-        let mut verifier = openssl::sign::Verifier::new(digest, &public_key)?;
+
+        let mut verifier =
+            openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), &public_key)?;
         verifier.update(&self.payload)?;
         verifier.verify(&self.signature)
     }
 
-    #[cfg(feature = "openssl")]
     #[must_use]
     pub fn jurisdiction_code(&self) -> Option<JurisdictionCode> {
+        let jurisdiction_code = self
+            .try_to_inner()
+            .ok()
+            .map(|payload| payload.jurisdiction_code());
+
+        #[cfg(feature = "openssl")]
+        {
+            jurisdiction_code.or_else(|| self.jurisdiction_code_from_certificates())
+        }
+
+        #[cfg(not(feature = "openssl"))]
+        {
+            jurisdiction_code
+        }
+    }
+
+    #[cfg(feature = "openssl")]
+    #[must_use]
+    pub fn jurisdiction_code_from_certificates(&self) -> Option<JurisdictionCode> {
         /// Format: {state-2-letter-abbreviation}.{county-or-town} (e.g. ms.warren or ca.los-angeles)
         const VX_CUSTOM_CERT_FIELD_JURISDICTION: &str = "1.3.6.1.4.1.59817.2";
 
@@ -115,27 +189,88 @@ impl SignedObject {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Payload {
-    pub object_type: String,
-    #[serde(with = "Base64Standard")]
-    pub data: Vec<u8>,
+#[serde(rename_all = "PascalCase", tag = "objectType")]
+pub enum Payload {
+    RegistrationRequest(RegistrationRequest),
+    Registration(Registration),
+    Election(Election),
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+impl Payload {
+    pub fn object_type(&self) -> &'static str {
+        match self {
+            Self::RegistrationRequest(_) => "RegistrationRequest",
+            Self::Registration(_) => "Registration",
+            Self::Election(_) => "Election",
+        }
+    }
+}
+
+impl JurisdictionScoped for Payload {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        match self {
+            Self::RegistrationRequest(request) => request.jurisdiction_code(),
+            Self::Registration(registration) => registration.jurisdiction_code(),
+            Self::Election(election) => election.jurisdiction_code(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct JournalEntry {
     pub id: Uuid,
     pub object_id: Uuid,
-    pub jurisdiction: JurisdictionCode,
+    pub jurisdiction_code: JurisdictionCode,
     pub object_type: String,
-    pub action: String,
+    pub action: JournalEntryAction,
+    #[serde(with = "time::serde::iso8601")]
     pub created_at: time::OffsetDateTime,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum JournalEntryAction {
     Create,
     Delete,
     Unknown(String),
+}
+
+impl JournalEntryAction {
+    pub fn as_str(&self) -> &str {
+        match self {
+            JournalEntryAction::Create => "create",
+            JournalEntryAction::Delete => "delete",
+            JournalEntryAction::Unknown(s) => s.as_str(),
+        }
+    }
+}
+
+impl From<&str> for JournalEntryAction {
+    fn from(s: &str) -> Self {
+        match s {
+            "create" => JournalEntryAction::Create,
+            "delete" => JournalEntryAction::Delete,
+            _ => JournalEntryAction::Unknown(s.to_owned()),
+        }
+    }
+}
+
+impl From<&JournalEntryAction> for String {
+    fn from(action: &JournalEntryAction) -> Self {
+        action.as_str().to_owned()
+    }
+}
+
+impl From<JournalEntryAction> for String {
+    fn from(action: JournalEntryAction) -> Self {
+        String::from(&action)
+    }
+}
+
+impl From<String> for JournalEntryAction {
+    fn from(s: String) -> Self {
+        s.as_str().into()
+    }
 }
 
 impl<'de> Deserialize<'de> for JournalEntryAction {
@@ -143,12 +278,7 @@ impl<'de> Deserialize<'de> for JournalEntryAction {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "create" => Ok(JournalEntryAction::Create),
-            "delete" => Ok(JournalEntryAction::Delete),
-            _ => Ok(JournalEntryAction::Unknown(s)),
-        }
+        Ok(String::deserialize(deserializer)?.into())
     }
 }
 
@@ -157,11 +287,34 @@ impl Serialize for JournalEntryAction {
     where
         S: serde::Serializer,
     {
-        match self {
-            JournalEntryAction::Create => serializer.serialize_str("create"),
-            JournalEntryAction::Delete => serializer.serialize_str("delete"),
-            JournalEntryAction::Unknown(s) => serializer.serialize_str(s),
-        }
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for JournalEntryAction
+where
+    sqlx::types::Json<Self>: sqlx::Decode<'r, sqlx::Postgres>,
+{
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        Ok(value.as_str()?.into())
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for JournalEntryAction
+where
+    Vec<u8>: sqlx::Encode<'q, sqlx::Postgres>,
+{
+    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> sqlx::encode::IsNull {
+        String::from(self).encode_by_ref(buf)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl sqlx::Type<sqlx::Postgres> for JournalEntryAction {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("varchar")
     }
 }
 
@@ -183,4 +336,73 @@ pub enum VerificationStatus {
     Error(String),
     #[default]
     Unknown,
+}
+
+trait JurisdictionScoped {
+    fn jurisdiction_code(&self) -> JurisdictionCode;
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RegistrationRequest {
+    pub common_access_card_id: String,
+    pub jurisdiction_code: JurisdictionCode,
+    pub given_name: String,
+    pub family_name: String,
+}
+
+impl JurisdictionScoped for RegistrationRequest {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        self.jurisdiction_code.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Registration {
+    pub common_access_card_id: String,
+    pub jurisdiction_code: JurisdictionCode,
+    pub registration_request_object_id: Uuid,
+    pub election_object_id: Uuid,
+    pub ballot_style_id: BallotStyleId,
+    pub precinct_id: PrecinctId,
+}
+
+impl JurisdictionScoped for Registration {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        self.jurisdiction_code.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Election {
+    pub jurisdiction_code: JurisdictionCode,
+    pub election_definition: ElectionDefinition,
+}
+
+impl JurisdictionScoped for Election {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        self.jurisdiction_code.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SessionData {
+    Authenticated {
+        jurisdiction_code: JurisdictionCode,
+        elections: Vec<ElectionDefinition>,
+    },
+    Unauthenticated {
+        has_smartcard: bool,
+    },
+}
+
+impl Default for SessionData {
+    fn default() -> Self {
+        Self::Unauthenticated {
+            has_smartcard: false,
+        }
+    }
 }

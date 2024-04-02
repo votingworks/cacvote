@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use clap::Parser;
+use types_rs::cacvote::JurisdictionCode;
 
 const TEN_MB: usize = 10 * 1024 * 1024;
 
@@ -27,6 +28,10 @@ pub(crate) struct Config {
     /// Port to listen on.
     #[arg(long, env = "PORT")]
     pub(crate) port: u16,
+
+    /// Jurisdiction code.
+    #[arg(long, env = "JURISDICTION_CODE")]
+    pub(crate) jurisdiction_code: JurisdictionCode,
 
     /// Directory to serve static files from.
     #[arg(long, env = "PUBLIC_DIR")]

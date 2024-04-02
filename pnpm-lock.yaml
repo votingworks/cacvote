@@ -164,8 +164,8 @@ importers:
         specifier: workspace:*
         version: link:../../../libs/utils
       cross-fetch:
-        specifier: ^3.1.5
-        version: 3.1.5
+        specifier: ^4.0.0
+        version: 4.0.0
       debug:
         specifier: 4.3.4
         version: 4.3.4(supports-color@5.5.0)
@@ -230,6 +230,9 @@ importers:
       '@votingworks/test-utils':
         specifier: workspace:*
         version: link:../../../libs/test-utils
+      esbuild-runner:
+        specifier: 2.2.2
+        version: 2.2.2(esbuild@0.17.11)
       eslint:
         specifier: 8.51.0
         version: 8.51.0
@@ -1392,8 +1395,8 @@ importers:
         specifier: workspace:*
         version: link:../basics
       cross-fetch:
-        specifier: ^3.1.5
-        version: 3.1.5
+        specifier: ^4.0.0
+        version: 4.0.0
       debug:
         specifier: 4.3.4
         version: 4.3.4(supports-color@5.5.0)
@@ -10891,6 +10894,7 @@ packages:
       node-fetch: 2.6.7
     transitivePeerDependencies:
       - encoding
+    dev: true
 
   /cross-fetch@4.0.0:
     resolution: {integrity: sha512-e4a5N8lVvuLgAWgnCrLr2PP0YyDOTHa9H/Rj54dirp61qXnNq46m82bRhNqIA5VccJtWBvPTFRV3TtvHUKPB1g==}

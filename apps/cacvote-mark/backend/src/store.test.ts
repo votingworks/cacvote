@@ -1,13 +1,36 @@
+import { Buffer } from 'buffer';
 import { electionTwoPartyPrimaryFixtures } from '@votingworks/fixtures';
 import {
   DEFAULT_SYSTEM_SETTINGS,
   SystemSettings,
   safeParseSystemSettings,
+  unsafeParse,
 } from '@votingworks/types';
+import { v4 } from 'uuid';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import { DateTime } from 'luxon';
+import {
+  JurisdictionCode,
+  JurisdictionCodeSchema,
+  Payload,
+  RegistrationRequest,
+  SignedObject,
+  UuidSchema,
+} from './cacvote-server/types';
 import { Store } from './store';
 
 // We pause in some of these tests so we need to increase the timeout
 jest.setTimeout(20000);
+
+async function getCertificates(): Promise<Buffer> {
+  return await readFile(
+    join(
+      __dirname,
+      '../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem'
+    )
+  );
+}
 
 test('getDbPath', () => {
   const store = Store.memoryStore();
@@ -59,4 +82,75 @@ test('setSystemSettings can handle boolean values in input', () => {
 test('reset clears the database', () => {
   const store = Store.memoryStore();
   store.reset();
+});
+
+test('forEachObjectOfType', async () => {
+  const store = Store.memoryStore();
+
+  const payload = Payload.RegistrationRequest(
+    new RegistrationRequest(
+      '0123456789',
+      'st.dev-jurisdiction' as JurisdictionCode,
+      'John',
+      'Smith',
+      DateTime.now()
+    )
+  );
+  const object = new SignedObject(
+    unsafeParse(UuidSchema, v4()),
+    payload.toBuffer(),
+    await getCertificates(),
+    Buffer.from('signature')
+  );
+
+  expect(
+    store.forEachObjectOfType(payload.getObjectType()).isEmpty()
+  ).toBeTruthy();
+
+  (await store.addObject(object)).unsafeUnwrap();
+
+  expect(store.forEachObjectOfType(payload.getObjectType()).count()).toEqual(1);
+  expect(store.forEachObjectOfType(payload.getObjectType()).first()).toEqual(
+    object
+  );
+  expect(store.forEachObjectOfType('NonExistent').count()).toEqual(0);
+});
+
+test('forEachRegistrationRequest', async () => {
+  const store = Store.memoryStore();
+  const commonAccessCardId = '1234567890';
+
+  const registrationRequest = new RegistrationRequest(
+    commonAccessCardId,
+    unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
+    'Given Name',
+    'Family Name',
+    DateTime.now()
+  );
+  const object = new SignedObject(
+    unsafeParse(UuidSchema, v4()),
+    Payload.RegistrationRequest(registrationRequest).toBuffer(),
+    await getCertificates(),
+    Buffer.from('signature')
+  );
+
+  expect(
+    store.forEachRegistrationRequest({ commonAccessCardId }).isEmpty()
+  ).toBeTruthy();
+
+  (await store.addObject(object)).unsafeUnwrap();
+
+  expect(
+    store.forEachRegistrationRequest({ commonAccessCardId }).count()
+  ).toEqual(1);
+  expect(
+    store.forEachRegistrationRequest({ commonAccessCardId }).first()
+  ).toEqual({ object, registrationRequest });
+  expect(
+    store
+      .forEachRegistrationRequest({
+        commonAccessCardId: `${commonAccessCardId}1`,
+      })
+      .isEmpty()
+  ).toBeTruthy();
 });

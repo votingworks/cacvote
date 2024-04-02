@@ -13,7 +13,7 @@ use base64_serde::base64_serde_type;
 use color_eyre::eyre::bail;
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
-use types_rs::cacvote::{JournalEntry, SignedObject};
+use types_rs::cacvote::{JournalEntry, JournalEntryAction, JurisdictionCode, SignedObject};
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -42,31 +42,43 @@ pub async fn create_object(
     }
 
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
-        bail!("No jurisdiction found in certificate");
+        tracing::error!(
+            "no jurisdiction found in object: {:?} (try_to_inner={:?}",
+            object,
+            object.try_to_inner(),
+        );
+        bail!("No jurisdiction found");
     };
 
-    let object_type = object.try_to_inner()?.object_type;
+    let object_type = object.try_to_inner()?.object_type();
 
     let mut txn = connection.begin().await?;
 
-    let object = sqlx::query!(
+    match sqlx::query!(
         r#"
-        INSERT INTO objects (jurisdiction, object_type, payload, certificates, signature)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id
+        INSERT INTO objects (id, jurisdiction, object_type, payload, certificates, signature)
+        VALUES ($1, $2, $3, $4, $5, $6)
         "#,
+        &object.id,
         jurisdiction_code.as_str(),
         object_type,
         &object.payload,
         &object.certificates,
         &object.signature
     )
-    .fetch_one(&mut *txn)
-    .await?;
+    .execute(&mut *txn)
+    .await
+    {
+        Ok(_) => {}
+        Err(e) => {
+            txn.rollback().await?;
+            bail!("Error creating object: {e}");
+        }
+    }
 
     tracing::debug!("Creating object with id {}", object.id);
 
-    let journal_entry = sqlx::query!(
+    let journal_entry = match sqlx::query!(
         r#"
         INSERT INTO journal_entries (object_id, jurisdiction, object_type, action)
         VALUES ($1, $2, $3, 'create')
@@ -77,7 +89,14 @@ pub async fn create_object(
         object_type,
     )
     .fetch_one(&mut *txn)
-    .await?;
+    .await
+    {
+        Ok(journal_entry) => journal_entry,
+        Err(e) => {
+            txn.rollback().await?;
+            bail!("Error creating journal entry: {e}");
+        }
+    };
 
     tracing::debug!("Creating journal entry with id {}", journal_entry.id);
 
@@ -91,36 +110,91 @@ pub async fn create_object(
 pub async fn get_journal_entries(
     connection: &mut sqlx::PgConnection,
     since_journal_entry_id: Option<Uuid>,
+    jurisdiction_code: Option<JurisdictionCode>,
 ) -> color_eyre::Result<Vec<types_rs::cacvote::JournalEntry>> {
     struct Record {
         id: Uuid,
         object_id: Uuid,
         jurisdiction: String,
         object_type: String,
-        action: String,
+        action: JournalEntryAction,
         created_at: time::OffsetDateTime,
     }
 
-    let entries = match since_journal_entry_id {
-        Some(id) => {
+    let entries = match (since_journal_entry_id, jurisdiction_code) {
+        (Some(since_journal_entry_id), Some(jurisdiction_code)) => {
             sqlx::query_as!(
                 Record,
                 r#"
-                SELECT id, object_id, jurisdiction, object_type, action, created_at
+                SELECT
+                  id,
+                  object_id,
+                  jurisdiction,
+                  object_type,
+                  action as "action: JournalEntryAction",
+                  created_at
                 FROM journal_entries
                 WHERE created_at > (SELECT created_at FROM journal_entries WHERE id = $1)
+                  AND jurisdiction = $2
                 ORDER BY created_at
                 "#,
-                id
+                since_journal_entry_id,
+                jurisdiction_code.as_str()
             )
             .fetch_all(connection)
             .await?
         }
-        None => {
+        (Some(since_journal_entry_id), None) => {
             sqlx::query_as!(
                 Record,
                 r#"
-                SELECT id, object_id, jurisdiction, object_type, action, created_at
+                SELECT
+                  id,
+                  object_id,
+                  jurisdiction,
+                  object_type,
+                  action as "action: JournalEntryAction",
+                  created_at
+                FROM journal_entries
+                WHERE created_at > (SELECT created_at FROM journal_entries WHERE id = $1)
+                ORDER BY created_at
+                "#,
+                since_journal_entry_id
+            )
+            .fetch_all(connection)
+            .await?
+        }
+        (None, Some(jurisdiction_code)) => {
+            sqlx::query_as!(
+                Record,
+                r#"
+                SELECT
+                  id,
+                  object_id,
+                  jurisdiction,
+                  object_type,
+                  action as "action: JournalEntryAction",
+                  created_at
+                FROM journal_entries
+                WHERE jurisdiction = $1
+                ORDER BY created_at
+                "#,
+                jurisdiction_code.as_str()
+            )
+            .fetch_all(connection)
+            .await?
+        }
+        (None, None) => {
+            sqlx::query_as!(
+                Record,
+                r#"
+                SELECT
+                  id,
+                  object_id,
+                  jurisdiction,
+                  object_type,
+                  action as "action: JournalEntryAction",
+                  created_at
                 FROM journal_entries
                 ORDER BY created_at
                 "#,
@@ -136,7 +210,7 @@ pub async fn get_journal_entries(
             Ok(JournalEntry {
                 id: entry.id,
                 object_id: entry.object_id,
-                jurisdiction: entry.jurisdiction.try_into().unwrap(),
+                jurisdiction_code: entry.jurisdiction.try_into().unwrap(),
                 object_type: entry.object_type,
                 action: entry.action,
                 created_at: entry.created_at,
@@ -161,6 +235,7 @@ pub async fn get_object_by_id(
     .await?;
 
     Ok(object.map(|object| SignedObject {
+        id: object_id,
         payload: object.payload,
         certificates: object.certificates,
         signature: object.signature,

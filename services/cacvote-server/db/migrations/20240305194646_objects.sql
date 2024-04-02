@@ -6,7 +6,7 @@ CREATE TABLE objects (
     jurisdiction varchar(255) NOT NULL,
 
     -- what type of object is this. de-normalized out of `payload`,
-    -- e.g. "election"
+    -- e.g. "Election"
     object_type varchar(255) NOT NULL,
 
     -- raw object data, must be JSON with fields `object_type` and `data`

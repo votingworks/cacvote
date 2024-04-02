@@ -1,21 +1,21 @@
 CREATE TABLE objects (
     id UUID PRIMARY KEY,
 
-    -- which jurisdiction owns the object. de-normalized out of certificate,
+    -- which jurisdiction owns the object. de-normalized out of certificates,
     -- e.g. "ca.alameda"
     jurisdiction varchar(255) NOT NULL,
 
     -- what type of object is this. de-normalized out of `payload`,
-    -- e.g. "election"
+    -- e.g. "Election"
     object_type varchar(255) NOT NULL,
 
     -- raw object data, must be JSON with fields `object_type` and `data`
     payload BYTEA NOT NULL,
 
-    -- certificate used to sign `payload` to get `signature`
-    certificate BYTEA NOT NULL,
+    -- certificates used to sign `payload` to get `signature`
+    certificates BYTEA NOT NULL,
 
-    -- signature of `data` using `certificate`
+    -- signature of `data` using `certificates`
     signature BYTEA NOT NULL,
 
     -- server sync timestamp, NULL if not synced
@@ -32,7 +32,7 @@ CREATE TABLE journal_entries (
     id UUID PRIMARY KEY,
 
     -- the object that was created or updated
-    object_id UUID NOT NULL REFERENCES objects(id),
+    object_id UUID NOT NULL,
 
     -- which jurisdiction owns the object, must match `jurisdiction` in `objects`
     jurisdiction varchar(255) NOT NULL,

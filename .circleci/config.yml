@@ -745,20 +745,6 @@ jobs:
           command: |
             cargo test -p cacvote-server
 
-  test-crate-controllerd:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p controllerd
-      - run:
-          name: Test
-          command: |
-            cargo test -p controllerd
-
   test-crate-types-rs:
     executor: nodejs
     resource_class: xlarge
@@ -850,7 +836,6 @@ workflows:
       - test-crate-cacvote-jx-terminal-backend
       - test-crate-cacvote-jx-terminal-frontend
       - test-crate-cacvote-server
-      - test-crate-controllerd
       - test-crate-types-rs
       - test-crate-ui-rs
       - test-crate-vx-logging

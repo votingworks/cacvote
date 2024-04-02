@@ -1,5 +1,5 @@
 use reqwest::{Response, Url};
-use types_rs::cacvote::{JournalEntry, SignedObject};
+use types_rs::cacvote::{JournalEntry, JurisdictionCode, SignedObject};
 use uuid::Uuid;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -48,6 +48,13 @@ impl Client {
         )
     }
 
+    /// Check that the server is responding.
+    pub async fn check_status(&self) -> Result<()> {
+        let response = self.get("/api/status").await?;
+        response.error_for_status()?;
+        Ok(())
+    }
+
     /// Create an object on the server.
     pub async fn create_object(&self, signed_object: SignedObject) -> Result<Uuid> {
         let response = self.post_json("/api/objects", &signed_object).await?;
@@ -84,20 +91,40 @@ impl Client {
     ///
     /// ```
     /// # use cacvote_server::client::Client;
+    /// # use types_rs::cacvote::JurisdictionCode;
     /// # async {
     /// # let client = Client::localhost();
     /// // get all journal entries ever
-    /// let entries = client.get_journal_entries(None).await.unwrap();
+    /// let entries = client.get_journal_entries(None, None).await.unwrap();
     ///
     /// // get all journal entries since a specific entry
-    /// let entries = client.get_journal_entries(Some("00000000-0000-0000-0000-000000000000".parse().unwrap())).await.unwrap();
+    /// let entries = client.get_journal_entries(
+    ///     Some(&"00000000-0000-0000-0000-000000000000".parse().unwrap()),
+    ///     None,
+    /// ).await.unwrap();
+    ///
+    /// // get all journal entries for a specific jurisdiction
+    /// let entries = client.get_journal_entries(
+    ///     None,
+    ///     Some(&JurisdictionCode::try_from("st.dev-jurisdiction").unwrap()),
+    /// ).await.unwrap();
     /// # };
     /// ```
-    pub async fn get_journal_entries(&self, since: Option<Uuid>) -> Result<Vec<JournalEntry>> {
-        let params = match since {
-            Some(since) => vec![("since", since.to_string())],
-            None => vec![],
-        };
+    pub async fn get_journal_entries(
+        &self,
+        since: Option<&Uuid>,
+        jurisdiction_code: Option<&JurisdictionCode>,
+    ) -> Result<Vec<JournalEntry>> {
+        let mut params = Vec::new();
+
+        if let Some(since) = since {
+            params.push(("since", since.to_string()));
+        }
+
+        if let Some(jurisdiction_code) = jurisdiction_code {
+            params.push(("jurisdiction", jurisdiction_code.to_string()));
+        }
+
         let url =
             Url::parse_with_params(self.base_url.join("/api/journal-entries")?.as_str(), params)?;
         Ok(self
@@ -138,8 +165,7 @@ mod tests {
         sign::{Signer, Verifier},
         x509::X509,
     };
-    use serde_json::json;
-    use types_rs::cacvote::Payload;
+    use types_rs::cacvote::{JournalEntryAction, JurisdictionCode, Payload, RegistrationRequest};
 
     use super::*;
     use crate::app;
@@ -179,11 +205,11 @@ mod tests {
         public_key: &PKey<Public>,
     ) -> color_eyre::Result<Vec<u8>> {
         let mut signer = Signer::new(MessageDigest::sha256(), private_key)?;
-        signer.update(&payload)?;
+        signer.update(payload)?;
         let signature = signer.sign_to_vec()?;
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), public_key)?;
-        verifier.update(&payload)?;
+        verifier.update(payload)?;
         assert!(verifier.verify(&signature)?);
         Ok(signature)
     }
@@ -192,13 +218,15 @@ mod tests {
     async fn test_client(pool: sqlx::PgPool) -> color_eyre::Result<()> {
         let client = setup(pool)?;
 
-        let entries = client.get_journal_entries(None).await?;
+        let entries = client.get_journal_entries(None, None).await?;
         assert_eq!(entries, vec![]);
 
-        let payload = Payload {
-            data: serde_json::to_vec(&json!({ "hello": "world" }))?,
-            object_type: "test".to_owned(),
-        };
+        let payload = Payload::RegistrationRequest(RegistrationRequest {
+            common_access_card_id: "1234567890".to_owned(),
+            given_name: "John".to_owned(),
+            family_name: "Doe".to_owned(),
+            jurisdiction_code: JurisdictionCode::try_from("st.dev-jurisdiction").unwrap(),
+        });
         let payload = serde_json::to_vec(&payload)?;
         let (certificates, public_key, private_key) = load_keypair()?;
         let signature = sign_and_verify(&payload, &private_key, &public_key)?;
@@ -206,6 +234,7 @@ mod tests {
         // create the object
         let object_id = client
             .create_object(SignedObject {
+                id: Uuid::new_v4(),
                 payload,
                 certificates: certificates.clone(),
                 signature: signature.clone(),
@@ -213,30 +242,63 @@ mod tests {
             .await?;
 
         // check the journal
-        let entries = client.get_journal_entries(None).await?;
+        let entries = client.get_journal_entries(None, None).await?;
         let entry = match entries.as_slice() {
             [entry] => {
                 assert_eq!(entry.object_id, object_id);
-                assert_eq!(entry.action, "create");
-                assert_eq!(entry.object_type, "test");
-                assert_eq!(entry.jurisdiction.as_str(), "st.dev-jurisdiction");
+                assert_eq!(entry.action, JournalEntryAction::Create);
+                assert_eq!(entry.object_type, "RegistrationRequest");
+                assert_eq!(entry.jurisdiction_code.as_str(), "st.dev-jurisdiction");
                 entry
             }
             _ => panic!("expected one journal entry, got: {entries:?}"),
         };
 
+        // filter by jurisdiction code
+        assert_eq!(
+            client
+                .get_journal_entries(
+                    None,
+                    Some(&JurisdictionCode::try_from("st.dev-jurisdiction").unwrap())
+                )
+                .await?,
+            vec![entry.clone()]
+        );
+        assert_eq!(
+            client
+                .get_journal_entries(
+                    None,
+                    Some(&JurisdictionCode::try_from("st.other-jurisdiction").unwrap())
+                )
+                .await?,
+            vec![]
+        );
+
         // check the journal since the last entry
-        assert_eq!(client.get_journal_entries(Some(entry.id)).await?, vec![]);
+        assert_eq!(
+            client.get_journal_entries(Some(&entry.id), None).await?,
+            vec![]
+        );
 
         // get the object
         let signed_object = client.get_object_by_id(object_id).await?.unwrap();
 
-        let round_trip_payload = signed_object.try_to_inner()?;
-        let round_trip_payload_data: serde_json::Value =
-            serde_json::from_slice(&round_trip_payload.data)?;
+        let round_trip_registration_request = match signed_object.try_to_inner()? {
+            Payload::RegistrationRequest(registration_request) => registration_request,
+            other => panic!("expected RegistrationRequest, got: {other:?}"),
+        };
         assert_eq!(signed_object.certificates, certificates);
         assert_eq!(signed_object.signature, signature);
-        assert_eq!(round_trip_payload_data, json!({ "hello": "world" }));
+        assert_eq!(
+            round_trip_registration_request.common_access_card_id,
+            "1234567890"
+        );
+        assert_eq!(round_trip_registration_request.given_name, "John");
+        assert_eq!(round_trip_registration_request.family_name, "Doe");
+        assert_eq!(
+            round_trip_registration_request.jurisdiction_code.as_str(),
+            "st.dev-jurisdiction"
+        );
 
         Ok(())
     }
@@ -245,14 +307,17 @@ mod tests {
     async fn test_invalid_certificate(pool: sqlx::PgPool) -> color_eyre::Result<()> {
         let client = setup(pool)?;
 
-        let payload = Payload {
-            data: serde_json::to_vec(&json!({ "hello": "world" }))?,
-            object_type: "test".to_owned(),
-        };
+        let payload = Payload::RegistrationRequest(RegistrationRequest {
+            common_access_card_id: "1234567890".to_owned(),
+            given_name: "John".to_owned(),
+            family_name: "Doe".to_owned(),
+            jurisdiction_code: JurisdictionCode::try_from("st.dev-jurisdiction").unwrap(),
+        });
         let payload = serde_json::to_vec(&payload)?;
 
         client
             .create_object(SignedObject {
+                id: Uuid::new_v4(),
                 payload,
                 // invalid certificates and signature
                 certificates: vec![],
@@ -262,7 +327,7 @@ mod tests {
             .unwrap_err();
 
         // check that there are no journal entries
-        assert_eq!(client.get_journal_entries(None).await?, vec![]);
+        assert_eq!(client.get_journal_entries(None, None).await?, vec![]);
 
         Ok(())
     }

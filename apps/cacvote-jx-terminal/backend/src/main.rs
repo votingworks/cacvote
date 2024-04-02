@@ -41,6 +41,9 @@
 #![cfg_attr(test, allow(clippy::float_cmp))]
 #![cfg_attr(not(test), warn(clippy::print_stdout, clippy::dbg_macro))]
 
+use std::sync::Arc;
+
+use auth_rs::Watcher;
 use clap::Parser;
 
 mod app;
@@ -51,8 +54,7 @@ mod log;
 mod smartcard;
 mod sync;
 
-use crate::smartcard::StatusGetter;
-pub use smartcard::watch;
+use crate::smartcard::Smartcard;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -62,14 +64,8 @@ async fn main() -> color_eyre::Result<()> {
     log::setup(&config)?;
     let pool = db::setup(&config).await?;
     sync::sync_periodically(&pool, config.clone()).await;
-    let smartcard_watcher = smartcard::watch();
-    app::run(
-        app::setup(
-            pool,
-            config.clone(),
-            StatusGetter::new(smartcard_watcher.readers_with_cards()),
-        ),
-        &config,
-    )
-    .await
+    let smartcard_watcher = Watcher::watch();
+    let smartcard = Smartcard::new(smartcard_watcher.readers_with_cards());
+    let smartcard = Arc::new(smartcard) as smartcard::DynSmartcard;
+    app::run(app::setup(pool, config.clone(), smartcard), &config).await
 }

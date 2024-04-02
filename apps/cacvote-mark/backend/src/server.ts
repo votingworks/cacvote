@@ -3,6 +3,9 @@ import { assertDefined, throwIllegalValue } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
 import { Server } from 'http';
 import { buildApp } from './app';
+import { Client } from './cacvote-server/client';
+import { syncPeriodically } from './cacvote-server/sync';
+import { CACVOTE_URL } from './globals';
 import { Auth } from './types/auth';
 import { Workspace } from './workspace';
 
@@ -63,6 +66,14 @@ function getDefaultAuth(): Auth {
   };
 }
 
+function getCacvoteServerClient(): Client {
+  if (!CACVOTE_URL) {
+    throw new Error('CACVOTE_URL not set');
+  }
+
+  return new Client(CACVOTE_URL);
+}
+
 /**
  * Starts the server with all the default options.
  */
@@ -72,45 +83,14 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
     workspace,
     auth: resolvedAuth,
   });
-
-  async function doCacvoteServerSync() {
-    try {
-      // TODO: sync with CACVote Server
-
-      await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: 'CACVote Server sync succeeded',
-        disposition: 'success',
-      });
-    } catch (err) {
-      await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Failed to sync with CACVote Server: ${err}`,
-        disposition: 'failure',
-      });
-    }
-
-    // run again in 5 seconds
-    setTimeout(doCacvoteServerSync, 1000 * 5);
-  }
-
-  void doCacvoteServerSync().then(
-    () =>
-      logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: 'Started CACVote Server sync',
-        disposition: 'success',
-      }),
-    (err) =>
-      logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Failed to start CACVote Server sync: ${err}`,
-        disposition: 'failure',
-      })
-  );
+  syncPeriodically(getCacvoteServerClient(), workspace.store, logger);
 
   return app.listen(
     port,
     /* istanbul ignore next */
     async () => {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `RaveMark backend running at http://localhost:${port}/`,
+        message: `CACVote Mark backend running at http://localhost:${port}/`,
         disposition: 'success',
       });
     }

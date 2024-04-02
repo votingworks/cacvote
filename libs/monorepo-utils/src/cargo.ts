@@ -3,10 +3,6 @@ import { lines } from '@votingworks/basics';
 import { relative } from 'path';
 import { getAbsoluteRootPath } from './dependencies';
 
-// Ballot interpreter tests are already run by the pnpm package test job
-// patinputd has no tests currently
-const EXCLUDED_PACKAGE_IDS = ['ballot-interpreter', 'patinputd'];
-
 /**
  * Information about Rust cargo crates in the monorepo.
  */
@@ -42,10 +38,6 @@ export function getCargoCrates(root: string): Promise<CargoCrate[]> {
       const name = match[1] as string;
       const version = match[2] as string;
       const absolutePath = match[3] as string;
-
-      if (EXCLUDED_PACKAGE_IDS.includes(name)) {
-        return;
-      }
 
       const workspacePath = relative(absoluteRootPath, absolutePath);
       return { name, version, absolutePath, workspacePath };

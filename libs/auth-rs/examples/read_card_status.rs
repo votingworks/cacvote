@@ -45,12 +45,13 @@ fn main() -> color_eyre::Result<()> {
 
     if let Some(card_reader) = card_reader {
         watcher.stop();
-        match card_reader.read_card_details() {
+        let card = card_reader.get_card()?;
+        match card.read_card_details() {
             Ok(card_details) => {
-                println!("{:#?}", card_details);
+                println!("{card_details:#?}");
             }
             Err(error) => {
-                eprintln!("Error: {}", error);
+                eprintln!("Error: {error}");
             }
         }
     }

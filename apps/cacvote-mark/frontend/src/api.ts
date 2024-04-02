@@ -1,4 +1,8 @@
-import { AuthStatus, type Api } from '@votingworks/cacvote-mark-backend';
+import {
+  AuthStatus,
+  type Api,
+  JurisdictionCode,
+} from '@votingworks/cacvote-mark-backend';
 import React, { useEffect } from 'react';
 import * as grout from '@votingworks/grout';
 import {
@@ -34,15 +38,20 @@ export function createQueryClient(): QueryClient {
   return new QueryClient({ defaultOptions: QUERY_CLIENT_DEFAULT_OPTIONS });
 }
 
-export const getJurisdictions = {
+export const getJurisdictionCodes = {
   queryKey(): QueryKey {
     return ['getJurisdictions'];
   },
   useQuery() {
-    // const apiClient = useApiClient();
+    const apiClient = useApiClient();
     return useQuery(
       this.queryKey(),
-      () => Array.of<{ id: string; name: string }>(),
+      async () => {
+        const jurisdictionCodes = await apiClient.getJurisdictionsCodes();
+        return jurisdictionCodes.length > 0
+          ? jurisdictionCodes
+          : ['st.dev-jurisdiction' as JurisdictionCode];
+      },
       {
         staleTime: Infinity,
       }
@@ -130,7 +139,7 @@ export const createVoterRegistration = {
   useMutation() {
     const apiClient = useApiClient();
     const queryClient = useQueryClient();
-    return useMutation(apiClient.createVoterRegistration, {
+    return useMutation(apiClient.createVoterRegistrationRequest, {
       async onSuccess() {
         await queryClient.invalidateQueries();
       },

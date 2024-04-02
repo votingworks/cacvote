@@ -1,18 +1,33 @@
 import { cac } from '@votingworks/auth';
-import { err, ok, Optional, Result } from '@votingworks/basics';
+import {
+  err,
+  ok,
+  Optional,
+  Result,
+  throwIllegalValue,
+} from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
 import {
   BallotStyleId,
   ElectionDefinition,
-  Id,
   PrecinctId,
+  unsafeParse,
   VotesDict,
 } from '@votingworks/types';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
+import { v4 } from 'uuid';
+import { DateTime } from 'luxon';
 import { Auth, AuthStatus } from './types/auth';
-import { ClientId, RegistrationRequest, ServerId } from './types/db';
 import { Workspace } from './workspace';
+import {
+  JurisdictionCode,
+  Payload,
+  RegistrationRequest,
+  SignedObject,
+  Uuid,
+  UuidSchema,
+} from './cacvote-server/types';
 
 export type VoterStatus =
   | 'unregistered'
@@ -20,40 +35,13 @@ export type VoterStatus =
   | 'registered'
   | 'voted';
 
-export interface CreateTestVoterInput {
-  jurisdictionId?: string;
-
-  registrationRequest?: {
-    /**
-     * Voter's given name, i.e. first name.
-     */
-    givenName?: string;
-
-    /**
-     * Voter's family name, i.e. last name.
-     */
-    familyName?: string;
-  };
-
-  registration?: {
-    /**
-     * Election definition as a JSON string.
-     */
-    electionData?: string;
-
-    /**
-     * Precinct ID to register the voter to.
-     */
-    precinctId?: PrecinctId;
-
-    /**
-     * Ballot style ID to register the voter to.
-     */
-    ballotStyleId?: BallotStyleId;
-  };
-}
-
-function buildApi({ auth }: { auth: Auth; workspace: Workspace }) {
+function buildApi({
+  auth,
+  workspace: { store },
+}: {
+  auth: Auth;
+  workspace: Workspace;
+}) {
   async function getAuthStatus(): Promise<AuthStatus> {
     return await auth.getAuthStatus();
   }
@@ -65,6 +53,10 @@ function buildApi({ auth }: { auth: Auth; workspace: Workspace }) {
       return auth.checkPin(input.pin);
     },
 
+    getJurisdictionsCodes() {
+      return store.getJurisdictionCodes();
+    },
+
     async getVoterStatus(): Promise<Optional<{ status: VoterStatus }>> {
       const authStatus: AuthStatus = await getAuthStatus();
 
@@ -72,8 +64,30 @@ function buildApi({ auth }: { auth: Auth; workspace: Workspace }) {
         return undefined;
       }
 
-      // TODO: get voter status for the user
-      return undefined;
+      const { commonAccessCardId } = authStatus.card;
+
+      // TODO: support more than one registration request for a given voter
+      const registrationRequest = store
+        .forEachRegistrationRequest({ commonAccessCardId })
+        .first();
+
+      if (!registrationRequest) {
+        return { status: 'unregistered' };
+      }
+
+      const registration = store
+        .forEachRegistration({
+          commonAccessCardId,
+          registrationRequestObjectId: registrationRequest.object.getId(),
+        })
+        .first();
+
+      if (!registration) {
+        return { status: 'registration_pending' };
+      }
+
+      // TODO: check for a submitted ballot to see if the voter has voted
+      return { status: 'registered' };
     },
 
     async getRegistrationRequests(): Promise<RegistrationRequest[]> {
@@ -87,14 +101,14 @@ function buildApi({ auth }: { auth: Auth; workspace: Workspace }) {
       return [];
     },
 
-    async createVoterRegistration(input: {
-      jurisdictionId: ServerId;
+    async createVoterRegistrationRequest(input: {
+      jurisdictionCode: JurisdictionCode;
       givenName: string;
       familyName: string;
       pin: string;
     }): Promise<
       Result<
-        { id: Id },
+        { id: Uuid },
         { type: 'not_logged_in' | 'incorrect_pin'; message: string }
       >
     > {
@@ -108,11 +122,50 @@ function buildApi({ auth }: { auth: Auth; workspace: Workspace }) {
         return err({ type: 'incorrect_pin', message: 'Incorrect PIN' });
       }
 
-      const id = ClientId();
+      const registrationRequest = new RegistrationRequest(
+        authStatus.card.commonAccessCardId,
+        input.jurisdictionCode,
+        input.givenName,
+        input.familyName,
+        DateTime.now()
+      );
 
-      // TODO: create registration request
+      const payload =
+        Payload.RegistrationRequest(registrationRequest).toBuffer();
 
-      return ok({ id });
+      const generateSignatureResult = await auth.generateSignature(payload, {
+        pin: input.pin,
+      });
+
+      if (generateSignatureResult.isErr()) {
+        const error = generateSignatureResult.err();
+        switch (error.type) {
+          case 'card_error':
+            return err({
+              type: 'not_logged_in',
+              message: `Card error: ${generateSignatureResult.err().message}`,
+            });
+
+          case 'incorrect_pin':
+            return err({ type: 'incorrect_pin', message: 'Incorrect PIN' });
+
+          default:
+            throwIllegalValue(error);
+        }
+      }
+
+      const certificates = await auth.getCertificate();
+      const objectId = unsafeParse(UuidSchema, v4());
+      const object = new SignedObject(
+        objectId,
+        payload,
+        certificates,
+        generateSignatureResult.ok()
+      );
+
+      (await store.addObject(object)).unsafeUnwrap();
+
+      return ok({ id: objectId });
     },
 
     async getElectionConfiguration(): Promise<
@@ -136,9 +189,9 @@ function buildApi({ auth }: { auth: Auth; workspace: Workspace }) {
     castBallot(_input: {
       votes: VotesDict;
       pin: string;
-    }): Promise<Result<ClientId, cac.GenerateSignatureError>> {
+    }): Promise<Result<Uuid, cac.GenerateSignatureError>> {
       // TODO: cast and print the ballot
-      return Promise.resolve(ok(ClientId()));
+      throw new Error('Not implemented');
     },
 
     logOut() {

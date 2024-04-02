@@ -208,6 +208,23 @@ export class Client {
   }
 
   /**
+   * Prepares a statement for execution.
+   *
+   * @example
+   *
+   * const stmt = client.prepare('select * from muppets where name = ?');
+   *
+   * for (const muppet of ['Kermit', 'Fozzie', 'Gonzo']) {
+   *   console.log(stmt.get(muppet));
+   * }
+   */
+  prepare(sql: string): Database.Statement {
+    queryDebug('prepare %s', sql);
+    const db = this.getDatabase();
+    return db.prepare(sql);
+  }
+
+  /**
    * Runs `sql` to fetch a list of rows.
    *
    * @example
