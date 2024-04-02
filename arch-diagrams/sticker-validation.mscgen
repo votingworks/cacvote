@@ -1,0 +1,18 @@
+msc {
+    bb [ label="Bulletin Board (BB)", textbgcolor="blue", textcolor="white" ],
+    vd [ label="Validation Device", textbgcolor="red", textcolor="white" ],
+    v [ label="Validator", textbgcolor="yellow" ];
+
+    v=>vd  [ label="mailing label including\nSigVS(CAC ID, Election ID, Hash)" ];
+    vd rbox vd  [ label="scan mailing label,\nverify signature" ];
+    vd=>v [ label="CAC ID, Election ID" ];
+    v rbox v  [ label="verify CAC ID and Election ID" ];
+    
+    vd=>bb  [ label="CAC ID (Periodically until\nreceiving a response\n or after a set duration)" ];
+
+    bb=>vd   [label="CAC sig"];
+    vd rbox vd  [ label="compute\nHash'=H(CAC sig)" ];
+    vd rbox vd  [ label="verify Hash=Hash'" ];
+    
+}
+
