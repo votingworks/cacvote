@@ -1,12 +1,15 @@
 use std::fmt;
+use std::ops::Deref;
 use std::str::FromStr;
 
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::election::BallotStyleId;
 use crate::election::ElectionDefinition;
+use crate::election::ElectionHash;
 use crate::election::PrecinctId;
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
@@ -199,10 +202,28 @@ pub enum Payload {
 impl Payload {
     pub fn object_type(&self) -> &'static str {
         match self {
-            Self::RegistrationRequest(_) => "RegistrationRequest",
-            Self::Registration(_) => "Registration",
-            Self::Election(_) => "Election",
+            Self::RegistrationRequest(_) => Self::registration_request_object_type(),
+            Self::Registration(_) => Self::registration_object_type(),
+            Self::Election(_) => Self::election_object_type(),
         }
+    }
+
+    pub fn registration_request_object_type() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Payload` enum.
+        "RegistrationRequest"
+    }
+
+    pub fn registration_object_type() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Payload` enum.
+        "Registration"
+    }
+
+    pub fn election_object_type() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Payload` enum.
+        "Election"
     }
 }
 
@@ -357,6 +378,36 @@ impl JurisdictionScoped for RegistrationRequest {
     }
 }
 
+impl RegistrationRequest {
+    pub fn common_access_card_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `RegistrationRequest` struct.
+        "commonAccessCardId"
+    }
+
+    pub fn jurisdiction_code_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `RegistrationRequest` struct.
+        "jurisdictionCode"
+    }
+
+    pub fn given_name_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `RegistrationRequest` struct.
+        "givenName"
+    }
+
+    pub fn family_name_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `RegistrationRequest` struct.
+        "familyName"
+    }
+
+    pub fn display_name(&self) -> String {
+        format!("{} {}", self.given_name, self.family_name)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Registration {
@@ -374,6 +425,44 @@ impl JurisdictionScoped for Registration {
     }
 }
 
+impl Registration {
+    pub fn common_access_card_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Registration` struct.
+        "commonAccessCardId"
+    }
+
+    pub fn jurisdiction_code_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Registration` struct
+        "jurisdictionCode"
+    }
+
+    pub fn registration_request_object_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Registration` struct
+        "registrationRequestObjectId"
+    }
+
+    pub fn election_object_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Registration` struct
+        "electionObjectId"
+    }
+
+    pub fn ballot_style_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Registration` struct
+        "ballotStyleId"
+    }
+
+    pub fn precinct_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Registration` struct
+        "precinctId"
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Election {
@@ -387,12 +476,22 @@ impl JurisdictionScoped for Election {
     }
 }
 
+impl Deref for Election {
+    type Target = ElectionDefinition;
+
+    fn deref(&self) -> &Self::Target {
+        &self.election_definition
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SessionData {
     Authenticated {
         jurisdiction_code: JurisdictionCode,
-        elections: Vec<ElectionDefinition>,
+        elections: Vec<ElectionPresenter>,
+        pending_registration_requests: Vec<RegistrationRequestPresenter>,
+        registrations: Vec<RegistrationPresenter>,
     },
     Unauthenticated {
         has_smartcard: bool,
@@ -404,5 +503,152 @@ impl Default for SessionData {
         Self::Unauthenticated {
             has_smartcard: false,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateRegistrationData {
+    pub election_id: Uuid,
+    pub registration_request_id: Uuid,
+    pub ballot_style_id: BallotStyleId,
+    pub precinct_id: PrecinctId,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateElectionData {
+    pub election_data: String,
+    pub return_address: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectionPresenter {
+    pub id: Uuid,
+    election: Election,
+}
+
+impl ElectionPresenter {
+    pub fn new(id: Uuid, election: Election) -> Self {
+        Self { id, election }
+    }
+}
+
+impl Deref for ElectionPresenter {
+    type Target = Election;
+
+    fn deref(&self) -> &Self::Target {
+        &self.election
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RegistrationRequestPresenter {
+    pub id: Uuid,
+    registration_request: RegistrationRequest,
+    #[serde(with = "time::serde::iso8601")]
+    created_at: OffsetDateTime,
+}
+
+impl Deref for RegistrationRequestPresenter {
+    type Target = RegistrationRequest;
+
+    fn deref(&self) -> &Self::Target {
+        &self.registration_request
+    }
+}
+
+impl RegistrationRequestPresenter {
+    pub fn new(
+        id: Uuid,
+        registration_request: RegistrationRequest,
+        created_at: OffsetDateTime,
+    ) -> Self {
+        Self {
+            id,
+            registration_request,
+            created_at,
+        }
+    }
+
+    pub fn display_name(&self) -> String {
+        format!(
+            "{} {}",
+            self.registration_request.given_name, self.registration_request.family_name
+        )
+    }
+
+    pub fn created_at(&self) -> OffsetDateTime {
+        self.created_at
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RegistrationPresenter {
+    pub id: Uuid,
+    display_name: String,
+    election_title: String,
+    election_hash: ElectionHash,
+    registration: Registration,
+    #[serde(with = "time::serde::iso8601")]
+    created_at: OffsetDateTime,
+    is_synced: bool,
+}
+
+impl Deref for RegistrationPresenter {
+    type Target = Registration;
+
+    fn deref(&self) -> &Self::Target {
+        &self.registration
+    }
+}
+
+impl RegistrationPresenter {
+    pub fn new(
+        id: Uuid,
+        display_name: String,
+        election_title: String,
+        election_hash: ElectionHash,
+        registration: Registration,
+        created_at: OffsetDateTime,
+        is_synced: bool,
+    ) -> Self {
+        Self {
+            id,
+            display_name,
+            election_title,
+            election_hash,
+            registration,
+            created_at,
+            is_synced,
+        }
+    }
+
+    pub fn display_name(&self) -> String {
+        self.display_name.clone()
+    }
+
+    pub fn election_title(&self) -> String {
+        self.election_title.clone()
+    }
+
+    pub fn election_hash(&self) -> ElectionHash {
+        self.election_hash.clone()
+    }
+
+    pub fn precinct_id(&self) -> PrecinctId {
+        self.precinct_id.clone()
+    }
+
+    pub fn ballot_style_id(&self) -> BallotStyleId {
+        self.ballot_style_id.clone()
+    }
+
+    pub fn is_synced(&self) -> bool {
+        self.is_synced
+    }
+
+    pub fn created_at(&self) -> OffsetDateTime {
+        self.created_at
     }
 }

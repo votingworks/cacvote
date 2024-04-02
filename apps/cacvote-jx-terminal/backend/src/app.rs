@@ -22,7 +22,9 @@ use tokio_stream::StreamExt;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote::{Election, Payload, SessionData, SignedObject};
+use types_rs::cacvote::{
+    CreateRegistrationData, Election, Payload, Registration, SessionData, SignedObject,
+};
 use types_rs::election::ElectionDefinition;
 use uuid::Uuid;
 
@@ -70,12 +72,16 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
                         if card_details.jurisdiction_code() == jurisdiction_code =>
                     {
                         let elections = db::get_elections(&mut connection).await.unwrap();
+                        let pending_registration_requests =
+                            db::get_pending_registration_requests(&mut connection)
+                                .await
+                                .unwrap();
+                        let registrations = db::get_registrations(&mut connection).await.unwrap();
                         SessionData::Authenticated {
                             jurisdiction_code: jurisdiction_code.clone(),
-                            elections: elections
-                                .into_iter()
-                                .map(|e| e.election_definition)
-                                .collect(),
+                            elections,
+                            pending_registration_requests,
+                            registrations,
                         }
                     }
                     Some(_) => SessionData::Unauthenticated {
@@ -97,6 +103,7 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
         .route("/api/status-stream", get(get_status_stream))
         .route("/api/elections", get(get_elections))
         .route("/api/elections", post(create_election))
+        .route("/api/registrations", post(create_registration))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
         .with_state(AppState {
@@ -214,6 +221,113 @@ async fn create_election(
     let payload = Payload::Election(Election {
         jurisdiction_code,
         election_definition,
+    });
+    let serialized_payload = match serde_json::to_vec(&payload) {
+        Ok(serialized_payload) => serialized_payload,
+        Err(e) => {
+            tracing::error!("error serializing payload: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error serializing payload" })),
+            );
+        }
+    };
+
+    let signed = match smartcard.sign(&serialized_payload, None) {
+        Ok(signed) => signed,
+        Err(e) => {
+            tracing::error!("error signing payload: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error signing payload" })),
+            );
+        }
+    };
+    let certificates: Vec<u8> = match signed
+        .cert_stack
+        .iter()
+        .map(|cert| cert.to_pem())
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(certificates) => certificates.concat(),
+        Err(e) => {
+            tracing::error!("error converting certificates to PEM: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error converting certificates to PEM" })),
+            );
+        }
+    };
+    let signed_object = SignedObject {
+        id: Uuid::new_v4(),
+        payload: serialized_payload,
+        certificates,
+        signature: signed.data,
+    };
+
+    if let Err(e) = db::add_object(&mut connection, &signed_object).await {
+        tracing::error!("error adding object to database: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error adding object to database" })),
+        );
+    }
+
+    (StatusCode::CREATED, Json(json!({ "id": signed_object.id })))
+}
+
+async fn create_registration(
+    State(AppState {
+        pool, smartcard, ..
+    }): State<AppState>,
+    Json(CreateRegistrationData {
+        registration_request_id,
+        election_id,
+        ballot_style_id,
+        precinct_id,
+    }): Json<CreateRegistrationData>,
+) -> impl IntoResponse {
+    let jurisdiction_code = match smartcard.get_card_details() {
+        Some(card_details) => card_details.card_details.jurisdiction_code(),
+        None => {
+            tracing::error!("no card details found");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "no card details found" })),
+            );
+        }
+    };
+
+    let mut connection = match pool.acquire().await {
+        Ok(connection) => connection,
+        Err(e) => {
+            tracing::error!("error getting database connection: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error getting database connection" })),
+            );
+        }
+    };
+
+    let registration_request =
+        match db::get_registration_request(&mut connection, registration_request_id).await {
+            Ok(registration_request) => registration_request,
+            Err(e) => {
+                tracing::error!("error getting registration request from database: {e}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": "error getting registration request from database" })),
+                );
+            }
+        };
+
+    let payload = Payload::Registration(Registration {
+        jurisdiction_code,
+        common_access_card_id: registration_request.common_access_card_id,
+        registration_request_object_id: registration_request_id,
+        election_object_id: election_id,
+        ballot_style_id,
+        precinct_id,
     });
     let serialized_payload = match serde_json::to_vec(&payload) {
         Ok(serialized_payload) => serialized_payload,
