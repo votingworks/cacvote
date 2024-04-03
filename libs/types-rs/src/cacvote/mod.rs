@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::cdf::cvr::Cvr;
 use crate::election::BallotStyleId;
 use crate::election::ElectionDefinition;
 use crate::election::ElectionHash;
@@ -197,6 +198,7 @@ pub enum Payload {
     RegistrationRequest(RegistrationRequest),
     Registration(Registration),
     Election(Election),
+    CastBallot(CastBallot),
 }
 
 impl Payload {
@@ -205,6 +207,7 @@ impl Payload {
             Self::RegistrationRequest(_) => Self::registration_request_object_type(),
             Self::Registration(_) => Self::registration_object_type(),
             Self::Election(_) => Self::election_object_type(),
+            Self::CastBallot(_) => Self::cast_ballot_object_type(),
         }
     }
 
@@ -225,6 +228,12 @@ impl Payload {
         // `Payload` enum.
         "Election"
     }
+
+    pub fn cast_ballot_object_type() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Payload` enum.
+        "CastBallot"
+    }
 }
 
 impl JurisdictionScoped for Payload {
@@ -233,6 +242,7 @@ impl JurisdictionScoped for Payload {
             Self::RegistrationRequest(request) => request.jurisdiction_code(),
             Self::Registration(registration) => registration.jurisdiction_code(),
             Self::Election(election) => election.jurisdiction_code(),
+            Self::CastBallot(cast_ballot) => cast_ballot.jurisdiction_code(),
         }
     }
 }
@@ -486,12 +496,115 @@ impl Deref for Election {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CastBallot {
+    pub common_access_card_id: String,
+    pub jurisdiction_code: JurisdictionCode,
+    pub registration_request_object_id: Uuid,
+    pub registration_object_id: Uuid,
+    pub election_object_id: Uuid,
+    pub cvr: Cvr,
+}
+
+impl CastBallot {
+    pub fn registration_request_object_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `CastBallot` struct.
+        "registrationRequestObjectId"
+    }
+
+    pub fn registration_object_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `CastBallot` struct.
+        "registrationObjectId"
+    }
+
+    pub fn election_object_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `CastBallot` struct.
+        "electionObjectId"
+    }
+}
+
+impl JurisdictionScoped for CastBallot {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        self.jurisdiction_code.clone()
+    }
+}
+
+impl Deref for CastBallot {
+    type Target = Cvr;
+
+    fn deref(&self) -> &Self::Target {
+        &self.cvr
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CastBallotPresenter {
+    cast_ballot: CastBallot,
+    registration_request: RegistrationRequest,
+    registration: Registration,
+    verification_status: VerificationStatus,
+    #[serde(with = "time::serde::iso8601")]
+    created_at: OffsetDateTime,
+}
+
+impl CastBallotPresenter {
+    pub const fn new(
+        cast_ballot: CastBallot,
+        registration_request: RegistrationRequest,
+        registration: Registration,
+        verification_status: VerificationStatus,
+        created_at: OffsetDateTime,
+    ) -> Self {
+        Self {
+            cast_ballot,
+            registration_request,
+            registration,
+            verification_status,
+            created_at,
+        }
+    }
+
+    pub fn registration(&self) -> &Registration {
+        &self.registration
+    }
+
+    pub fn registration_request(&self) -> &RegistrationRequest {
+        &self.registration_request
+    }
+
+    pub fn cvr(&self) -> &Cvr {
+        &self.cvr
+    }
+
+    pub fn created_at(&self) -> OffsetDateTime {
+        self.created_at
+    }
+
+    pub fn verification_status(&self) -> &VerificationStatus {
+        &self.verification_status
+    }
+}
+
+impl Deref for CastBallotPresenter {
+    type Target = CastBallot;
+
+    fn deref(&self) -> &Self::Target {
+        &self.cast_ballot
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum SessionData {
     Authenticated {
         jurisdiction_code: JurisdictionCode,
         elections: Vec<ElectionPresenter>,
         pending_registration_requests: Vec<RegistrationRequestPresenter>,
         registrations: Vec<RegistrationPresenter>,
+        cast_ballots: Vec<CastBallotPresenter>,
     },
     Unauthenticated {
         has_smartcard: bool,

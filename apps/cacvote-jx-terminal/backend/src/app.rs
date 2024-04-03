@@ -77,11 +77,13 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
                                 .await
                                 .unwrap();
                         let registrations = db::get_registrations(&mut connection).await.unwrap();
+                        let cast_ballots = db::get_cast_ballots(&mut connection).await.unwrap();
                         SessionData::Authenticated {
                             jurisdiction_code: jurisdiction_code.clone(),
                             elections,
                             pending_registration_requests,
                             registrations,
+                            cast_ballots,
                         }
                     }
                     Some(_) => SessionData::Unauthenticated {

@@ -43,7 +43,7 @@ pub async fn create_object(
 
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
         tracing::error!(
-            "no jurisdiction found in object: {:?} (try_to_inner={:?}",
+            "no jurisdiction found in object: {:?} (try_to_inner={:?})",
             object,
             object.try_to_inner(),
         );

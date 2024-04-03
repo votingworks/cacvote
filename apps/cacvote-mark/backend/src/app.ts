@@ -1,5 +1,6 @@
 import { cac } from '@votingworks/auth';
 import {
+  asyncResultBlock,
   err,
   ok,
   Optional,
@@ -8,7 +9,9 @@ import {
 } from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
 import {
+  BallotIdSchema,
   BallotStyleId,
+  BallotType,
   ElectionDefinition,
   PrecinctId,
   unsafeParse,
@@ -16,18 +19,23 @@ import {
 } from '@votingworks/types';
 import express, { Application } from 'express';
 import { isDeepStrictEqual } from 'util';
-import { v4 } from 'uuid';
 import { DateTime } from 'luxon';
+import { buildCastVoteRecord, VX_MACHINE_ID } from '@votingworks/backend';
+import { execFileSync } from 'child_process';
+import { z } from 'zod';
+import * as mailingLabel from './mailing_label';
 import { Auth, AuthStatus } from './types/auth';
 import { Workspace } from './workspace';
 import {
+  CastBallot,
+  Election,
   JurisdictionCode,
   Payload,
   RegistrationRequest,
   SignedObject,
   Uuid,
-  UuidSchema,
 } from './cacvote-server/types';
+import { MAILING_LABEL_PRINTER } from './globals';
 
 export type VoterStatus =
   | 'unregistered'
@@ -155,7 +163,7 @@ function buildApi({
       }
 
       const certificates = await auth.getCertificate();
-      const objectId = unsafeParse(UuidSchema, v4());
+      const objectId = Uuid();
       const object = new SignedObject(
         objectId,
         payload,
@@ -181,17 +189,153 @@ function buildApi({
         return undefined;
       }
 
-      // TODO: get election configuration for the user
-      return undefined;
+      const registrationInfo = store
+        .forEachRegistration({
+          commonAccessCardId: authStatus.card.commonAccessCardId,
+        })
+        .first();
+
+      if (!registrationInfo) {
+        return undefined;
+      }
+
+      const electionObjectId =
+        registrationInfo.registration.getElectionObjectId();
+      const electionObject = store.getObjectById(electionObjectId);
+
+      if (!electionObject) {
+        throw new Error(`Election not found: ${electionObjectId}`);
+      }
+
+      const electionPayloadResult = electionObject.getPayload();
+
+      if (electionPayloadResult.isErr()) {
+        throw new Error(electionPayloadResult.err().message);
+      }
+
+      const electionPayload = electionPayloadResult.ok();
+      const election = electionPayload.getData();
+
+      if (!(election instanceof Election)) {
+        throw new Error(
+          `Expected 'Election' but was ${electionPayload.getObjectType()}`
+        );
+      }
+
+      return {
+        electionDefinition: election.getElectionDefinition(),
+        ballotStyleId: registrationInfo.registration.getBallotStyleId(),
+        precinctId: registrationInfo.registration.getPrecinctId(),
+      };
     },
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    castBallot(_input: {
+    castBallot(input: {
       votes: VotesDict;
       pin: string;
-    }): Promise<Result<Uuid, cac.GenerateSignatureError>> {
-      // TODO: cast and print the ballot
-      throw new Error('Not implemented');
+    }): Promise<
+      Result<
+        { id: Uuid },
+        cac.GenerateSignatureError | SyntaxError | z.ZodError
+      >
+    > {
+      return asyncResultBlock(async (bail) => {
+        const authStatus = await getAuthStatus();
+
+        if (authStatus.status !== 'has_card') {
+          throw new Error('Not logged in');
+        }
+
+        const { commonAccessCardId } = authStatus.card;
+        // TODO: Handle multiple registrations
+        const registration = store
+          .forEachRegistration({ commonAccessCardId })
+          .first();
+
+        if (!registration) {
+          throw new Error('Not registered');
+        }
+
+        const electionObjectId =
+          registration.registration.getElectionObjectId();
+        const electionObject = store.getObjectById(electionObjectId);
+
+        if (!electionObject) {
+          throw new Error(`Election not found: ${electionObjectId}`);
+        }
+
+        const electionPayload = electionObject.getPayload().okOrElse(bail);
+        const election = electionPayload.getData();
+
+        if (!(election instanceof Election)) {
+          throw new Error(
+            `Expected 'Election' but was ${electionPayload.getObjectType()}`
+          );
+        }
+
+        const electionDefinition = election.getElectionDefinition();
+        if (!electionDefinition) {
+          throw new Error('no election definition found for registration');
+        }
+
+        const ballotId = Uuid();
+        const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
+        const castVoteRecord = buildCastVoteRecord({
+          electionDefinition,
+          electionId: electionDefinition.electionHash,
+          scannerId: VX_MACHINE_ID,
+          // TODO: what should the batch ID be?
+          batchId: '',
+          castVoteRecordId,
+          interpretation: {
+            type: 'InterpretedBmdPage',
+            metadata: {
+              ballotStyleId: registration.registration.getBallotStyleId(),
+              precinctId: registration.registration.getPrecinctId(),
+              ballotType: BallotType.Absentee,
+              electionHash: electionDefinition.electionHash,
+              // TODO: support test mode
+              isTestMode: false,
+            },
+            votes: input.votes,
+          },
+          ballotMarkingMode: 'machine',
+        });
+
+        const pdf = await mailingLabel.buildPdf();
+
+        execFileSync(
+          'lpr',
+          ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
+          { input: pdf }
+        );
+
+        const payload = Payload.CastBallot(
+          new CastBallot(
+            authStatus.card.commonAccessCardId,
+            election.getJurisdictionCode(),
+            registration.registration.getRegistrationRequestObjectId(),
+            registration.object.getId(),
+            electionObjectId,
+            castVoteRecord
+          )
+        );
+
+        const signature = (
+          await auth.generateSignature(payload.toBuffer(), { pin: input.pin })
+        ).okOrElse(bail);
+        const commonAccessCardCertificate = await auth.getCertificate();
+        const objectId = Uuid();
+        const object = new SignedObject(
+          objectId,
+          payload.toBuffer(),
+          commonAccessCardCertificate,
+          signature
+        );
+
+        (await store.addObject(object)).unsafeUnwrap();
+
+        return ok({ id: objectId });
+      });
     },
 
     logOut() {
