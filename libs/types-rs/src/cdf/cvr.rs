@@ -497,10 +497,6 @@ pub struct Cvr {
     /// The sequence number for this CVR. This represents the ordinal number that this CVR was processed by the tabulating device.
     #[serde(rename = "UniqueId", skip_serializing_if = "Option::is_none")]
     pub unique_id: Option<String>,
-
-    /// Indicates whether the ballot is an absentee or precinct ballot.
-    #[serde(rename = "vxBallotType")]
-    pub vx_ballot_type: VxBallotType,
 }
 
 impl Default for Cvr {
@@ -521,49 +517,6 @@ impl Default for Cvr {
             election_id: "".to_string(),
             party_ids: None,
             unique_id: None,
-            vx_ballot_type: VxBallotType::Precinct,
-        }
-    }
-}
-
-/// Used in `CVR::vxBallotType` to indicate whether the ballot is an absentee or
-/// precinct ballot.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
-pub enum VxBallotType {
-    #[serde(rename = "precinct")]
-    Precinct,
-
-    #[serde(rename = "absentee")]
-    Absentee,
-
-    #[serde(rename = "provisional")]
-    Provisional,
-}
-
-impl VxBallotType {
-    pub fn max() -> u32 {
-        // updating this value is a breaking change
-        2u32.pow(4) - 1
-    }
-}
-
-impl From<VxBallotType> for u32 {
-    fn from(vx_ballot_type: VxBallotType) -> Self {
-        match vx_ballot_type {
-            VxBallotType::Precinct => 0,
-            VxBallotType::Absentee => 1,
-            VxBallotType::Provisional => 2,
-        }
-    }
-}
-
-impl From<u32> for VxBallotType {
-    fn from(vx_ballot_type: u32) -> Self {
-        match vx_ballot_type {
-            0 => VxBallotType::Precinct,
-            1 => VxBallotType::Absentee,
-            2 => VxBallotType::Provisional,
-            _ => panic!("Invalid VxBallotType"),
         }
     }
 }
@@ -959,56 +912,6 @@ pub struct CastVoteRecordReport {
     /// The version of the CVR specification being used (1.0).
     #[serde(rename = "Version")]
     pub version: CastVoteRecordVersion,
-
-    /// List of scanner batches with metadata.
-    #[serde(rename = "vxBatch")]
-    vx_batch: Vec<VxBatch>,
-}
-
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
-pub enum VxBatchObjectType {
-    #[serde(rename = "CVR.vxBatch")]
-    #[default]
-    VxBatch,
-}
-
-/// Entity containing metadata about a scanned batch. Cast vote records link to batches via CVR::BatchId.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize)]
-pub struct VxBatch {
-    #[serde(rename = "@id")]
-    pub id: String,
-
-    #[serde(rename = "@type")]
-    pub object_type: VxBatchObjectType,
-
-    /// A human readable label for the batch.
-    #[serde(rename = "BatchLabel")]
-    batch_label: String,
-
-    /// The ordinal number of the batch in the tabulator's sequence of batches in a given election.
-    #[serde(rename = "SequenceId")]
-    sequence_id: u64,
-
-    /// The start time of the batch. On a precinct scanner, the start time is when the polls are opened or voting is resumed. On a central scanner, the start time is when the user initiates scanning a batch.
-    #[serde(rename = "StartTime", with = "time::serde::iso8601")]
-    start_time: OffsetDateTime,
-
-    /// The end time of the batch. On a precinct scanner, the end time is when the polls are closed or voting is paused. On a central scanner, the end time is when a batch scan is complete
-    #[serde(
-        rename = "EndTime",
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "time::serde::iso8601::option"
-    )]
-    end_time: Option<OffsetDateTime>,
-
-    /// The number of sheets included in a batch.
-    #[serde(rename = "NumberSheets")]
-    number_sheets: u64,
-
-    /// The tabulator that created the batch.
-    #[serde(rename = "CreatingDeviceId")]
-    creating_device_id: String,
 }
 
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Deserialize, Serialize, Default)]
