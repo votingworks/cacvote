@@ -12,6 +12,7 @@ pub fn AppLayout(cx: Scope) -> Element {
     use_shared_state_provider(cx, SessionData::default);
     let session_data = use_shared_state::<SessionData>(cx).unwrap();
     let nav = use_navigator(cx);
+    let route: Route = use_route(cx).unwrap();
 
     use_coroutine(cx, {
         to_owned![nav, session_data];
@@ -21,15 +22,17 @@ pub fn AppLayout(cx: Scope) -> Element {
 
             let callback = Closure::wrap(Box::new(move |event: MessageEvent| {
                 if let Some(data) = event.data().as_string() {
-                    log::info!("received status event: {:?}", data);
+                    log::info!("received status event: {data:?}");
                     match serde_json::from_str::<SessionData>(&data) {
                         Ok(new_session_data) => {
-                            log::info!("updating session data: {:?}", new_session_data);
+                            log::info!("updating session data: {new_session_data:?}");
 
                             match new_session_data {
                                 SessionData::Authenticated { .. } => {
-                                    log::info!("redirecting to elections page");
-                                    nav.push(Route::ElectionsPage);
+                                    if matches!(route, Route::MachineLockedPage) {
+                                        log::info!("redirecting to elections page");
+                                        nav.push(Route::ElectionsPage);
+                                    }
                                 }
                                 SessionData::Unauthenticated { .. } => {
                                     log::info!("redirecting to machine locked page");
