@@ -426,13 +426,106 @@ pub(crate) async fn get_journal_entries_for_objects_to_pull(
             created_at
         FROM journal_entries
         WHERE object_id IS NOT NULL
-          AND object_type IN ($1)
+          AND object_type IN ($1, $2)
           AND object_id NOT IN (SELECT id FROM objects)
         "#,
         cacvote::Payload::registration_request_object_type(),
+        cacvote::Payload::cast_ballot_object_type(),
     )
     .fetch_all(&mut *executor)
     .await?)
+}
+
+pub(crate) async fn get_cast_ballots(
+    executor: &mut sqlx::PgConnection,
+) -> color_eyre::Result<Vec<cacvote::CastBallotPresenter>> {
+    let records = sqlx::query!(
+        r#"
+        SELECT
+            cb.id AS cast_ballot_id,
+            cb.payload AS cast_ballot_payload,
+            cb.certificates AS cast_ballot_certificates,
+            cb.signature AS cast_ballot_signature,
+            rr.id AS registration_request_id,
+            rr.payload AS registration_request_payload,
+            rr.certificates AS registration_request_certificates,
+            rr.signature AS registration_request_signature,
+            r.id AS registration_id,
+            r.payload AS registration_payload,
+            r.certificates AS registration_certificates,
+            r.signature AS registration_signature,
+            cb.created_at AS created_at
+        FROM objects AS cb
+        -- join on registration request
+        INNER JOIN objects AS rr
+            ON (convert_from(cb.payload, 'UTF8')::jsonb ->> $1)::uuid = rr.id
+        -- join on registration
+        INNER JOIN objects AS r
+            ON (convert_from(cb.payload, 'UTF8')::jsonb ->> $2)::uuid = r.id
+        WHERE rr.object_type = $3
+          AND cb.object_type = $4
+          AND r.object_type = $5
+        ORDER BY cb.created_at DESC
+        "#,
+        cacvote::CastBallot::registration_request_object_id_field_name(),
+        cacvote::CastBallot::registration_object_id_field_name(),
+        cacvote::Payload::registration_request_object_type(),
+        cacvote::Payload::cast_ballot_object_type(),
+        cacvote::Payload::registration_object_type(),
+    )
+    .fetch_all(&mut *executor)
+    .await?;
+
+    let mut cast_ballots = Vec::new();
+
+    for record in records {
+        let cast_ballot_object = cacvote::SignedObject {
+            id: record.cast_ballot_id,
+            payload: record.cast_ballot_payload,
+            certificates: record.cast_ballot_certificates,
+            signature: record.cast_ballot_signature,
+        };
+        let registration_object = cacvote::SignedObject {
+            id: record.registration_id,
+            payload: record.registration_payload,
+            certificates: record.registration_certificates,
+            signature: record.registration_signature,
+        };
+        let registration_request_object = cacvote::SignedObject {
+            id: record.registration_request_id,
+            payload: record.registration_request_payload,
+            certificates: record.registration_request_certificates,
+            signature: record.registration_request_signature,
+        };
+
+        if let cacvote::Payload::CastBallot(cast_ballot) = cast_ballot_object.try_to_inner()? {
+            if let cacvote::Payload::RegistrationRequest(registration_request) =
+                registration_request_object.try_to_inner()?
+            {
+                if let cacvote::Payload::Registration(registration) =
+                    registration_object.try_to_inner()?
+                {
+                    // TODO: remove this or replace with actual verification status
+                    // we already verify the signature as part of adding the object to the DB,
+                    // so we can assume that the verification status is success
+                    let verification_status = cacvote::VerificationStatus::Success {
+                        common_access_card_id: cast_ballot.common_access_card_id.clone(),
+                        display_name: "test".to_owned(),
+                    };
+                    let created_at = record.created_at;
+                    cast_ballots.push(cacvote::CastBallotPresenter::new(
+                        cast_ballot,
+                        registration_request,
+                        registration,
+                        verification_status,
+                        created_at,
+                    ));
+                }
+            }
+        }
+    }
+
+    Ok(cast_ballots)
 }
 
 #[cfg(test)]

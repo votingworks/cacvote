@@ -6,17 +6,14 @@ use crate::{components::ElectionConfigurationCell, util::url::get_url};
 
 pub fn VotersPage(cx: Scope) -> Element {
     let session_data = use_shared_state::<cacvote::SessionData>(cx).unwrap();
-    let session_data = &*session_data.read();
-    let (elections, pending_registration_requests, registrations) = match session_data {
-        SessionData::Authenticated {
-            elections,
-            pending_registration_requests,
-            registrations,
-            ..
-        } => (elections, pending_registration_requests, registrations),
-        SessionData::Unauthenticated { .. } => {
-            return render!(h1 { class: "text-2xl font-bold", "Please log in to view this page" })
-        }
+    let SessionData::Authenticated {
+        elections,
+        pending_registration_requests,
+        registrations,
+        ..
+    } = &*session_data.read()
+    else {
+        return render!(h1 { class: "text-2xl font-bold", "Please log in to view this page" });
     };
 
     render!(
