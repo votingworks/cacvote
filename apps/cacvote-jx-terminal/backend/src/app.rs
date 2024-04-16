@@ -183,7 +183,7 @@ async fn create_election(
     State(AppState {
         pool, smartcard, ..
     }): State<AppState>,
-    Json(mut election): Json<Election>,
+    Json(election): Json<Election>,
 ) -> impl IntoResponse {
     let jurisdiction_code = match smartcard.get_card_details() {
         Some(card_details) => card_details.card_details.jurisdiction_code(),
@@ -196,7 +196,12 @@ async fn create_election(
         }
     };
 
-    election.jurisdiction_code = jurisdiction_code;
+    if election.jurisdiction_code != jurisdiction_code {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "jurisdiction_code does not match card details" })),
+        );
+    }
 
     let mut connection = match pool.acquire().await {
         Ok(connection) => connection,
