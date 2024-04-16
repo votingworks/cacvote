@@ -225,50 +225,6 @@ export function buildSvg({
             )
           ),
 
-          // Return Address
-          offset(
-            { x: 12, y: 84 + 35 },
-            svg(
-              { width: inner.width, height: 96 },
-              text('Jane Doe', {
-                x: 0,
-                y: 0,
-                'dominant-baseline': 'hanging',
-                'font-size': 10,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('Example Military Base', {
-                x: 0,
-                y: 11,
-                'dominant-baseline': 'hanging',
-                'font-size': 10,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('1234 Main St', {
-                x: 0,
-                y: 22,
-                'dominant-baseline': 'hanging',
-                'font-size': 10,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('Anytown, CA 95959', {
-                x: 0,
-                y: 33,
-                'dominant-baseline': 'hanging',
-                'font-size': 10,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              })
-            )
-          ),
-
           // Shipping Address
           offset(
             { x: 12, y: 84 + 35 + 39 + 13 + 55 },
