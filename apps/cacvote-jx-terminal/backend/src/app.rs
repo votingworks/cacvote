@@ -8,7 +8,6 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use auth_rs::card_details::CardDetailsWithAuthInfo;
-use axum::body::Bytes;
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::Sse;
 use axum::routing::post;
@@ -25,7 +24,6 @@ use tracing::Level;
 use types_rs::cacvote::{
     CreateRegistrationData, Election, Payload, Registration, SessionData, SignedObject,
 };
-use types_rs::election::ElectionDefinition;
 use uuid::Uuid;
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
@@ -185,7 +183,7 @@ async fn create_election(
     State(AppState {
         pool, smartcard, ..
     }): State<AppState>,
-    body: Bytes,
+    Json(mut election): Json<Election>,
 ) -> impl IntoResponse {
     let jurisdiction_code = match smartcard.get_card_details() {
         Some(card_details) => card_details.card_details.jurisdiction_code(),
@@ -198,16 +196,7 @@ async fn create_election(
         }
     };
 
-    let election_definition = match ElectionDefinition::try_from(&body[..]) {
-        Ok(election_definition) => election_definition,
-        Err(e) => {
-            tracing::error!("error parsing election definition: {e}");
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": format!("error parsing election definition: {e}") })),
-            );
-        }
-    };
+    election.jurisdiction_code = jurisdiction_code;
 
     let mut connection = match pool.acquire().await {
         Ok(connection) => connection,
@@ -220,11 +209,7 @@ async fn create_election(
         }
     };
 
-    let payload = Payload::Election(Election {
-        jurisdiction_code,
-        election_definition,
-        mailing_address: "Ballot Receiving Center\n1234 Main St\nAnytown, CA 95959".to_owned(),
-    });
+    let payload = Payload::Election(election);
     let serialized_payload = match serde_json::to_vec(&payload) {
         Ok(serialized_payload) => serialized_payload,
         Err(e) => {

@@ -567,6 +567,7 @@ mod tests {
         let election_payload = cacvote::Payload::Election(cacvote::Election {
             jurisdiction_code: jurisdiction_code.clone(),
             election_definition: election_definition.clone(),
+            mailing_address: "123 Main St".to_owned(),
         });
         let election_object = cacvote::SignedObject::from_payload(
             &election_payload,
