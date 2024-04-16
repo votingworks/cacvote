@@ -478,6 +478,7 @@ impl Registration {
 pub struct Election {
     pub jurisdiction_code: JurisdictionCode,
     pub election_definition: ElectionDefinition,
+    pub mailing_address: String,
 }
 
 impl JurisdictionScoped for Election {

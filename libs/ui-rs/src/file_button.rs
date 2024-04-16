@@ -74,6 +74,7 @@ pub fn FileButton<'a>(cx: Scope<'a, Props<'a>>) -> Element {
         }
         Button {
             class: cx.props.class.unwrap_or(""),
+            disabled: cx.props.disabled.unwrap_or(false),
             &cx.props.children
             onclick: {
                 to_owned![id];

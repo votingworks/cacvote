@@ -301,7 +301,9 @@ function buildApi({
           ballotMarkingMode: 'machine',
         });
 
-        const pdf = await mailingLabel.buildPdf();
+        const pdf = await mailingLabel.buildPdf({
+          mailingAddress: election.getMailingAddress(),
+        });
 
         execFileSync(
           'lpr',
