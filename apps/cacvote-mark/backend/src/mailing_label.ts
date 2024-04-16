@@ -72,11 +72,11 @@ function trackingNumberBarcode({
   return g({}, ...lines);
 }
 
-export function buildSvg2(): string {
-  return xml({});
-}
-
-export function buildSvg(): string {
+export function buildSvg({
+  mailingAddress,
+}: {
+  mailingAddress: string;
+}): string {
   const padding = {
     x: 5.76,
     y: 12.48,
@@ -87,6 +87,8 @@ export function buildSvg(): string {
   } as const;
   const thickBorderSize = 4;
   const mediumBorderSize = 3;
+
+  const mailingAddressLines = mailingAddress.split('\n').map((l) => l.trim());
 
   return xml(
     svg(
@@ -290,33 +292,17 @@ export function buildSvg(): string {
                 fill: 'black',
                 style: 'text-transform: uppercase;',
               }),
-              text('Ballot Receiving Center', {
-                x: 55,
-                y: 0,
-                'dominant-baseline': 'hanging',
-                'font-size': 14,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('1234 Main St', {
-                x: 55,
-                y: 16,
-                'dominant-baseline': 'hanging',
-                'font-size': 14,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('Anytown, CA 95959', {
-                x: 55,
-                y: 32,
-                'dominant-baseline': 'hanging',
-                'font-size': 14,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              })
+              ...mailingAddressLines.map((l, i) =>
+                text(l, {
+                  x: 55,
+                  y: i * 16,
+                  'dominant-baseline': 'hanging',
+                  'font-size': 14,
+                  'font-family': 'open-sans, sans-serif',
+                  fill: 'black',
+                  style: 'text-transform: uppercase;',
+                })
+              )
             )
           ),
 
@@ -361,8 +347,12 @@ export function buildSvg(): string {
   ).toString();
 }
 
-export async function buildPdf(): Promise<Buffer> {
-  const content = buildSvg();
+export async function buildPdf({
+  mailingAddress,
+}: {
+  mailingAddress: string;
+}): Promise<Buffer> {
+  const content = buildSvg({ mailingAddress });
   const userDataDirTemp = dirSync({ unsafeCleanup: true });
   const browser = await puppeteer.launch({
     executablePath: '/usr/bin/chromium',

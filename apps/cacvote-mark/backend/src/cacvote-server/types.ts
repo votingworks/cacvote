@@ -129,7 +129,8 @@ export const JournalEntrySchema: z.ZodSchema<JournalEntry> =
 export class Election {
   constructor(
     private readonly jurisdictionCode: JurisdictionCode,
-    private readonly electionDefinition: ElectionDefinition
+    private readonly electionDefinition: ElectionDefinition,
+    private readonly mailingAddress: string
   ) {}
 
   getJurisdictionCode(): JurisdictionCode {
@@ -140,10 +141,15 @@ export class Election {
     return this.electionDefinition;
   }
 
+  getMailingAddress(): string {
+    return this.mailingAddress;
+  }
+
   toJSON(): unknown {
     return {
       jurisdictionCode: this.jurisdictionCode,
       electionDefinition: this.electionDefinition,
+      mailingAddress: this.mailingAddress,
     };
   }
 }
@@ -154,11 +160,13 @@ const ElectionStructSchema = z.object({
     .string()
     .transform((s) => Buffer.from(s, 'base64').toString('utf-8'))
     .transform((s) => safeParseElectionDefinition(s).unsafeUnwrap()),
+  mailingAddress: z.string(),
 });
 
 export const ElectionSchema: z.ZodSchema<Election> =
   ElectionStructSchema.transform(
-    (o) => new Election(o.jurisdictionCode, o.electionDefinition)
+    (o) =>
+      new Election(o.jurisdictionCode, o.electionDefinition, o.mailingAddress)
   ) as unknown as z.ZodSchema<Election>;
 
 export class RegistrationRequest {
@@ -405,7 +413,11 @@ export const PayloadSchema: z.ZodSchema<Payload> = z
     switch (o.objectType) {
       case ElectionObjectType: {
         return Payload.Election(
-          new Election(o.jurisdictionCode, o.electionDefinition)
+          new Election(
+            o.jurisdictionCode,
+            o.electionDefinition,
+            o.mailingAddress
+          )
         );
       }
 

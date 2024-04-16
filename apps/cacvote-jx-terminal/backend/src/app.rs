@@ -223,6 +223,7 @@ async fn create_election(
     let payload = Payload::Election(Election {
         jurisdiction_code,
         election_definition,
+        mailing_address: "Ballot Receiving Center\n1234 Main St\nAnytown, CA 95959".to_owned(),
     });
     let serialized_payload = match serde_json::to_vec(&payload) {
         Ok(serialized_payload) => serialized_payload,
