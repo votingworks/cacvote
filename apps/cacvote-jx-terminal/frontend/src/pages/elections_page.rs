@@ -4,10 +4,7 @@ use std::sync::Arc;
 
 use dioxus::prelude::*;
 use dioxus_router::hooks::use_navigator;
-use types_rs::{
-    cacvote::{self, JurisdictionCode},
-    election,
-};
+use types_rs::{cacvote, election};
 use ui_rs::FileButton;
 
 use crate::{
@@ -33,7 +30,7 @@ pub fn ElectionsPage(cx: Scope) -> Element {
 
     let upload_election = {
         to_owned![is_uploading, mailing_address];
-        |election_data: Vec<u8>, jurisdiction_code: JurisdictionCode| async move {
+        |election_data: Vec<u8>, jurisdiction_code: cacvote::JurisdictionCode| async move {
             is_uploading.set(true);
 
             log::info!("election data: {}", String::from_utf8_lossy(&election_data));
