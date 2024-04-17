@@ -561,7 +561,7 @@ mod tests {
     async fn test_pending_registration_requests(pool: sqlx::PgPool) -> color_eyre::Result<()> {
         let (certificates, _, private_key) = load_keypair()?;
         let election_definition = load_election_definition()?;
-        let mut connection = &mut pool.acquire().await?;
+        let connection = &mut pool.acquire().await?;
         let jurisdiction_code = JurisdictionCode::try_from("st.test-jurisdiction").unwrap();
 
         let election_payload = cacvote::Payload::Election(cacvote::Election {
@@ -576,10 +576,9 @@ mod tests {
             &private_key,
         )?;
 
-        add_object_from_server(&mut connection, &election_object).await?;
+        add_object_from_server(connection, &election_object).await?;
 
-        let pending_registration_requests =
-            get_pending_registration_requests(&mut connection).await?;
+        let pending_registration_requests = get_pending_registration_requests(connection).await?;
 
         assert!(
             pending_registration_requests.is_empty(),
@@ -599,10 +598,9 @@ mod tests {
             &private_key,
         )?;
 
-        add_object_from_server(&mut connection, &registration_request_object).await?;
+        add_object_from_server(connection, &registration_request_object).await?;
 
-        let pending_registration_requests =
-            get_pending_registration_requests(&mut connection).await?;
+        let pending_registration_requests = get_pending_registration_requests(connection).await?;
 
         match pending_registration_requests.as_slice() {
             [registration_request] => {
@@ -631,10 +629,9 @@ mod tests {
             &private_key,
         )?;
 
-        add_object_from_server(&mut connection, &registration_object).await?;
+        add_object_from_server(connection, &registration_object).await?;
 
-        let pending_registration_requests =
-            get_pending_registration_requests(&mut connection).await?;
+        let pending_registration_requests = get_pending_registration_requests(connection).await?;
 
         assert!(
             pending_registration_requests.is_empty(),
