@@ -47,6 +47,7 @@ pub fn ElectionsPage(cx: Scope) -> Element {
                 election_definition,
                 jurisdiction_code,
                 mailing_address: mailing_address.get().clone(),
+                electionguard_election_metadata_blob: vec![],
             };
             let res = client.post(url).json(&election).send().await;
 

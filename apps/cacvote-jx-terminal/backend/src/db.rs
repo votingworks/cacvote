@@ -568,6 +568,7 @@ mod tests {
             jurisdiction_code: jurisdiction_code.clone(),
             election_definition: election_definition.clone(),
             mailing_address: "123 Main St".to_owned(),
+            electionguard_election_metadata_blob: vec![],
         });
         let election_object = cacvote::SignedObject::from_payload(
             &election_payload,

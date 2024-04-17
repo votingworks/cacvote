@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::cdf::cvr::Cvr;
 use crate::election::BallotStyleId;
 use crate::election::ElectionDefinition;
 use crate::election::ElectionHash;
@@ -199,6 +198,7 @@ pub enum Payload {
     Registration(Registration),
     Election(Election),
     CastBallot(CastBallot),
+    ShuffledEncryptedCastBallot(ShuffledEncryptedCastBallot),
 }
 
 impl Payload {
@@ -208,6 +208,9 @@ impl Payload {
             Self::Registration(_) => Self::registration_object_type(),
             Self::Election(_) => Self::election_object_type(),
             Self::CastBallot(_) => Self::cast_ballot_object_type(),
+            Self::ShuffledEncryptedCastBallot(_) => {
+                Self::shuffled_encrypted_cast_ballot_object_type()
+            }
         }
     }
 
@@ -234,6 +237,12 @@ impl Payload {
         // `Payload` enum.
         "CastBallot"
     }
+
+    pub fn shuffled_encrypted_cast_ballot_object_type() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `Payload` enum.
+        "ShuffledEncryptedCastBallot"
+    }
 }
 
 impl JurisdictionScoped for Payload {
@@ -243,6 +252,9 @@ impl JurisdictionScoped for Payload {
             Self::Registration(registration) => registration.jurisdiction_code(),
             Self::Election(election) => election.jurisdiction_code(),
             Self::CastBallot(cast_ballot) => cast_ballot.jurisdiction_code(),
+            Self::ShuffledEncryptedCastBallot(_) => {
+                unimplemented!("TODO: pull from field")
+            }
         }
     }
 }
@@ -479,6 +491,7 @@ pub struct Election {
     pub jurisdiction_code: JurisdictionCode,
     pub election_definition: ElectionDefinition,
     pub mailing_address: String,
+    pub electionguard_election_metadata_blob: Vec<u8>,
 }
 
 impl JurisdictionScoped for Election {
@@ -503,7 +516,7 @@ pub struct CastBallot {
     pub registration_request_object_id: Uuid,
     pub registration_object_id: Uuid,
     pub election_object_id: Uuid,
-    pub cvr: Cvr,
+    pub electionguard_encrypted_cvr_blob: Vec<u8>,
 }
 
 impl CastBallot {
@@ -529,14 +542,6 @@ impl CastBallot {
 impl JurisdictionScoped for CastBallot {
     fn jurisdiction_code(&self) -> JurisdictionCode {
         self.jurisdiction_code.clone()
-    }
-}
-
-impl Deref for CastBallot {
-    type Target = Cvr;
-
-    fn deref(&self) -> &Self::Target {
-        &self.cvr
     }
 }
 
@@ -576,10 +581,6 @@ impl CastBallotPresenter {
         &self.registration_request
     }
 
-    pub fn cvr(&self) -> &Cvr {
-        &self.cvr
-    }
-
     pub fn created_at(&self) -> OffsetDateTime {
         self.created_at
     }
@@ -596,6 +597,11 @@ impl Deref for CastBallotPresenter {
         &self.cast_ballot
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+// TODO: fill in these fields
+pub struct ShuffledEncryptedCastBallot;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
