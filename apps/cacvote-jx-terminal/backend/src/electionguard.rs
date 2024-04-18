@@ -1,12 +1,11 @@
 use std::{
-    fs::{DirBuilder, File},
+    fs::{read_dir, DirBuilder, File},
     io,
     path::PathBuf,
 };
 
 use serde::Serialize;
 use types_rs::election as vx_election;
-use walkdir::WalkDir;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct Manifest {
@@ -290,11 +289,16 @@ impl Default for ContactInformation {
     }
 }
 
+pub(crate) struct ElectionConfig {
+    pub(crate) public_metadata_blob: Vec<u8>,
+    pub(crate) private_metadata_blob: Vec<u8>,
+}
+
 /// Generate ElectionGuard metadata for an election.
 pub(crate) fn generate_election_config(
     classpath: &PathBuf,
     election: impl Into<Manifest>,
-) -> io::Result<Vec<u8>> {
+) -> io::Result<ElectionConfig> {
     let manifest: Manifest = election.into();
 
     // create a temporary working directory securely
@@ -320,33 +324,26 @@ pub(crate) fn generate_election_config(
         &output_directory,
     )?;
 
-    // zip the output directory
+    // at this point, the output directory should contain the public election
+    // configuration & key and the private keys in the `trustees` directory
+    let public_metadata_blob = zip_files_in_directory_to_buffer(&output_directory)?;
+    let private_metadata_blob = zip_files_in_directory_to_buffer(&trustees_directory)?;
+
+    Ok(ElectionConfig {
+        public_metadata_blob,
+        private_metadata_blob,
+    })
+}
+
+/// Zip all files directly within a directory into a zip archive. This function
+/// does not recursively zip files in subdirectories, and it does not include
+/// the directory itself in the archive.
+fn zip_files_in_directory_to_buffer(directory: &PathBuf) -> io::Result<Vec<u8>> {
     let mut zip_buffer = Vec::new();
     let writer = std::io::Cursor::new(&mut zip_buffer);
     let mut zip = zip::ZipWriter::new(writer);
 
-    // iterate through the output directory and add each file to the zip archive
-    for entry in WalkDir::new(&output_directory) {
-        let entry = entry?;
-        let path = entry.path();
-        let name = path
-            .strip_prefix(&output_directory)
-            .expect("entry must be in output directory");
-
-        if path.is_dir() && path != output_directory {
-            zip.add_directory(
-                name.to_str().expect("entry must have valid UTF-8 name"),
-                Default::default(),
-            )?;
-        } else if path.is_file() {
-            zip.start_file(
-                name.to_str().expect("entry must have valid UTF-8 name"),
-                Default::default(),
-            )?;
-            let mut file = File::open(&path)?;
-            std::io::copy(&mut file, &mut zip)?;
-        }
-    }
+    zip_files_in_directory(&mut zip, directory)?;
 
     zip.finish()?;
 
@@ -355,6 +352,33 @@ pub(crate) fn generate_election_config(
     drop(zip);
 
     Ok(zip_buffer)
+}
+
+/// Zip all files directly within a directory into a zip archive. This function
+/// does not recursively zip files in subdirectories, and it does not include
+/// the directory itself in the archive.
+fn zip_files_in_directory<W>(zip: &mut zip::ZipWriter<W>, directory: &PathBuf) -> io::Result<()>
+where
+    W: io::Write + io::Seek,
+{
+    for entry in read_dir(directory)? {
+        let entry = entry?;
+        let path = entry.path();
+        let name = path
+            .strip_prefix(&directory)
+            .expect("entry must be in output directory");
+
+        if path.is_file() {
+            zip.start_file(
+                name.to_str().expect("entry must have valid UTF-8 name"),
+                Default::default(),
+            )?;
+            let mut file = File::open(&path)?;
+            std::io::copy(&mut file, zip)?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Run the Java ElectionGuard CLI to create an election configuration. Expects
@@ -446,11 +470,14 @@ mod tests {
     fn test_generate_election_config() {
         if let Ok(classpath) = std::env::var("EG_CLASSPATH") {
             let election_definition = load_election_definition().unwrap();
-            let zip_buffer =
+            let election_config =
                 generate_election_config(&PathBuf::from(classpath), election_definition.election)
                     .unwrap();
-            let zip = zip::ZipArchive::new(std::io::Cursor::new(zip_buffer)).unwrap();
-            let mut file_names = zip.file_names().collect::<Vec<_>>();
+
+            let public_metadata_zip =
+                zip::ZipArchive::new(std::io::Cursor::new(election_config.public_metadata_blob))
+                    .unwrap();
+            let mut file_names = public_metadata_zip.file_names().collect::<Vec<_>>();
             file_names.sort();
             assert_eq!(
                 file_names,
@@ -459,10 +486,15 @@ mod tests {
                     "election_config.json",
                     "election_initialized.json",
                     "manifest.json",
-                    "trustees/",
-                    "trustees/decryptingTrustee-trustee1.json"
                 ]
             );
+
+            let private_metadata_zip =
+                zip::ZipArchive::new(std::io::Cursor::new(election_config.private_metadata_blob))
+                    .unwrap();
+            let mut file_names = private_metadata_zip.file_names().collect::<Vec<_>>();
+            file_names.sort();
+            assert_eq!(file_names, vec!["decryptingTrustee-trustee1.json"]);
         } else {
             eprintln!("EG_CLASSPATH environment variable not set");
         }

@@ -209,7 +209,7 @@ async fn create_election(
         );
     }
 
-    let mut connection = match pool.acquire().await {
+    let mut transaction = match pool.begin().await {
         Ok(connection) => connection,
         Err(e) => {
             tracing::error!("error getting database connection: {e}");
@@ -220,11 +220,11 @@ async fn create_election(
         }
     };
 
-    let electionguard_election_metadata_blob = match electionguard::generate_election_config(
+    let election_config = match electionguard::generate_election_config(
         &config.eg_classpath,
         election.election_definition.election.clone(),
     ) {
-        Ok(electionguard_election_metadata_blob) => electionguard_election_metadata_blob,
+        Ok(election_config) => election_config,
         Err(e) => {
             tracing::error!("error generating election config: {e}");
             return (
@@ -238,8 +238,9 @@ async fn create_election(
         jurisdiction_code: election.jurisdiction_code,
         mailing_address: election.mailing_address,
         election_definition: election.election_definition,
-        electionguard_election_metadata_blob,
+        electionguard_election_metadata_blob: election_config.public_metadata_blob,
     });
+
     let serialized_payload = match serde_json::to_vec(&payload) {
         Ok(serialized_payload) => serialized_payload,
         Err(e) => {
@@ -283,11 +284,33 @@ async fn create_election(
         signature: signed.data,
     };
 
-    if let Err(e) = db::add_object(&mut connection, &signed_object).await {
+    if let Err(e) = db::add_object(&mut transaction, &signed_object).await {
         tracing::error!("error adding object to database: {e}");
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({ "error": "error adding object to database" })),
+        );
+    }
+
+    if let Err(e) = db::add_eg_private_key(
+        &mut transaction,
+        &signed_object.id,
+        &election_config.private_metadata_blob,
+    )
+    .await
+    {
+        tracing::error!("error adding EG private key to database: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error adding EG private key to database" })),
+        );
+    }
+
+    if let Err(e) = transaction.commit().await {
+        tracing::error!("error committing transaction: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error committing transaction" })),
         );
     }
 

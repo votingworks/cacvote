@@ -528,6 +528,26 @@ pub(crate) async fn get_cast_ballots(
     Ok(cast_ballots)
 }
 
+pub(crate) async fn add_eg_private_key(
+    executor: &mut sqlx::PgConnection,
+    election_object_id: &Uuid,
+    private_metadata_blob: &[u8],
+) -> color_eyre::Result<Uuid> {
+    let record = sqlx::query!(
+        r#"
+        INSERT INTO eg_private_keys (election_object_id, private_key)
+        VALUES ($1, $2)
+        RETURNING id
+        "#,
+        election_object_id,
+        private_metadata_blob
+    )
+    .fetch_one(executor)
+    .await?;
+
+    Ok(record.id)
+}
+
 #[cfg(test)]
 mod tests {
     use openssl::{
