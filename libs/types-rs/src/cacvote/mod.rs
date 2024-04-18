@@ -487,10 +487,20 @@ impl Registration {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CreateElectionRequest {
+    pub jurisdiction_code: JurisdictionCode,
+    pub election_definition: ElectionDefinition,
+    pub mailing_address: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Election {
     pub jurisdiction_code: JurisdictionCode,
     pub election_definition: ElectionDefinition,
     pub mailing_address: String,
+
+    #[serde(with = "Base64Standard")]
     pub electionguard_election_metadata_blob: Vec<u8>,
 }
 
@@ -628,18 +638,11 @@ impl Default for SessionData {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateRegistrationData {
+pub struct CreateRegistrationRequest {
     pub election_id: Uuid,
     pub registration_request_id: Uuid,
     pub ballot_style_id: BallotStyleId,
     pub precinct_id: PrecinctId,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateElectionData {
-    pub election_data: String,
-    pub return_address: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

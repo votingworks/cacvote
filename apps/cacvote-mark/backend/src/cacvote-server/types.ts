@@ -130,7 +130,8 @@ export class Election {
   constructor(
     private readonly jurisdictionCode: JurisdictionCode,
     private readonly electionDefinition: ElectionDefinition,
-    private readonly mailingAddress: string
+    private readonly mailingAddress: string,
+    private readonly electionguardElectionMetadataBlob: Buffer
   ) {}
 
   getJurisdictionCode(): JurisdictionCode {
@@ -145,11 +146,17 @@ export class Election {
     return this.mailingAddress;
   }
 
+  getElectionguardElectionMetadataBlob(): Buffer {
+    return this.electionguardElectionMetadataBlob;
+  }
+
   toJSON(): unknown {
     return {
       jurisdictionCode: this.jurisdictionCode,
       electionDefinition: this.electionDefinition,
       mailingAddress: this.mailingAddress,
+      electionguardElectionMetadataBlob:
+        this.electionguardElectionMetadataBlob.toString('base64'),
     };
   }
 }
@@ -161,12 +168,20 @@ const ElectionStructSchema = z.object({
     .transform((s) => Buffer.from(s, 'base64').toString('utf-8'))
     .transform((s) => safeParseElectionDefinition(s).unsafeUnwrap()),
   mailingAddress: z.string(),
+  electionguardElectionMetadataBlob: z
+    .string()
+    .transform((s) => Buffer.from(s, 'base64')),
 });
 
 export const ElectionSchema: z.ZodSchema<Election> =
   ElectionStructSchema.transform(
     (o) =>
-      new Election(o.jurisdictionCode, o.electionDefinition, o.mailingAddress)
+      new Election(
+        o.jurisdictionCode,
+        o.electionDefinition,
+        o.mailingAddress,
+        o.electionguardElectionMetadataBlob
+      )
   ) as unknown as z.ZodSchema<Election>;
 
 export class RegistrationRequest {
@@ -416,7 +431,8 @@ export const PayloadSchema: z.ZodSchema<Payload> = z
           new Election(
             o.jurisdictionCode,
             o.electionDefinition,
-            o.mailingAddress
+            o.mailingAddress,
+            o.electionguardElectionMetadataBlob
           )
         );
       }

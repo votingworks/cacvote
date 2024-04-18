@@ -50,6 +50,7 @@ mod app;
 mod cac;
 mod config;
 mod db;
+mod electionguard;
 mod log;
 mod smartcard;
 mod sync;

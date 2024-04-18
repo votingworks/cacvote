@@ -22,16 +22,18 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
 use types_rs::cacvote::{
-    CreateRegistrationData, Election, Payload, Registration, SessionData, SignedObject,
+    CreateElectionRequest, CreateRegistrationRequest, Election, Payload, Registration, SessionData,
+    SignedObject,
 };
 use uuid::Uuid;
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
-use crate::{db, smartcard};
+use crate::{db, electionguard, smartcard};
 use tokio::sync::broadcast;
 
 #[derive(Clone)]
 struct AppState {
+    config: Config,
     pool: PgPool,
     smartcard: smartcard::DynSmartcard,
     broadcast_tx: broadcast::Sender<SessionData>,
@@ -107,6 +109,7 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
         .with_state(AppState {
+            config,
             pool,
             smartcard,
             broadcast_tx,
@@ -181,9 +184,12 @@ async fn get_elections(State(AppState { pool, .. }): State<AppState>) -> impl In
 
 async fn create_election(
     State(AppState {
-        pool, smartcard, ..
+        config,
+        pool,
+        smartcard,
+        ..
     }): State<AppState>,
-    Json(election): Json<Election>,
+    Json(election): Json<CreateElectionRequest>,
 ) -> impl IntoResponse {
     let jurisdiction_code = match smartcard.get_card_details() {
         Some(card_details) => card_details.card_details.jurisdiction_code(),
@@ -214,7 +220,26 @@ async fn create_election(
         }
     };
 
-    let payload = Payload::Election(election);
+    let electionguard_election_metadata_blob = match electionguard::generate_election_config(
+        &config.eg_classpath,
+        election.election_definition.election.clone(),
+    ) {
+        Ok(electionguard_election_metadata_blob) => electionguard_election_metadata_blob,
+        Err(e) => {
+            tracing::error!("error generating election config: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error generating election config" })),
+            );
+        }
+    };
+
+    let payload = Payload::Election(Election {
+        jurisdiction_code: election.jurisdiction_code,
+        mailing_address: election.mailing_address,
+        election_definition: election.election_definition,
+        electionguard_election_metadata_blob,
+    });
     let serialized_payload = match serde_json::to_vec(&payload) {
         Ok(serialized_payload) => serialized_payload,
         Err(e) => {
@@ -273,12 +298,12 @@ async fn create_registration(
     State(AppState {
         pool, smartcard, ..
     }): State<AppState>,
-    Json(CreateRegistrationData {
+    Json(CreateRegistrationRequest {
         registration_request_id,
         election_id,
         ballot_style_id,
         precinct_id,
-    }): Json<CreateRegistrationData>,
+    }): Json<CreateRegistrationRequest>,
 ) -> impl IntoResponse {
     let jurisdiction_code = match smartcard.get_card_details() {
         Some(card_details) => card_details.card_details.jurisdiction_code(),

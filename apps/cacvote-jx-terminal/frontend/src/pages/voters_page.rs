@@ -53,7 +53,7 @@ fn PendingRegistrationsTable(cx: Scope<PendingRegistrationsTableProps>) -> Eleme
     let link_voter_registration_request_and_election = {
         // TODO: make this work
         // to_owned![is_linking_registration_request_with_election];
-        |create_registration_data: cacvote::CreateRegistrationData| async move {
+        |create_registration_data: cacvote::CreateRegistrationRequest| async move {
             // is_linking_registration_request_with_election.set(true);
 
             let url = get_url("/api/registrations");
@@ -89,7 +89,7 @@ fn PendingRegistrationsTable(cx: Scope<PendingRegistrationsTableProps>) -> Eleme
                                     select {
                                         class: "dark:bg-gray-800 dark:text-white dark:border-gray-600 border-2 rounded-md p-2 focus:outline-none focus:border-blue-500",
                                         oninput: move |event| {
-                                            let create_registration_data = serde_json::from_str::<cacvote::CreateRegistrationData>(event.inner().value.as_str()).expect("parse succeeded");
+                                            let create_registration_data = serde_json::from_str::<cacvote::CreateRegistrationRequest>(event.inner().value.as_str()).expect("parse succeeded");
                                             cx.spawn({
                                                 to_owned![link_voter_registration_request_and_election, create_registration_data];
                                                 async move {
@@ -127,7 +127,7 @@ fn PendingRegistrationsTable(cx: Scope<PendingRegistrationsTableProps>) -> Eleme
                                                 for ballot_style in election_presenter.election.ballot_styles.iter() {
                                                     for precinct_id in ballot_style.precincts.iter() {
                                                         {
-                                                            let create_registration_data = cacvote::CreateRegistrationData {
+                                                            let create_registration_data = cacvote::CreateRegistrationRequest {
                                                                 election_id: election_presenter.id,
                                                                 registration_request_id: registration_request_presenter.id,
                                                                 ballot_style_id: ballot_style.id.clone(),
