@@ -107,7 +107,7 @@ async fn pull_objects(
 
 #[cfg(test)]
 mod tests {
-    use std::{net::TcpListener, sync::Arc};
+    use std::{net::TcpListener, path::PathBuf, sync::Arc};
 
     use reqwest::Url;
     use tracing::Level;
@@ -134,6 +134,7 @@ mod tests {
             public_dir: None,
             log_level: Level::DEBUG,
             jurisdiction_code: JurisdictionCode::try_from(JURISDICTION_CODE).unwrap(),
+            eg_classpath: PathBuf::from("/not/real/path"),
         };
 
         tokio::spawn(async move {

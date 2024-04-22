@@ -528,6 +528,26 @@ pub(crate) async fn get_cast_ballots(
     Ok(cast_ballots)
 }
 
+pub(crate) async fn add_eg_private_key(
+    executor: &mut sqlx::PgConnection,
+    election_object_id: &Uuid,
+    private_metadata_blob: &[u8],
+) -> color_eyre::Result<Uuid> {
+    let record = sqlx::query!(
+        r#"
+        INSERT INTO eg_private_keys (election_object_id, private_key)
+        VALUES ($1, $2)
+        RETURNING id
+        "#,
+        election_object_id,
+        private_metadata_blob
+    )
+    .fetch_one(executor)
+    .await?;
+
+    Ok(record.id)
+}
+
 #[cfg(test)]
 mod tests {
     use openssl::{
@@ -561,13 +581,14 @@ mod tests {
     async fn test_pending_registration_requests(pool: sqlx::PgPool) -> color_eyre::Result<()> {
         let (certificates, _, private_key) = load_keypair()?;
         let election_definition = load_election_definition()?;
-        let mut connection = &mut pool.acquire().await?;
+        let connection = &mut pool.acquire().await?;
         let jurisdiction_code = JurisdictionCode::try_from("st.test-jurisdiction").unwrap();
 
         let election_payload = cacvote::Payload::Election(cacvote::Election {
             jurisdiction_code: jurisdiction_code.clone(),
             election_definition: election_definition.clone(),
             mailing_address: "123 Main St".to_owned(),
+            electionguard_election_metadata_blob: vec![],
         });
         let election_object = cacvote::SignedObject::from_payload(
             &election_payload,
@@ -575,10 +596,9 @@ mod tests {
             &private_key,
         )?;
 
-        add_object_from_server(&mut connection, &election_object).await?;
+        add_object_from_server(connection, &election_object).await?;
 
-        let pending_registration_requests =
-            get_pending_registration_requests(&mut connection).await?;
+        let pending_registration_requests = get_pending_registration_requests(connection).await?;
 
         assert!(
             pending_registration_requests.is_empty(),
@@ -598,10 +618,9 @@ mod tests {
             &private_key,
         )?;
 
-        add_object_from_server(&mut connection, &registration_request_object).await?;
+        add_object_from_server(connection, &registration_request_object).await?;
 
-        let pending_registration_requests =
-            get_pending_registration_requests(&mut connection).await?;
+        let pending_registration_requests = get_pending_registration_requests(connection).await?;
 
         match pending_registration_requests.as_slice() {
             [registration_request] => {
@@ -630,10 +649,9 @@ mod tests {
             &private_key,
         )?;
 
-        add_object_from_server(&mut connection, &registration_object).await?;
+        add_object_from_server(connection, &registration_object).await?;
 
-        let pending_registration_requests =
-            get_pending_registration_requests(&mut connection).await?;
+        let pending_registration_requests = get_pending_registration_requests(connection).await?;
 
         assert!(
             pending_registration_requests.is_empty(),

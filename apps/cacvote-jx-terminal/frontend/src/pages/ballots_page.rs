@@ -1,15 +1,12 @@
 use dioxus::prelude::*;
-use types_rs::{
-    cacvote::{self, SessionData},
-    cdf::cvr::Cvr,
-};
+use types_rs::cacvote;
 use ui_rs::DateOrDateTimeCell;
 
 use crate::components::ElectionConfigurationCell;
 
 pub fn BallotsPage(cx: Scope) -> Element {
     let session_data = use_shared_state::<cacvote::SessionData>(cx).unwrap();
-    let SessionData::Authenticated {
+    let cacvote::SessionData::Authenticated {
         elections,
         cast_ballots,
         ..
@@ -35,31 +32,6 @@ pub fn BallotsPage(cx: Scope) -> Element {
 struct CastBallotsTableProps {
     elections: Vec<cacvote::ElectionPresenter>,
     cast_ballots: Vec<cacvote::CastBallotPresenter>,
-}
-
-fn summarize_cast_vote_record(cvr: &Cvr) -> String {
-    let mut summary = String::new();
-
-    for snapshot in cvr.cvr_snapshot.iter() {
-        if let Some(ref contests) = snapshot.cvr_contest {
-            for contest in contests {
-                if let Some(ref contest_selections) = contest.cvr_contest_selection {
-                    for contest_selection in contest_selections {
-                        if let Some(ref contest_selection_id) =
-                            contest_selection.contest_selection_id
-                        {
-                            summary.push_str(&format!(
-                                "{}: {}\n",
-                                contest.contest_id, contest_selection_id
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    summary
 }
 
 fn CastBallotsTable(cx: Scope<CastBallotsTableProps>) -> Element {
@@ -147,18 +119,6 @@ fn CastBallotsTable(cx: Scope<CastBallotsTableProps>) -> Element {
                                                             class: "ps-2",
                                                             "Unknown"
                                                         }
-                                                    })
-                                                }
-                                            }
-                                            details {
-                                                rsx!(summary {
-                                                    class: "text-gray-200",
-                                                    "DEBUG"
-                                                })
-                                                {
-                                                    let summary = summarize_cast_vote_record(&cast_ballot.cvr);
-                                                    rsx!(pre {
-                                                        summary
                                                     })
                                                 }
                                             }

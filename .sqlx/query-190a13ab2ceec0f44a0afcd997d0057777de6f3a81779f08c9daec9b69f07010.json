@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id,\n            object_id,\n            jurisdiction as \"jurisdiction_code: JurisdictionCode\",\n            object_type,\n            action,\n            created_at\n        FROM journal_entries\n        WHERE object_id IS NOT NULL\n          AND object_type IN ('RegistrationRequest')\n          AND object_id NOT IN (SELECT id FROM objects)\n        ",
+  "query": "\n        SELECT\n            id,\n            object_id,\n            jurisdiction as \"jurisdiction_code: cacvote::JurisdictionCode\",\n            object_type,\n            action,\n            created_at\n        FROM journal_entries\n        ORDER BY created_at DESC\n        LIMIT 1\n        ",
   "describe": {
     "columns": [
       {
@@ -15,7 +15,7 @@
       },
       {
         "ordinal": 2,
-        "name": "jurisdiction_code: JurisdictionCode",
+        "name": "jurisdiction_code: cacvote::JurisdictionCode",
         "type_info": "Varchar"
       },
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "f3bea3cd380dffea913274cd686e6d1be327c232364856c4ce32296aec960db1"
+  "hash": "190a13ab2ceec0f44a0afcd997d0057777de6f3a81779f08c9daec9b69f07010"
 }

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id,\n            payload,\n            certificates,\n            signature\n        FROM objects\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "signature",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "09b62085a558ad9db5035f1b06657c2ef4e11f81963bdf6c1fcec1442c765ea4"
+}
