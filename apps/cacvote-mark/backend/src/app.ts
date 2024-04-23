@@ -1,4 +1,5 @@
 import { cac } from '@votingworks/auth';
+import { buildCastVoteRecord, VX_MACHINE_ID } from '@votingworks/backend';
 import {
   asyncResultBlock,
   err,
@@ -17,15 +18,12 @@ import {
   unsafeParse,
   VotesDict,
 } from '@votingworks/types';
-import express, { Application } from 'express';
-import { isDeepStrictEqual } from 'util';
-import { DateTime } from 'luxon';
-import { buildCastVoteRecord, VX_MACHINE_ID } from '@votingworks/backend';
+import { Buffer } from 'buffer';
 import { execFileSync } from 'child_process';
+import express, { Application } from 'express';
+import { DateTime } from 'luxon';
+import { isDeepStrictEqual } from 'util';
 import { z } from 'zod';
-import * as mailingLabel from './mailing_label';
-import { Auth, AuthStatus } from './types/auth';
-import { Workspace } from './workspace';
 import {
   CastBallot,
   Election,
@@ -36,6 +34,9 @@ import {
   Uuid,
 } from './cacvote-server/types';
 import { MAILING_LABEL_PRINTER } from './globals';
+import * as mailingLabel from './mailing_label';
+import { Auth, AuthStatus } from './types/auth';
+import { Workspace } from './workspace';
 
 export type VoterStatus =
   | 'unregistered'
@@ -318,7 +319,10 @@ function buildApi({
             registration.registration.getRegistrationRequestObjectId(),
             registration.object.getId(),
             electionObjectId,
-            castVoteRecord
+            // TODO: encrypt with ElectionGuard
+            Buffer.from(
+              new TextEncoder().encode(JSON.stringify(castVoteRecord))
+            )
           )
         );
 

@@ -9,7 +9,6 @@ import {
 import {
   BallotStyleId,
   BallotStyleIdSchema,
-  CVR,
   ElectionDefinition,
   NewType,
   PrecinctId,
@@ -308,7 +307,7 @@ export class CastBallot {
     private readonly registrationRequestObjectId: Uuid,
     private readonly registrationObjectId: Uuid,
     private readonly electionObjectId: Uuid,
-    private readonly cvr: CVR.CVR
+    private readonly electionGuardEncryptedCvrBlob: Buffer
   ) {}
 
   getCommonAccessCardId(): string {
@@ -331,8 +330,8 @@ export class CastBallot {
     return this.electionObjectId;
   }
 
-  getCVR(): CVR.CVR {
-    return this.cvr;
+  getElectionGuardEncryptedCvrBlob(): Buffer {
+    return this.electionGuardEncryptedCvrBlob;
   }
 }
 
@@ -342,7 +341,9 @@ const CastBallotStructSchema = z.object({
   registrationRequestObjectId: UuidSchema,
   registrationObjectId: UuidSchema,
   electionObjectId: UuidSchema,
-  cvr: CVR.CVRSchema,
+  electionGuardEncryptedCvrBlob: z
+    .string()
+    .transform((s) => Buffer.from(s, 'base64')),
 });
 
 export const CastBallotSchema: z.ZodSchema<CastBallot> =
@@ -354,7 +355,7 @@ export const CastBallotSchema: z.ZodSchema<CastBallot> =
         o.registrationRequestObjectId,
         o.registrationObjectId,
         o.electionObjectId,
-        o.cvr
+        o.electionGuardEncryptedCvrBlob
       )
   ) as unknown as z.ZodSchema<CastBallot>;
 
@@ -470,7 +471,7 @@ export const PayloadSchema: z.ZodSchema<Payload> = z
             o.registrationRequestObjectId,
             o.registrationObjectId,
             o.electionObjectId,
-            o.cvr
+            o.electionGuardEncryptedCvrBlob
           )
         );
       }
