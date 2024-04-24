@@ -4,6 +4,8 @@ members = [
     "apps/cacvote-jx-terminal/backend",
     "apps/cacvote-jx-terminal/frontend",
     "libs/auth-rs",
+    "libs/electionguard",
+    "libs/electionguard-rs",
     "libs/logging",
     "libs/types-rs",
     "libs/ui-rs",
@@ -28,6 +30,7 @@ dioxus-logger = "0.4.1"
 dioxus-router = "0.4.1"
 dioxus-web = { version = "0.4" }
 dotenvy = "0.15.7"
+electionguard-rs = { path = "libs/electionguard-rs" }
 env_logger = "0.10.0"
 futures = "0.3.28"
 futures-core = "0.3.28"
@@ -43,6 +46,11 @@ log = "0.4.19"
 logging_timer = "1.1.0"
 mockall = "0.12.1"
 nanoid = "0.4.0"
+napi = { version = "2.12.2", default-features = false, features = [
+    "napi6",
+    "serde-json",
+] }
+napi-derive = "2.12.2"
 neon = { version = "0.10", default-features = false, features = ["napi-6"] }
 num_enum = "0.7.1"
 openssl = "0.10.56"
@@ -50,6 +58,7 @@ pcsc = "2.8.0"
 pretty_assertions = "1.4.0"
 pretty_env_logger = "0.4.0"
 proptest = "1.2.0"
+rand = "0.8.5"
 rayon = "1.7.0"
 regex = "1.9.1"
 reqwest = { version = "0.11.18", features = ["json"] }

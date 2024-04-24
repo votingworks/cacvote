@@ -1,0 +1,275 @@
+{
+  "@type": "CVR.CVR",
+  "BallotStyleId": "1",
+  "BallotStyleUnitId": "20",
+  "CreatingDeviceId": "VX-00-000",
+  "ElectionId": "c58b27d55ee6d01008c2128f02389a8b85c653b6e411b87ab086b9aea07012a9",
+  "BatchId": "9822c71014",
+  "CurrentSnapshotId": "0a2f1a8e-5192-4c14-b947-b9b6cbab84dd-modified",
+  "UniqueId": "0a2f1a8e-5192-4c14-b947-b9b6cbab84dd",
+  "CVRSnapshot": [
+    {
+      "@type": "CVR.CVRSnapshot",
+      "@id": "0a2f1a8e-5192-4c14-b947-b9b6cbab84dd-modified",
+      "Status": ["other"],
+      "OtherStatus": "{\"ballotType\":\"precinct\"}",
+      "Type": "modified",
+      "CVRContest": [
+        {
+          "@type": "CVR.CVRContest",
+          "ContestId": "mayor",
+          "Overvotes": 0,
+          "Undervotes": 0,
+          "WriteIns": 0,
+          "CVRContestSelection": [
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "thomas-edison",
+              "OptionPosition": 1,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "@type": "CVR.CVRContest",
+          "ContestId": "controller",
+          "Overvotes": 0,
+          "Undervotes": 0,
+          "WriteIns": 0,
+          "CVRContestSelection": [
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "louis-armstrong",
+              "OptionPosition": 2,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "@type": "CVR.CVRContest",
+          "ContestId": "attorney",
+          "Overvotes": 0,
+          "Undervotes": 0,
+          "WriteIns": 0,
+          "CVRContestSelection": [
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "mark-twain",
+              "OptionPosition": 1,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "@type": "CVR.CVRContest",
+          "ContestId": "public-works-director",
+          "Overvotes": 0,
+          "Undervotes": 0,
+          "WriteIns": 0,
+          "CVRContestSelection": [
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "bill-nye",
+              "OptionPosition": 2,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "@type": "CVR.CVRContest",
+          "ContestId": "chief-of-police",
+          "Overvotes": 0,
+          "Undervotes": 0,
+          "WriteIns": 0,
+          "CVRContestSelection": [
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "alfred-hitchcock",
+              "OptionPosition": 3,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "@type": "CVR.CVRContest",
+          "ContestId": "parks-and-recreation-director",
+          "Overvotes": 0,
+          "Undervotes": 0,
+          "WriteIns": 0,
+          "CVRContestSelection": [
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "alexander-graham-bell",
+              "OptionPosition": 3,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "@type": "CVR.CVRContest",
+          "ContestId": "board-of-alderman",
+          "Overvotes": 0,
+          "Undervotes": 0,
+          "WriteIns": 0,
+          "CVRContestSelection": [
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "nikola-tesla",
+              "OptionPosition": 2,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            },
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "vincent-van-gogh",
+              "OptionPosition": 3,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            },
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "pablo-picasso",
+              "OptionPosition": 4,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            },
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "wolfgang-amadeus-mozart",
+              "OptionPosition": 5,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "@type": "CVR.CVRContest",
+          "ContestId": "city-council",
+          "Overvotes": 0,
+          "Undervotes": 0,
+          "WriteIns": 0,
+          "CVRContestSelection": [
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "indiana-jones",
+              "OptionPosition": 1,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            },
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "mona-lisa",
+              "OptionPosition": 2,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            },
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "tim-allen",
+              "OptionPosition": 4,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            },
+            {
+              "@type": "CVR.CVRContestSelection",
+              "ContestSelectionId": "harriet-tubman",
+              "OptionPosition": 6,
+              "SelectionPosition": [
+                {
+                  "@type": "CVR.SelectionPosition",
+                  "HasIndication": "yes",
+                  "NumberVotes": 1,
+                  "IsAllocable": "yes"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
