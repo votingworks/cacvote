@@ -3,6 +3,10 @@ name = "cacvote-jx-terminal-backend"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "decrypt-tally"
+path = "bin/decrypt-tally.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -33,6 +37,7 @@ tower-http = { workspace = true, features = ["trace"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 types-rs = { workspace = true, features = ["backend"] }
+url = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]

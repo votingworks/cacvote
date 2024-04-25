@@ -18,21 +18,21 @@ import {
   unsafeParse,
   VotesDict,
 } from '@votingworks/types';
-import { Buffer } from 'buffer';
 import { execFileSync } from 'child_process';
 import express, { Application } from 'express';
 import { DateTime } from 'luxon';
 import { isDeepStrictEqual } from 'util';
 import { z } from 'zod';
 import {
-  CastBallot,
   Election,
+  ElectionObjectType,
   JurisdictionCode,
   Payload,
   RegistrationRequest,
   SignedObject,
   Uuid,
 } from './cacvote-server/types';
+import { createEncryptedBallotPayload } from './electionguard';
 import { MAILING_LABEL_PRINTER } from './globals';
 import * as mailingLabel from './mailing_label';
 import { Auth, AuthStatus } from './types/auth';
@@ -264,19 +264,11 @@ function buildApi({
           throw new Error(`Election not found: ${electionObjectId}`);
         }
 
-        const electionPayload = electionObject.getPayload().okOrElse(bail);
+        const electionPayload = electionObject
+          .getPayloadAsObjectType(ElectionObjectType)
+          .okOrElse(bail);
         const election = electionPayload.getData();
-
-        if (!(election instanceof Election)) {
-          throw new Error(
-            `Expected 'Election' but was ${electionPayload.getObjectType()}`
-          );
-        }
-
         const electionDefinition = election.getElectionDefinition();
-        if (!electionDefinition) {
-          throw new Error('no election definition found for registration');
-        }
 
         const ballotId = Uuid();
         const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
@@ -312,18 +304,13 @@ function buildApi({
           { input: pdf }
         );
 
-        const payload = Payload.CastBallot(
-          new CastBallot(
-            authStatus.card.commonAccessCardId,
-            election.getJurisdictionCode(),
-            registration.registration.getRegistrationRequestObjectId(),
-            registration.object.getId(),
-            electionObjectId,
-            // TODO: encrypt with ElectionGuard
-            Buffer.from(
-              new TextEncoder().encode(JSON.stringify(castVoteRecord))
-            )
-          )
+        const payload = createEncryptedBallotPayload(
+          commonAccessCardId,
+          electionPayload,
+          registration.registration.getRegistrationRequestObjectId(),
+          registration.object.getId(),
+          electionObjectId,
+          castVoteRecord
         );
 
         const signature = (

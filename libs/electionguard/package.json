@@ -32,8 +32,8 @@
   },
   "scripts": {
     "artifacts": "napi artifacts",
-    "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
+    "build": "napi build --platform --release --dts napi.d.ts",
+    "build:debug": "napi build --platform --dts napi.d.ts",
     "lint": "pnpm type-check && eslint .",
     "lint:fix": "pnpm type-check && eslint . --fix",
     "prepublishOnly": "napi prepublish -t npm",

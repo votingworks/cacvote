@@ -15,6 +15,7 @@ use types_rs::{
 
 use crate::{
     command::run_electionguard_command,
+    constants::{ENCRYPTED_BALLOTS_DIRECTORY, PLAINTEXT_BALLOT_PREFIX},
     manifest::{Manifest, ObjectId},
     zip::{unzip_into_directory, UnzipLimits},
 };
@@ -173,6 +174,7 @@ pub fn encrypt(
     classpath: &PathBuf,
     public_metadata_blob: &[u8],
     plaintext_ballot: &PlaintextBallot,
+    device_name: &str,
 ) -> io::Result<Vec<u8>> {
     // create a temporary working directory securely
     let temp_directory = tempfile::tempdir()?;
@@ -192,7 +194,7 @@ pub fn encrypt(
     unzip_into_directory(&mut zip, &config_directory, UnzipLimits::default())?;
 
     // write the plaintext ballot to a file
-    let plaintext_ballot_path = input_directory.join("ballot.json");
+    let plaintext_ballot_path = input_directory.join(format!("{PLAINTEXT_BALLOT_PREFIX}1.json"));
     let plaintext_ballot_file = File::create(&plaintext_ballot_path)?;
     serde_json::to_writer(plaintext_ballot_file, plaintext_ballot)?;
 
@@ -202,9 +204,10 @@ pub fn encrypt(
         &config_directory,
         &plaintext_ballot_path,
         &output_directory,
+        device_name,
     )?;
 
-    let encrypted_ballots_directory = output_directory.join("encrypted_ballots");
+    let encrypted_ballots_directory = output_directory.join(ENCRYPTED_BALLOTS_DIRECTORY);
     let output_directory = if encrypted_ballots_directory.exists() {
         encrypted_ballots_directory
     } else {
@@ -237,6 +240,7 @@ pub fn run_encrypt_ballot(
     config_directory: &PathBuf,
     plaintext_ballot_path: &PathBuf,
     output_directory: &PathBuf,
+    device_name: &str,
 ) -> io::Result<()> {
     DirBuilder::new().recursive(true).create(output_directory)?;
 
@@ -252,7 +256,7 @@ pub fn run_encrypt_ballot(
             .arg("-out")
             .arg(output_directory)
             .arg("-device")
-            .arg("device42")
+            .arg(device_name)
             .arg("--noDeviceNameInDir"),
     )
 }
@@ -294,6 +298,7 @@ mod tests {
                 &PathBuf::from(&classpath),
                 &election_config.public_metadata_blob,
                 &plaintext_ballot,
+                "device1",
             )
             .unwrap();
 

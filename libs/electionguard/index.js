@@ -310,12 +310,10 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { ElectionType, GeopoliticalUnitType, VoteVariation, convertVxElectionToEgManifest, generateElectionConfig, convertVxCvrToEgPlaintextBallot, encryptEgPlaintextBallot } = nativeBinding
+const { convertVxElectionToEgManifest, generateElectionConfig, convertVxCvrToEgPlaintextBallot, encryptEgPlaintextBallot, extractManifestFromPublicMetadataBlob } = nativeBinding
 
-module.exports.ElectionType = ElectionType
-module.exports.GeopoliticalUnitType = GeopoliticalUnitType
-module.exports.VoteVariation = VoteVariation
 module.exports.convertVxElectionToEgManifest = convertVxElectionToEgManifest
 module.exports.generateElectionConfig = generateElectionConfig
 module.exports.convertVxCvrToEgPlaintextBallot = convertVxCvrToEgPlaintextBallot
 module.exports.encryptEgPlaintextBallot = encryptEgPlaintextBallot
+module.exports.extractManifestFromPublicMetadataBlob = extractManifestFromPublicMetadataBlob

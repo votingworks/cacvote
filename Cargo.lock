@@ -486,6 +486,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "types-rs",
+ "url",
  "uuid",
 ]
 

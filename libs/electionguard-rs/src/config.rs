@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::{
-    command::run_electionguard_command, manifest::Manifest, zip::zip_files_in_directory_to_buffer,
+    command::run_electionguard_command, constants::MANIFEST_FILE, manifest::Manifest,
+    zip::zip_files_in_directory_to_buffer,
 };
 
 pub struct ElectionConfig {
@@ -25,7 +26,7 @@ pub fn generate_election_config(
     let temp_dir_path = temp_dir.path();
 
     // write the manifest to a file
-    let manifest_path = temp_dir_path.join("manifest.json");
+    let manifest_path = temp_dir_path.join(MANIFEST_FILE);
     let manifest_file = File::create(&manifest_path)?;
     serde_json::to_writer(manifest_file, &manifest)?;
 
@@ -103,9 +104,21 @@ pub fn run_trusted_key_ceremony(
     )
 }
 
+/// Extract the manifest from the public metadata blob.
+pub fn extract_manifest_from_public_metadata_blob(
+    public_metadata_blob: &[u8],
+) -> io::Result<Manifest> {
+    let mut manifest_zip = zip::ZipArchive::new(std::io::Cursor::new(public_metadata_blob))?;
+    let manifest_file = manifest_zip.by_name(MANIFEST_FILE)?;
+    let manifest: Manifest = serde_json::from_reader(manifest_file)?;
+    Ok(manifest)
+}
+
 #[cfg(test)]
 mod tests {
     use types_rs::election::ElectionDefinition;
+
+    use crate::constants::{CONSTANTS_FILE, ELECTION_CONFIG_FILE, ELECTION_INITIALIZED_FILE};
 
     use super::*;
 
@@ -131,10 +144,10 @@ mod tests {
             assert_eq!(
                 file_names,
                 vec![
-                    "constants.json",
-                    "election_config.json",
-                    "election_initialized.json",
-                    "manifest.json",
+                    CONSTANTS_FILE,
+                    ELECTION_CONFIG_FILE,
+                    ELECTION_INITIALIZED_FILE,
+                    MANIFEST_FILE,
                 ]
             );
 

@@ -46,7 +46,7 @@ pub struct ElectionConfig {
     pub private_metadata_blob: Buffer,
 }
 
-#[napi]
+#[napi(ts_args_type = "classpath: string, egManifest: import('./types').Manifest")]
 pub fn generate_election_config(
     classpath: String,
     eg_manifest: serde_json::Value,
@@ -142,13 +142,14 @@ pub fn convert_vx_cvr_to_eg_plaintext_ballot(
 /// blob from the `ElectionConfig` struct. The return value is the encrypted
 /// ballot as a POJO.
 #[napi(
-    ts_args_type = "classpath: string, publicMetadataBlob: Uint8Array, egPlaintextBallot: import('./types').PlaintextBallot",
+    ts_args_type = "classpath: string, publicMetadataBlob: Uint8Array, egPlaintextBallot: import('./types').PlaintextBallot, deviceName: string",
     ts_return_type = "import('./types').EncryptedBallot"
 )]
 pub fn encrypt_eg_plaintext_ballot(
     classpath: String,
     public_metadata_blob: &[u8],
     eg_plaintext_ballot: serde_json::Value,
+    device_name: String,
 ) -> Result<serde_json::Value> {
     let classpath = PathBuf::from(classpath);
 
@@ -160,18 +161,47 @@ pub fn encrypt_eg_plaintext_ballot(
             )
         })?;
 
-    let encrypted_ballot_bytes =
-        ballot::encrypt(&classpath, public_metadata_blob, &eg_plaintext_ballot).map_err(|e| {
-            Error::new(
-                Status::GenericFailure,
-                format!("Failed to encrypt EG plaintext ballot: {e}"),
-            )
-        })?;
+    let encrypted_ballot_bytes = ballot::encrypt(
+        &classpath,
+        public_metadata_blob,
+        &eg_plaintext_ballot,
+        &device_name,
+    )
+    .map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to encrypt EG plaintext ballot: {e}"),
+        )
+    })?;
 
     serde_json::from_slice(&encrypted_ballot_bytes).map_err(|e| {
         Error::new(
             Status::GenericFailure,
             format!("Failed to deserialize encrypted ballot: {e}"),
+        )
+    })
+}
+
+/// Extract the ElectionGuard manifest from the public metadata blob.
+#[napi(
+    ts_args_type = "publicMetadataBlob: Uint8Array",
+    ts_return_type = "import('./types').Manifest"
+)]
+pub fn extract_manifest_from_public_metadata_blob(
+    public_metadata_blob: &[u8],
+) -> Result<serde_json::Value> {
+    let manifest = config::extract_manifest_from_public_metadata_blob(public_metadata_blob)
+        .map_err(|e| {
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to extract manifest from public metadata blob: {e}"),
+            )
+        })?;
+
+    serde_json::to_value(manifest).map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to serialize manifest: {e}"),
         )
     })
 }
