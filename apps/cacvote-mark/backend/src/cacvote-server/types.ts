@@ -2,6 +2,7 @@
 import { certs, cryptography } from '@votingworks/auth';
 import {
   Result,
+  err,
   ok,
   throwIllegalValue,
   wrapException,
@@ -9,7 +10,6 @@ import {
 import {
   BallotStyleId,
   BallotStyleIdSchema,
-  CVR,
   ElectionDefinition,
   NewType,
   PrecinctId,
@@ -27,6 +27,11 @@ export const ElectionObjectType = 'Election';
 export const RegistrationRequestObjectType = 'RegistrationRequest';
 export const RegistrationObjectType = 'Registration';
 export const CastBallotObjectType = 'CastBallot';
+export type PayloadObjectType =
+  | typeof ElectionObjectType
+  | typeof RegistrationRequestObjectType
+  | typeof RegistrationObjectType
+  | typeof CastBallotObjectType;
 export type Uuid = NewType<string, 'Uuid'>;
 
 export function Uuid(): Uuid {
@@ -308,7 +313,7 @@ export class CastBallot {
     private readonly registrationRequestObjectId: Uuid,
     private readonly registrationObjectId: Uuid,
     private readonly electionObjectId: Uuid,
-    private readonly cvr: CVR.CVR
+    private readonly electionguardEncryptedBallot: string
   ) {}
 
   getCommonAccessCardId(): string {
@@ -331,8 +336,8 @@ export class CastBallot {
     return this.electionObjectId;
   }
 
-  getCVR(): CVR.CVR {
-    return this.cvr;
+  getElectionguardEncryptedBallot(): string {
+    return this.electionguardEncryptedBallot;
   }
 }
 
@@ -342,7 +347,7 @@ const CastBallotStructSchema = z.object({
   registrationRequestObjectId: UuidSchema,
   registrationObjectId: UuidSchema,
   electionObjectId: UuidSchema,
-  cvr: CVR.CVRSchema,
+  electionguardEncryptedBallot: z.string(),
 });
 
 export const CastBallotSchema: z.ZodSchema<CastBallot> =
@@ -354,7 +359,7 @@ export const CastBallotSchema: z.ZodSchema<CastBallot> =
         o.registrationRequestObjectId,
         o.registrationObjectId,
         o.electionObjectId,
-        o.cvr
+        o.electionguardEncryptedBallot
       )
   ) as unknown as z.ZodSchema<CastBallot>;
 
@@ -470,7 +475,7 @@ export const PayloadSchema: z.ZodSchema<Payload> = z
             o.registrationRequestObjectId,
             o.registrationObjectId,
             o.electionObjectId,
-            o.cvr
+            o.electionguardEncryptedBallot
           )
         );
       }
@@ -498,6 +503,43 @@ export class SignedObject {
 
   getPayload(): Result<Payload, ZodError | SyntaxError> {
     return safeParseJson(this.payload.toString(), PayloadSchema);
+  }
+
+  getPayloadAsObjectType(
+    objectType: typeof ElectionObjectType
+  ): Result<Payload<Election>, ZodError | SyntaxError>;
+  getPayloadAsObjectType(
+    objectType: typeof RegistrationRequestObjectType
+  ): Result<Payload<RegistrationRequest>, ZodError | SyntaxError>;
+  getPayloadAsObjectType(
+    objectType: typeof RegistrationObjectType
+  ): Result<Payload<Registration>, ZodError | SyntaxError>;
+  getPayloadAsObjectType(
+    objectType: typeof CastBallotObjectType
+  ): Result<Payload<CastBallot>, ZodError | SyntaxError>;
+  // eslint-disable-next-line vx/gts-no-return-type-only-generics
+  getPayloadAsObjectType<T extends PayloadInner>(
+    objectType: PayloadObjectType
+  ): Result<Payload<T>, ZodError | SyntaxError> {
+    const parsePayloadResult = this.getPayload();
+    if (parsePayloadResult.isErr()) {
+      return parsePayloadResult;
+    }
+
+    const payload = parsePayloadResult.ok();
+    if (payload.getObjectType() === objectType) {
+      return ok(payload as Payload<T>);
+    }
+
+    return err(
+      new ZodError([
+        {
+          code: 'custom',
+          message: `Expected payload object type ${objectType}, got ${payload.getObjectType()}`,
+          path: ['objectType'],
+        },
+      ])
+    );
   }
 
   getCertificates(): Buffer {

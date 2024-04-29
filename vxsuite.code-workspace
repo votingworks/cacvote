@@ -61,6 +61,14 @@
       "name": "libs/dev-dock/frontend"
     },
     {
+      "path": "libs/electionguard",
+      "name": "libs/electionguard"
+    },
+    {
+      "path": "libs/electionguard-rs",
+      "name": "libs/electionguard-rs"
+    },
+    {
       "path": "libs/eslint-plugin-vx",
       "name": "libs/eslint-plugin-vx"
     },
@@ -160,7 +168,9 @@
       "canonicalizes",
       "cardless",
       "castability",
+      "CLASSPATH",
       "cvrs",
+      "ELECTIONGUARD",
       "frontends",
       "hmpb",
       "imdebug",

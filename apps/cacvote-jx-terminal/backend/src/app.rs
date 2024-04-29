@@ -28,7 +28,7 @@ use types_rs::cacvote::{
 use uuid::Uuid;
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
-use crate::{db, electionguard, smartcard};
+use crate::{db, smartcard};
 use tokio::sync::broadcast;
 
 #[derive(Clone)]
@@ -220,7 +220,7 @@ async fn create_election(
         }
     };
 
-    let election_config = match electionguard::generate_election_config(
+    let election_config = match electionguard_rs::config::generate_election_config(
         &config.eg_classpath,
         election.election_definition.election.clone(),
     ) {

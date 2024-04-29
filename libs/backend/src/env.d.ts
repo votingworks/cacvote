@@ -6,5 +6,6 @@ declare namespace NodeJS {
     readonly NODE_ENV: 'development' | 'production' | 'test';
     readonly SCAN_ALLOWED_EXPORT_PATTERNS?: string;
     readonly VX_MACHINE_ID?: string;
+    readonly EG_CLASSPATH?: string;
   }
 }
