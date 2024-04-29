@@ -24,10 +24,6 @@ path = "bin/get-journal-entries.rs"
 name = "get-object-by-id"
 path = "bin/get-object-by-id.rs"
 
-[[bin]]
-name = "decrypt-ballot"
-path = "bin/decrypt-ballot.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
