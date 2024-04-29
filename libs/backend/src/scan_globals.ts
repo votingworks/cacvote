@@ -1,4 +1,3 @@
-import { assertDefined } from '@votingworks/basics';
 import { unsafeParse } from '@votingworks/types';
 import { DEV_MOCK_USB_DRIVE_GLOB_PATTERN } from '@votingworks/usb-drive';
 import { z } from 'zod';
@@ -41,4 +40,4 @@ export const SCAN_ALLOWED_EXPORT_PATTERNS =
 /**
  * Path to the ElectionGuard JAR file.
  */
-export const ELECTIONGUARD_CLASSPATH = assertDefined(process.env.EG_CLASSPATH);
+export const ELECTIONGUARD_CLASSPATH = process.env.EG_CLASSPATH;

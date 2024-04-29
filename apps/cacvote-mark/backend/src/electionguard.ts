@@ -5,6 +5,7 @@ import {
   extractManifestFromPublicMetadataBlob,
 } from '@votingworks/electionguard';
 import { CVR } from '@votingworks/types';
+import { assertDefined } from '@votingworks/basics';
 import { CastBallot, Election, Payload, Uuid } from './cacvote-server/types';
 
 /**
@@ -29,7 +30,7 @@ export function createEncryptedBallotPayload(
     castVoteRecord
   );
   const encryptedBallot = encryptEgPlaintextBallot(
-    ELECTIONGUARD_CLASSPATH,
+    assertDefined(ELECTIONGUARD_CLASSPATH),
     electionMetadataBlob,
     plaintextBallot,
     VX_MACHINE_ID
