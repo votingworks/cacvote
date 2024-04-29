@@ -59,14 +59,12 @@ test('convert VX election to EG manifest', () => {
 });
 
 test('convert VX CVR to EG plaintext ballot', () => {
-  const manifest = convertVxElectionToEgManifest(famousNamesElection) as {
-    ballot_styles: Array<{ object_id: string }>;
-  };
+  const manifest = convertVxElectionToEgManifest(famousNamesElection);
   const egPlaintextBallot = convertVxCvrToEgPlaintextBallot(
     famousNamesElection,
     manifest,
     famousNamesCvr
-  ) as Record<string, unknown>;
+  );
   expect(egPlaintextBallot).toMatchObject({
     ballot_id: famousNamesCvr.UniqueId,
     ballot_style: manifest.ballot_styles[0]?.object_id,
@@ -89,12 +87,13 @@ test('convert VX CVR to EG plaintext ballot', () => {
     famousNamesElection,
     manifest,
     famousNamesCvr
-  ) as Record<string, unknown>;
+  );
   const encryptedBallot = encryptEgPlaintextBallot(
     assertDefined(EG_CLASSPATH),
     config.publicMetadataBlob,
-    egPlaintextBallot
-  ) as Record<string, unknown>;
+    egPlaintextBallot,
+    'test-device'
+  );
   expect(encryptedBallot).toMatchObject({
     ballot_id: egPlaintextBallot['ballot_id'],
     ballot_style_id: egPlaintextBallot['ballot_style'],
