@@ -44,5 +44,6 @@
     "type-check": "tsc --build",
     "universal": "napi universal",
     "version": "napi version"
-  }
+  },
+  "packageManager": "pnpm@8.1.0"
 }
