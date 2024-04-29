@@ -309,6 +309,29 @@ jobs:
       - store_test_results:
           path: libs/dev-dock/frontend/reports/
 
+  # @votingworks/electionguard
+  test-libs-electionguard:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/electionguard build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/electionguard lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/electionguard test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/electionguard/reports/
+
   # eslint-plugin-vx
   test-libs-eslint-plugin-vx:
     executor: nodejs
@@ -745,6 +768,34 @@ jobs:
           command: |
             cargo test -p cacvote-server
 
+  test-crate-electionguard:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p electionguard
+      - run:
+          name: Test
+          command: |
+            cargo test -p electionguard
+
+  test-crate-electionguard-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p electionguard-rs
+      - run:
+          name: Test
+          command: |
+            cargo test -p electionguard-rs
+
   test-crate-types-rs:
     executor: nodejs
     resource_class: xlarge
@@ -816,6 +867,7 @@ workflows:
       - test-libs-db
       - test-libs-dev-dock-backend
       - test-libs-dev-dock-frontend
+      - test-libs-electionguard
       - test-libs-eslint-plugin-vx
       - test-libs-fixtures
       - test-libs-fs
@@ -836,6 +888,8 @@ workflows:
       - test-crate-cacvote-jx-terminal-backend
       - test-crate-cacvote-jx-terminal-frontend
       - test-crate-cacvote-server
+      - test-crate-electionguard
+      - test-crate-electionguard-rs
       - test-crate-types-rs
       - test-crate-ui-rs
       - test-crate-vx-logging
