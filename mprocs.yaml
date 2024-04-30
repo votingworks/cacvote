@@ -8,10 +8,7 @@ procs:
     shell: 'cargo watch -- cargo run --bin cacvote-jx-terminal-backend'
   cacvote-jx-frontend:
     cwd: 'apps/cacvote-jx-terminal/frontend'
-    shell: 'dx serve --port 5000'
-  cacvote-jx-frontend-css:
-    cwd: 'apps/cacvote-jx-terminal/frontend'
-    shell: 'pnpm tailwindcss -i input.css -o ./public/styles.css --watch'
+    shell: 'pnpm start'
 
   cacvote-mark:
     cwd: 'apps/cacvote-mark/frontend'
