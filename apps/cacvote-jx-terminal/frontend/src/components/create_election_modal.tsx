@@ -4,8 +4,9 @@ import {
   safeParseElectionDefinition,
 } from '@votingworks/types';
 import { Button, FileInputButton, InputGroup, Modal, P } from '@votingworks/ui';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import styled from 'styled-components';
+import { useModalKeybindings } from '../use_modal_keybindings';
 
 const Label = styled.div`
   display: block;
@@ -43,33 +44,13 @@ export function CreateElectionModal({
     onCreate({ mailingAddress, electionDefinition });
   }, [electionDefinition, mailingAddress, onCreate]);
 
-  const onKeyUp = useCallback(
-    (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
+  const onKeyboardEnter = useCallback(() => {
+    if (isReadyToCreate) {
+      onPressCreate();
+    }
+  }, [isReadyToCreate, onPressCreate]);
 
-      const focusedElement = document.activeElement;
-      const focusedElementIsInput =
-        focusedElement instanceof HTMLInputElement ||
-        focusedElement instanceof HTMLTextAreaElement;
-
-      if (!focusedElementIsInput) {
-        if (event.key === 'Enter' && isReadyToCreate) {
-          onPressCreate();
-        }
-      }
-    },
-    [isReadyToCreate, onClose, onPressCreate]
-  );
-
-  useEffect(() => {
-    window.addEventListener('keyup', onKeyUp);
-
-    return () => {
-      window.removeEventListener('keyup', onKeyUp);
-    };
-  }, [onKeyUp]);
+  useModalKeybindings({ onEnter: onKeyboardEnter, onEscape: onClose });
 
   return (
     <Modal
