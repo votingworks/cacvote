@@ -566,6 +566,7 @@ pub struct CastBallotPresenter {
     cast_ballot: CastBallot,
     registration_request: RegistrationRequest,
     registration: Registration,
+    registration_id: Uuid,
     verification_status: VerificationStatus,
     #[serde(with = "time::serde::iso8601")]
     created_at: OffsetDateTime,
@@ -576,6 +577,7 @@ impl CastBallotPresenter {
         cast_ballot: CastBallot,
         registration_request: RegistrationRequest,
         registration: Registration,
+        registration_id: Uuid,
         verification_status: VerificationStatus,
         created_at: OffsetDateTime,
     ) -> Self {
@@ -583,6 +585,7 @@ impl CastBallotPresenter {
             cast_ballot,
             registration_request,
             registration,
+            registration_id,
             verification_status,
             created_at,
         }
@@ -590,6 +593,10 @@ impl CastBallotPresenter {
 
     pub fn registration(&self) -> &Registration {
         &self.registration
+    }
+
+    pub fn registration_id(&self) -> &Uuid {
+        &self.registration_id
     }
 
     pub fn registration_request(&self) -> &RegistrationRequest {

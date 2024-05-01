@@ -29,12 +29,14 @@ interface Props {
   children: React.ReactNode;
   title?: string;
   parentRoutes?: Route[];
+  headerActions?: React.ReactNode;
 }
 
 export function NavigationScreen({
   children,
   title,
   parentRoutes,
+  headerActions,
 }: Props): JSX.Element | null {
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
@@ -66,6 +68,7 @@ export function NavigationScreen({
               </React.Fragment>
             )}
           </div>
+          {headerActions}
         </Header>
         <MainContent>{children}</MainContent>
       </Main>
