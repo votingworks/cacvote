@@ -1,21 +1,10 @@
-import { Button, Card, H2, P, Seal } from '@votingworks/ui';
-import { format } from '@votingworks/utils';
+import { Button } from '@votingworks/ui';
 import { useState } from 'react';
-import styled from 'styled-components';
+import { Link } from 'react-router-dom';
 import * as api from '../api';
-import { NavigationScreen } from './navigation_screen';
 import { CreateElectionModal } from '../components/create_election_modal';
-
-const ElectionCard = styled(Card).attrs({ color: 'neutral' })`
-  margin: 1rem 0;
-
-  > div {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    padding: 1rem;
-  }
-`;
+import { ElectionCard } from '../components/election_card';
+import { NavigationScreen } from './navigation_screen';
 
 export function ElectionsScreen(): JSX.Element | null {
   const sessionDataQuery = api.sessionData.useQuery();
@@ -38,19 +27,9 @@ export function ElectionsScreen(): JSX.Element | null {
             electionDefinition: { election },
           },
         }) => (
-          // <Link to={`/elections/${id}`} key={id}>
-          <ElectionCard key={id}>
-            <Seal seal={election.seal} maxWidth="7rem" />
-            <div>
-              <H2 as="h3">{election.title}</H2>
-              <P>
-                {election.county.name}, {election.state}
-                <br />
-                {format.localeDate(new Date(election.date))}
-              </P>
-            </div>
-          </ElectionCard>
-          // </Link>
+          <Link to={`/elections/${id}`} key={id}>
+            <ElectionCard election={election} />
+          </Link>
         )
       )}
       <Button icon="Add" onPress={() => setIsShowingAddElectionModal(true)}>
@@ -58,6 +37,7 @@ export function ElectionsScreen(): JSX.Element | null {
       </Button>
       {isShowingAddElectionModal && (
         <CreateElectionModal
+          isCreating={createElectionMutation.isLoading}
           onCreate={({ mailingAddress, electionDefinition }) =>
             createElectionMutation.mutate(
               {

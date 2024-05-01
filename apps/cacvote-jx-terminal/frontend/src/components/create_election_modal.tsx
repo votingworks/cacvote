@@ -4,16 +4,12 @@ import {
   safeParseElectionDefinition,
 } from '@votingworks/types';
 import { Button, FileInputButton, InputGroup, Modal, P } from '@votingworks/ui';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 
 const Label = styled.div`
   display: block;
   font-weight: ${(p) => p.theme.sizes.fontWeight.semiBold};
-`;
-
-const ErrorMessage = styled(P)`
-  color: ${(p) => p.theme.colors.danger};
 `;
 
 export interface CreateElectionModalProps {
@@ -25,25 +21,55 @@ export interface CreateElectionModalProps {
     electionDefinition: ElectionDefinition;
   }) => void;
   onClose: () => void;
-  errorMessage?: string;
+  isCreating?: boolean;
 }
 
 export function CreateElectionModal({
   onCreate,
   onClose,
-  errorMessage,
+  isCreating,
 }: CreateElectionModalProps): JSX.Element {
   const [mailingAddress, setMailingAddress] = useState('');
   const [electionDefinition, setElectionDefinition] =
     useState<ElectionDefinition>();
   const isReadyToCreate =
-    mailingAddress.length > 0 && electionDefinition !== undefined;
+    !isCreating &&
+    mailingAddress.length > 0 &&
+    electionDefinition !== undefined;
 
-  function onPressCreate() {
+  const onPressCreate = useCallback(() => {
     assert(electionDefinition);
     assert(mailingAddress.length > 0);
     onCreate({ mailingAddress, electionDefinition });
-  }
+  }, [electionDefinition, mailingAddress, onCreate]);
+
+  const onKeyUp = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+
+      const focusedElement = document.activeElement;
+      const focusedElementIsInput =
+        focusedElement instanceof HTMLInputElement ||
+        focusedElement instanceof HTMLTextAreaElement;
+
+      if (!focusedElementIsInput) {
+        if (event.key === 'Enter' && isReadyToCreate) {
+          onPressCreate();
+        }
+      }
+    },
+    [isReadyToCreate, onClose, onPressCreate]
+  );
+
+  useEffect(() => {
+    window.addEventListener('keyup', onKeyUp);
+
+    return () => {
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, [onKeyUp]);
 
   return (
     <Modal
@@ -86,7 +112,6 @@ export function CreateElectionModal({
               Import Election
             </FileInputButton>
           </InputGroup>
-          {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
         </React.Fragment>
       }
       actions={

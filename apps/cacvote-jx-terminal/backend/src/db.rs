@@ -521,6 +521,7 @@ pub(crate) async fn get_cast_ballots(
                         cast_ballot,
                         registration_request,
                         registration,
+                        registration_object.id,
                         verification_status,
                         created_at,
                     ));

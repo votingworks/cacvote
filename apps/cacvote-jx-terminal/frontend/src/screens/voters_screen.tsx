@@ -1,13 +1,52 @@
 import { H2, P, TD, TH, Table } from '@votingworks/ui';
-import { DateTime } from 'luxon';
 import { useState } from 'react';
 import * as api from '../api';
+import { RegistrationPresenter } from '../cacvote-server/session_data';
 import { Uuid } from '../cacvote-server/types';
+import { DateTimeCell } from '../components/date_time_cell';
 import {
   ElectionConfiguration,
   ElectionConfigurationSelect,
 } from '../components/election_configuration_select';
+import { RegistrationConfigurationCell } from '../components/registration_configuration_cell';
+import { VoterInfoCell } from '../components/voter_info_cell';
 import { NavigationScreen } from './navigation_screen';
+
+interface RegistrationsTableProps {
+  registrations: readonly RegistrationPresenter[];
+}
+
+function RegistrationsTable({
+  registrations,
+}: RegistrationsTableProps): JSX.Element {
+  return (
+    <Table>
+      <thead>
+        <tr>
+          <TH>Voter</TH>
+          <TH>Election Configuration</TH>
+          <TH>Registered</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {registrations.map((r) => (
+          <tr key={r.id}>
+            <VoterInfoCell
+              displayName={r.displayName}
+              commonAccessCardId={r.registration.commonAccessCardId}
+            />
+            <RegistrationConfigurationCell
+              electionTitle={r.electionTitle}
+              ballotStyleId={r.registration.ballotStyleId}
+              precinctId={r.registration.precinctId}
+            />
+            <DateTimeCell dateTime={r.createdAt} />
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
 
 export function VotersScreen(): JSX.Element | null {
   const sessionDataQuery = api.sessionData.useQuery();
@@ -83,42 +122,7 @@ export function VotersScreen(): JSX.Element | null {
 
       <H2>Registrations</H2>
       {sessionData.registrations.length > 0 ? (
-        <Table>
-          <thead>
-            <tr>
-              <TH>Voter</TH>
-              <TH>Election Configuration</TH>
-              <TH>Registered</TH>
-            </tr>
-          </thead>
-          <tbody>
-            {sessionData.registrations.map((r) => (
-              <tr key={r.id}>
-                <TD>
-                  <P>{r.displayName}</P>
-                  <P>
-                    <em>CAC:</em> {r.registration.commonAccessCardId}
-                  </P>
-                </TD>
-                <TD>
-                  <P>{r.electionTitle}</P>
-                  <P>
-                    <em>Ballot Style:</em> {r.registration.ballotStyleId}
-                    <br />
-                    <em>Precinct:</em> {r.registration.precinctId}
-                  </P>
-                </TD>
-                <TD>
-                  <P>
-                    {DateTime.fromISO(r.createdAt).toLocaleString(
-                      DateTime.DATETIME_SHORT
-                    )}
-                  </P>
-                </TD>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <RegistrationsTable registrations={sessionData.registrations} />
       ) : (
         <p>There are no registrations.</p>
       )}

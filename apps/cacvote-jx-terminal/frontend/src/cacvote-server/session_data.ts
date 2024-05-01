@@ -200,6 +200,7 @@ export interface CastBallotPresenter {
   castBallot: CastBallot;
   registrationRequest: RegistrationRequest;
   registration: Registration;
+  registrationId: Uuid;
   verificationStatus: VerificationStatus;
 
   /**
@@ -213,6 +214,7 @@ export const CastBallotPresenterSchema: z.ZodSchema<CastBallotPresenter> =
     castBallot: CastBallotSchema,
     registrationRequest: RegistrationRequestSchema,
     registration: RegistrationSchema,
+    registrationId: UuidSchema,
     verificationStatus: VerificationStatusSchema,
     createdAt: z.string(),
   });
