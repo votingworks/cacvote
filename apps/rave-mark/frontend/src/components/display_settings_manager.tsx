@@ -1,5 +1,8 @@
 import React from 'react';
-import { ThemeManagerContext, useQueryChangeListener } from '@votingworks/ui';
+import {
+  VoterSettingsManagerContext,
+  useQueryChangeListener,
+} from '@votingworks/ui';
 import { DefaultTheme, ThemeContext } from 'styled-components';
 import { getAuthStatus } from '../api';
 
@@ -8,7 +11,7 @@ import { getAuthStatus } from '../api';
  * resetting/restoring voter display settings as needed.
  */
 export function DisplaySettingsManager(): JSX.Element | null {
-  const themeManager = React.useContext(ThemeManagerContext);
+  const voterSettingsManager = React.useContext(VoterSettingsManagerContext);
   const currentTheme = React.useContext(ThemeContext);
 
   const authStatusQuery = getAuthStatus.useQuery();
@@ -22,13 +25,13 @@ export function DisplaySettingsManager(): JSX.Element | null {
       // Reset to default theme when election official logs in:
       if (newStatus !== 'no_card') {
         setVoterSessionTheme(currentTheme);
-        themeManager.resetThemes();
+        voterSettingsManager.resetThemes();
       }
 
       // Reset to previous voter settings when election official logs out:
       if (newStatus === 'no_card' && voterSessionTheme) {
-        themeManager.setColorMode(voterSessionTheme.colorMode);
-        themeManager.setSizeMode(voterSessionTheme.sizeMode);
+        voterSettingsManager.setColorMode(voterSessionTheme.colorMode);
+        voterSettingsManager.setSizeMode(voterSessionTheme.sizeMode);
         setVoterSessionTheme(null);
       }
     },

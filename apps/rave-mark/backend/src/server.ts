@@ -146,7 +146,9 @@ export function start({ auth, logger, port, workspace }: StartOptions): Server {
     console.log('===> CLEARED!');
 
     // run again in 5 seconds
-    setTimeout(deleteRecentlyCastBallots, 1000 * 5);
+    setTimeout(() => {
+      deleteRecentlyCastBallots(ageInSeconds);
+    }, 1000 * 5);
   }
 
   if (DELETE_RECENTLY_CAST_BALLOTS_MINUTES) {

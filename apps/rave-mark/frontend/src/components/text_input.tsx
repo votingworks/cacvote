@@ -3,7 +3,7 @@ import {
   Modal,
   P,
   TouchTextInput,
-  US_ENGLISH_ALNUM_KEYMAP,
+  US_ENGLISH_KEYMAP,
   VirtualKeyboard,
 } from '@votingworks/ui';
 import React, { useState } from 'react';
@@ -95,7 +95,7 @@ export function TextInput({
               <TouchTextInput value={value} />
               <P>&nbsp;</P>
               <VirtualKeyboard
-                keyMap={US_ENGLISH_ALNUM_KEYMAP}
+                keyMap={US_ENGLISH_KEYMAP}
                 onBackspace={onKeyboardBackspace}
                 onKeyPress={onKeyboardKeyPress}
                 keyDisabled={keyDisabled}
