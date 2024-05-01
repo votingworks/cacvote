@@ -130,12 +130,6 @@ setup-rust() {
 setup-global-devtools() {
   echo "🛠️ Global Devtools"
 
-  if ! which dx >/dev/null 2>&1; then
-    cargo install --locked dioxus-cli
-  else
-    echo -e "\e[1m[skip]\e[0m dioxus-cli is already installed"
-  fi
-
   if ! which sqlx >/dev/null 2>&1; then
     cargo install --locked sqlx-cli
   else

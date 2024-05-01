@@ -123,6 +123,10 @@ pub async fn get_pending_registration_requests(
         {
             registration_requests.push(cacvote::RegistrationRequestPresenter::new(
                 object.id,
+                format!(
+                    "{} {}",
+                    registration_request.given_name, registration_request.family_name
+                ),
                 registration_request,
                 record.created_at,
             ));

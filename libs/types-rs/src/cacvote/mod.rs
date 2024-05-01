@@ -370,14 +370,19 @@ pub enum SmartcardStatus {
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "type")]
 pub enum VerificationStatus {
+    #[serde(rename_all = "camelCase")]
     Success {
         common_access_card_id: String,
         display_name: String,
     },
+    #[serde(rename_all = "camelCase")]
     Failure,
-    Error(String),
+    #[serde(rename_all = "camelCase")]
+    Error { message: String },
     #[default]
+    #[serde(rename_all = "camelCase")]
     Unknown,
 }
 
@@ -614,8 +619,9 @@ impl Deref for CastBallotPresenter {
 pub struct ShuffledEncryptedCastBallot;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", tag = "type")]
 pub enum SessionData {
+    #[serde(rename_all = "camelCase")]
     Authenticated {
         jurisdiction_code: JurisdictionCode,
         elections: Vec<ElectionPresenter>,
@@ -623,9 +629,8 @@ pub enum SessionData {
         registrations: Vec<RegistrationPresenter>,
         cast_ballots: Vec<CastBallotPresenter>,
     },
-    Unauthenticated {
-        has_smartcard: bool,
-    },
+    #[serde(rename_all = "camelCase")]
+    Unauthenticated { has_smartcard: bool },
 }
 
 impl Default for SessionData {
@@ -646,6 +651,7 @@ pub struct CreateRegistrationRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ElectionPresenter {
     pub id: Uuid,
     election: Election,
@@ -666,8 +672,10 @@ impl Deref for ElectionPresenter {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RegistrationRequestPresenter {
     pub id: Uuid,
+    display_name: String,
     registration_request: RegistrationRequest,
     #[serde(with = "time::serde::iso8601")]
     created_at: OffsetDateTime,
@@ -684,21 +692,16 @@ impl Deref for RegistrationRequestPresenter {
 impl RegistrationRequestPresenter {
     pub fn new(
         id: Uuid,
+        display_name: String,
         registration_request: RegistrationRequest,
         created_at: OffsetDateTime,
     ) -> Self {
         Self {
             id,
+            display_name,
             registration_request,
             created_at,
         }
-    }
-
-    pub fn display_name(&self) -> String {
-        format!(
-            "{} {}",
-            self.registration_request.given_name, self.registration_request.family_name
-        )
     }
 
     pub fn created_at(&self) -> OffsetDateTime {
@@ -707,6 +710,7 @@ impl RegistrationRequestPresenter {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RegistrationPresenter {
     pub id: Uuid,
     display_name: String,

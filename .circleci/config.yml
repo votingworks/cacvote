@@ -734,20 +734,6 @@ jobs:
           command: |
             cargo test -p cacvote-jx-terminal-backend
 
-  test-crate-cacvote-jx-terminal-frontend:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p cacvote-jx-terminal-frontend
-      - run:
-          name: Test
-          command: |
-            cargo test -p cacvote-jx-terminal-frontend
-
   test-crate-cacvote-server:
     executor: rust-db
     resource_class: xlarge
@@ -809,20 +795,6 @@ jobs:
           name: Test
           command: |
             cargo test -p types-rs
-
-  test-crate-ui-rs:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p ui-rs
-      - run:
-          name: Test
-          command: |
-            cargo test -p ui-rs
 
   test-crate-vx-logging:
     executor: nodejs
@@ -886,12 +858,10 @@ workflows:
       - test-libs-utils
       - test-crate-auth-rs
       - test-crate-cacvote-jx-terminal-backend
-      - test-crate-cacvote-jx-terminal-frontend
       - test-crate-cacvote-server
       - test-crate-electionguard
       - test-crate-electionguard-rs
       - test-crate-types-rs
-      - test-crate-ui-rs
       - test-crate-vx-logging
       - validate-monorepo
 
