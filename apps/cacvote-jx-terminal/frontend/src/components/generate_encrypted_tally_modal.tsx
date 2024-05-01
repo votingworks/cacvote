@@ -1,4 +1,4 @@
-import { Button, Modal, P } from '@votingworks/ui';
+import { Button, LoadingButton, Modal, P } from '@votingworks/ui';
 import React, { useCallback } from 'react';
 import { format } from '@votingworks/utils';
 import { useModalKeybindings } from '../use_modal_keybindings';
@@ -24,7 +24,13 @@ export function GenerateEncryptedTallyModal({
     }
   }, [isGenerating, onGenerate]);
 
-  useModalKeybindings({ onEnter: onConfirm, onEscape: onClose });
+  const onCancel = useCallback(() => {
+    if (!isGenerating) {
+      onClose();
+    }
+  }, [isGenerating, onClose]);
+
+  useModalKeybindings({ onEnter: onConfirm, onEscape: onCancel });
 
   return (
     <Modal
@@ -45,10 +51,20 @@ export function GenerateEncryptedTallyModal({
       }
       actions={
         <React.Fragment>
-          <Button variant="primary" onPress={onConfirm} disabled={isGenerating}>
-            Yes, Generate Encrypted Tally
-          </Button>
-          <Button variant="neutral" onPress={onClose}>
+          {isGenerating ? (
+            <LoadingButton variant="primary">
+              Generating Encrypted Tally…
+            </LoadingButton>
+          ) : (
+            <Button
+              variant="primary"
+              onPress={onConfirm}
+              disabled={isGenerating}
+            >
+              Yes, Generate Encrypted Tally
+            </Button>
+          )}
+          <Button variant="neutral" onPress={onCancel} disabled={isGenerating}>
             Cancel
           </Button>
         </React.Fragment>

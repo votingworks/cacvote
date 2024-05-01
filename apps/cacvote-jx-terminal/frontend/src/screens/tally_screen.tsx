@@ -20,6 +20,8 @@ export function TallyScreen(): JSX.Element | null {
     isShowingGenerateEncryptedTallyModal,
     setIsShowingGenerateEncryptedTallyModal,
   ] = useState(false);
+  const [isGeneratingEncryptedTally, setIsGeneratingEncryptedTally] =
+    useState(false);
 
   if (sessionData?.type !== 'authenticated' || !electionId) {
     return null;
@@ -48,7 +50,11 @@ export function TallyScreen(): JSX.Element | null {
   }
 
   function onGenerateEncryptedTallyConfirmed() {
-    console.log('Generating encrypted tally');
+    setIsGeneratingEncryptedTally(true);
+    setTimeout(() => {
+      setIsGeneratingEncryptedTally(false);
+      setIsShowingGenerateEncryptedTallyModal(false);
+    }, 2000);
   }
 
   function onExportEncryptedTallyPressed() {
@@ -132,7 +138,7 @@ export function TallyScreen(): JSX.Element | null {
       </P>
       {isShowingGenerateEncryptedTallyModal && (
         <GenerateEncryptedTallyModal
-          isGenerating={false}
+          isGenerating={isGeneratingEncryptedTally}
           registeredVoterCount={registeredVoterCount}
           castBallotCount={castBallotCount}
           onGenerate={onGenerateEncryptedTallyConfirmed}
