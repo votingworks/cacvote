@@ -3,7 +3,11 @@ import { electionFamousNames2021Fixtures } from '@votingworks/fixtures';
 import { unsafeParse } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import { App } from './app';
-import { AuthenticatedSessionData } from './cacvote-server/session_data';
+import {
+  AuthenticatedSessionData,
+  ElectionInfo,
+  ElectionPresenter,
+} from './cacvote-server/session_data';
 import { JurisdictionCodeSchema, Uuid } from './cacvote-server/types';
 import { mockEventSource } from '../test/mess';
 
@@ -26,46 +30,28 @@ test('authenticated render', async () => {
     JurisdictionCodeSchema,
     'st.test-jurisdiction'
   );
-  const sessionData: AuthenticatedSessionData = {
-    type: 'authenticated',
+  const sessionData = new AuthenticatedSessionData(
     jurisdictionCode,
-    elections: [
-      {
-        id: Uuid(),
-        election: {
+    [
+      new ElectionPresenter(
+        Uuid(),
+        new ElectionInfo(
           jurisdictionCode,
-          mailingAddress: '123 Main St',
-          electionDefinition:
-            electionFamousNames2021Fixtures.electionDefinition,
-          electionguardElectionMetadataBlob: Buffer.of(),
-        },
-      },
+          electionFamousNames2021Fixtures.electionDefinition,
+          '123 Main St',
+          Buffer.of()
+        )
+      ),
     ],
-    pendingRegistrationRequests: [],
-    registrations: [],
-    castBallots: [],
-  };
+    [],
+    [],
+    []
+  );
 
   mess.postMessage(
     '/api/status-stream',
     new MessageEvent('message', {
-      // TODO: extract this serialization code somewhere
-      data: JSON.stringify({
-        ...sessionData,
-        elections: sessionData.elections.map((election) => ({
-          ...election,
-          election: {
-            ...election.election,
-            electionDefinition: Buffer.from(
-              election.election.electionDefinition.electionData
-            ).toString('base64'),
-            electionguardElectionMetadataBlob:
-              election.election.electionguardElectionMetadataBlob.toString(
-                'base64'
-              ),
-          },
-        })),
-      }),
+      data: JSON.stringify(sessionData),
     })
   );
 

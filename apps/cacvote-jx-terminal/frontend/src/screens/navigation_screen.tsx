@@ -11,6 +11,7 @@ import {
 import styled from 'styled-components';
 import { Sidebar } from '../components/sidebar';
 import * as api from '../api';
+import { UnauthenticatedSessionData } from '../cacvote-server/session_data';
 
 export const Header = styled(MainHeader)`
   display: flex;
@@ -40,8 +41,10 @@ export function NavigationScreen({
 }: Props): JSX.Element | null {
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
+  const isUnauthenticated =
+    sessionData && sessionData instanceof UnauthenticatedSessionData;
 
-  if (sessionData?.type !== 'authenticated') {
+  if (isUnauthenticated) {
     return null;
   }
 

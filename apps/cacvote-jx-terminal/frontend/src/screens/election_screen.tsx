@@ -4,6 +4,7 @@ import React from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import * as api from '../api';
 import {
+  AuthenticatedSessionData,
   CastBallotPresenter,
   RegistrationPresenter,
 } from '../cacvote-server/session_data';
@@ -26,7 +27,7 @@ function VotersAndBallotsTable({
   const castBallotsByRegistrationId = new Map<Uuid, CastBallotPresenter>();
 
   for (const castBallot of castBallots) {
-    castBallotsByRegistrationId.set(castBallot.registrationId, castBallot);
+    castBallotsByRegistrationId.set(castBallot.getRegistrationId(), castBallot);
   }
 
   return (
@@ -41,21 +42,21 @@ function VotersAndBallotsTable({
       </thead>
       <tbody>
         {registrations.map((r) => {
-          const castBallot = castBallotsByRegistrationId.get(r.id);
+          const castBallot = castBallotsByRegistrationId.get(r.getId());
           return (
-            <tr key={r.id}>
+            <tr key={r.getId()}>
               <VoterInfoCell
-                displayName={r.displayName}
-                commonAccessCardId={r.registration.commonAccessCardId}
+                displayName={r.getDisplayName()}
+                commonAccessCardId={r.getRegistration().getCommonAccessCardId()}
               />
               <RegistrationConfigurationCell
-                electionTitle={r.electionTitle}
-                ballotStyleId={r.registration.ballotStyleId}
-                precinctId={r.registration.precinctId}
+                electionTitle={r.getElectionTitle()}
+                ballotStyleId={r.getRegistration().getBallotStyleId()}
+                precinctId={r.getRegistration().getPrecinctId()}
               />
-              <DateTimeCell dateTime={r.createdAt} />
+              <DateTimeCell dateTime={r.getCreatedAt()} />
               {castBallot ? (
-                <DateTimeCell dateTime={castBallot.createdAt} />
+                <DateTimeCell dateTime={castBallot.getCreatedAt()} />
               ) : (
                 <TD>
                   <P>No ballot cast</P>
@@ -76,24 +77,26 @@ export interface ElectionScreenParams {
 export function ElectionScreen(): JSX.Element | null {
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
+  const isAuthenticated =
+    sessionData && sessionData instanceof AuthenticatedSessionData;
   const { electionId } = useParams<ElectionScreenParams>();
   const history = useHistory();
 
-  if (sessionData?.type !== 'authenticated' || !electionId) {
+  if (!isAuthenticated || !electionId) {
     return null;
   }
 
   const electionPresenter = assertDefined(
-    sessionData.elections.find((e) => e.id === electionId)
+    sessionData.getElections().find((e) => e.getId() === electionId)
   );
 
-  const registrations = sessionData.registrations.filter(
-    (r) => r.registration.electionObjectId === electionId
-  );
+  const registrations = sessionData
+    .getRegistrations()
+    .filter((r) => r.getRegistration().getElectionObjectId() === electionId);
 
-  const castBallots = sessionData.castBallots.filter(
-    (b) => b.registration.electionObjectId === electionId
-  );
+  const castBallots = sessionData
+    .getCastBallots()
+    .filter((b) => b.getRegistration().getElectionObjectId() === electionId);
 
   function onPressTallyButton() {
     history.push(`/elections/${electionId}/tally`);
@@ -101,12 +104,16 @@ export function ElectionScreen(): JSX.Element | null {
 
   return (
     <NavigationScreen
-      title={electionPresenter.election.electionDefinition.election.title}
+      title={
+        electionPresenter.getElection().getElectionDefinition().election.title
+      }
       parentRoutes={[{ title: 'Elections', path: '/elections' }]}
     >
       <H2>Election Information</H2>
       <ElectionCard
-        election={electionPresenter.election.electionDefinition.election}
+        election={
+          electionPresenter.getElection().getElectionDefinition().election
+        }
       />
 
       <H2>Voters &amp; Ballots</H2>
