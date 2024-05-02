@@ -1,7 +1,10 @@
 import { H2, P, TD, TH, Table } from '@votingworks/ui';
 import { useState } from 'react';
 import * as api from '../api';
-import { RegistrationPresenter } from '../cacvote-server/session_data';
+import {
+  AuthenticatedSessionData,
+  RegistrationPresenter,
+} from '../cacvote-server/session_data';
 import { Uuid } from '../cacvote-server/types';
 import { DateTimeCell } from '../components/date_time_cell';
 import {
@@ -30,17 +33,17 @@ function RegistrationsTable({
       </thead>
       <tbody>
         {registrations.map((r) => (
-          <tr key={r.id}>
+          <tr key={r.getId()}>
             <VoterInfoCell
-              displayName={r.displayName}
-              commonAccessCardId={r.registration.commonAccessCardId}
+              displayName={r.getDisplayName()}
+              commonAccessCardId={r.getRegistration().getCommonAccessCardId()}
             />
             <RegistrationConfigurationCell
-              electionTitle={r.electionTitle}
-              ballotStyleId={r.registration.ballotStyleId}
-              precinctId={r.registration.precinctId}
+              electionTitle={r.getElectionTitle()}
+              ballotStyleId={r.getRegistration().getBallotStyleId()}
+              precinctId={r.getRegistration().getPrecinctId()}
             />
-            <DateTimeCell dateTime={r.createdAt} />
+            <DateTimeCell dateTime={r.getCreatedAt()} />
           </tr>
         ))}
       </tbody>
@@ -51,6 +54,8 @@ function RegistrationsTable({
 export function VotersScreen(): JSX.Element | null {
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
+  const isAuthenticated =
+    sessionData && sessionData instanceof AuthenticatedSessionData;
 
   const registerVoterMutation = api.registerVoter.useMutation();
   const [pendingRegistrationData, setPendingRegistrationData] = useState<{
@@ -58,14 +63,14 @@ export function VotersScreen(): JSX.Element | null {
     electionConfiguration: ElectionConfiguration;
   }>();
 
-  if (sessionData?.type !== 'authenticated') {
+  if (!isAuthenticated) {
     return null;
   }
 
   return (
     <NavigationScreen title="Voters">
       <H2>Pending Registration Requests</H2>
-      {sessionData.pendingRegistrationRequests.length > 0 ? (
+      {sessionData.getPendingRegistrationRequests().length > 0 ? (
         <Table>
           <thead>
             <tr>
@@ -74,7 +79,7 @@ export function VotersScreen(): JSX.Element | null {
             </tr>
           </thead>
           <tbody>
-            {sessionData.pendingRegistrationRequests.map((rr) => (
+            {sessionData.getPendingRegistrationRequests().map((rr) => (
               <tr key={rr.id}>
                 <TD>
                   <P>
@@ -85,9 +90,10 @@ export function VotersScreen(): JSX.Element | null {
                 </TD>
                 <TD>
                   <ElectionConfigurationSelect
-                    elections={sessionData.elections.map((e) => ({
-                      id: e.id,
-                      election: e.election.electionDefinition.election,
+                    elections={sessionData.getElections().map((e) => ({
+                      id: e.getId(),
+                      election: e.getElection().getElectionDefinition()
+                        .election,
                     }))}
                     value={
                       pendingRegistrationData?.registrationRequestId === rr.id
@@ -121,8 +127,8 @@ export function VotersScreen(): JSX.Element | null {
       )}
 
       <H2>Registrations</H2>
-      {sessionData.registrations.length > 0 ? (
-        <RegistrationsTable registrations={sessionData.registrations} />
+      {sessionData.getRegistrations().length > 0 ? (
+        <RegistrationsTable registrations={sessionData.getRegistrations()} />
       ) : (
         <p>There are no registrations.</p>
       )}

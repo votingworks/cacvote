@@ -8,17 +8,20 @@ import {
   Screen,
 } from '@votingworks/ui';
 import * as api from '../api';
+import { AuthenticatedSessionData } from '../cacvote-server/session_data';
 
 export function InsertCardScreen(): JSX.Element {
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
+  const isAuthenticated =
+    sessionData && sessionData instanceof AuthenticatedSessionData;
   const history = useHistory();
 
   useEffect(() => {
-    if (sessionData?.type === 'authenticated') {
+    if (isAuthenticated) {
       history.replace('/elections');
     }
-  }, [sessionData?.type, history]);
+  }, [isAuthenticated, history]);
 
   return (
     <Screen>

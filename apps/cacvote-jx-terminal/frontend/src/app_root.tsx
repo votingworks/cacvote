@@ -6,6 +6,7 @@ import { ElectionsScreen } from './screens/elections_screen';
 import { InsertCardScreen } from './screens/insert_card_screen';
 import { VotersScreen } from './screens/voters_screen';
 import { TallyScreen } from './screens/tally_screen';
+import { UnauthenticatedSessionData } from './cacvote-server/session_data';
 
 export function AppRoot(): JSX.Element {
   const history = useHistory();
@@ -15,12 +16,14 @@ export function AppRoot(): JSX.Element {
 
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
+  const isUnauthenticated =
+    sessionData && sessionData instanceof UnauthenticatedSessionData;
 
   useEffect(() => {
-    if (sessionData?.type === 'unauthenticated') {
+    if (isUnauthenticated) {
       history.replace('/');
     }
-  }, [sessionData?.type, history]);
+  }, [isUnauthenticated, history]);
 
   return (
     <Switch>

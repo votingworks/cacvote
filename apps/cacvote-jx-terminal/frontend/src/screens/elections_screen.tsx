@@ -2,6 +2,7 @@ import { Button } from '@votingworks/ui';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as api from '../api';
+import { AuthenticatedSessionData } from '../cacvote-server/session_data';
 import { CreateElectionModal } from '../components/create_election_modal';
 import { ElectionCard } from '../components/election_card';
 import { NavigationScreen } from './navigation_screen';
@@ -9,29 +10,26 @@ import { NavigationScreen } from './navigation_screen';
 export function ElectionsScreen(): JSX.Element | null {
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
+  const isAuthenticated =
+    sessionData && sessionData instanceof AuthenticatedSessionData;
   const createElectionMutation = api.createElection.useMutation();
 
   const [isShowingAddElectionModal, setIsShowingAddElectionModal] =
     useState(false);
 
-  if (sessionData?.type !== 'authenticated') {
+  if (!isAuthenticated) {
     return null;
   }
 
   return (
     <NavigationScreen title="Elections">
-      {sessionData.elections.map(
-        ({
-          id,
-          election: {
-            electionDefinition: { election },
-          },
-        }) => (
-          <Link to={`/elections/${id}`} key={id}>
-            <ElectionCard election={election} />
-          </Link>
-        )
-      )}
+      {sessionData.getElections().map((e) => (
+        <Link to={`/elections/${e.getId()}`} key={e.getId()}>
+          <ElectionCard
+            election={e.getElection().getElectionDefinition().election}
+          />
+        </Link>
+      ))}
       <Button icon="Add" onPress={() => setIsShowingAddElectionModal(true)}>
         Create New Election
       </Button>
@@ -41,7 +39,7 @@ export function ElectionsScreen(): JSX.Element | null {
           onCreate={({ mailingAddress, electionDefinition }) =>
             createElectionMutation.mutate(
               {
-                jurisdictionCode: sessionData.jurisdictionCode,
+                jurisdictionCode: sessionData.getJurisdictionCode(),
                 electionDefinition,
                 mailingAddress,
               },

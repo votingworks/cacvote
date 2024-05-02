@@ -9,6 +9,7 @@ import { Uuid } from '../cacvote-server/types';
 import { GenerateEncryptedTallyModal } from '../components/generate_encrypted_tally_modal';
 import { NavigationScreen } from './navigation_screen';
 import { downloadData } from '../utils/download';
+import { AuthenticatedSessionData } from '../cacvote-server/session_data';
 
 export interface TallyScreenParams {
   electionId: Uuid;
@@ -35,6 +36,8 @@ function ObjectStatus({
 export function TallyScreen(): JSX.Element | null {
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
+  const isAuthenticated =
+    sessionData && sessionData instanceof AuthenticatedSessionData;
   const { electionId } = useParams<TallyScreenParams>();
 
   const [
@@ -46,27 +49,27 @@ export function TallyScreen(): JSX.Element | null {
   const decryptEncryptedElectionTallyMutation =
     api.decryptEncryptedElectionTally.useMutation();
 
-  if (sessionData?.type !== 'authenticated' || !electionId) {
+  if (!isAuthenticated || !electionId) {
     return null;
   }
 
   const electionPresenter = assertDefined(
-    sessionData.elections.find((e) => e.id === electionId)
+    sessionData.getElections().find((e) => e.getId() === electionId)
   );
 
-  const registeredVoterCount = iter(sessionData.registrations)
-    .filter((r) => r.registration.electionObjectId === electionId)
+  const registeredVoterCount = iter(sessionData.getRegistrations())
+    .filter((r) => r.getRegistration().getElectionObjectId() === electionId)
     .count();
 
-  const castBallotCount = iter(sessionData.castBallots)
-    .filter((b) => b.registration.electionObjectId === electionId)
+  const castBallotCount = iter(sessionData.getCastBallots())
+    .filter((b) => b.getRegistration().getElectionObjectId() === electionId)
     .count();
 
   const isEncryptedElectionTallyPresent = Boolean(
-    electionPresenter.encryptedTally
+    electionPresenter.getEncryptedTally()
   );
   const isDecryptedElectionTallyPresent = Boolean(
-    electionPresenter.decryptedTally
+    electionPresenter.getDecryptedTally()
   );
   const isReadyToGenerateEncryptedTally = !isEncryptedElectionTallyPresent;
   const isReadyToDecryptElectionTally =
@@ -81,10 +84,12 @@ export function TallyScreen(): JSX.Element | null {
   }
 
   function onSaveEncryptedTallyPressed() {
-    assert(electionPresenter.encryptedTally);
+    const encryptedTally = electionPresenter.getEncryptedTally();
+    assert(encryptedTally);
     downloadData(
-      electionPresenter.encryptedTally.encryptedElectionTally
-        .electionguardEncryptedTally,
+      encryptedTally
+        .getEncryptedElectionTally()
+        .getElectionguardEncryptedTally(),
       `encrypted-tally-${electionId}.json`
     );
   }
@@ -94,10 +99,12 @@ export function TallyScreen(): JSX.Element | null {
   }
 
   function onSaveDecryptedTallyPressed() {
-    assert(electionPresenter.decryptedTally);
+    const decryptedTally = electionPresenter.getDecryptedTally();
+    assert(decryptedTally);
     downloadData(
-      electionPresenter.decryptedTally.decryptedElectionTally
-        .electionguardDecryptedTally,
+      decryptedTally
+        .getDecryptedElectionTally()
+        .getElectionguardDecryptedTally(),
       `decrypted-tally-${electionId}.json`
     );
   }
@@ -108,15 +115,16 @@ export function TallyScreen(): JSX.Element | null {
       parentRoutes={[
         { title: 'Elections', path: '/elections' },
         {
-          title: electionPresenter.election.electionDefinition.election.title,
+          title: electionPresenter.getElection().getElectionDefinition()
+            .election.title,
           path: `/elections/${electionId}`,
         },
       ]}
     >
       <H2>Encrypted Election Tally</H2>
       <ObjectStatus
-        createdAt={electionPresenter.encryptedTally?.createdAt}
-        postedAt={electionPresenter.encryptedTally?.syncedAt}
+        createdAt={electionPresenter.getEncryptedTally()?.getCreatedAt()}
+        postedAt={electionPresenter.getEncryptedTally()?.getSyncedAt()}
       />
       <P>
         <strong>Registered voter count:</strong>{' '}
@@ -152,8 +160,8 @@ export function TallyScreen(): JSX.Element | null {
 
       <H2>Decrypted Election Tally</H2>
       <ObjectStatus
-        createdAt={electionPresenter.decryptedTally?.createdAt}
-        postedAt={electionPresenter.decryptedTally?.syncedAt}
+        createdAt={electionPresenter.getDecryptedTally()?.getCreatedAt()}
+        postedAt={electionPresenter.getDecryptedTally()?.getSyncedAt()}
       />
       <P>
         This operation uses ElectionGuard to decrypt only the encrypted tally,

@@ -3,12 +3,12 @@ import {
   ElectionDefinition,
   safeParseElectionDefinition,
 } from '@votingworks/types';
-import { Button, FileInputButton, InputGroup, Modal, P } from '@votingworks/ui';
+import { Button, FileInputButton, Modal, P } from '@votingworks/ui';
 import React, { useCallback, useState } from 'react';
 import styled from 'styled-components';
 import { useModalKeybindings } from '../use_modal_keybindings';
 
-const Label = styled.div`
+const Label = styled.label`
   display: block;
   font-weight: ${(p) => p.theme.sizes.fontWeight.semiBold};
 `;
@@ -62,22 +62,25 @@ export function CreateElectionModal({
             definition file. This file should be in the VotingWorks or CDF
             format.
           </P>
-          <InputGroup>
-            <Label>Mailing Address</Label>
+          <Label>
+            Mailing Address
+            <br />
             <textarea
               placeholder="Where should ballots be sent?"
               rows={4}
               value={mailingAddress}
               onInput={(event) => setMailingAddress(event.currentTarget.value)}
             />
-          </InputGroup>
-          <InputGroup>
-            <Label>Election Definition</Label>
+          </Label>
+          <Label>
+            Election Definition
+            <br />
             <FileInputButton
               accept=".json"
               onChange={(event) => {
                 const input = event.currentTarget;
                 const { files } = input;
+                /* istanbul ignore next */
                 const file = assertDefined(files?.[0]);
                 const reader = new FileReader();
                 reader.onload = () => {
@@ -92,7 +95,7 @@ export function CreateElectionModal({
             >
               Import Election
             </FileInputButton>
-          </InputGroup>
+          </Label>
         </React.Fragment>
       }
       actions={
@@ -102,7 +105,7 @@ export function CreateElectionModal({
             onPress={onPressCreate}
             disabled={!isReadyToCreate}
           >
-            Create
+            Create Election
           </Button>
           <Button variant="neutral" onPress={onClose}>
             Cancel
