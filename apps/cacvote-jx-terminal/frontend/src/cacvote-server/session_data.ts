@@ -6,8 +6,10 @@ import {
 } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import { z } from 'zod';
+import { DateTime } from 'luxon';
 import {
   Base64StringSchema,
+  Iso8601DateSchema,
   JurisdictionCode,
   JurisdictionCodeSchema,
   Uuid,
@@ -70,6 +72,58 @@ export const VerificationStatusSchema: z.ZodSchema<VerificationStatus> =
     VerificationStatusUnknownSchema,
   ]);
 
+export interface EncryptedElectionTally {
+  jurisdictionCode: JurisdictionCode;
+  electionObjectId: Uuid;
+  electionguardEncryptedTally: Buffer;
+}
+
+export const EncryptedElectionTallySchema: z.ZodSchema<EncryptedElectionTally> =
+  z.object({
+    jurisdictionCode: JurisdictionCodeSchema,
+    electionObjectId: UuidSchema,
+    electionguardEncryptedTally: Base64StringSchema,
+  });
+
+export interface EncryptedElectionTallyPresenter {
+  encryptedElectionTally: EncryptedElectionTally;
+  createdAt: DateTime;
+  syncedAt?: DateTime;
+}
+
+export const EncryptedElectionTallyPresenterSchema: z.ZodSchema<EncryptedElectionTallyPresenter> =
+  z.object({
+    encryptedElectionTally: EncryptedElectionTallySchema,
+    createdAt: Iso8601DateSchema,
+    syncedAt: Iso8601DateSchema.optional(),
+  });
+
+export interface DecryptedElectionTally {
+  jurisdictionCode: JurisdictionCode;
+  electionObjectId: Uuid;
+  electionguardDecryptedTally: Buffer;
+}
+
+export const DecryptedElectionTallySchema: z.ZodSchema<DecryptedElectionTally> =
+  z.object({
+    jurisdictionCode: JurisdictionCodeSchema,
+    electionObjectId: UuidSchema,
+    electionguardDecryptedTally: Base64StringSchema,
+  });
+
+export interface DecryptedElectionTallyPresenter {
+  decryptedElectionTally: DecryptedElectionTally;
+  createdAt: DateTime;
+  syncedAt?: DateTime;
+}
+
+export const DecryptedElectionTallyPresenterSchema: z.ZodSchema<DecryptedElectionTallyPresenter> =
+  z.object({
+    decryptedElectionTally: DecryptedElectionTallySchema,
+    createdAt: Iso8601DateSchema,
+    syncedAt: Iso8601DateSchema.optional(),
+  });
+
 export interface ElectionInfo {
   jurisdictionCode: JurisdictionCode;
   electionDefinition: ElectionDefinition;
@@ -92,12 +146,16 @@ export const ElectionInfoSchema: z.ZodSchema<ElectionInfo> = z.object({
 export interface ElectionPresenter {
   id: Uuid;
   election: ElectionInfo;
+  encryptedTally?: EncryptedElectionTallyPresenter;
+  decryptedTally?: DecryptedElectionTallyPresenter;
 }
 
 export const ElectionPresenterSchema: z.ZodSchema<ElectionPresenter> = z.object(
   {
     id: UuidSchema,
     election: ElectionInfoSchema,
+    encryptedTally: EncryptedElectionTallyPresenterSchema.optional(),
+    decryptedTally: DecryptedElectionTallyPresenterSchema.optional(),
   }
 );
 
@@ -120,11 +178,7 @@ export interface RegistrationRequestPresenter {
   id: Uuid;
   displayName: string;
   registrationRequest: RegistrationRequest;
-
-  /**
-   * ISO 8601 timestamp.
-   */
-  createdAt: string;
+  createdAt: DateTime;
 }
 
 export const RegistrationRequestPresenterSchema: z.ZodSchema<RegistrationRequestPresenter> =
@@ -132,7 +186,7 @@ export const RegistrationRequestPresenterSchema: z.ZodSchema<RegistrationRequest
     id: UuidSchema,
     displayName: z.string(),
     registrationRequest: RegistrationRequestSchema,
-    createdAt: z.string(),
+    createdAt: Iso8601DateSchema,
   });
 
 export interface Registration {
@@ -159,11 +213,7 @@ export interface RegistrationPresenter {
   electionTitle: string;
   electionHash: string;
   registration: Registration;
-
-  /**
-   * ISO 8601 timestamp.
-   */
-  createdAt: string;
+  createdAt: DateTime;
   isSynced: boolean;
 }
 
@@ -174,7 +224,7 @@ export const RegistrationPresenterSchema: z.ZodSchema<RegistrationPresenter> =
     electionTitle: z.string(),
     electionHash: z.string(),
     registration: RegistrationSchema,
-    createdAt: z.string(),
+    createdAt: Iso8601DateSchema,
     isSynced: z.boolean(),
   });
 
@@ -202,11 +252,7 @@ export interface CastBallotPresenter {
   registration: Registration;
   registrationId: Uuid;
   verificationStatus: VerificationStatus;
-
-  /**
-   * ISO 8601 timestamp.
-   */
-  createdAt: string;
+  createdAt: DateTime;
 }
 
 export const CastBallotPresenterSchema: z.ZodSchema<CastBallotPresenter> =
@@ -216,7 +262,7 @@ export const CastBallotPresenterSchema: z.ZodSchema<CastBallotPresenter> =
     registration: RegistrationSchema,
     registrationId: UuidSchema,
     verificationStatus: VerificationStatusSchema,
-    createdAt: z.string(),
+    createdAt: Iso8601DateSchema,
   });
 
 export interface AuthenticatedSessionData {

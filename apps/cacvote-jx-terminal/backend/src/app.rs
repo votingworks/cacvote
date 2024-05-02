@@ -8,6 +8,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use auth_rs::card_details::CardDetailsWithAuthInfo;
+use axum::extract::Path;
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::Sse;
 use axum::routing::post;
@@ -21,10 +22,7 @@ use tokio_stream::StreamExt;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote::{
-    CreateElectionRequest, CreateRegistrationRequest, Election, Payload, Registration, SessionData,
-    SignedObject,
-};
+use types_rs::cacvote;
 use uuid::Uuid;
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
@@ -36,7 +34,7 @@ struct AppState {
     config: Config,
     pool: PgPool,
     smartcard: smartcard::DynSmartcard,
-    broadcast_tx: broadcast::Sender<SessionData>,
+    broadcast_tx: broadcast::Sender<cacvote::SessionData>,
 }
 
 /// Prepares the application with all the routes. Run the application with
@@ -78,7 +76,7 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
                                 .unwrap();
                         let registrations = db::get_registrations(&mut connection).await.unwrap();
                         let cast_ballots = db::get_cast_ballots(&mut connection).await.unwrap();
-                        SessionData::Authenticated {
+                        cacvote::SessionData::Authenticated {
                             jurisdiction_code: jurisdiction_code.clone(),
                             elections,
                             pending_registration_requests,
@@ -86,10 +84,10 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
                             cast_ballots,
                         }
                     }
-                    Some(_) => SessionData::Unauthenticated {
+                    Some(_) => cacvote::SessionData::Unauthenticated {
                         has_smartcard: true,
                     },
-                    None => SessionData::Unauthenticated {
+                    None => cacvote::SessionData::Unauthenticated {
                         has_smartcard: false,
                     },
                 };
@@ -106,6 +104,14 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
         .route("/api/elections", get(get_elections))
         .route("/api/elections", post(create_election))
         .route("/api/registrations", post(create_registration))
+        .route(
+            "/api/elections/:election_id/encrypted-tally",
+            post(generate_encrypted_election_tally),
+        )
+        .route(
+            "/api/elections/:election_id/decrypted-tally",
+            post(decrypt_encrypted_election_tally),
+        )
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
         .with_state(AppState {
@@ -189,7 +195,7 @@ async fn create_election(
         smartcard,
         ..
     }): State<AppState>,
-    Json(election): Json<CreateElectionRequest>,
+    Json(election): Json<cacvote::CreateElectionRequest>,
 ) -> impl IntoResponse {
     let jurisdiction_code = match smartcard.get_card_details() {
         Some(card_details) => card_details.card_details.jurisdiction_code(),
@@ -234,7 +240,7 @@ async fn create_election(
         }
     };
 
-    let payload = Payload::Election(Election {
+    let payload = cacvote::Payload::Election(cacvote::Election {
         jurisdiction_code: election.jurisdiction_code,
         mailing_address: election.mailing_address,
         election_definition: election.election_definition,
@@ -277,7 +283,7 @@ async fn create_election(
             );
         }
     };
-    let signed_object = SignedObject {
+    let signed_object = cacvote::SignedObject {
         id: Uuid::new_v4(),
         payload: serialized_payload,
         certificates,
@@ -321,12 +327,12 @@ async fn create_registration(
     State(AppState {
         pool, smartcard, ..
     }): State<AppState>,
-    Json(CreateRegistrationRequest {
+    Json(cacvote::CreateRegistrationRequest {
         registration_request_id,
         election_id,
         ballot_style_id,
         precinct_id,
-    }): Json<CreateRegistrationRequest>,
+    }): Json<cacvote::CreateRegistrationRequest>,
 ) -> impl IntoResponse {
     let jurisdiction_code = match smartcard.get_card_details() {
         Some(card_details) => card_details.card_details.jurisdiction_code(),
@@ -362,7 +368,7 @@ async fn create_registration(
             }
         };
 
-    let payload = Payload::Registration(Registration {
+    let payload = cacvote::Payload::Registration(cacvote::Registration {
         jurisdiction_code,
         common_access_card_id: registration_request.common_access_card_id,
         registration_request_object_id: registration_request_id,
@@ -406,7 +412,7 @@ async fn create_registration(
             );
         }
     };
-    let signed_object = SignedObject {
+    let signed_object = cacvote::SignedObject {
         id: Uuid::new_v4(),
         payload: serialized_payload,
         certificates,
@@ -418,6 +424,346 @@ async fn create_registration(
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({ "error": "error adding object to database" })),
+        );
+    }
+
+    (StatusCode::CREATED, Json(json!({ "id": signed_object.id })))
+}
+
+async fn generate_encrypted_election_tally(
+    State(AppState {
+        pool,
+        config,
+        smartcard,
+        ..
+    }): State<AppState>,
+    Path(election_id): Path<Uuid>,
+) -> impl IntoResponse {
+    let mut transaction = match pool.begin().await {
+        Ok(transaction) => transaction,
+        Err(e) => {
+            tracing::error!("error getting database connection: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error getting database connection" })),
+            );
+        }
+    };
+
+    match db::get_tallies_for_election(&mut transaction, election_id).await {
+        Ok(db::ElectionTallies::OnlyEncrypted(_)) | Ok(db::ElectionTallies::Both(..)) => {
+            return (
+                StatusCode::CONFLICT,
+                Json(json!({ "error": "tally already exists" })),
+            )
+        }
+        Ok(db::ElectionTallies::Neither) => (),
+        Err(e) => {
+            tracing::error!("error getting encrypted election tally from database: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error getting encrypted election tally from database" })),
+            );
+        }
+    }
+
+    let election_object = match db::get_object(&mut transaction, election_id).await {
+        Ok(object) => object,
+        Err(e) => {
+            tracing::error!("error getting election from database: {e}");
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "error getting election from database" })),
+            );
+        }
+    };
+
+    let election_payload: cacvote::Payload = match election_object.try_to_inner() {
+        Ok(payload) => payload,
+        Err(e) => {
+            tracing::error!("error deserializing election: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error deserializing election" })),
+            );
+        }
+    };
+
+    let election = match election_payload {
+        cacvote::Payload::Election(election) => election,
+        _ => {
+            tracing::error!("object is not an election");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "object is not an election" })),
+            );
+        }
+    };
+
+    let cast_ballots = db::get_cast_ballots_for_election(&mut transaction, &election_id)
+        .await
+        .unwrap();
+
+    let encrypted_tally = match electionguard_rs::tally::accumulate(
+        &config.eg_classpath,
+        &election.electionguard_election_metadata_blob,
+        cast_ballots
+            .iter()
+            .map(|cast_ballot| cast_ballot.electionguard_encrypted_ballot.as_bytes()),
+    ) {
+        Ok(encrypted_tally) => encrypted_tally,
+        Err(e) => {
+            tracing::error!("error accumulating tally: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error accumulating tally" })),
+            );
+        }
+    };
+
+    let payload = cacvote::Payload::EncryptedElectionTally(cacvote::EncryptedElectionTally {
+        election_object_id: election_id,
+        jurisdiction_code: election.jurisdiction_code,
+        electionguard_encrypted_tally: encrypted_tally,
+    });
+
+    let serialized_payload = match serde_json::to_vec(&payload) {
+        Ok(serialized_payload) => serialized_payload,
+        Err(e) => {
+            tracing::error!("error serializing payload: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error serializing payload" })),
+            );
+        }
+    };
+
+    let signed = match smartcard.sign(&serialized_payload, None) {
+        Ok(signed) => signed,
+        Err(e) => {
+            tracing::error!("error signing payload: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error signing payload" })),
+            );
+        }
+    };
+
+    let certificates: Vec<u8> = match signed
+        .cert_stack
+        .iter()
+        .map(|cert| cert.to_pem())
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(certificates) => certificates.concat(),
+        Err(e) => {
+            tracing::error!("error converting certificates to PEM: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error converting certificates to PEM" })),
+            );
+        }
+    };
+
+    let signed_object = cacvote::SignedObject {
+        id: Uuid::new_v4(),
+        payload: serialized_payload,
+        certificates,
+        signature: signed.data,
+    };
+
+    if let Err(e) = db::add_object(&mut transaction, &signed_object).await {
+        tracing::error!("error adding object to database: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error adding object to database" })),
+        );
+    }
+
+    if let Err(e) = transaction.commit().await {
+        tracing::error!("error committing transaction: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error committing transaction" })),
+        );
+    }
+
+    (StatusCode::CREATED, Json(json!({ "id": signed_object.id })))
+}
+
+async fn decrypt_encrypted_election_tally(
+    State(AppState {
+        pool,
+        config,
+        smartcard,
+        ..
+    }): State<AppState>,
+    Path(election_id): Path<Uuid>,
+) -> impl IntoResponse {
+    let mut transaction = match pool.begin().await {
+        Ok(transaction) => transaction,
+        Err(e) => {
+            tracing::error!("error getting database connection: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error getting database connection" })),
+            );
+        }
+    };
+
+    let encrypted_tally = match db::get_tallies_for_election(&mut transaction, election_id).await {
+        Ok(db::ElectionTallies::OnlyEncrypted(encrypted_tally)) => encrypted_tally,
+        Ok(db::ElectionTallies::Both(..)) => {
+            return (
+                StatusCode::CONFLICT,
+                Json(json!({ "error": "tally already exists" })),
+            )
+        }
+        Ok(db::ElectionTallies::Neither) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "encrypted tally not found" })),
+            )
+        }
+        Err(e) => {
+            tracing::error!("error getting encrypted election tally from database: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error getting encrypted election tally from database" })),
+            );
+        }
+    };
+
+    let election_object = match db::get_object(&mut transaction, election_id).await {
+        Ok(object) => object,
+        Err(e) => {
+            tracing::error!("error getting election from database: {e}");
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "error getting election from database" })),
+            );
+        }
+    };
+
+    let election_payload: cacvote::Payload = match election_object.try_to_inner() {
+        Ok(payload) => payload,
+        Err(e) => {
+            tracing::error!("error deserializing election: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error deserializing election" })),
+            );
+        }
+    };
+
+    let election = match election_payload {
+        cacvote::Payload::Election(election) => election,
+        _ => {
+            tracing::error!("object is not an election");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "object is not an election" })),
+            );
+        }
+    };
+
+    let private_key = match db::get_eg_private_key(&mut transaction, &election_id).await {
+        Ok(record) => record,
+        Err(e) => {
+            tracing::error!("error getting EG private key from database: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error getting EG private key from database" })),
+            );
+        }
+    };
+
+    let election_config = electionguard_rs::config::ElectionConfig {
+        public_metadata_blob: election.electionguard_election_metadata_blob,
+        private_metadata_blob: private_key,
+    };
+
+    let decrypted_tally = match electionguard_rs::tally::decrypt(
+        &config.eg_classpath,
+        &election_config,
+        &encrypted_tally
+            .encrypted_election_tally
+            .electionguard_encrypted_tally,
+    ) {
+        Ok(decrypted_tally) => decrypted_tally,
+        Err(e) => {
+            tracing::error!("error decrypting tally: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error decrypting tally" })),
+            );
+        }
+    };
+
+    let payload = cacvote::Payload::DecryptedElectionTally(cacvote::DecryptedElectionTally {
+        election_object_id: election_id,
+        jurisdiction_code: election.jurisdiction_code,
+        electionguard_decrypted_tally: decrypted_tally,
+    });
+
+    let serialized_payload = match serde_json::to_vec(&payload) {
+        Ok(serialized_payload) => serialized_payload,
+        Err(e) => {
+            tracing::error!("error serializing payload: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error serializing payload" })),
+            );
+        }
+    };
+
+    let signed = match smartcard.sign(&serialized_payload, None) {
+        Ok(signed) => signed,
+        Err(e) => {
+            tracing::error!("error signing payload: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error signing payload" })),
+            );
+        }
+    };
+
+    let certificates: Vec<u8> = match signed
+        .cert_stack
+        .iter()
+        .map(|cert| cert.to_pem())
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(certificates) => certificates.concat(),
+        Err(e) => {
+            tracing::error!("error converting certificates to PEM: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error converting certificates to PEM" })),
+            );
+        }
+    };
+
+    let signed_object = cacvote::SignedObject {
+        id: Uuid::new_v4(),
+        payload: serialized_payload,
+        certificates,
+        signature: signed.data,
+    };
+
+    if let Err(e) = db::add_object(&mut transaction, &signed_object).await {
+        tracing::error!("error adding object to database: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error adding object to database" })),
+        );
+    }
+
+    if let Err(e) = transaction.commit().await {
+        tracing::error!("error committing transaction: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error committing transaction" })),
         );
     }
 

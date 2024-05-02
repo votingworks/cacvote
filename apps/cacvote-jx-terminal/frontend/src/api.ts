@@ -128,3 +128,59 @@ export const registerVoter = {
     });
   },
 } as const;
+
+export interface CreateEncryptedElectionTallyRequest {
+  electionId: Uuid;
+}
+
+export interface CreateEncryptedElectionTallyResponse {
+  id: Uuid;
+}
+
+export const generateEncryptedElectionTally = {
+  useMutation() {
+    return useMutation(async ({ electionId }: { electionId: Uuid }) => {
+      const response = await fetch(
+        `/api/elections/${electionId}/encrypted-tally`,
+        { method: 'POST' }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to generate encrypted election tally: ${response.statusText}`
+        );
+      }
+
+      return (await response.json()) as CreateEncryptedElectionTallyResponse;
+    });
+  },
+} as const;
+
+export interface DecryptEncryptedElectionTallyRequest {
+  electionId: Uuid;
+}
+
+export interface DecryptEncryptedElectionTallyResponse {
+  id: Uuid;
+}
+
+export const decryptEncryptedElectionTally = {
+  useMutation() {
+    return useMutation(
+      async ({ electionId }: DecryptEncryptedElectionTallyRequest) => {
+        const response = await fetch(
+          `/api/elections/${electionId}/decrypted-tally`,
+          { method: 'POST' }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to decrypt encrypted election tally: ${response.statusText}`
+          );
+        }
+
+        return (await response.json()) as DecryptEncryptedElectionTallyResponse;
+      }
+    );
+  },
+} as const;

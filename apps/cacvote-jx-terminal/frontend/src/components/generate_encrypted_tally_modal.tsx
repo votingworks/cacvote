@@ -4,7 +4,7 @@ import { format } from '@votingworks/utils';
 import { useModalKeybindings } from '../use_modal_keybindings';
 
 export interface GenerateEncryptedTallyModalProps {
-  onGenerate: () => void;
+  onGenerate: () => Promise<void>;
   onClose: () => void;
   registeredVoterCount: number;
   castBallotCount: number;
@@ -18,11 +18,12 @@ export function GenerateEncryptedTallyModal({
   castBallotCount,
   isGenerating,
 }: GenerateEncryptedTallyModalProps): JSX.Element {
-  const onConfirm = useCallback(() => {
+  const onConfirm = useCallback(async () => {
     if (!isGenerating) {
-      onGenerate();
+      await onGenerate();
+      onClose();
     }
-  }, [isGenerating, onGenerate]);
+  }, [isGenerating, onClose, onGenerate]);
 
   const onCancel = useCallback(() => {
     if (!isGenerating) {

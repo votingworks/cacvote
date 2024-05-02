@@ -1,12 +1,13 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithThemes } from '@votingworks/ui';
+import { deferred } from '@votingworks/basics';
 import { GenerateEncryptedTallyModal } from './generate_encrypted_tally_modal';
 
 test('shows voter & ballot counts', async () => {
   renderWithThemes(
     <GenerateEncryptedTallyModal
-      onGenerate={() => {}}
+      onGenerate={() => Promise.resolve()}
       onClose={() => {}}
       registeredVoterCount={100}
       castBallotCount={200}
@@ -37,11 +38,36 @@ test('calls onGenerate when confirmed', async () => {
   expect(onGenerate).toHaveBeenCalled();
 });
 
+test('calls onClose after onGenerate resolves', async () => {
+  const generateDeferred = deferred<void>();
+  const onGenerate = jest.fn().mockReturnValue(generateDeferred.promise);
+  const onClose = jest.fn();
+  renderWithThemes(
+    <GenerateEncryptedTallyModal
+      onGenerate={onGenerate}
+      onClose={onClose}
+      registeredVoterCount={100}
+      castBallotCount={200}
+    />
+  );
+
+  await screen.findByText(/Would you like to proceed?/i);
+  const generateButton = await screen.findByRole('button', {
+    name: /generate encrypted tally/i,
+  });
+
+  userEvent.click(generateButton);
+  expect(onGenerate).toHaveBeenCalled();
+
+  generateDeferred.resolve();
+  await waitFor(() => expect(onClose).toHaveBeenCalled());
+});
+
 test('calls onClose when canceled', async () => {
   const onClose = jest.fn();
   renderWithThemes(
     <GenerateEncryptedTallyModal
-      onGenerate={() => {}}
+      onGenerate={() => Promise.resolve()}
       onClose={onClose}
       registeredVoterCount={100}
       castBallotCount={200}
@@ -85,7 +111,7 @@ test('does not call onClose when generating', async () => {
   const onClose = jest.fn();
   renderWithThemes(
     <GenerateEncryptedTallyModal
-      onGenerate={() => {}}
+      onGenerate={() => Promise.resolve()}
       onClose={onClose}
       registeredVoterCount={100}
       castBallotCount={200}
@@ -124,7 +150,7 @@ test('calls onClose on escape', async () => {
   const onClose = jest.fn();
   renderWithThemes(
     <GenerateEncryptedTallyModal
-      onGenerate={() => {}}
+      onGenerate={() => Promise.resolve()}
       onClose={onClose}
       registeredVoterCount={100}
       castBallotCount={200}
