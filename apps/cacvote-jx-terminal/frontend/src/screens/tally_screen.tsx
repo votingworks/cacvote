@@ -1,14 +1,35 @@
-import { assertDefined, iter } from '@votingworks/basics';
-import { Button, H2, P } from '@votingworks/ui';
-import { useParams } from 'react-router-dom';
+import { assert, assertDefined, iter } from '@votingworks/basics';
+import { Button, H2, LoadingButton, P } from '@votingworks/ui';
 import { format } from '@votingworks/utils';
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { DateTime } from 'luxon';
 import * as api from '../api';
-import { NavigationScreen } from './navigation_screen';
+import { Uuid } from '../cacvote-server/types';
 import { GenerateEncryptedTallyModal } from '../components/generate_encrypted_tally_modal';
+import { NavigationScreen } from './navigation_screen';
+import { downloadData } from '../utils/download';
 
 export interface TallyScreenParams {
-  electionId: string;
+  electionId: Uuid;
+}
+
+function ObjectStatus({
+  createdAt,
+  postedAt,
+}: {
+  createdAt?: DateTime;
+  postedAt?: DateTime;
+}): JSX.Element {
+  return (
+    <P>
+      <strong>Created:</strong>{' '}
+      {createdAt?.toLocaleString(DateTime.DATETIME_SHORT) ?? 'n/a'}
+      <br />
+      <strong>Posted:</strong>{' '}
+      {postedAt?.toLocaleString(DateTime.DATETIME_SHORT) ?? 'n/a'}
+    </P>
+  );
 }
 
 export function TallyScreen(): JSX.Element | null {
@@ -20,8 +41,10 @@ export function TallyScreen(): JSX.Element | null {
     isShowingGenerateEncryptedTallyModal,
     setIsShowingGenerateEncryptedTallyModal,
   ] = useState(false);
-  const [isGeneratingEncryptedTally, setIsGeneratingEncryptedTally] =
-    useState(false);
+  const generateEncryptedElectionTallyMutation =
+    api.generateEncryptedElectionTally.useMutation();
+  const decryptEncryptedElectionTallyMutation =
+    api.decryptEncryptedElectionTally.useMutation();
 
   if (sessionData?.type !== 'authenticated' || !electionId) {
     return null;
@@ -39,8 +62,12 @@ export function TallyScreen(): JSX.Element | null {
     .filter((b) => b.registration.electionObjectId === electionId)
     .count();
 
-  const isEncryptedElectionTallyPresent = false;
-  const isDecryptedElectionTallyPresent = false;
+  const isEncryptedElectionTallyPresent = Boolean(
+    electionPresenter.encryptedTally
+  );
+  const isDecryptedElectionTallyPresent = Boolean(
+    electionPresenter.decryptedTally
+  );
   const isReadyToGenerateEncryptedTally = !isEncryptedElectionTallyPresent;
   const isReadyToDecryptElectionTally =
     isEncryptedElectionTallyPresent && !isDecryptedElectionTallyPresent;
@@ -49,24 +76,30 @@ export function TallyScreen(): JSX.Element | null {
     setIsShowingGenerateEncryptedTallyModal(true);
   }
 
-  function onGenerateEncryptedTallyConfirmed() {
-    setIsGeneratingEncryptedTally(true);
-    setTimeout(() => {
-      setIsGeneratingEncryptedTally(false);
-      setIsShowingGenerateEncryptedTallyModal(false);
-    }, 2000);
+  async function onGenerateEncryptedTallyConfirmed() {
+    await generateEncryptedElectionTallyMutation.mutateAsync({ electionId });
   }
 
-  function onExportEncryptedTallyPressed() {
-    console.log('Exporting encrypted tally');
+  function onSaveEncryptedTallyPressed() {
+    assert(electionPresenter.encryptedTally);
+    downloadData(
+      electionPresenter.encryptedTally.encryptedElectionTally
+        .electionguardEncryptedTally,
+      `encrypted-tally-${electionId}.json`
+    );
   }
 
   function onDecryptElectionTallyPressed() {
-    console.log('Decrypting election tally');
+    decryptEncryptedElectionTallyMutation.mutate({ electionId });
   }
 
-  function onExportDecryptedTallyPressed() {
-    console.log('Exporting decrypted tally');
+  function onSaveDecryptedTallyPressed() {
+    assert(electionPresenter.decryptedTally);
+    downloadData(
+      electionPresenter.decryptedTally.decryptedElectionTally
+        .electionguardDecryptedTally,
+      `decrypted-tally-${electionId}.json`
+    );
   }
 
   return (
@@ -81,6 +114,10 @@ export function TallyScreen(): JSX.Element | null {
       ]}
     >
       <H2>Encrypted Election Tally</H2>
+      <ObjectStatus
+        createdAt={electionPresenter.encryptedTally?.createdAt}
+        postedAt={electionPresenter.encryptedTally?.syncedAt}
+      />
       <P>
         <strong>Registered voter count:</strong>{' '}
         {format.count(registeredVoterCount)}
@@ -106,39 +143,49 @@ export function TallyScreen(): JSX.Element | null {
       <P>
         <Button
           icon="Export"
-          onPress={onExportEncryptedTallyPressed}
+          onPress={onSaveEncryptedTallyPressed}
           disabled={!isEncryptedElectionTallyPresent}
         >
-          Export Encrypted Tally
+          Save Encrypted Tally
         </Button>
       </P>
 
       <H2>Decrypted Election Tally</H2>
+      <ObjectStatus
+        createdAt={electionPresenter.decryptedTally?.createdAt}
+        postedAt={electionPresenter.decryptedTally?.syncedAt}
+      />
       <P>
-        ElectionGuard may be used to decrypt the election tally. Once the tally
-        is decrypted, the results can be exported.
+        This operation uses ElectionGuard to decrypt only the encrypted tally,
+        not any of the encrypted cast ballots. Once the tally is decrypted, the
+        decrypted tally will automatically be posted to the bulletin board. The
+        decrypted tally can be saved below.
       </P>
       <P>
-        <Button
-          icon="Bolt"
-          onPress={onDecryptElectionTallyPressed}
-          disabled={!isReadyToDecryptElectionTally}
-        >
-          Decrypt Election Tally
-        </Button>
+        {decryptEncryptedElectionTallyMutation.isLoading ? (
+          <LoadingButton>Decrypting Election Tally…</LoadingButton>
+        ) : (
+          <Button
+            icon="Unlock"
+            onPress={onDecryptElectionTallyPressed}
+            disabled={!isReadyToDecryptElectionTally}
+          >
+            Decrypt Election Tally
+          </Button>
+        )}
       </P>
       <P>
         <Button
           icon="Export"
-          onPress={onExportDecryptedTallyPressed}
+          onPress={onSaveDecryptedTallyPressed}
           disabled={!isDecryptedElectionTallyPresent}
         >
-          Export Decrypted Tally
+          Save Decrypted Tally
         </Button>
       </P>
       {isShowingGenerateEncryptedTallyModal && (
         <GenerateEncryptedTallyModal
-          isGenerating={isGeneratingEncryptedTally}
+          isGenerating={generateEncryptedElectionTallyMutation.isLoading}
           registeredVoterCount={registeredVoterCount}
           castBallotCount={castBallotCount}
           onGenerate={onGenerateEncryptedTallyConfirmed}

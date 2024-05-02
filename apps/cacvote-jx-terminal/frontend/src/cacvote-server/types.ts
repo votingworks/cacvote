@@ -3,6 +3,7 @@
 
 import { NewType } from '@votingworks/types';
 import { Buffer } from 'buffer';
+import { DateTime } from 'luxon';
 import { v4, validate } from 'uuid';
 import { z } from 'zod';
 
@@ -29,3 +30,7 @@ export type Base64String = NewType<string, 'Base64String'>;
 export const Base64StringSchema: z.ZodSchema<Buffer> = z
   .string()
   .transform((s) => Buffer.from(s, 'base64')) as unknown as z.ZodSchema<Buffer>;
+
+export const Iso8601DateSchema: z.ZodSchema<DateTime> = z
+  .string()
+  .transform((s) => DateTime.fromISO(s)) as unknown as z.ZodSchema<DateTime>;

@@ -43,6 +43,7 @@ import {
   faBatteryQuarter,
   faBatteryEmpty,
   faBolt,
+  faUnlock,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   faXmarkCircle,
@@ -309,6 +310,10 @@ export const Icons = {
 
   TextSize(props) {
     return <FaIcon {...props} type={faTextHeight} />;
+  },
+
+  Unlock(props) {
+    return <FaIcon {...props} type={faUnlock} />;
   },
 
   Warning(props) {

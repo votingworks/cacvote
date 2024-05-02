@@ -51,7 +51,7 @@ pub(crate) async fn get_elections(
         ORDER BY created_at DESC
         "#,
     )
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
 
     let mut elections = Vec::new();
@@ -68,8 +68,19 @@ pub(crate) async fn get_elections(
             }
         };
 
+        // FIXME: this makes `get_elections` run N+1 queries
+        let (encrypted_tally, decrypted_tally) =
+            get_tallies_for_election(&mut *connection, object.id)
+                .await?
+                .into();
+
         if let cacvote::Payload::Election(election) = payload {
-            elections.push(cacvote::ElectionPresenter::new(object.id, election));
+            elections.push(cacvote::ElectionPresenter::new(
+                object.id,
+                election,
+                encrypted_tally,
+                decrypted_tally,
+            ));
         }
     }
 
@@ -257,6 +268,108 @@ pub async fn get_object(
     )
     .fetch_one(connection)
     .await?)
+}
+
+#[derive(Debug)]
+pub enum ElectionTallies {
+    Neither,
+    OnlyEncrypted(cacvote::EncryptedElectionTallyPresenter),
+    Both(
+        cacvote::EncryptedElectionTallyPresenter,
+        cacvote::DecryptedElectionTallyPresenter,
+    ),
+}
+
+impl From<ElectionTallies>
+    for (
+        Option<cacvote::EncryptedElectionTallyPresenter>,
+        Option<cacvote::DecryptedElectionTallyPresenter>,
+    )
+{
+    fn from(tallies: ElectionTallies) -> Self {
+        match tallies {
+            ElectionTallies::Neither => (None, None),
+            ElectionTallies::OnlyEncrypted(encrypted_tally) => (Some(encrypted_tally), None),
+            ElectionTallies::Both(encrypted_tally, decrypted_tally) => {
+                (Some(encrypted_tally), Some(decrypted_tally))
+            }
+        }
+    }
+}
+
+#[tracing::instrument(skip(connection))]
+pub async fn get_tallies_for_election(
+    connection: &mut sqlx::PgConnection,
+    election_object_id: Uuid,
+) -> color_eyre::Result<ElectionTallies> {
+    let Some(record) = sqlx::query!(
+        r#"
+        SELECT
+            payload,
+            created_at,
+            server_synced_at
+        FROM objects
+        WHERE object_type = $1
+          AND (convert_from(payload, 'UTF8')::jsonb ->> $2)::uuid = $3
+        "#,
+        cacvote::Payload::encrypted_election_tally_object_type(),
+        cacvote::EncryptedElectionTally::election_object_id_field_name(),
+        election_object_id,
+    )
+    .fetch_optional(&mut *connection)
+    .await?
+    else {
+        return Ok(ElectionTallies::Neither);
+    };
+
+    let cacvote::Payload::EncryptedElectionTally(encrypted_election_tally) =
+        serde_json::from_slice(&record.payload)?
+    else {
+        bail!("Object is not an encrypted election tally")
+    };
+
+    let encrypted_election_tally = cacvote::EncryptedElectionTallyPresenter {
+        encrypted_election_tally,
+        created_at: record.created_at,
+        synced_at: record.server_synced_at,
+    };
+
+    let Some(record) = sqlx::query!(
+        r#"
+        SELECT
+            payload,
+            created_at,
+            server_synced_at
+        FROM objects
+        WHERE object_type = $1
+          AND (convert_from(payload, 'UTF8')::jsonb ->> $2)::uuid = $3
+        "#,
+        cacvote::Payload::decrypted_election_tally_object_type(),
+        cacvote::DecryptedElectionTally::election_object_id_field_name(),
+        election_object_id,
+    )
+    .fetch_optional(&mut *connection)
+    .await?
+    else {
+        return Ok(ElectionTallies::OnlyEncrypted(encrypted_election_tally));
+    };
+
+    let cacvote::Payload::DecryptedElectionTally(decrypted_election_tally) =
+        serde_json::from_slice(&record.payload)?
+    else {
+        bail!("Object is not a decrypted election tally")
+    };
+
+    let decrypted_election_tally = cacvote::DecryptedElectionTallyPresenter {
+        decrypted_election_tally,
+        created_at: record.created_at,
+        synced_at: record.server_synced_at,
+    };
+
+    Ok(ElectionTallies::Both(
+        encrypted_election_tally,
+        decrypted_election_tally,
+    ))
 }
 
 #[tracing::instrument(skip(connection, object))]
@@ -533,6 +646,46 @@ pub(crate) async fn get_cast_ballots(
     Ok(cast_ballots)
 }
 
+pub(crate) async fn get_cast_ballots_for_election(
+    executor: &mut sqlx::PgConnection,
+    election_object_id: &Uuid,
+) -> color_eyre::Result<Vec<cacvote::CastBallot>> {
+    let records = sqlx::query!(
+        r#"
+        SELECT
+            cb.id AS cast_ballot_id,
+            cb.payload AS cast_ballot_payload,
+            cb.certificates AS cast_ballot_certificates,
+            cb.signature AS cast_ballot_signature
+        FROM objects AS cb
+        WHERE cb.object_type = $1
+          AND (convert_from(cb.payload, 'UTF8')::jsonb ->> $2)::uuid = $3
+        "#,
+        cacvote::Payload::cast_ballot_object_type(),
+        cacvote::CastBallot::election_object_id_field_name(),
+        election_object_id,
+    )
+    .fetch_all(executor)
+    .await?;
+
+    let mut cast_ballots = Vec::new();
+
+    for record in records {
+        let cast_ballot = cacvote::SignedObject {
+            id: record.cast_ballot_id,
+            payload: record.cast_ballot_payload,
+            certificates: record.cast_ballot_certificates,
+            signature: record.cast_ballot_signature,
+        };
+
+        if let cacvote::Payload::CastBallot(cast_ballot) = cast_ballot.try_to_inner()? {
+            cast_ballots.push(cast_ballot);
+        }
+    }
+
+    Ok(cast_ballots)
+}
+
 pub(crate) async fn add_eg_private_key(
     executor: &mut sqlx::PgConnection,
     election_object_id: &Uuid,
@@ -551,6 +704,24 @@ pub(crate) async fn add_eg_private_key(
     .await?;
 
     Ok(record.id)
+}
+
+pub(crate) async fn get_eg_private_key(
+    executor: &mut sqlx::PgConnection,
+    election_object_id: &Uuid,
+) -> color_eyre::Result<Vec<u8>> {
+    let record = sqlx::query!(
+        r#"
+        SELECT private_key
+        FROM eg_private_keys
+        WHERE election_object_id = $1
+        "#,
+        election_object_id
+    )
+    .fetch_one(executor)
+    .await?;
+
+    Ok(record.private_key)
 }
 
 #[cfg(test)]
