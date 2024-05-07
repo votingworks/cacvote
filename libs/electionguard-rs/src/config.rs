@@ -5,8 +5,10 @@ use std::{
 };
 
 use crate::{
-    command::run_electionguard_command, constants::MANIFEST_FILE, manifest::Manifest,
-    zip::zip_files_in_directory_to_buffer,
+    command::run_electionguard_command,
+    constants::MANIFEST_FILE,
+    manifest::Manifest,
+    zip::{zip_files_in_directory_to_buffer, ZipOptions},
 };
 
 pub struct ElectionConfig {
@@ -46,8 +48,10 @@ pub fn generate_election_config(
 
     // at this point, the output directory should contain the public election
     // configuration & key and the private keys in the `trustees` directory
-    let public_metadata_blob = zip_files_in_directory_to_buffer(&output_directory)?;
-    let private_metadata_blob = zip_files_in_directory_to_buffer(&trustees_directory)?;
+    let public_metadata_blob =
+        zip_files_in_directory_to_buffer(&output_directory, ZipOptions { recursion_depth: 0 })?;
+    let private_metadata_blob =
+        zip_files_in_directory_to_buffer(&trustees_directory, ZipOptions { recursion_depth: 0 })?;
 
     Ok(ElectionConfig {
         public_metadata_blob,

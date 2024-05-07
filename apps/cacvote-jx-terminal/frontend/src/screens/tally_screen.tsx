@@ -48,6 +48,8 @@ export function TallyScreen(): JSX.Element | null {
     api.generateEncryptedElectionTally.useMutation();
   const decryptEncryptedElectionTallyMutation =
     api.decryptEncryptedElectionTally.useMutation();
+  const shuffleEncryptedBallotsMutation =
+    api.shuffleEncryptedBallots.useMutation();
 
   if (!isAuthenticated || !electionId) {
     return null;
@@ -71,9 +73,15 @@ export function TallyScreen(): JSX.Element | null {
   const isDecryptedElectionTallyPresent = Boolean(
     electionPresenter.getDecryptedTally()
   );
+  const areShuffledBallotsPresent =
+    typeof electionPresenter.getShuffledEncryptedCastBallots() !== 'undefined';
   const isReadyToGenerateEncryptedTally = !isEncryptedElectionTallyPresent;
   const isReadyToDecryptElectionTally =
     isEncryptedElectionTallyPresent && !isDecryptedElectionTallyPresent;
+  const isReadyToShuffleBallots =
+    castBallotCount > 0 &&
+    isDecryptedElectionTallyPresent &&
+    !areShuffledBallotsPresent;
 
   function onGenerateEncryptedTallyPressed() {
     setIsShowingGenerateEncryptedTallyModal(true);
@@ -107,6 +115,14 @@ export function TallyScreen(): JSX.Element | null {
         .getElectionguardDecryptedTally(),
       `decrypted-tally-${electionId}.json`
     );
+  }
+
+  function onShuffleBallotsPressed() {
+    shuffleEncryptedBallotsMutation.mutate({
+      electionId,
+      // Hardcoded to 2 shuffling phases. Ideally this would be based on the number of trustees.
+      phases: 2,
+    });
   }
 
   return (
@@ -200,6 +216,34 @@ export function TallyScreen(): JSX.Element | null {
           onClose={() => setIsShowingGenerateEncryptedTallyModal(false)}
         />
       )}
+
+      <H2>Shuffled Ballots</H2>
+      <ObjectStatus
+        createdAt={electionPresenter
+          .getShuffledEncryptedCastBallots()
+          ?.getCreatedAt()}
+        postedAt={electionPresenter
+          .getShuffledEncryptedCastBallots()
+          ?.getSyncedAt()}
+      />
+      <P>
+        Shuffles the ballots using two shuffling phases, decrypting the serial
+        numbers only. This uses the ElectionGuard mixnet feature to shuffle the
+        ballots, posting the shuffled ballots to the bulletin board.
+      </P>
+      <P>
+        {shuffleEncryptedBallotsMutation.isLoading ? (
+          <LoadingButton>Shuffling Ballots…</LoadingButton>
+        ) : (
+          <Button
+            icon="Shuffle"
+            onPress={onShuffleBallotsPressed}
+            disabled={!isReadyToShuffleBallots}
+          >
+            Shuffle Ballots
+          </Button>
+        )}
+      </P>
     </NavigationScreen>
   );
 }
