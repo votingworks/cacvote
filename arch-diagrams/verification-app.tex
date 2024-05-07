@@ -1,0 +1,61 @@
+\documentclass{article}
+\input{macros}
+
+\begin{document}
+Suppose we have a Bulletin Board with something like the following operations:
+    \begin{description}
+        \item[post(m, id)] post item $m$, authenticated with ID.
+        \item[get\_inclusion\_proof(m)] get a proof that $m$ is included.
+        \item[get\_all] get all the contents.
+    \end{description}
+    The exact details can vary. For example, Andrew Conway's bulletin board (**add details).
+
+    This verification app can be used in 4 modes:
+    \begin{itemize}
+        \item Voter mode: the voter scans their own sticker and continues to poll the bulletin board for its inclusion;
+        \item \remoteVotingCenter{} authority mode: an authority at the \remoteVotingCenter{} scans everyone's stickers, and continues to poll the BB for the inclusion of \emph{all} of them;
+        \item \localVotingCenter{} authority mode: an authority at the \localVotingCenter{}, responsible for receiving the paper votes, scans the incoming stickers and verifies the signatures ...;
+        \item \localVotingCenter{} public/auditor mode: an auditor at the \localVotingCenter{} scans the stickers and verifies the signatures in the context of an audit. This usage may also poll the BB and verify other aspects.
+    \end{itemize}
+
+    We also have two protocol options, which are relevant to the verification options:
+    \BBInclusionCheck{} and \StickerBBUpload{}. These alter the details of how the verification app checks for the presence of a vote on the BB.
+
+    This document details the implementation steps for the Verification summary described in Section 4.5 of the main Merge paper. We emphasise the implementation details---procedural responses are detailed elsewhere.
+
+\subsection{Subroutines}
+Sticker signature verification:
+    Input: scanned QR code, CAC CA, election data.
+    Output: true if the CA-signature chain is valid, and the election data is as expected.
+
+Vote BB presence (\BBInclusionCheck{} mode):
+   Input: Voter CAC ID, Election Id, Ballot hash,
+    Do: query BB for a vote matching the CAC ID (?), check that all the data match; validate inclusion proof.  (Should this match election data, expected ballot type, etc??)
+
+
+Vote BB presence (\StickerBBUpload{} mode):
+TODO
+
+Sticker BB presence (Only relevant for \StickerBBUpload mode):
+
+
+Valid Vote Arrival:
+Input: List of enrolled CAC IDs, Election ID, CAC ID of arrived ballot.
+Do: Check that the CAC ID is on the enrolled voter list.
+Check that it's not already marked as arrived on the BB.
+
+BB Notification of Valid Vote Arrival:
+Input: CAC ID, Election ID.
+
+Tell the BB that it has arrived.
+
+\subsection{App modes}
+String together subroutines.
+
+    \subsection{Universal verification}
+    This is a lot of work. Prob not great for a mobile app, but maybe OK as an option...
+
+
+
+
+\end{document}
