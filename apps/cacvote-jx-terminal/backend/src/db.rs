@@ -43,6 +43,7 @@ pub(crate) async fn get_elections(
         r#"
         SELECT
             id,
+            election_id,
             payload,
             certificates,
             signature
@@ -99,6 +100,7 @@ pub async fn get_pending_registration_requests(
         r#"
         SELECT
             rr.id,
+            rr.election_id,
             rr.payload,
             rr.certificates,
             rr.signature,
@@ -128,6 +130,7 @@ pub async fn get_pending_registration_requests(
     for record in records {
         let object = cacvote::SignedObject {
             id: record.id,
+            election_id: record.election_id,
             payload: record.payload,
             certificates: record.certificates,
             signature: record.signature,
@@ -163,10 +166,12 @@ pub async fn get_registrations(
             r.certificates AS registration_certificates,
             r.signature AS registration_signature,
             e.id AS election_id,
+            e.election_id AS election_election_id,
             e.payload AS election_payload,
             e.certificates AS election_certificates,
             e.signature AS election_signature,
             rr.id AS registration_request_id,
+            rr.election_id AS registration_request_election_id,
             rr.payload AS registration_request_payload,
             rr.certificates AS registration_request_certificates,
             rr.signature AS registration_request_signature,
@@ -194,18 +199,21 @@ pub async fn get_registrations(
     for record in records {
         let registration_object = cacvote::SignedObject {
             id: record.registration_id,
+            election_id: Some(record.election_id),
             payload: record.registration_payload,
             certificates: record.registration_certificates,
             signature: record.registration_signature,
         };
         let election_object = cacvote::SignedObject {
             id: record.election_id,
+            election_id: record.election_election_id,
             payload: record.election_payload,
             certificates: record.election_certificates,
             signature: record.election_signature,
         };
         let registration_request_object = cacvote::SignedObject {
             id: record.registration_request_id,
+            election_id: record.registration_request_election_id,
             payload: record.registration_request_payload,
             certificates: record.registration_request_certificates,
             signature: record.registration_request_signature,
@@ -257,11 +265,12 @@ pub async fn get_object(
     connection: &mut sqlx::PgConnection,
     id: Uuid,
 ) -> color_eyre::Result<cacvote::SignedObject> {
-    Ok(sqlx::query_as!(
+    let object = sqlx::query_as!(
         cacvote::SignedObject,
         r#"
         SELECT
             id,
+            election_id,
             payload,
             certificates,
             signature
@@ -271,7 +280,14 @@ pub async fn get_object(
         id
     )
     .fetch_one(connection)
-    .await?)
+    .await?;
+
+    // Ensure the denormalized election_id field matches the election_id in the
+    // payload. The denormalized field is used for fast lookups, but isn't part
+    // of the signed payload.
+    assert_eq!(object.election_id, object.try_to_inner()?.election_id());
+
+    Ok(object)
 }
 
 #[derive(Debug)]
@@ -393,10 +409,11 @@ pub async fn add_object_from_server(
 
     sqlx::query!(
         r#"
-        INSERT INTO objects (id, jurisdiction, object_type, payload, certificates, signature, server_synced_at)
-        VALUES ($1, $2, $3, $4, $5, $6, now())
+        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificates, signature, server_synced_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, now())
         "#,
         &object.id,
+        object.election_id,
         jurisdiction_code.as_str(),
         object_type,
         &object.payload,
@@ -428,10 +445,11 @@ pub async fn add_object(
 
     sqlx::query!(
         r#"
-        INSERT INTO objects (id, jurisdiction, object_type, payload, certificates, signature)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificates, signature)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
         &object.id,
+        object.election_id,
         jurisdiction_code.as_str(),
         object_type,
         &object.payload,
@@ -482,6 +500,7 @@ pub(crate) async fn get_latest_journal_entry(
         SELECT
             id,
             object_id,
+            election_id,
             jurisdiction as "jurisdiction_code: cacvote::JurisdictionCode",
             object_type,
             action,
@@ -503,6 +522,7 @@ pub(crate) async fn get_unsynced_objects(
         r#"
         SELECT
             id,
+            election_id,
             payload,
             certificates,
             signature
@@ -541,6 +561,7 @@ pub(crate) async fn get_journal_entries_for_objects_to_pull(
         SELECT
             id,
             object_id,
+            election_id,
             jurisdiction as "jurisdiction_code: cacvote::JurisdictionCode",
             object_type,
             action,
@@ -564,14 +585,17 @@ pub(crate) async fn get_cast_ballots(
         r#"
         SELECT
             cb.id AS cast_ballot_id,
+            cb.election_id as cast_ballot_election_id,
             cb.payload AS cast_ballot_payload,
             cb.certificates AS cast_ballot_certificates,
             cb.signature AS cast_ballot_signature,
             rr.id AS registration_request_id,
+            rr.election_id AS registration_request_election_id,
             rr.payload AS registration_request_payload,
             rr.certificates AS registration_request_certificates,
             rr.signature AS registration_request_signature,
             r.id AS registration_id,
+            r.election_id AS registration_election_id,
             r.payload AS registration_payload,
             r.certificates AS registration_certificates,
             r.signature AS registration_signature,
@@ -602,18 +626,21 @@ pub(crate) async fn get_cast_ballots(
     for record in records {
         let cast_ballot_object = cacvote::SignedObject {
             id: record.cast_ballot_id,
+            election_id: record.cast_ballot_election_id,
             payload: record.cast_ballot_payload,
             certificates: record.cast_ballot_certificates,
             signature: record.cast_ballot_signature,
         };
         let registration_object = cacvote::SignedObject {
             id: record.registration_id,
+            election_id: record.registration_election_id,
             payload: record.registration_payload,
             certificates: record.registration_certificates,
             signature: record.registration_signature,
         };
         let registration_request_object = cacvote::SignedObject {
             id: record.registration_request_id,
+            election_id: record.registration_request_election_id,
             payload: record.registration_request_payload,
             certificates: record.registration_request_certificates,
             signature: record.registration_request_signature,
@@ -658,6 +685,7 @@ pub(crate) async fn get_cast_ballots_for_election(
         r#"
         SELECT
             cb.id AS cast_ballot_id,
+            cb.election_id as cast_ballot_election_id,
             cb.payload AS cast_ballot_payload,
             cb.certificates AS cast_ballot_certificates,
             cb.signature AS cast_ballot_signature
@@ -677,6 +705,7 @@ pub(crate) async fn get_cast_ballots_for_election(
     for record in records {
         let cast_ballot = cacvote::SignedObject {
             id: record.cast_ballot_id,
+            election_id: record.cast_ballot_election_id,
             payload: record.cast_ballot_payload,
             certificates: record.cast_ballot_certificates,
             signature: record.cast_ballot_signature,
@@ -698,6 +727,7 @@ pub(crate) async fn get_shuffled_encrypted_cast_ballots(
         r#"
         SELECT
             b.id AS shuffled_encrypted_cast_ballots_id,
+            b.election_id AS shuffled_encrypted_cast_ballots_election_id,
             b.payload AS shuffled_encrypted_cast_ballots_payload,
             b.certificates AS shuffled_encrypted_cast_ballots_certificates,
             b.signature AS shuffled_encrypted_cast_ballots_signature,
@@ -719,6 +749,7 @@ pub(crate) async fn get_shuffled_encrypted_cast_ballots(
 
     let shuffled_encrypted_cast_ballots = cacvote::SignedObject {
         id: record.shuffled_encrypted_cast_ballots_id,
+        election_id: record.shuffled_encrypted_cast_ballots_election_id,
         payload: record.shuffled_encrypted_cast_ballots_payload,
         certificates: record.shuffled_encrypted_cast_ballots_certificates,
         signature: record.shuffled_encrypted_cast_ballots_signature,

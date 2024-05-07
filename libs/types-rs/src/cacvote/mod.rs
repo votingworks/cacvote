@@ -91,6 +91,10 @@ impl sqlx::Type<sqlx::Postgres> for JurisdictionCode {
 pub struct SignedObject {
     pub id: Uuid,
 
+    /// The jurisdiction code of the object.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub election_id: Option<Uuid>,
+
     /// Data to be signed. Must be JSON decodable as [`Payload`][crate::cacvote::Payload].
     #[serde(with = "Base64Standard")]
     pub payload: Vec<u8>,
@@ -111,6 +115,7 @@ impl SignedObject {
         certificates: Vec<openssl::x509::X509>,
         private_key: &openssl::pkey::PKeyRef<openssl::pkey::Private>,
     ) -> color_eyre::Result<Self> {
+        let election_id = payload.election_id();
         let mut signer =
             openssl::sign::Signer::new(openssl::hash::MessageDigest::sha256(), private_key)?;
         let payload = serde_json::to_vec(payload)?;
@@ -125,6 +130,7 @@ impl SignedObject {
 
         Ok(Self {
             id: Uuid::new_v4(),
+            election_id,
             payload,
             certificates,
             signature,
@@ -219,6 +225,18 @@ impl Payload {
         }
     }
 
+    pub fn election_id(&self) -> Option<Uuid> {
+        match self {
+            Self::RegistrationRequest(_) => None,
+            Self::Registration(r) => Some(r.election_object_id.clone()),
+            Self::Election(_) => None,
+            Self::CastBallot(cb) => Some(cb.election_object_id.clone()),
+            Self::EncryptedElectionTally(tally) => Some(tally.election_object_id.clone()),
+            Self::DecryptedElectionTally(tally) => Some(tally.election_object_id.clone()),
+            Self::ShuffledEncryptedCastBallots(ballots) => Some(ballots.election_object_id.clone()),
+        }
+    }
+
     pub fn registration_request_object_type() -> &'static str {
         // This must match the naming rules of the `serde` attribute in the
         // `Payload` enum.
@@ -281,6 +299,8 @@ impl JurisdictionScoped for Payload {
 pub struct JournalEntry {
     pub id: Uuid,
     pub object_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub election_id: Option<Uuid>,
     pub jurisdiction_code: JurisdictionCode,
     pub object_type: String,
     pub action: JournalEntryAction,

@@ -289,6 +289,8 @@ async fn create_election(
     };
     let signed_object = cacvote::SignedObject {
         id: Uuid::new_v4(),
+        // elections don't "belong" to an election, they are an election
+        election_id: None,
         payload: serialized_payload,
         certificates,
         signature: signed.data,
@@ -418,6 +420,7 @@ async fn create_registration(
     };
     let signed_object = cacvote::SignedObject {
         id: Uuid::new_v4(),
+        election_id: Some(election_id),
         payload: serialized_payload,
         certificates,
         signature: signed.data,
@@ -571,6 +574,7 @@ async fn generate_encrypted_election_tally(
 
     let signed_object = cacvote::SignedObject {
         id: Uuid::new_v4(),
+        election_id: Some(election_id),
         payload: serialized_payload,
         certificates,
         signature: signed.data,
@@ -750,6 +754,7 @@ async fn decrypt_encrypted_election_tally(
 
     let signed_object = cacvote::SignedObject {
         id: Uuid::new_v4(),
+        election_id: Some(election_id),
         payload: serialized_payload,
         certificates,
         signature: signed.data,
@@ -897,6 +902,7 @@ async fn mix_encrypted_ballots(
 
     let signed_object = cacvote::SignedObject {
         id: Uuid::new_v4(),
+        election_id: Some(election_id),
         payload: serialized_payload,
         certificates,
         signature: signed.data,

@@ -1,7 +1,6 @@
 import { Buffer } from 'buffer';
 import { readFile } from 'fs/promises';
 import { cryptography } from '@votingworks/auth';
-import { v4 } from 'uuid';
 import { Readable } from 'stream';
 import { unsafeParse } from '@votingworks/types';
 import { join } from 'path';
@@ -11,7 +10,7 @@ import {
   Payload,
   RegistrationRequest,
   SignedObject,
-  UuidSchema,
+  Uuid,
 } from '../../cacvote-server/types';
 import { resolveWorkspace } from '../../workspace';
 
@@ -45,7 +44,8 @@ export async function main(): Promise<void> {
     },
   });
   const signedObject = new SignedObject(
-    unsafeParse(UuidSchema, v4()),
+    Uuid(),
+    Uuid(),
     payloadBuffer,
     certificatesPem,
     signature

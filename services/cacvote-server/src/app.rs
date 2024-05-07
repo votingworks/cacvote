@@ -17,10 +17,11 @@ use serde_json::json;
 use sqlx::PgPool;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote::{JournalEntry, JurisdictionCode, SignedObject};
+use types_rs::cacvote::{self, JournalEntry, JurisdictionCode, SignedObject};
 use uuid::Uuid;
 
 use crate::{
+    bulletin_board,
     config::{Config, MAX_REQUEST_SIZE},
     db,
 };
@@ -36,6 +37,27 @@ pub async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
         .route("/api/objects", post(create_object))
         .route("/api/objects/:object_id", get(get_object_by_id))
         .route("/api/journal-entries", get(get_journal_entries))
+        .route("/api/elections", get(list_elections))
+        .route(
+            "/api/elections/:election_id/cast-ballots",
+            get(list_cast_ballots_by_election),
+        )
+        .route(
+            "/api/elections/:election_id/cast-ballots/:cast_ballot_id",
+            get(get_cast_ballot_by_id),
+        )
+        .route(
+            "/api/elections/:election_id/encrypted-tally",
+            get(get_encrypted_tally_by_election),
+        )
+        .route(
+            "/api/elections/:election_id/decrypted-tally",
+            get(get_decrypted_tally_by_election),
+        )
+        .route(
+            "/api/elections/:election_id/shuffled-ballots",
+            get(list_shuffled_ballots_by_election),
+        )
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
         .with_state(pool))
@@ -102,6 +124,106 @@ async fn get_object_by_id(
             tracing::info!("PAYLOAD: {}", std::str::from_utf8(&object.payload).unwrap());
             Ok(Json(object))
         }
+        None => Err(Error::NotFound),
+    }
+}
+
+async fn list_elections(
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<bulletin_board::Election>>, Error> {
+    let mut conn = pool.acquire().await?;
+
+    Ok(Json(
+        db::get_election_ids(&mut conn)
+            .await?
+            .into_iter()
+            .map(bulletin_board::Election::new)
+            .collect(),
+    ))
+}
+
+async fn list_cast_ballots_by_election(
+    State(pool): State<PgPool>,
+    Path(election_id): Path<Uuid>,
+) -> Result<Json<Vec<bulletin_board::CastBallot>>, Error> {
+    let mut conn = pool.acquire().await?;
+
+    Ok(Json(
+        db::get_cast_ballot_ids_by_election(&mut conn, election_id)
+            .await?
+            .into_iter()
+            .map(|id| bulletin_board::CastBallot::new(id, election_id.clone()))
+            .collect(),
+    ))
+}
+
+async fn get_cast_ballot_by_id(
+    State(pool): State<PgPool>,
+    Path((election_id, cast_ballot_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<SignedObject>, Error> {
+    let mut conn = pool.acquire().await?;
+
+    match db::get_object_by_id(&mut conn, cast_ballot_id).await? {
+        Some(cast_ballot) => match cast_ballot.try_to_inner()? {
+            cacvote::Payload::CastBallot(payload) if payload.election_object_id == election_id => {
+                Ok(Json(cast_ballot))
+            }
+            _ => Err(Error::NotFound),
+        },
+        None => Err(Error::NotFound),
+    }
+}
+
+async fn get_encrypted_tally_by_election(
+    State(pool): State<PgPool>,
+    Path(election_id): Path<Uuid>,
+) -> Result<Json<SignedObject>, Error> {
+    let mut conn = pool.acquire().await?;
+
+    match db::get_object_by_election_id_and_type(
+        &mut conn,
+        election_id,
+        cacvote::Payload::encrypted_election_tally_object_type(),
+    )
+    .await?
+    {
+        Some(object) => Ok(Json(object)),
+        None => Err(Error::NotFound),
+    }
+}
+
+async fn get_decrypted_tally_by_election(
+    State(pool): State<PgPool>,
+    Path(election_id): Path<Uuid>,
+) -> Result<Json<SignedObject>, Error> {
+    let mut conn = pool.acquire().await?;
+
+    match db::get_object_by_election_id_and_type(
+        &mut conn,
+        election_id,
+        cacvote::Payload::decrypted_election_tally_object_type(),
+    )
+    .await?
+    {
+        Some(object) => Ok(Json(object)),
+        None => Err(Error::NotFound),
+    }
+}
+
+async fn list_shuffled_ballots_by_election(
+    State(pool): State<PgPool>,
+    Path(election_id): Path<Uuid>,
+) -> Result<Json<SignedObject>, Error> {
+    let mut conn = pool.acquire().await?;
+
+    match db::get_object_by_election_id_and_type(
+        &mut conn,
+        election_id,
+        cacvote::Payload::shuffled_encrypted_cast_ballots_object_type(),
+    )
+    .await?
+    {
+        Some(object) => Ok(Json(object)),
         None => Err(Error::NotFound),
     }
 }

@@ -55,6 +55,7 @@ async fn main() -> color_eyre::Result<()> {
     let signature = sign_and_verify(&payload, &private_key, &public_key)?;
     let signed_object = SignedObject {
         id: Uuid::new_v4(),
+        election_id: None,
         payload,
         certificates,
         signature,

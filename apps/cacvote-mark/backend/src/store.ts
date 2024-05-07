@@ -100,13 +100,14 @@ export class Store {
   getLatestJournalEntry(): Optional<JournalEntry> {
     const result = this.client.one(
       `
-      select id, object_id, jurisdiction, object_type, action, created_at
+      select id, election_id, object_id, jurisdiction, object_type, action, created_at
       from journal_entries
       order by created_at desc
       limit 1`
     ) as Optional<{
       id: string;
       object_id: string;
+      election_id: string | null;
       jurisdiction: string;
       object_type: string;
       action: string;
@@ -119,6 +120,11 @@ export class Store {
           safeParse(UuidSchema, result.object_id).assertOk(
             'assuming valid UUID'
           ),
+          result.election_id
+            ? safeParse(UuidSchema, result.election_id).assertOk(
+                'assuming valid UUID'
+              )
+            : undefined,
           safeParse(JurisdictionCodeSchema, result.jurisdiction).assertOk(
             'assuming valid jurisdiction code'
           ),
@@ -131,12 +137,13 @@ export class Store {
 
   getJournalEntries(): JournalEntry[] {
     const rows = this.client.all(
-      `select id, object_id, jurisdiction, object_type, action, created_at
+      `select id, election_id, object_id, jurisdiction, object_type, action, created_at
       from journal_entries
       order by created_at`
     ) as Array<{
       id: string;
       object_id: string;
+      election_id: string | null;
       jurisdiction: string;
       object_type: string;
       action: string;
@@ -148,6 +155,9 @@ export class Store {
         new JournalEntry(
           unsafeParse(UuidSchema, row.id),
           unsafeParse(UuidSchema, row.object_id),
+          row.election_id
+            ? unsafeParse(UuidSchema, row.election_id)
+            : undefined,
           unsafeParse(JurisdictionCodeSchema, row.jurisdiction),
           row.object_type,
           row.action,
@@ -162,14 +172,15 @@ export class Store {
   addJournalEntries(entries: JournalEntry[]): void {
     this.client.transaction(() => {
       const stmt = this.client.prepare(
-        `insert into journal_entries (id, object_id, jurisdiction, object_type, action, created_at)
-        values (?, ?, ?, ?, ?, ?)`
+        `insert into journal_entries (id, object_id, election_id, jurisdiction, object_type, action, created_at)
+        values (?, ?, ?, ?, ?, ?, ?)`
       );
 
       for (const entry of entries) {
         stmt.run(
           entry.getId(),
           entry.getObjectId(),
+          entry.getElectionId() ?? null,
           entry.getJurisdictionCode(),
           entry.getObjectType(),
           entry.getAction(),
@@ -190,9 +201,10 @@ export class Store {
       const payload = object.getPayload().okOrElse(bail);
 
       this.client.run(
-        `insert into objects (id, jurisdiction, object_type, payload, certificates, signature)
-        values (?, ?, ?, ?, ?, ?)`,
+        `insert into objects (id, election_id, jurisdiction, object_type, payload, certificates, signature)
+        values (?, ?, ?, ?, ?, ?, ?)`,
         object.getId(),
+        object.getElectionId() ?? null,
         jurisdiction,
         payload.getObjectType(),
         object.getPayloadRaw(),
@@ -215,9 +227,10 @@ export class Store {
       const payload = object.getPayload().okOrElse(bail);
 
       this.client.run(
-        `insert into objects (id, jurisdiction, object_type, payload, certificates, signature, server_synced_at)
-        values (?, ?, ?, ?, ?, ?, current_timestamp)`,
+        `insert into objects (id, election_id, jurisdiction, object_type, payload, certificates, signature, server_synced_at)
+        values (?, ?, ?, ?, ?, ?, ?, current_timestamp)`,
         object.getId(),
+        object.getElectionId() ?? null,
         jurisdiction,
         payload.getObjectType(),
         object.getPayloadRaw(),
@@ -234,10 +247,11 @@ export class Store {
    */
   getObjectById(objectId: Uuid): Optional<SignedObject> {
     const row = this.client.one(
-      `select id, payload, certificates, signature from objects where id = ?`,
+      `select id, election_id as electionId, payload, certificates, signature from objects where id = ?`,
       objectId
     ) as Optional<{
       id: string;
+      electionId: string | null;
       payload: Buffer;
       certificates: Buffer;
       signature: Buffer;
@@ -246,6 +260,7 @@ export class Store {
     return row
       ? new SignedObject(
           unsafeParse(UuidSchema, row.id),
+          row.electionId ? unsafeParse(UuidSchema, row.electionId) : undefined,
           row.payload,
           row.certificates,
           row.signature
@@ -262,7 +277,7 @@ export class Store {
     const action = 'create';
 
     const rows = this.client.all(
-      `select je.id, je.object_id, je.jurisdiction, je.object_type, je.created_at
+      `select je.id, je.election_id, je.object_id, je.jurisdiction, je.object_type, je.created_at
       from journal_entries je
       left join objects o on je.object_id = o.id
       where je.object_type in (${objectTypesToPull.map(() => '?').join(', ')})
@@ -273,6 +288,7 @@ export class Store {
       action
     ) as Array<{
       id: string;
+      election_id: string | null;
       object_id: string;
       jurisdiction: string;
       object_type: string;
@@ -284,6 +300,9 @@ export class Store {
         new JournalEntry(
           unsafeParse(UuidSchema, row.id),
           unsafeParse(UuidSchema, row.object_id),
+          row.election_id
+            ? unsafeParse(UuidSchema, row.election_id)
+            : undefined,
           unsafeParse(JurisdictionCodeSchema, row.jurisdiction),
           row.object_type,
           action,
@@ -297,9 +316,10 @@ export class Store {
    */
   getObjectsToPush(): SignedObject[] {
     const rows = this.client.all(
-      `select id, payload, certificates, signature from objects where server_synced_at is null`
+      `select id, election_id as electionId, payload, certificates, signature from objects where server_synced_at is null`
     ) as Array<{
       id: string;
+      electionId: string | null;
       payload: Buffer;
       certificates: Buffer;
       signature: Buffer;
@@ -309,6 +329,7 @@ export class Store {
       (row) =>
         new SignedObject(
           unsafeParse(UuidSchema, row.id),
+          row.electionId ? unsafeParse(UuidSchema, row.electionId) : undefined,
           row.payload,
           row.certificates,
           row.signature
@@ -400,11 +421,12 @@ export class Store {
     // FIXME: this should be using `this.client.each`, but there seems to be a race condition
     // that results in errors with "This database connection is busy executing a query"
     const rows = this.client.all(
-      `select id, payload, certificates, signature from objects
+      `select id, election_id as electionId, payload, certificates, signature from objects
         where json_extract(payload, '$.objectType') = ?`,
       objectType
     ) as Array<{
       id: string;
+      electionId: string | null;
       payload: Buffer;
       certificates: Buffer;
       signature: Buffer;
@@ -413,6 +435,7 @@ export class Store {
       (row) =>
         new SignedObject(
           unsafeParse(UuidSchema, row.id),
+          row.electionId ? unsafeParse(UuidSchema, row.electionId) : undefined,
           row.payload,
           row.certificates,
           row.signature

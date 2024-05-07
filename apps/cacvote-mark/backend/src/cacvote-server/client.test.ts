@@ -9,6 +9,7 @@ import {
   JurisdictionCodeSchema,
   RegistrationRequestObjectType,
   SignedObject,
+  Uuid,
   UuidSchema,
 } from './types';
 import { ClientResult } from './client';
@@ -56,6 +57,7 @@ test('checkStatus failure', async () => {
 });
 
 test('createObject success', async () => {
+  const electionId = Uuid();
   const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'POST /api/objects': {
@@ -72,6 +74,7 @@ test('createObject success', async () => {
           const object = safeParseJson(body).unsafeUnwrap();
           expect(object).toEqual({
             id: uuid,
+            electionId,
             payload: Buffer.of(1, 2, 3).toString('base64'),
             certificates: Buffer.of(4, 5, 6).toString('base64'),
             signature: Buffer.of(7, 8, 9).toString('base64'),
@@ -90,6 +93,7 @@ test('createObject success', async () => {
 
   const object = new SignedObject(
     uuid,
+    electionId,
     Buffer.of(1, 2, 3),
     Buffer.of(4, 5, 6),
     Buffer.of(7, 8, 9)
@@ -114,6 +118,7 @@ test('createObject network failure', async () => {
 
   const object = new SignedObject(
     uuid,
+    Uuid(),
     Buffer.of(1, 2, 3),
     Buffer.of(4, 5, 6),
     Buffer.of(7, 8, 9)
@@ -140,6 +145,7 @@ test('createObject schema failure', async () => {
 
   const object = new SignedObject(
     uuid,
+    Uuid(),
     Buffer.of(1, 2, 3),
     Buffer.of(4, 5, 6),
     Buffer.of(7, 8, 9)
@@ -170,6 +176,7 @@ test('getObjectById success / no object', async () => {
 });
 
 test('getObjectById success / with object', async () => {
+  const electionId = Uuid();
   const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case `GET /api/objects/${uuid}`:
@@ -178,6 +185,7 @@ test('getObjectById success / with object', async () => {
           JSON.stringify(
             new SignedObject(
               uuid,
+              electionId,
               Buffer.of(1, 2, 3),
               Buffer.of(4, 5, 6),
               Buffer.of(7, 8, 9)
@@ -193,6 +201,7 @@ test('getObjectById success / with object', async () => {
 
   const object = new SignedObject(
     uuid,
+    electionId,
     Buffer.of(1, 2, 3),
     Buffer.of(4, 5, 6),
     Buffer.of(7, 8, 9)
@@ -260,6 +269,7 @@ test('getJournalEntries success / no entries', async () => {
 
 test('getJournalEntries success / with entries', async () => {
   const createdAt = DateTime.now();
+  const electionId = Uuid();
   const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/journal-entries':
@@ -269,6 +279,7 @@ test('getJournalEntries success / with entries', async () => {
             new JournalEntry(
               uuid,
               uuid,
+              electionId,
               jurisdictionCode,
               RegistrationRequestObjectType,
               'action',
@@ -290,6 +301,7 @@ test('getJournalEntries success / with entries', async () => {
       new JournalEntry(
         uuid,
         uuid,
+        electionId,
         jurisdictionCode,
         RegistrationRequestObjectType,
         'action',
@@ -321,6 +333,7 @@ test('getJournalEntries network failure', async () => {
 
 test('getJournalEntries schema failure', async () => {
   const createdAt = DateTime.now();
+  const electionId = Uuid();
   const server = await mockCacvoteServer((req, res) => {
     switch (`${req.method} ${req.url}`) {
       case 'GET /api/journal-entries':
@@ -330,6 +343,7 @@ test('getJournalEntries schema failure', async () => {
             new JournalEntry(
               uuid,
               uuid,
+              electionId,
               'invalid jurisdiction' as JurisdictionCode,
               'objectType',
               'action',

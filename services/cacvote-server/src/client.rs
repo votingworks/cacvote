@@ -235,6 +235,7 @@ mod tests {
         let object_id = client
             .create_object(SignedObject {
                 id: Uuid::new_v4(),
+                election_id: None,
                 payload,
                 certificates: certificates.clone(),
                 signature: signature.clone(),
@@ -319,6 +320,7 @@ mod tests {
             .create_object(SignedObject {
                 id: Uuid::new_v4(),
                 payload,
+                election_id: None,
                 // invalid certificates and signature
                 certificates: vec![],
                 signature: vec![],

@@ -167,6 +167,7 @@ function buildApi({
       const objectId = Uuid();
       const object = new SignedObject(
         objectId,
+        undefined,
         payload,
         certificates,
         generateSignatureResult.ok()
@@ -320,6 +321,7 @@ function buildApi({
         const objectId = Uuid();
         const object = new SignedObject(
           objectId,
+          electionObjectId,
           payload.toBuffer(),
           commonAccessCardCertificate,
           signature

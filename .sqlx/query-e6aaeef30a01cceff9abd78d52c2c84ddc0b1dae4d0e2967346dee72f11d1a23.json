@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT\n                  id,\n                  object_id,\n                  jurisdiction,\n                  object_type,\n                  action as \"action: JournalEntryAction\",\n                  created_at\n                FROM journal_entries\n                ORDER BY created_at\n                ",
+  "query": "\n                SELECT\n                  id,\n                  object_id,\n                  election_id,\n                  jurisdiction,\n                  object_type,\n                  action as \"action: JournalEntryAction\",\n                  created_at\n                FROM journal_entries\n                ORDER BY created_at\n                ",
   "describe": {
     "columns": [
       {
@@ -15,21 +15,26 @@
       },
       {
         "ordinal": 2,
+        "name": "election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "jurisdiction",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "object_type",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "action: JournalEntryAction",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
@@ -40,11 +45,12 @@
     "nullable": [
       false,
       false,
+      true,
       false,
       false,
       false,
       false
     ]
   },
-  "hash": "3262a5daff021e13a842ddd30fc57f0fdc024763c98a01d0e7d7ca88aae69579"
+  "hash": "e6aaeef30a01cceff9abd78d52c2c84ddc0b1dae4d0e2967346dee72f11d1a23"
 }

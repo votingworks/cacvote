@@ -1,6 +1,7 @@
 // eslint-disable-next-line max-classes-per-file
 import { certs, cryptography } from '@votingworks/auth';
 import {
+  Optional,
   Result,
   err,
   ok,
@@ -60,6 +61,8 @@ export class JournalEntry {
   constructor(
     private readonly id: Uuid,
     private readonly objectId: Uuid,
+    // eslint-disable-next-line vx/gts-use-optionals
+    private readonly electionId: Optional<Uuid>,
     private readonly jurisdictionCode: JurisdictionCode,
     private readonly objectType: string,
     private readonly action: JournalEntryAction,
@@ -72,6 +75,10 @@ export class JournalEntry {
 
   getObjectId(): Uuid {
     return this.objectId;
+  }
+
+  getElectionId(): Optional<Uuid> {
+    return this.electionId;
   }
 
   getJurisdictionCode(): JurisdictionCode {
@@ -94,6 +101,7 @@ export class JournalEntry {
     return {
       id: this.id.toString(),
       objectId: this.objectId.toString(),
+      electionId: this.electionId?.toString(),
       jurisdictionCode: this.jurisdictionCode,
       objectType: this.objectType,
       action: this.action,
@@ -105,6 +113,7 @@ export class JournalEntry {
 export const JournalEntryStructSchema: z.ZodSchema<{
   id: Uuid;
   objectId: Uuid;
+  electionId?: Uuid;
   jurisdictionCode: JurisdictionCode;
   objectType: string;
   action: string;
@@ -112,6 +121,7 @@ export const JournalEntryStructSchema: z.ZodSchema<{
 }> = z.object({
   id: UuidSchema,
   objectId: UuidSchema,
+  electionId: UuidSchema.optional(),
   jurisdictionCode: JurisdictionCodeSchema,
   objectType: z.string(),
   action: z.string(),
@@ -124,6 +134,7 @@ export const JournalEntrySchema: z.ZodSchema<JournalEntry> =
       new JournalEntry(
         o.id,
         o.objectId,
+        o.electionId,
         o.jurisdictionCode,
         o.objectType,
         o.action,
@@ -488,6 +499,8 @@ export const PayloadSchema: z.ZodSchema<Payload> = z
 export class SignedObject {
   constructor(
     private readonly id: Uuid,
+    // eslint-disable-next-line vx/gts-use-optionals
+    private readonly electionId: Optional<Uuid>,
     private readonly payload: Buffer,
     private readonly certificates: Buffer,
     private readonly signature: Buffer
@@ -495,6 +508,10 @@ export class SignedObject {
 
   getId(): Uuid {
     return this.id;
+  }
+
+  getElectionId(): Optional<Uuid> {
+    return this.electionId;
   }
 
   getPayloadRaw(): Buffer {
@@ -590,6 +607,7 @@ export class SignedObject {
   toJSON(): unknown {
     return {
       id: this.id.toString(),
+      electionId: this.electionId?.toString(),
       payload: this.payload.toString('base64'),
       certificates: this.certificates.toString('base64'),
       signature: this.signature.toString('base64'),
@@ -600,6 +618,7 @@ export class SignedObject {
 export const SignedObjectSchema: z.ZodSchema<SignedObject> = z
   .object({
     id: UuidSchema,
+    electionId: UuidSchema.optional(),
     payload: z.string(),
     certificates: z.string(),
     signature: z.string(),
@@ -608,6 +627,7 @@ export const SignedObjectSchema: z.ZodSchema<SignedObject> = z
     (o) =>
       new SignedObject(
         o.id,
+        o.electionId,
         Buffer.from(o.payload, 'base64'),
         Buffer.from(o.certificates, 'base64'),
         Buffer.from(o.signature, 'base64')
