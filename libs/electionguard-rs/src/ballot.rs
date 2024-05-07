@@ -22,7 +22,7 @@ use crate::{
 
 /// The range of serial numbers for ballots. Max is `Number.MAX_SAFE_INTEGER`
 /// from JS.
-const SERIAL_NUMBER_RANGE: Range<u64> = 1..(2 ^ 53 - 1);
+pub(crate) const SERIAL_NUMBER_RANGE: Range<u64> = 1..((2 ^ 53) - 1);
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -215,7 +215,7 @@ pub fn encrypt(
     };
 
     // at this point, the output directory should contain a single encrypted ballot file
-    let output_paths: Vec<_> = read_dir(&output_directory)?
+    let output_paths: Vec<_> = read_dir(output_directory)?
         .flatten()
         .filter(|e| matches!(e.file_type(), Ok(file_type) if file_type.is_file()))
         .take(2)
@@ -223,12 +223,10 @@ pub fn encrypt(
 
     match output_paths.as_slice() {
         [encrypted_ballot_path] => File::open(encrypted_ballot_path.path())?.bytes().collect(),
-        _ => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Expected exactly one encrypted ballot file, found {output_paths:?}"),
-            ));
-        }
+        _ => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Expected exactly one encrypted ballot file, found {output_paths:?}"),
+        )),
     }
 }
 

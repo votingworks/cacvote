@@ -1,4 +1,5 @@
 /* eslint-disable max-classes-per-file */
+import { Optional } from '@votingworks/basics';
 import {
   BallotStyleId,
   BallotStyleIdSchema,
@@ -287,6 +288,76 @@ export const DecryptedElectionTallyPresenterSchema: z.ZodSchema<DecryptedElectio
       )
   ) as unknown as z.ZodSchema<DecryptedElectionTallyPresenter>;
 
+export interface ShuffledEncryptedCastBallotsPresenterStruct {
+  jurisdictionCode: string;
+  electionObjectId: string;
+  electionguardShuffledBallots: string;
+  createdAt: string;
+  syncedAt?: string;
+}
+
+export const ShuffledEncryptedCastBallotsPresenterStructSchema: z.ZodSchema<ShuffledEncryptedCastBallotsPresenterStruct> =
+  z.object({
+    jurisdictionCode: z.string(),
+    electionObjectId: z.string(),
+    electionguardShuffledBallots: z.string(),
+    createdAt: z.string(),
+    syncedAt: z.string().optional(),
+  });
+
+export class ShuffledEncryptedCastBallotsPresenter {
+  constructor(
+    private readonly jurisdictionCode: JurisdictionCode,
+    private readonly electionObjectId: Uuid,
+    private readonly electionguardShuffledBallots: Buffer,
+    private readonly createdAt: DateTime,
+    private readonly syncedAt?: DateTime
+  ) {}
+
+  getJurisdictionCode(): JurisdictionCode {
+    return this.jurisdictionCode;
+  }
+
+  getElectionObjectId(): Uuid {
+    return this.electionObjectId;
+  }
+
+  getElectionguardShuffledBallots(): Buffer {
+    return this.electionguardShuffledBallots;
+  }
+
+  getCreatedAt(): DateTime {
+    return this.createdAt;
+  }
+
+  getSyncedAt(): Optional<DateTime> {
+    return this.syncedAt;
+  }
+
+  toJSON(): ShuffledEncryptedCastBallotsPresenterStruct {
+    return {
+      jurisdictionCode: this.jurisdictionCode,
+      electionObjectId: this.electionObjectId,
+      electionguardShuffledBallots:
+        this.electionguardShuffledBallots.toString('base64'),
+      createdAt: this.createdAt.toISO(),
+      syncedAt: this.syncedAt?.toISO(),
+    };
+  }
+}
+
+export const ShuffledEncryptedCastBallotsPresenterSchema: z.ZodSchema<ShuffledEncryptedCastBallotsPresenter> =
+  ShuffledEncryptedCastBallotsPresenterStructSchema.transform(
+    (struct) =>
+      new ShuffledEncryptedCastBallotsPresenter(
+        unsafeParse(JurisdictionCodeSchema, struct.jurisdictionCode),
+        unsafeParse(UuidSchema, struct.electionObjectId),
+        Buffer.from(struct.electionguardShuffledBallots, 'base64'),
+        DateTime.fromISO(struct.createdAt),
+        struct.syncedAt ? DateTime.fromISO(struct.syncedAt) : undefined
+      )
+  ) as unknown as z.ZodSchema<ShuffledEncryptedCastBallotsPresenter>;
+
 export interface ElectionInfoStruct {
   jurisdictionCode: string;
   electionDefinition: string;
@@ -357,6 +428,7 @@ export interface ElectionPresenterStruct {
   election: ElectionInfoStruct;
   encryptedTally?: EncryptedElectionTallyPresenterStruct;
   decryptedTally?: DecryptedElectionTallyPresenterStruct;
+  shuffledEncryptedCastBallots?: ShuffledEncryptedCastBallotsPresenterStruct;
 }
 
 export const ElectionPresenterStructSchema: z.ZodSchema<ElectionPresenterStruct> =
@@ -365,6 +437,8 @@ export const ElectionPresenterStructSchema: z.ZodSchema<ElectionPresenterStruct>
     election: ElectionInfoStructSchema,
     encryptedTally: EncryptedElectionTallyPresenterStructSchema.optional(),
     decryptedTally: DecryptedElectionTallyPresenterStructSchema.optional(),
+    shuffledEncryptedCastBallots:
+      ShuffledEncryptedCastBallotsPresenterStructSchema.optional(),
   });
 
 export class ElectionPresenter {
@@ -372,7 +446,8 @@ export class ElectionPresenter {
     private readonly id: Uuid,
     private readonly election: ElectionInfo,
     private readonly encryptedTally?: EncryptedElectionTallyPresenter,
-    private readonly decryptedTally?: DecryptedElectionTallyPresenter
+    private readonly decryptedTally?: DecryptedElectionTallyPresenter,
+    private readonly shuffledEncryptedCastBallots?: ShuffledEncryptedCastBallotsPresenter
   ) {}
 
   getId(): Uuid {
@@ -383,12 +458,16 @@ export class ElectionPresenter {
     return this.election;
   }
 
-  getEncryptedTally(): EncryptedElectionTallyPresenter | undefined {
+  getEncryptedTally(): Optional<EncryptedElectionTallyPresenter> {
     return this.encryptedTally;
   }
 
-  getDecryptedTally(): DecryptedElectionTallyPresenter | undefined {
+  getDecryptedTally(): Optional<DecryptedElectionTallyPresenter> {
     return this.decryptedTally;
+  }
+
+  getShuffledEncryptedCastBallots(): Optional<ShuffledEncryptedCastBallotsPresenter> {
+    return this.shuffledEncryptedCastBallots;
   }
 
   toJSON(): ElectionPresenterStruct {
@@ -397,6 +476,7 @@ export class ElectionPresenter {
       election: this.election.toJSON(),
       encryptedTally: this.encryptedTally?.toJSON(),
       decryptedTally: this.decryptedTally?.toJSON(),
+      shuffledEncryptedCastBallots: this.shuffledEncryptedCastBallots?.toJSON(),
     };
   }
 }
@@ -416,6 +496,11 @@ export const ElectionPresenterSchema: z.ZodSchema<ElectionPresenter> =
           unsafeParse(
             DecryptedElectionTallyPresenterSchema,
             struct.decryptedTally
+          ),
+        struct.shuffledEncryptedCastBallots &&
+          unsafeParse(
+            ShuffledEncryptedCastBallotsPresenterSchema,
+            struct.shuffledEncryptedCastBallots
           )
       )
   ) as unknown as z.ZodSchema<ElectionPresenter>;
@@ -682,9 +767,9 @@ export interface CastBallotPresenterStruct {
   castBallot: CastBallot;
   registrationRequest: RegistrationRequestStruct;
   registration: RegistrationStruct;
-  registrationId: Uuid;
+  registrationId: string;
   verificationStatus: VerificationStatus;
-  createdAt: DateTime;
+  createdAt: string;
 }
 
 export const CastBallotPresenterStructSchema: z.ZodSchema<CastBallotPresenterStruct> =
@@ -692,9 +777,9 @@ export const CastBallotPresenterStructSchema: z.ZodSchema<CastBallotPresenterStr
     castBallot: CastBallotSchema,
     registrationRequest: RegistrationRequestStructSchema,
     registration: RegistrationStructSchema,
-    registrationId: UuidSchema,
+    registrationId: z.string(),
     verificationStatus: VerificationStatusSchema,
-    createdAt: Iso8601DateSchema,
+    createdAt: z.string(),
   });
 
 export class CastBallotPresenter {
@@ -738,7 +823,7 @@ export class CastBallotPresenter {
       registration: this.registration.toJSON(),
       registrationId: this.registrationId,
       verificationStatus: this.verificationStatus,
-      createdAt: this.createdAt,
+      createdAt: this.createdAt.toISO(),
     };
   }
 }
@@ -750,9 +835,9 @@ export const CastBallotPresenterSchema: z.ZodSchema<CastBallotPresenter> =
         struct.castBallot,
         unsafeParse(RegistrationRequestSchema, struct.registrationRequest),
         unsafeParse(RegistrationSchema, struct.registration),
-        struct.registrationId,
+        unsafeParse(UuidSchema, struct.registrationId),
         struct.verificationStatus,
-        struct.createdAt
+        DateTime.fromISO(struct.createdAt)
       )
   ) as unknown as z.ZodSchema<CastBallotPresenter>;
 

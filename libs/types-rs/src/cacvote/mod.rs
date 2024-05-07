@@ -1,4 +1,5 @@
 use std::fmt;
+use std::num::NonZeroUsize;
 use std::ops::Deref;
 use std::str::FromStr;
 
@@ -200,7 +201,7 @@ pub enum Payload {
     CastBallot(CastBallot),
     EncryptedElectionTally(EncryptedElectionTally),
     DecryptedElectionTally(DecryptedElectionTally),
-    ShuffledEncryptedCastBallot(ShuffledEncryptedCastBallot),
+    ShuffledEncryptedCastBallots(ShuffledEncryptedCastBallots),
 }
 
 impl Payload {
@@ -212,8 +213,8 @@ impl Payload {
             Self::CastBallot(_) => Self::cast_ballot_object_type(),
             Self::EncryptedElectionTally(_) => Self::encrypted_election_tally_object_type(),
             Self::DecryptedElectionTally(_) => Self::decrypted_election_tally_object_type(),
-            Self::ShuffledEncryptedCastBallot(_) => {
-                Self::shuffled_encrypted_cast_ballot_object_type()
+            Self::ShuffledEncryptedCastBallots(_) => {
+                Self::shuffled_encrypted_cast_ballots_object_type()
             }
         }
     }
@@ -254,10 +255,10 @@ impl Payload {
         "DecryptedElectionTally"
     }
 
-    pub fn shuffled_encrypted_cast_ballot_object_type() -> &'static str {
+    pub fn shuffled_encrypted_cast_ballots_object_type() -> &'static str {
         // This must match the naming rules of the `serde` attribute in the
         // `Payload` enum.
-        "ShuffledEncryptedCastBallot"
+        "ShuffledEncryptedCastBallots"
     }
 }
 
@@ -270,9 +271,7 @@ impl JurisdictionScoped for Payload {
             Self::CastBallot(cast_ballot) => cast_ballot.jurisdiction_code(),
             Self::EncryptedElectionTally(tally) => tally.jurisdiction_code(),
             Self::DecryptedElectionTally(tally) => tally.jurisdiction_code(),
-            Self::ShuffledEncryptedCastBallot(_) => {
-                unimplemented!("TODO: pull from field")
-            }
+            Self::ShuffledEncryptedCastBallots(ballots) => ballots.jurisdiction_code(),
         }
     }
 }
@@ -712,8 +711,40 @@ impl JurisdictionScoped for DecryptedElectionTally {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-// TODO: fill in these fields
-pub struct ShuffledEncryptedCastBallot;
+pub struct ShuffledEncryptedCastBallots {
+    pub jurisdiction_code: JurisdictionCode,
+    pub election_object_id: Uuid,
+    #[serde(with = "Base64Standard")]
+    pub electionguard_shuffled_ballots: Vec<u8>,
+}
+
+impl JurisdictionScoped for ShuffledEncryptedCastBallots {
+    fn jurisdiction_code(&self) -> JurisdictionCode {
+        self.jurisdiction_code.clone()
+    }
+}
+
+impl ShuffledEncryptedCastBallots {
+    pub fn election_object_id_field_name() -> &'static str {
+        // This must match the naming rules of the `serde` attribute in the
+        // `ShuffledEncryptedCastBallots` struct.
+        "electionObjectId"
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShuffledEncryptedCastBallotsPresenter {
+    #[serde(flatten)]
+    pub shuffled_encrypted_cast_ballots: ShuffledEncryptedCastBallots,
+    #[serde(with = "time::serde::iso8601")]
+    pub created_at: OffsetDateTime,
+    #[serde(
+        with = "time::serde::iso8601::option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub synced_at: Option<OffsetDateTime>,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
@@ -756,6 +787,8 @@ pub struct ElectionPresenter {
     encrypted_tally: Option<EncryptedElectionTallyPresenter>,
     #[serde(skip_serializing_if = "Option::is_none")]
     decrypted_tally: Option<DecryptedElectionTallyPresenter>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shuffled_encrypted_cast_ballots: Option<ShuffledEncryptedCastBallotsPresenter>,
 }
 
 impl ElectionPresenter {
@@ -764,12 +797,14 @@ impl ElectionPresenter {
         election: Election,
         encrypted_tally: Option<EncryptedElectionTallyPresenter>,
         decrypted_tally: Option<DecryptedElectionTallyPresenter>,
+        shuffled_encrypted_cast_ballots: Option<ShuffledEncryptedCastBallotsPresenter>,
     ) -> Self {
         Self {
             id,
             election,
             encrypted_tally,
             decrypted_tally,
+            shuffled_encrypted_cast_ballots,
         }
     }
 }
@@ -889,4 +924,9 @@ impl RegistrationPresenter {
     pub fn created_at(&self) -> OffsetDateTime {
         self.created_at
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MixEncryptedBallotsRequest {
+    pub phases: NonZeroUsize,
 }

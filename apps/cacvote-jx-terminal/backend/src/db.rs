@@ -74,12 +74,16 @@ pub(crate) async fn get_elections(
                 .await?
                 .into();
 
+        let shuffled_encrypted_cast_ballots =
+            get_shuffled_encrypted_cast_ballots(&mut *connection, &object.id).await?;
+
         if let cacvote::Payload::Election(election) = payload {
             elections.push(cacvote::ElectionPresenter::new(
                 object.id,
                 election,
                 encrypted_tally,
                 decrypted_tally,
+                shuffled_encrypted_cast_ballots,
             ));
         }
     }
@@ -684,6 +688,55 @@ pub(crate) async fn get_cast_ballots_for_election(
     }
 
     Ok(cast_ballots)
+}
+
+pub(crate) async fn get_shuffled_encrypted_cast_ballots(
+    executor: &mut sqlx::PgConnection,
+    election_object_id: &Uuid,
+) -> color_eyre::Result<Option<cacvote::ShuffledEncryptedCastBallotsPresenter>> {
+    let Some(record) = sqlx::query!(
+        r#"
+        SELECT
+            b.id AS shuffled_encrypted_cast_ballots_id,
+            b.payload AS shuffled_encrypted_cast_ballots_payload,
+            b.certificates AS shuffled_encrypted_cast_ballots_certificates,
+            b.signature AS shuffled_encrypted_cast_ballots_signature,
+            b.created_at AS shuffled_encrypted_cast_ballots_created_at,
+            b.server_synced_at AS shuffled_encrypted_cast_ballots_server_synced_at
+        FROM objects AS b
+        WHERE b.object_type = $1
+          AND (convert_from(b.payload, 'UTF8')::jsonb ->> $2)::uuid = $3
+        "#,
+        cacvote::Payload::shuffled_encrypted_cast_ballots_object_type(),
+        cacvote::ShuffledEncryptedCastBallots::election_object_id_field_name(),
+        election_object_id,
+    )
+    .fetch_optional(executor)
+    .await?
+    else {
+        return Ok(None);
+    };
+
+    let shuffled_encrypted_cast_ballots = cacvote::SignedObject {
+        id: record.shuffled_encrypted_cast_ballots_id,
+        payload: record.shuffled_encrypted_cast_ballots_payload,
+        certificates: record.shuffled_encrypted_cast_ballots_certificates,
+        signature: record.shuffled_encrypted_cast_ballots_signature,
+    };
+
+    let cacvote::Payload::ShuffledEncryptedCastBallots(shuffled_encrypted_cast_ballots) =
+        shuffled_encrypted_cast_ballots.try_to_inner()?
+    else {
+        bail!("Object is not a shuffled encrypted cast ballots")
+    };
+
+    let shuffled_encrypted_cast_ballots = cacvote::ShuffledEncryptedCastBallotsPresenter {
+        shuffled_encrypted_cast_ballots,
+        created_at: record.shuffled_encrypted_cast_ballots_created_at,
+        synced_at: record.shuffled_encrypted_cast_ballots_server_synced_at,
+    };
+
+    Ok(Some(shuffled_encrypted_cast_ballots))
 }
 
 pub(crate) async fn add_eg_private_key(

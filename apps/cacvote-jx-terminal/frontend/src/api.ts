@@ -184,3 +184,37 @@ export const decryptEncryptedElectionTally = {
     );
   },
 } as const;
+
+export interface ShuffleEncryptedBallotsRequest {
+  electionId: Uuid;
+  phases: number;
+}
+
+export interface ShuffleEncryptedBallotsResponse {
+  id: Uuid;
+}
+
+export const shuffleEncryptedBallots = {
+  useMutation() {
+    return useMutation(
+      async ({ electionId, phases }: ShuffleEncryptedBallotsRequest) => {
+        const response = await fetch(
+          `/api/elections/${electionId}/mixed-ballots`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phases }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to shuffle encrypted ballots: ${response.statusText}`
+          );
+        }
+
+        return (await response.json()) as ShuffleEncryptedBallotsResponse;
+      }
+    );
+  },
+} as const;

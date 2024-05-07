@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            cb.id AS cast_ballot_id,\n            cb.payload AS cast_ballot_payload,\n            cb.certificates AS cast_ballot_certificates,\n            cb.signature AS cast_ballot_signature\n        FROM objects AS cb\n        WHERE cb.object_type = $1\n          AND (convert_from(cb.payload, 'UTF8')::jsonb ->> $2)::uuid = $3\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cast_ballot_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "cast_ballot_payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "cast_ballot_certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "cast_ballot_signature",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "150c905080cb7f3444a4fd653f3f659003db969c6fd3426749986f7399e26d7d"
+}

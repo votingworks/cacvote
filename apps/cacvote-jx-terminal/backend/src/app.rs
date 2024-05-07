@@ -112,6 +112,10 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
             "/api/elections/:election_id/decrypted-tally",
             post(decrypt_encrypted_election_tally),
         )
+        .route(
+            "/api/elections/:election_id/mixed-ballots",
+            post(mix_encrypted_ballots),
+        )
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
         .with_state(AppState {
@@ -705,6 +709,153 @@ async fn decrypt_encrypted_election_tally(
         jurisdiction_code: election.jurisdiction_code,
         electionguard_decrypted_tally: decrypted_tally,
     });
+
+    let serialized_payload = match serde_json::to_vec(&payload) {
+        Ok(serialized_payload) => serialized_payload,
+        Err(e) => {
+            tracing::error!("error serializing payload: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error serializing payload" })),
+            );
+        }
+    };
+
+    let signed = match smartcard.sign(&serialized_payload, None) {
+        Ok(signed) => signed,
+        Err(e) => {
+            tracing::error!("error signing payload: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error signing payload" })),
+            );
+        }
+    };
+
+    let certificates: Vec<u8> = match signed
+        .cert_stack
+        .iter()
+        .map(|cert| cert.to_pem())
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(certificates) => certificates.concat(),
+        Err(e) => {
+            tracing::error!("error converting certificates to PEM: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error converting certificates to PEM" })),
+            );
+        }
+    };
+
+    let signed_object = cacvote::SignedObject {
+        id: Uuid::new_v4(),
+        payload: serialized_payload,
+        certificates,
+        signature: signed.data,
+    };
+
+    if let Err(e) = db::add_object(&mut transaction, &signed_object).await {
+        tracing::error!("error adding object to database: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error adding object to database" })),
+        );
+    }
+
+    if let Err(e) = transaction.commit().await {
+        tracing::error!("error committing transaction: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "error committing transaction" })),
+        );
+    }
+
+    (StatusCode::CREATED, Json(json!({ "id": signed_object.id })))
+}
+
+async fn mix_encrypted_ballots(
+    State(AppState {
+        pool,
+        config,
+        smartcard,
+        ..
+    }): State<AppState>,
+    Path(election_id): Path<Uuid>,
+    Json(cacvote::MixEncryptedBallotsRequest { phases }): Json<cacvote::MixEncryptedBallotsRequest>,
+) -> impl IntoResponse {
+    let mut transaction = match pool.begin().await {
+        Ok(transaction) => transaction,
+        Err(e) => {
+            tracing::error!("error getting database connection: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error getting database connection" })),
+            );
+        }
+    };
+
+    let election_object = match db::get_object(&mut transaction, election_id).await {
+        Ok(object) => object,
+        Err(e) => {
+            tracing::error!("error getting election from database: {e}");
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "error getting election from database" })),
+            );
+        }
+    };
+
+    let election_payload: cacvote::Payload = match election_object.try_to_inner() {
+        Ok(payload) => payload,
+        Err(e) => {
+            tracing::error!("error deserializing election: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error deserializing election" })),
+            );
+        }
+    };
+
+    let election = match election_payload {
+        cacvote::Payload::Election(election) => election,
+        _ => {
+            tracing::error!("object is not an election");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "object is not an election" })),
+            );
+        }
+    };
+
+    let cast_ballots = db::get_cast_ballots_for_election(&mut transaction, &election_id)
+        .await
+        .unwrap();
+
+    let shuffled_ballots = match electionguard_rs::mixnet::mix(
+        &config.eg_classpath,
+        &election.electionguard_election_metadata_blob,
+        cast_ballots
+            .iter()
+            .map(|cast_ballot| cast_ballot.electionguard_encrypted_ballot.as_bytes()),
+        phases,
+    ) {
+        Ok(shuffled_ballots) => shuffled_ballots,
+        Err(e) => {
+            tracing::error!("error mixing ballots: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "error mixing ballots" })),
+            );
+        }
+    };
+
+    let payload =
+        cacvote::Payload::ShuffledEncryptedCastBallots(cacvote::ShuffledEncryptedCastBallots {
+            election_object_id: election_id,
+            jurisdiction_code: election.jurisdiction_code,
+            electionguard_shuffled_ballots: shuffled_ballots,
+        });
 
     let serialized_payload = match serde_json::to_vec(&payload) {
         Ok(serialized_payload) => serialized_payload,
