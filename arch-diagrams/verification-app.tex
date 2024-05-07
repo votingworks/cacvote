@@ -24,35 +24,103 @@ Suppose we have a Bulletin Board with something like the following operations:
     This document details the implementation steps for the Verification summary described in Section 4.5 of the main Merge paper. We emphasise the implementation details---procedural responses are detailed elsewhere.
 
 \subsection{Subroutines}
-Sticker signature verification:
-    Input: scanned QR code, CAC CA, election data.
-    Output: true if the CA-signature chain is valid, and the election data is as expected.
+Each mode uses a subset of the following subroutines:
 
-Vote BB presence (\BBInclusionCheck{} mode):
-   Input: Voter CAC ID, Election Id, Ballot hash,
-    Do: query BB for a vote matching the CAC ID (?), check that all the data match; validate inclusion proof.  (Should this match election data, expected ballot type, etc??)
+\begin{enumerate}
+    \item \textbf{Sticker signature verification}:
+\begin{itemize}
+    \item Input: scanned QR code,  CA certificate, election Id.
+    \item Output: CAC Id and ballot Hash if 
+    \begin{itemize}
+        \item the scanned election Id is as expected, and
+        \item the certificate chain is valid,
+        \item the signature is verified,
+    \end{itemize}
+    and ``invalid signature'' otherwise.
+\end{itemize}
+\label{Sticker signature verification}
+    \item \textbf{Vote BB presence (for \BBInclusionCheck{} mode)}:
+
+\begin{itemize}
+    \item    Input: Voter CAC ID, Election Id, Ballot hash
+    \item     Do: Query the BB  searching for a vote corresponding to the provided CAC ID and Election ID,
+    \item Output: 
+    \begin{itemize}
+        \item ``NULL'' if the query 's output is NULL,
+        \item ``True'' if (1) the inclusion proof is successfully verified, and
+        (2) The CAC ID, Election ID and the ballot hash computed from the query's output, are as expected, or
+        \item ``False'' otherwise.
+    \end{itemize}
 
 
-Vote BB presence (\StickerBBUpload{} mode):
-TODO
+\end{itemize}
+\label{Vote BB presence-BB Inc}
+    \item \textbf{Vote BB presence (\StickerBBUpload{} mode)}:
+\begin{itemize}
+    \item Input: Sticker data with valid signature,
+    \item Do: Post the sticker data to the BB.
+\end{itemize}
+\label{Vote BB presence-upload}
 
-Sticker BB presence (Only relevant for \StickerBBUpload mode):
+    \item \textbf{Valid Vote Arrival}:
+\begin{itemize}
+    \item Input: List of enrolled CAC IDs, Election ID, CAC ID of arrived ballot.
+    \item Do: Check that the CAC ID is on the enrolled voter list.
+    Check that it's not already marked as arrived on the BB.
+\end{itemize}
+\label{Valid Vote Arrival}
+    \item \textbf{BB Notification of Valid Vote Arrival}:
+\begin{itemize}
+    \item Input: CAC ID, Election ID.
+    \item Do: Mark the ballot with matching CAC ID and Election ID on the BB.
 
+\end{itemize}
+\label{BB Notification of Valid Vote Arrival}
+\end{enumerate}
 
-Valid Vote Arrival:
-Input: List of enrolled CAC IDs, Election ID, CAC ID of arrived ballot.
-Do: Check that the CAC ID is on the enrolled voter list.
-Check that it's not already marked as arrived on the BB.
-
-BB Notification of Valid Vote Arrival:
-Input: CAC ID, Election ID.
-
-Tell the BB that it has arrived.
+    
 
 \subsection{App modes}
-String together subroutines.
+\subsubsection{Voter mode BB (\BBInclusionCheck{} mode) }
+App configuration data: CA certificate, Election Id, query interval, query deadline
 
-    \subsection{Universal verification}
+
+Routine:
+\begin{enumerate}
+    \item Scan the sticker
+    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input.
+    \item If Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continuously run the subroutine \ref{Vote BB presence-BB Inc} at intervals specified by the query interval, with scanned CAC ID and Ballot hash as input until either (1) subroutine \ref{Vote BB presence-BB Inc} outputs ``True'' or ``False'' or (2) the query deadline is reached. In the latter case, output ``NULL''.
+    
+\end{enumerate}
+
+\subsubsection{Voter mode BB (\StickerBBUpload{}{} mode) }
+
+App configuration data: CA certificate, Election Id
+
+
+Routine:
+\begin{enumerate}
+    \item Scan the sticker
+    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input.
+    \item If Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', run the subroutine \ref{Vote BB presence-upload},
+\end{enumerate}
+
+\subsubsection{\remoteVotingCenter{} authority mode}
+
+\subsubsection{\localVotingCenter{} authority mode:}
+App configuration data: CA certificate, Election Id
+
+Routine:
+\begin{enumerate}
+    \item Scan the sticker
+    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input.
+    \item If Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'',  run the subroutine \ref{Vote BB presence-BB Inc}.
+    \item If subroutine \ref{Vote BB presence-BB Inc}'s output equals ``True'', run the subroutine \ref{Valid Vote Arrival}.
+    \item run the subroutine \ref{BB Notification of Valid Vote Arrival}.
+\end{enumerate}
+\subsubsection{\localVotingCenter{}  public/auditor mode:}
+
+\subsection{Universal verification}
     This is a lot of work. Prob not great for a mobile app, but maybe OK as an option...
 
 
