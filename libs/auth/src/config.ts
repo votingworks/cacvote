@@ -33,7 +33,11 @@ function getVxCertAuthorityCertPath(): string {
     : DEV_VX_CERT_AUTHORITY_CERT_PATH;
 }
 
-function getMachineCertPathAndPrivateKey(): {
+/**
+ * Returns the path to the machine cert and the private key for the machine
+ * cert. The private key can either be a file key or a TPM key.
+ */
+export function getMachineCertPathAndPrivateKey(): {
   certPath: string;
   privateKey: FileKey | TpmKey;
 } {
