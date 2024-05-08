@@ -8,6 +8,7 @@ import {
   CommandApdu,
   constructTlv,
   parseTlv,
+  parseTlvList,
   ResponseApduError,
 } from './apdu';
 
@@ -225,6 +226,33 @@ test('constructTlv/parseTlv round trip', () => {
         expect(() => parseTlv(wrongTag, tlv)).toThrow(
           `TLV tag (<Buffer ${asHexString(tag as Byte)}>) ` +
             `does not match expected tag (<Buffer ${asHexString(wrongTag)}>)`
+        );
+      }
+    )
+  );
+});
+
+test('constructTlv/parseTlvList round trip', () => {
+  fc.assert(
+    fc.property(
+      fc.array(
+        fc.tuple(
+          fc.integer({ min: 0, max: 0xff }),
+          fc.integer({ min: 0, max: 0xffff })
+        )
+      ),
+      (tagValuePairs) => {
+        const tlvList = tagValuePairs.map(([tag, valueLength]) => {
+          const value = Buffer.alloc(valueLength);
+          return constructTlv(tag as Byte, value);
+        });
+
+        const parsedTlvList = parseTlvList(
+          tagValuePairs.map(([tag]) => tag as Byte),
+          Buffer.concat(tlvList)
+        );
+        expect(parsedTlvList.map((b) => b.byteLength)).toEqual(
+          tagValuePairs.map(([, valueLength]) => valueLength)
         );
       }
     )
