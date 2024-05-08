@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import { electionTwoPartyPrimaryFixtures } from '@votingworks/fixtures';
 import {
   DEFAULT_SYSTEM_SETTINGS,
@@ -6,17 +5,17 @@ import {
   safeParseSystemSettings,
   unsafeParse,
 } from '@votingworks/types';
-import { v4 } from 'uuid';
+import { Buffer } from 'buffer';
 import { readFile } from 'fs/promises';
-import { join } from 'path';
 import { DateTime } from 'luxon';
+import { join } from 'path';
 import {
   JurisdictionCode,
   JurisdictionCodeSchema,
   Payload,
   RegistrationRequest,
   SignedObject,
-  UuidSchema,
+  Uuid,
 } from './cacvote-server/types';
 import { Store } from './store';
 
@@ -97,7 +96,8 @@ test('forEachObjectOfType', async () => {
     )
   );
   const object = new SignedObject(
-    unsafeParse(UuidSchema, v4()),
+    Uuid(),
+    Uuid(),
     payload.toBuffer(),
     await getCertificates(),
     Buffer.from('signature')
@@ -128,7 +128,8 @@ test('forEachRegistrationRequest', async () => {
     DateTime.now()
   );
   const object = new SignedObject(
-    unsafeParse(UuidSchema, v4()),
+    Uuid(),
+    Uuid(),
     Payload.RegistrationRequest(registrationRequest).toBuffer(),
     await getCertificates(),
     Buffer.from('signature')

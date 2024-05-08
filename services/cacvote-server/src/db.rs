@@ -13,7 +13,7 @@ use base64_serde::base64_serde_type;
 use color_eyre::eyre::bail;
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
-use types_rs::cacvote::{JournalEntry, JournalEntryAction, JurisdictionCode, SignedObject};
+use types_rs::cacvote::{self, JournalEntry, JournalEntryAction, JurisdictionCode, SignedObject};
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -56,10 +56,11 @@ pub async fn create_object(
 
     match sqlx::query!(
         r#"
-        INSERT INTO objects (id, jurisdiction, object_type, payload, certificates, signature)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificates, signature)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
         &object.id,
+        object.election_id,
         jurisdiction_code.as_str(),
         object_type,
         &object.payload,
@@ -80,11 +81,12 @@ pub async fn create_object(
 
     let journal_entry = match sqlx::query!(
         r#"
-        INSERT INTO journal_entries (object_id, jurisdiction, object_type, action)
-        VALUES ($1, $2, $3, 'create')
+        INSERT INTO journal_entries (object_id, election_id, jurisdiction, object_type, action)
+        VALUES ($1, $2, $3, $4, 'create')
         RETURNING id
         "#,
         object.id,
+        object.election_id,
         jurisdiction_code.as_str(),
         object_type,
     )
@@ -115,6 +117,7 @@ pub async fn get_journal_entries(
     struct Record {
         id: Uuid,
         object_id: Uuid,
+        election_id: Option<Uuid>,
         jurisdiction: String,
         object_type: String,
         action: JournalEntryAction,
@@ -129,6 +132,7 @@ pub async fn get_journal_entries(
                 SELECT
                   id,
                   object_id,
+                  election_id,
                   jurisdiction,
                   object_type,
                   action as "action: JournalEntryAction",
@@ -151,6 +155,7 @@ pub async fn get_journal_entries(
                 SELECT
                   id,
                   object_id,
+                  election_id,
                   jurisdiction,
                   object_type,
                   action as "action: JournalEntryAction",
@@ -171,6 +176,7 @@ pub async fn get_journal_entries(
                 SELECT
                   id,
                   object_id,
+                  election_id,
                   jurisdiction,
                   object_type,
                   action as "action: JournalEntryAction",
@@ -191,6 +197,7 @@ pub async fn get_journal_entries(
                 SELECT
                   id,
                   object_id,
+                  election_id,
                   jurisdiction,
                   object_type,
                   action as "action: JournalEntryAction",
@@ -210,6 +217,7 @@ pub async fn get_journal_entries(
             Ok(JournalEntry {
                 id: entry.id,
                 object_id: entry.object_id,
+                election_id: entry.election_id,
                 jurisdiction_code: entry.jurisdiction.try_into().unwrap(),
                 object_type: entry.object_type,
                 action: entry.action,
@@ -223,9 +231,10 @@ pub async fn get_object_by_id(
     connection: &mut sqlx::PgConnection,
     object_id: Uuid,
 ) -> color_eyre::Result<Option<SignedObject>> {
-    let object = sqlx::query!(
+    let object = sqlx::query_as!(
+        cacvote::SignedObject,
         r#"
-        SELECT payload, certificates, signature
+        SELECT id, election_id, payload, certificates, signature
         FROM objects
         WHERE id = $1
         "#,
@@ -234,10 +243,74 @@ pub async fn get_object_by_id(
     .fetch_optional(connection)
     .await?;
 
-    Ok(object.map(|object| SignedObject {
-        id: object_id,
-        payload: object.payload,
-        certificates: object.certificates,
-        signature: object.signature,
-    }))
+    // Ensure the denormalized election_id field matches the election_id in the
+    // payload. The denormalized field is used for fast lookups, but isn't part
+    // of the signed payload.
+    if let Some(object) = &object {
+        let payload = object.try_to_inner()?;
+        assert_eq!(
+            object.election_id,
+            payload.election_id(),
+            "denormalized election_id field does not match election_id in payload: {payload:?}"
+        );
+    }
+
+    Ok(object)
+}
+
+pub(crate) async fn get_election_ids(
+    connection: &mut sqlx::PgConnection,
+) -> color_eyre::Result<Vec<Uuid>> {
+    let object = sqlx::query!(
+        r#"
+        SELECT id
+        FROM objects
+        WHERE object_type = $1
+        "#,
+        cacvote::Payload::election_object_type(),
+    )
+    .fetch_all(connection)
+    .await?;
+
+    Ok(object.into_iter().map(|object| object.id).collect())
+}
+
+pub(crate) async fn get_cast_ballot_ids_by_election(
+    connection: &mut sqlx::PgConnection,
+    election_id: Uuid,
+) -> color_eyre::Result<Vec<Uuid>> {
+    let records = sqlx::query!(
+        r#"
+        SELECT id
+        FROM objects
+        WHERE object_type = $1
+          AND election_id = $2
+        "#,
+        cacvote::Payload::cast_ballot_object_type(),
+        election_id
+    )
+    .fetch_all(connection)
+    .await?;
+
+    Ok(records.into_iter().map(|record| record.id).collect())
+}
+
+pub(crate) async fn get_object_by_election_id_and_type(
+    conn: &mut sqlx::PgConnection,
+    election_id: Uuid,
+    object_type: &str,
+) -> color_eyre::Result<Option<SignedObject>> {
+    Ok(sqlx::query_as!(
+        cacvote::SignedObject,
+        r#"
+            SELECT id, election_id, payload, certificates, signature
+            FROM objects
+            WHERE election_id = $1
+              AND object_type = $2
+            "#,
+        election_id,
+        object_type,
+    )
+    .fetch_optional(conn)
+    .await?)
 }

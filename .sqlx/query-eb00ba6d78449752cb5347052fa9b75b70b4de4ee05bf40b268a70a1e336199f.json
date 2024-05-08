@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO journal_entries (object_id, jurisdiction, object_type, action)\n        VALUES ($1, $2, $3, 'create')\n        RETURNING id\n        ",
+  "query": "\n        INSERT INTO journal_entries (object_id, election_id, jurisdiction, object_type, action)\n        VALUES ($1, $2, $3, $4, 'create')\n        RETURNING id\n        ",
   "describe": {
     "columns": [
       {
@@ -12,6 +12,7 @@
     "parameters": {
       "Left": [
         "Uuid",
+        "Uuid",
         "Varchar",
         "Varchar"
       ]
@@ -20,5 +21,5 @@
       false
     ]
   },
-  "hash": "7ccc2e2723eacde6a8f3acc0604d3bf767265d92997aea12e6dbc09a131289b7"
+  "hash": "eb00ba6d78449752cb5347052fa9b75b70b4de4ee05bf40b268a70a1e336199f"
 }

@@ -7,6 +7,9 @@ create table system_settings (
 create table objects (
   id uuid primary key,
 
+  -- the ID of the election object this object is associated with or NULL
+  election_id uuid,
+
   -- which jurisdiction owns the object. de-normalized out of certificates,
   -- e.g. "ca.alameda"
   jurisdiction varchar(255) not null,
@@ -39,6 +42,9 @@ create table journal_entries (
 
   -- the object that was created or updated
   object_id uuid not null,
+
+  -- the ID of the election object this object is associated with or NULL
+  election_id uuid,
 
   -- which jurisdiction owns the object, must match `jurisdiction` in `objects`
   jurisdiction varchar(255) not null,
