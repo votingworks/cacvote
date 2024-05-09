@@ -30,11 +30,11 @@ Each mode uses a subset of the following subroutines:
     \item \textbf{Sticker signature verification}:
 \begin{itemize}
     \item Input: scanned QR code,  CA certificate, election Id.
-    \item Output: CAC Id and ballot Hash if 
+    \item Output: CAC ID and Ballot Hash if 
     \begin{itemize}
-        \item the scanned election Id is as expected, and
-        \item the certificate chain is valid,
-        \item the signature is verified,
+        \item the scanned Election ID is as expected, 
+        \item the certificate chain is valid, and
+        \item the signature of the message (CAC ID, Election ID,Ballot Hash) is verified,
     \end{itemize}
     and ``invalid signature'' otherwise.
 \end{itemize}
@@ -47,8 +47,8 @@ Each mode uses a subset of the following subroutines:
     \item Output: 
     \begin{itemize}
         \item ``NULL'' if the query 's output is NULL,
-        \item ``True'' if (1) the inclusion proof is successfully verified, and
-        (2) The CAC ID, Election ID and the ballot hash computed from the query's output, are as expected, or
+        \item ``True'' if (1) the query 's output is not NULL, (2) the inclusion proof is successfully verified, and
+        (3) The CAC ID, Election ID and the ballot hash computed from the query's output, are as expected, or
         \item ``False'' otherwise.
     \end{itemize}
 
@@ -64,9 +64,13 @@ Each mode uses a subset of the following subroutines:
 
     \item \textbf{Valid Vote Arrival}:
 \begin{itemize}
-    \item Input: List of enrolled CAC IDs, Election ID, CAC ID of arrived ballot.
-    \item Do: Check that the CAC ID is on the enrolled voter list.
-    Check that it's not already marked as arrived on the BB.
+    \item Input: List of enrolled CAC IDs, Election ID, CAC ID and Election ID of the arrived ballot
+    \item Output: 
+    \begin{itemize}
+        \item ``Valid'' if     (1) The CAC ID is on the enrolled voter list, (2) Election ID of the arrived ballot is as expected, and (3) The CAC ID is not already marked as arrived on the BB, or
+        \item ``Invalid'' otherwise.
+
+    \end{itemize}
 \end{itemize}
 \label{Valid Vote Arrival}
     \item \textbf{BB Notification of Valid Vote Arrival}:
@@ -88,8 +92,14 @@ App configuration data: CA certificate, Election Id, query interval, query deadl
 Routine:
 \begin{enumerate}
     \item Scan the sticker
-    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input.
-    \item If Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continuously run the subroutine \ref{Vote BB presence-BB Inc} at intervals specified by the query interval, with scanned CAC ID and Ballot hash as input until either (1) subroutine \ref{Vote BB presence-BB Inc} outputs ``True'' or ``False'' or (2) the query deadline is reached. In the latter case, output ``NULL''.
+    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
+    \item Continuously run the subroutine \ref{Vote BB presence-BB Inc} at intervals specified by the query interval, with scanned CAC ID, Election ID and Ballot Hash as input until either (1) Subroutine \ref{Vote BB presence-BB Inc}'s outputs ``True'' or ``False'' or (2) the query deadline is reached. 
+    \item Output 
+    \begin{itemize}
+        \item ``Included'' if Subroutine \ref{Vote BB presence-BB Inc}'s output is ``True'',
+        \item ``Not included'' if Subroutine \ref{Vote BB presence-BB Inc}'s output is ``False'', or
+        \item ``Time out'' otherwise.
+    \end{itemize}
     
 \end{enumerate}
 
@@ -101,8 +111,8 @@ App configuration data: CA certificate, Election Id
 Routine:
 \begin{enumerate}
     \item Scan the sticker
-    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input.
-    \item If Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', run the subroutine \ref{Vote BB presence-upload},
+    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
+    \item Run the subroutine \ref{Vote BB presence-upload}.
 \end{enumerate}
 
 \subsubsection{\remoteVotingCenter{} authority mode}
@@ -113,10 +123,10 @@ App configuration data: CA certificate, Election Id
 Routine:
 \begin{enumerate}
     \item Scan the sticker
-    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input.
-    \item If Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'',  run the subroutine \ref{Vote BB presence-BB Inc}.
-    \item If subroutine \ref{Vote BB presence-BB Inc}'s output equals ``True'', run the subroutine \ref{Valid Vote Arrival}.
-    \item run the subroutine \ref{BB Notification of Valid Vote Arrival}.
+    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
+    \item Run the subroutine \ref{Vote BB presence-BB Inc}. If subroutine \ref{Vote BB presence-BB Inc}'s output equals ``True'', continue. Otherwise halt.
+    \item Run the subroutine \ref{Valid Vote Arrival}. If subroutine \ref{Valid Vote Arrival}' output equals ``Valid'', continue. Otherwise halt.
+    \item Run the subroutine \ref{BB Notification of Valid Vote Arrival}.
 \end{enumerate}
 \subsubsection{\localVotingCenter{}  public/auditor mode:}
 
