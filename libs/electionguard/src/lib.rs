@@ -80,11 +80,12 @@ pub fn generate_election_config(
 /// `vx_election` argument. The return value is the EG plaintext ballot as a
 /// POJO.
 #[napi(
-    ts_args_type = "vxElection: import('@votingworks/types').Election, egManifest: import('./types').Manifest, vxCvr: import('@votingworks/types').CVR.CVR",
+    ts_args_type = "vxElection: import('@votingworks/types').Election, serialNumber: number, egManifest: import('./types').Manifest, vxCvr: import('@votingworks/types').CVR.CVR",
     ts_return_type = "import('./types').PlaintextBallot"
 )]
 pub fn convert_vx_cvr_to_eg_plaintext_ballot(
     vx_election: serde_json::Value,
+    serial_number: serde_json::Number,
     eg_manifest: serde_json::Value,
     vx_cvr: serde_json::Value,
 ) -> Result<serde_json::Value> {
@@ -118,15 +119,20 @@ pub fn convert_vx_cvr_to_eg_plaintext_ballot(
         )
     })?;
 
-    let plaintext_ballot =
-        ballot::convert_vx_cvr_to_eg_plaintext_ballot(vx_cvr, eg_manifest, vx_election).map_err(
-            |e| {
-                Error::new(
-                    Status::GenericFailure,
-                    format!("Failed to convert VX CVR to EG plaintext ballot: {e}"),
-                )
-            },
-        )?;
+    let plaintext_ballot = ballot::convert_vx_cvr_to_eg_plaintext_ballot(
+        vx_cvr,
+        serial_number
+            .as_u64()
+            .expect("Failed to convert serial number to u64"),
+        eg_manifest,
+        vx_election,
+    )
+    .map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to convert VX CVR to EG plaintext ballot: {e}"),
+        )
+    })?;
 
     serde_json::to_value(plaintext_ballot).map_err(|e| {
         Error::new(

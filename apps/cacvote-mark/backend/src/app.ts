@@ -241,6 +241,7 @@ function buildApi({
 
     castBallot(input: {
       votes: VotesDict;
+      serialNumber: number;
       pin: string;
     }): Promise<
       Result<
@@ -279,7 +280,7 @@ function buildApi({
         const election = electionPayload.getData();
         const electionDefinition = election.getElectionDefinition();
 
-        const ballotId = Uuid();
+        const ballotId = `${input.serialNumber}`;
         const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
         const castVoteRecord = buildCastVoteRecord({
           electionDefinition,
@@ -309,7 +310,8 @@ function buildApi({
           registration.registration.getRegistrationRequestObjectId(),
           registration.object.getId(),
           electionObjectId,
-          castVoteRecord
+          castVoteRecord,
+          input.serialNumber
         );
 
         const signature = (

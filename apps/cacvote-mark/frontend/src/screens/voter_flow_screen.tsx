@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { getElectionConfiguration, getVoterStatus } from '../api';
 import * as Registration from './registration';
 import * as Voting from './voting';
+import { randomInt } from '../random';
 
 interface InitState {
   type: 'init';
@@ -29,16 +30,19 @@ interface ReviewOnscreenState {
 interface PrintBallotState {
   type: 'print_ballot';
   votes: VotesDict;
+  serialNumber: number;
 }
 
 interface ReviewPrintedBallotState {
   type: 'review_printed';
   votes: VotesDict;
+  serialNumber: number;
 }
 
 interface SubmitState {
   type: 'submit';
   votes: VotesDict;
+  serialNumber: number;
 }
 
 interface PostVoteState {
@@ -109,9 +113,11 @@ function RegisteredStateScreen({
   function onReviewConfirm() {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'review_onscreen');
+      const serialNumber = randomInt();
       return {
         type: 'print_ballot',
         votes: prev.votes,
+        serialNumber,
       };
     });
   }
@@ -172,6 +178,7 @@ function RegisteredStateScreen({
       return {
         type: 'review_printed',
         votes: prev.votes,
+        serialNumber: prev.serialNumber,
       };
     });
   }
@@ -182,6 +189,7 @@ function RegisteredStateScreen({
       return {
         type: 'submit',
         votes: prev.votes,
+        serialNumber: prev.serialNumber,
       };
     });
   }
@@ -260,7 +268,7 @@ function RegisteredStateScreen({
           ballotStyleId={ballotStyleId}
           precinctId={precinctId}
           votes={voterFlowState.votes}
-          generateBallotId={() => ''}
+          generateBallotId={() => `${voterFlowState.serialNumber}`}
           // TODO: use live vs test mode?
           isLiveMode={false}
           onPrintCompleted={onPrintBallotCompleted}
@@ -279,6 +287,7 @@ function RegisteredStateScreen({
       return (
         <Voting.SubmitScreen
           votes={voterFlowState.votes}
+          serialNumber={voterFlowState.serialNumber}
           onSubmitted={onSubmitted}
         />
       );

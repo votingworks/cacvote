@@ -698,7 +698,6 @@ dependencies = [
  "color-eyre",
  "napi",
  "napi-derive",
- "rand",
  "serde",
  "serde_json",
  "tempfile",
