@@ -39,7 +39,7 @@ Each mode uses a subset of the following subroutines:
     and ``invalid signature'' otherwise.
 \end{itemize}
 \label{Sticker signature verification}
-    \item \textbf{Vote BB presence (for \BBInclusionCheck{} mode)}:
+    \item \textbf{\BBInclusionCheck{}}:
 
 \begin{itemize}
     \item    Input: Voter CAC ID, Election Id, Ballot hash
@@ -55,7 +55,7 @@ Each mode uses a subset of the following subroutines:
 
 \end{itemize}
 \label{Vote BB presence-BB Inc}
-    \item \textbf{Vote BB presence (\StickerBBUpload{} mode)}:
+    \item \textbf{\StickerBBUpload{}}:
 \begin{itemize}
     \item Input: Sticker data with valid signature,
     \item Do: Post the sticker data to the BB.
@@ -73,13 +73,21 @@ Each mode uses a subset of the following subroutines:
     \end{itemize}
 \end{itemize}
 \label{Valid Vote Arrival}
-    \item \textbf{BB Notification of Valid Vote Arrival}:
+    \item \textbf{Arrival BB Notification}:
 \begin{itemize}
     \item Input: CAC ID, Election ID.
     \item Do: Mark the ballot with matching CAC ID and Election ID on the BB.
 
 \end{itemize}
 \label{BB Notification of Valid Vote Arrival}
+\item \textbf{Decryption proof processing}:
+\begin{itemize}
+    \item Input: An encrypted ballot  (or an encrypted tally), a cleartext ballot (or a cleartext tally), proof of decryption, aggregated public key, cryptography public parameters
+    \item Output: ``True'' if proof of decryption is successfully verified or ``False'' otherwise.
+\end{itemize}
+More information can be found in ``verification 9'' and ``verification 10'' in pages 40 and 41 of the ''ElectionGuard, Design Specification,
+Version 2.0.0''.
+\label{Decryption proof processing}
 \end{enumerate}
 
     
@@ -96,8 +104,8 @@ App configuration data: CA certificate, Election Id, query interval, query numbe
 Routine:
 \begin{enumerate}
     \item Scan the sticker
-    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
-    \item Continuously run the subroutine \ref{Vote BB presence-BB Inc} at intervals specified by the query interval, with scanned CAC ID, Election ID and Ballot Hash as input until either (1) Subroutine \ref{Vote BB presence-BB Inc}'s outputs ``True'' or ``False'' or (2) the number of complete queries is already equal to the specified query number. 
+    \item Run the subroutine \ref{Sticker signature verification} (\StickersignatureVerification{}) with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
+    \item Continuously run the subroutine \ref{Vote BB presence-BB Inc} (\BBInclusionCheck{}) at intervals specified by the query interval, with scanned CAC ID, Election ID and Ballot Hash as input until either (1) Subroutine \ref{Vote BB presence-BB Inc}'s outputs ``True'' or ``False'' or (2) the number of complete queries is already equal to the specified query number. 
     \item Output 
     \begin{itemize}
         \item ``Included'' if Subroutine \ref{Vote BB presence-BB Inc}'s output is ``True'',
@@ -115,8 +123,8 @@ App configuration data: CA certificate, Election Id
 Routine:
 \begin{enumerate}
     \item Scan the sticker
-    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
-    \item Run the subroutine \ref{Vote BB presence-upload}.
+    \item Run the subroutine \ref{Sticker signature verification} (\StickersignatureVerification{}) with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
+    \item Run the subroutine \ref{Vote BB presence-upload} (\StickerBBUpload{}).
 \end{enumerate}
 
 \subsubsection{\remoteVotingCenter{} authority mode}
@@ -132,8 +140,8 @@ Routine:
     \item Scan all stickers
     \item For each scanned sticker:
     \begin{itemize}
-        \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
-    \item Continuously run the subroutine \ref{Vote BB presence-BB Inc} at intervals specified by the query interval, with scanned CAC ID, Election ID and Ballot Hash as input until either (1) Subroutine \ref{Vote BB presence-BB Inc}'s outputs ``True'' or ``False'' or (2) the number of complete queries is already equal to the specified query number. 
+        \item Run the subroutine \ref{Sticker signature verification} (\StickersignatureVerification{}) with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
+    \item Continuously run the subroutine \ref{Vote BB presence-BB Inc} (\BBInclusionCheck{}) at intervals specified by the query interval, with scanned CAC ID, Election ID and Ballot Hash as input until either (1) Subroutine \ref{Vote BB presence-BB Inc}'s outputs ``True'' or ``False'' or (2) the number of complete queries is already equal to the specified query number. 
     \item Output 
     \begin{itemize}
         \item ``Included'' if Subroutine \ref{Vote BB presence-BB Inc}'s output is ``True'',
@@ -151,8 +159,8 @@ Routine:
     \item For each scanned sticker:
     \begin{itemize}
 
-        \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
-        \item Run the subroutine \ref{Vote BB presence-upload}.
+        \item Run the subroutine \ref{Sticker signature verification} (\StickersignatureVerification{}) with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
+        \item Run the subroutine \ref{Vote BB presence-upload} (\StickerBBUpload{}).
     \end{itemize}
 \end{enumerate}
 
@@ -162,12 +170,28 @@ App configuration data: CA certificate, Election Id
 Routine:
 \begin{enumerate}
     \item Scan the sticker
-    \item Run the subroutine \ref{Sticker signature verification} with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
-    \item Run the subroutine \ref{Vote BB presence-BB Inc}. If subroutine \ref{Vote BB presence-BB Inc}'s output equals ``True'', continue. Otherwise halt.
-    \item Run the subroutine \ref{Valid Vote Arrival}. If subroutine \ref{Valid Vote Arrival}' output equals ``Valid'', continue. Otherwise halt.
-    \item Run the subroutine \ref{BB Notification of Valid Vote Arrival}.
+    \item Run the subroutine \ref{Sticker signature verification} (\StickersignatureVerification{}) with scanned QR code, CA certificate and election ID as input. If the Subroutine \ref{Sticker signature verification}'s output $\neq\;$ ``invalid signature'', continue. Otherwise, halt.
+    \item Run the subroutine \ref{Vote BB presence-BB Inc} (\BBInclusionCheck{}). If subroutine \ref{Vote BB presence-BB Inc}'s output equals ``True'', continue. Otherwise halt.
+    \item Run the subroutine \ref{Valid Vote Arrival} (\ValidVoteArrival{}). If subroutine \ref{Valid Vote Arrival}' output equals ``Valid'', continue. Otherwise halt.
+    \item Run the subroutine \ref{BB Notification of Valid Vote Arrival} (\ArrivalBBNotification{}).
 \end{enumerate}
 \subsubsection{\localVotingCenter{}  public/auditor mode:}
+Application in this mode should have multiple functionalities as follows.
+
+
+\textbf{Sticker processing}
+
+App configuration data: CA certificate, Election Id
+
+Routine:
+\begin{enumerate}
+    \item Scan the sticker
+    \item Run the subroutine \ref{Sticker signature verification} (\StickersignatureVerification{}) with scanned QR code, CA certificate and election ID as input.
+\end{enumerate}
+
+\textbf{Decryption processing}
+
+Routine: Run the subroutine \ref{Decryption proof processing} (\DecryptionProof{}).
 
 \subsection{Universal verification}
     This is a lot of work. Prob not great for a mobile app, but maybe OK as an option...
