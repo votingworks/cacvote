@@ -11,11 +11,13 @@ function arbitrarySha256() {
 test(BallotVerificationPayload.name, () => {
   fc.assert(
     fc.property(
-      fc.string({ minLength: 10, maxLength: 10 }),
+      fc.string({ minLength: 2, maxLength: 10 }), // machineId
+      fc.string({ minLength: 10, maxLength: 10 }), // commonAccessCardId
       fc.uuid(),
       arbitrarySha256(),
-      (commonAccessCardId, electionObjectId, signatureHash) => {
+      (machineId, commonAccessCardId, electionObjectId, signatureHash) => {
         const original = new BallotVerificationPayload(
+          machineId,
           commonAccessCardId,
           unsafeParse(UuidSchema, electionObjectId),
           Buffer.from(signatureHash)

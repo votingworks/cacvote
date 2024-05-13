@@ -329,6 +329,7 @@ function buildApi({
 
         const signatureHash = createHash('sha256').update(signature).digest();
         const ballotValidationPayload = new BallotVerificationPayload(
+          VX_MACHINE_ID,
           commonAccessCardId,
           electionObjectId,
           signatureHash
