@@ -2,6 +2,7 @@
 import { constructTlv, parseTlvList } from '@votingworks/auth';
 import { unsafeParse } from '@votingworks/types';
 import { Buffer } from 'buffer';
+import * as uuid from 'uuid';
 import { Uuid, UuidSchema } from './cacvote-server/types';
 
 /**
@@ -41,7 +42,7 @@ export class BallotVerificationPayload {
       ),
       constructTlv(
         BallotVerificationPayload.ELECTION_OBJECT_ID_TAG,
-        Buffer.from(this.electionObjectId)
+        Buffer.from(uuid.parse(this.electionObjectId))
       ),
       constructTlv(
         BallotVerificationPayload.ENCRYPTED_BALLOT_SIGNATURE_HASH_TAG,
@@ -68,7 +69,7 @@ export class BallotVerificationPayload {
     const commonAccessCardId = commonAccessCardIdBytes.toString('utf-8');
     const electionObjectId = unsafeParse(
       UuidSchema,
-      electionObjectIdBytes.toString('utf-8')
+      uuid.stringify(electionObjectIdBytes)
     );
 
     const signatureHash = signatureHashBytes;
