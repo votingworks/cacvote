@@ -20,7 +20,7 @@ export function generateElectionConfig(classpath: string, egManifest: import('./
  * `vx_election` argument. The return value is the EG plaintext ballot as a
  * POJO.
  */
-export function convertVxCvrToEgPlaintextBallot(vxElection: import('@votingworks/types').Election, egManifest: import('./types').Manifest, vxCvr: import('@votingworks/types').CVR.CVR): import('./types').PlaintextBallot
+export function convertVxCvrToEgPlaintextBallot(vxElection: import('@votingworks/types').Election, serialNumber: number, egManifest: import('./types').Manifest, vxCvr: import('@votingworks/types').CVR.CVR): import('./types').PlaintextBallot
 /**
  * Encrypt an EG plaintext ballot using the ElectionGuard Java implementation.
  * The `classpath` argument should be the path to the ElectionGuard Java JAR

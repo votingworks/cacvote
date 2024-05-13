@@ -112,14 +112,13 @@ pub fn run_mixnet(
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
     use types_rs::election::ElectionDefinition;
 
     use super::*;
     use std::{iter::once, num::NonZeroUsize};
 
     use crate::{
-        ballot::{encrypt, PlaintextBallot, SERIAL_NUMBER_RANGE},
+        ballot::{encrypt, PlaintextBallot},
         config::generate_election_config,
         manifest::{Manifest, ObjectId},
     };
@@ -147,7 +146,7 @@ mod tests {
             ballot_id: ObjectId("ballot1".to_owned()),
             ballot_style: manifest.ballot_styles[0].object_id.clone(),
             contests: vec![],
-            sn: Some(rand::thread_rng().gen_range(SERIAL_NUMBER_RANGE)),
+            sn: Some(1234567890),
             errors: None,
         };
 
@@ -201,7 +200,7 @@ mod tests {
             ballot_id: ObjectId("ballot1".to_owned()),
             ballot_style: manifest.ballot_styles[0].object_id.clone(),
             contests: vec![],
-            sn: Some(rand::thread_rng().gen_range(SERIAL_NUMBER_RANGE)),
+            sn: Some(1234567890),
             errors: None,
         };
 

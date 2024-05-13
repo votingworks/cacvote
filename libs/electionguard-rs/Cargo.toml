@@ -9,7 +9,6 @@ edition = "2021"
 color-eyre = { workspace = true }
 napi = { workspace = true }
 napi-derive = { workspace = true }
-rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tempfile = { workspace = true }

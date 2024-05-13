@@ -15,11 +15,13 @@ import { COMMON_ACCESS_CARD_PIN_LENGTH } from '../../globals';
 
 export interface SubmitScreenProps {
   votes: VotesDict;
+  serialNumber: number;
   onSubmitted: () => void;
 }
 
 export function SubmitScreen({
   votes,
+  serialNumber,
   onSubmitted,
 }: SubmitScreenProps): JSX.Element {
   const [isShowingPinModal, setIsShowingPinModal] = useState(false);
@@ -28,7 +30,7 @@ export function SubmitScreen({
   const isCheckingPin = castBallotMutation.isLoading;
 
   function submitBallot(pin: string) {
-    castBallotMutationMutate({ votes, pin });
+    castBallotMutationMutate({ votes, serialNumber, pin });
   }
 
   useEffect(() => {

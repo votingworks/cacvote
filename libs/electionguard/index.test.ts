@@ -62,6 +62,7 @@ test('convert VX CVR to EG plaintext ballot', () => {
   const manifest = convertVxElectionToEgManifest(famousNamesElection);
   const egPlaintextBallot = convertVxCvrToEgPlaintextBallot(
     famousNamesElection,
+    0,
     manifest,
     famousNamesCvr
   );
@@ -85,6 +86,7 @@ test('convert VX CVR to EG plaintext ballot', () => {
   const config = generateElectionConfig(assertDefined(EG_CLASSPATH), manifest);
   const egPlaintextBallot = convertVxCvrToEgPlaintextBallot(
     famousNamesElection,
+    0,
     manifest,
     famousNamesCvr
   );
