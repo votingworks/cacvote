@@ -1,11 +1,15 @@
-import { cac } from '@votingworks/auth';
-import { buildCastVoteRecord, VX_MACHINE_ID } from '@votingworks/backend';
 import {
+  cac,
+  cryptography,
+  getMachineCertPathAndPrivateKey,
+} from '@votingworks/auth';
+import { VX_MACHINE_ID, buildCastVoteRecord } from '@votingworks/backend';
+import {
+  Optional,
+  Result,
   asyncResultBlock,
   err,
   ok,
-  Optional,
-  Result,
   throwIllegalValue,
 } from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
@@ -15,12 +19,15 @@ import {
   BallotType,
   ElectionDefinition,
   PrecinctId,
-  unsafeParse,
   VotesDict,
+  unsafeParse,
 } from '@votingworks/types';
+import { Buffer } from 'buffer';
 import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import express, { Application } from 'express';
 import { DateTime } from 'luxon';
+import { Readable } from 'stream';
 import { isDeepStrictEqual } from 'util';
 import { z } from 'zod';
 import {
@@ -36,6 +43,7 @@ import { createEncryptedBallotPayload } from './electionguard';
 import { MAILING_LABEL_PRINTER } from './globals';
 import * as mailingLabel from './mailing_label';
 import { Auth, AuthStatus } from './types/auth';
+import { BallotVerificationPayload, SignedBuffer } from './verification';
 import { Workspace } from './workspace';
 
 export type VoterStatus =
@@ -233,6 +241,7 @@ function buildApi({
 
     castBallot(input: {
       votes: VotesDict;
+      serialNumber: number;
       pin: string;
     }): Promise<
       Result<
@@ -271,7 +280,7 @@ function buildApi({
         const election = electionPayload.getData();
         const electionDefinition = election.getElectionDefinition();
 
-        const ballotId = Uuid();
+        const ballotId = `${input.serialNumber}`;
         const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
         const castVoteRecord = buildCastVoteRecord({
           electionDefinition,
@@ -295,23 +304,14 @@ function buildApi({
           ballotMarkingMode: 'machine',
         });
 
-        const pdf = await mailingLabel.buildPdf({
-          mailingAddress: election.getMailingAddress(),
-        });
-
-        execFileSync(
-          'lpr',
-          ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
-          { input: pdf }
-        );
-
         const payload = createEncryptedBallotPayload(
           commonAccessCardId,
           electionPayload,
           registration.registration.getRegistrationRequestObjectId(),
           registration.object.getId(),
           electionObjectId,
-          castVoteRecord
+          castVoteRecord,
+          input.serialNumber
         );
 
         const signature = (
@@ -325,6 +325,40 @@ function buildApi({
           payload.toBuffer(),
           commonAccessCardCertificate,
           signature
+        );
+
+        const signatureHash = createHash('sha256').update(signature).digest();
+        const ballotValidationPayload = new BallotVerificationPayload(
+          commonAccessCardId,
+          electionObjectId,
+          signatureHash
+        );
+        const ballotValidationPayloadBuffer = ballotValidationPayload.encode();
+
+        const machineAuthConfig = getMachineCertPathAndPrivateKey();
+        const ballotValidationPayloadSignature = await cryptography.signMessage(
+          {
+            message: Readable.from(ballotValidationPayloadBuffer),
+            signingPrivateKey: machineAuthConfig.privateKey,
+          }
+        );
+        const signedBuffer = new SignedBuffer(
+          ballotValidationPayloadBuffer,
+          ballotValidationPayloadSignature
+        );
+        const qrCodeData = Buffer.from(
+          signedBuffer.encode().toString('base64')
+        );
+
+        const pdf = await mailingLabel.buildPdf({
+          mailingAddress: election.getMailingAddress(),
+          qrCodeData,
+        });
+
+        execFileSync(
+          'lpr',
+          ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
+          { input: pdf }
         );
 
         (await store.addObject(object)).unsafeUnwrap();

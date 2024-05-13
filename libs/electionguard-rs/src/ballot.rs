@@ -1,12 +1,10 @@
 use std::{
     fs::{read_dir, DirBuilder, File},
     io::{self, Read},
-    ops::Range,
     path::PathBuf,
 };
 
 use color_eyre::eyre::{bail, ensure};
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use types_rs::{
     cdf::cvr::{AllocationStatus, Cvr},
@@ -19,10 +17,6 @@ use crate::{
     manifest::{Manifest, ObjectId},
     zip::{unzip_into_directory, UnzipLimits},
 };
-
-/// The range of serial numbers for ballots. Max is `Number.MAX_SAFE_INTEGER`
-/// from JS.
-pub(crate) const SERIAL_NUMBER_RANGE: Range<u64> = 1..((2 ^ 53) - 1);
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -53,6 +47,7 @@ pub struct Selection {
 
 pub fn convert_vx_cvr_to_eg_plaintext_ballot(
     cvr: Cvr,
+    serial_number: u64,
     manifest: Manifest,
     election: election::Election,
 ) -> color_eyre::Result<PlaintextBallot> {
@@ -163,7 +158,7 @@ pub fn convert_vx_cvr_to_eg_plaintext_ballot(
         ballot_id: ObjectId(unique_id),
         ballot_style: eg_ballot_style.object_id.clone(),
         contests,
-        sn: Some(rand::thread_rng().gen_range(SERIAL_NUMBER_RANGE)),
+        sn: Some(serial_number),
         errors: None,
     };
 
@@ -288,7 +283,7 @@ mod tests {
                 ballot_id: ObjectId("ballot1".to_owned()),
                 ballot_style: manifest.ballot_styles[0].object_id.clone(),
                 contests: vec![],
-                sn: Some(rand::thread_rng().gen_range(SERIAL_NUMBER_RANGE)),
+                sn: Some(1234567890),
                 errors: None,
             };
 

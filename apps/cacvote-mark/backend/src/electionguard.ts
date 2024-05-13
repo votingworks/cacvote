@@ -5,7 +5,7 @@ import {
   extractManifestFromPublicMetadataBlob,
 } from '@votingworks/electionguard';
 import { CVR } from '@votingworks/types';
-import { assertDefined } from '@votingworks/basics';
+import { assert, assertDefined } from '@votingworks/basics';
 import { CastBallot, Election, Payload, Uuid } from './cacvote-server/types';
 
 /**
@@ -19,13 +19,21 @@ export function createEncryptedBallotPayload(
   registrationRequestObjectId: Uuid,
   registrationObjectId: Uuid,
   electionObjectId: Uuid,
-  castVoteRecord: CVR.CVR
+  castVoteRecord: CVR.CVR,
+  serialNumber: number
 ): Payload<CastBallot> {
+  assert(
+    Number.isSafeInteger(serialNumber),
+    'serialNumber must be a safe integer'
+  );
+  assert(serialNumber >= 0, 'serialNumber must be non-negative');
+
   const election = electionPayload.getData();
   const electionMetadataBlob = election.getElectionguardElectionMetadataBlob();
   const manifest = extractManifestFromPublicMetadataBlob(electionMetadataBlob);
   const plaintextBallot = convertVxCvrToEgPlaintextBallot(
     election.getElectionDefinition().election,
+    serialNumber,
     manifest,
     castVoteRecord
   );

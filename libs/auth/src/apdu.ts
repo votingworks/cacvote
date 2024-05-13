@@ -241,6 +241,12 @@ export class CardCommand {
 }
 
 /**
+ * A tag in a TLV structure. A tag is a byte or series of bytes that indicates
+ * what the value is.
+ */
+export type TlvTag = Byte | Buffer;
+
+/**
  * A TLV, or tag-length-value, is a byte array that consists of:
  * 1. A tag indicating what the value is
  * 2. A length indicating the size of the value
@@ -248,10 +254,7 @@ export class CardCommand {
  *
  * The data in command and response APDUs is often comprised of TLVs.
  */
-export function constructTlv(
-  tagAsByteOrBuffer: Byte | Buffer,
-  value: Buffer
-): Buffer {
+export function constructTlv(tagAsByteOrBuffer: TlvTag, value: Buffer): Buffer {
   const tag = Buffer.isBuffer(tagAsByteOrBuffer)
     ? tagAsByteOrBuffer
     : Buffer.of(tagAsByteOrBuffer);
@@ -289,7 +292,7 @@ export function constructTlv(
  * The inverse of constructTlv, splits a TLV into its tag, length, and value
  */
 export function parseTlv(
-  tagAsByteOrBuffer: Byte | Buffer,
+  tagAsByteOrBuffer: TlvTag,
   tlv: Buffer
 ): [tag: Buffer, length: Buffer, value: Buffer] {
   const expectedTag = Buffer.isBuffer(tagAsByteOrBuffer)
@@ -345,6 +348,66 @@ export function parseTlv(
   );
 
   return [tag, lengthBytes, value];
+}
+
+/**
+ * Parse a list of TLVs with a single entry.
+ */
+export function parseTlvList(tags: [TlvTag], tlvList: Buffer): [Buffer];
+
+/**
+ * Parse a list of TLVs with two entries.
+ */
+export function parseTlvList(
+  tags: [TlvTag, TlvTag],
+  tlvList: Buffer
+): [Buffer, Buffer];
+
+/**
+ * Parse a list of TLVs with three entries.
+ */
+export function parseTlvList(
+  tags: [TlvTag, TlvTag, TlvTag],
+  tlvList: Buffer
+): [Buffer, Buffer, Buffer];
+
+/**
+ * Parse a list of TLVs with four entries.
+ */
+export function parseTlvList(
+  tags: [TlvTag, TlvTag, TlvTag, TlvTag],
+  tlvList: Buffer
+): [Buffer, Buffer, Buffer, Buffer];
+
+/**
+ * Parse a list of TLVs with five entries.
+ */
+export function parseTlvList(
+  tags: [TlvTag, TlvTag, TlvTag, TlvTag, TlvTag],
+  tlvList: Buffer
+): [Buffer, Buffer, Buffer, Buffer, Buffer];
+
+/**
+ * Parse a list of TLVs.
+ */
+export function parseTlvList(tags: TlvTag[], tlvList: Buffer): Buffer[];
+
+/**
+ * Parse a list of TLVs.
+ */
+export function parseTlvList(tags: TlvTag[], tlvList: Buffer): Buffer[] {
+  const tlvs: Buffer[] = [];
+  let offset = 0;
+  for (const tag of tags) {
+    const [tagBytes, lengthBytes, value] = parseTlv(
+      tag,
+      tlvList.subarray(offset)
+    );
+    tlvs.push(value);
+    offset += tagBytes.byteLength + lengthBytes.byteLength + value.length;
+  }
+  assert(offset === tlvList.length, 'Not all TLVs were parsed');
+  return tlvs;
 }
 
 /**
