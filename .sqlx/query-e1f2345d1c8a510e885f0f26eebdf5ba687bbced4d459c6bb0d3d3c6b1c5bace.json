@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id,\n            election_id,\n            payload,\n            certificates,\n            signature\n        FROM objects\n        WHERE server_synced_at IS NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "signature",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e1f2345d1c8a510e885f0f26eebdf5ba687bbced4d459c6bb0d3d3c6b1c5bace"
+}

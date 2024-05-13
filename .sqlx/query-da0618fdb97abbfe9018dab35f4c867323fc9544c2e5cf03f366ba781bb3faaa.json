@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            rr.id,\n            rr.election_id,\n            rr.payload,\n            rr.certificates,\n            rr.signature,\n            rr.created_at\n        FROM\n            objects AS rr\n        WHERE\n            rr.object_type = $1\n          AND\n            NOT EXISTS (\n                SELECT 1\n                FROM objects AS r\n                WHERE r.object_type = $2\n                  AND rr.id = (convert_from(r.payload, 'UTF8')::jsonb ->> $3)::uuid\n            )\n        ORDER BY rr.created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "signature",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "da0618fdb97abbfe9018dab35f4c867323fc9544c2e5cf03f366ba781bb3faaa"
+}

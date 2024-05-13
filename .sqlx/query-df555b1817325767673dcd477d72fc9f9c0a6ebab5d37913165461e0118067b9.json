@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificates, signature, server_synced_at)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, now())\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Bytea",
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "df555b1817325767673dcd477d72fc9f9c0a6ebab5d37913165461e0118067b9"
+}

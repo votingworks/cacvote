@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id,\n            election_id,\n            payload,\n            certificates,\n            signature\n        FROM objects\n        WHERE object_type = 'Election'\n        ORDER BY created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "signature",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "54645459573f3837a93d5c679c8a32ddba897a6f23800bc2cd4fdd5ce6d1e80c"
+}

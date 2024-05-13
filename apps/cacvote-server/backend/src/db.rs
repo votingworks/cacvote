@@ -13,7 +13,10 @@ use base64_serde::base64_serde_type;
 use color_eyre::eyre::bail;
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
-use types_rs::cacvote::{self, JournalEntry, JournalEntryAction, JurisdictionCode, SignedObject};
+use types_rs::cacvote::{
+    self, BallotVerificationPayload, JournalEntry, JournalEntryAction, JurisdictionCode,
+    SignedBuffer, SignedObject,
+};
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -313,4 +316,68 @@ pub(crate) async fn get_object_by_election_id_and_type(
     )
     .fetch_optional(conn)
     .await?)
+}
+
+pub(crate) async fn get_machine_id_by_identifier(
+    conn: &mut sqlx::PgConnection,
+    identifier: &str,
+) -> color_eyre::Result<Option<Uuid>> {
+    Ok(sqlx::query!(
+        r#"
+        SELECT id
+        FROM machines
+        WHERE machine_identifier = $1
+        "#,
+        identifier,
+    )
+    .fetch_optional(conn)
+    .await?
+    .map(|record| record.id))
+}
+
+pub(crate) async fn create_scanned_mailing_label_code(
+    conn: &mut sqlx::PgConnection,
+    ballot_verification_payload: &[u8],
+) -> color_eyre::Result<Uuid> {
+    let mut txn = conn.begin().await?;
+    let original_payload = ballot_verification_payload;
+    let signed_buffer: SignedBuffer = tlv::from_slice(&original_payload)?;
+
+    // TODO: do something with `signed_buffer.signature()`?
+    let ballot_verification_payload: BallotVerificationPayload =
+        tlv::from_slice(signed_buffer.buffer())?;
+
+    let Some(machine_id) =
+        get_machine_id_by_identifier(&mut *txn, ballot_verification_payload.machine_id()).await?
+    else {
+        bail!(
+            "Machine with identifier {} not found",
+            ballot_verification_payload.machine_id()
+        );
+    };
+
+    let record = sqlx::query!(
+        r#"
+        INSERT INTO scanned_mailing_label_codes (
+            election_id,
+            machine_id,
+            common_access_card_id,
+            encrypted_ballot_signature_hash,
+            original_payload
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+        "#,
+        ballot_verification_payload.election_object_id(),
+        machine_id,
+        ballot_verification_payload.common_access_card_id(),
+        ballot_verification_payload.encrypted_ballot_signature_hash(),
+        original_payload,
+    )
+    .fetch_one(&mut *txn)
+    .await?;
+
+    txn.commit().await?;
+
+    Ok(record.id)
 }

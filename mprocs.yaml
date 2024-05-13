@@ -2,6 +2,9 @@ procs:
   cacvote-server-backend:
     cwd: 'apps/cacvote-server/backend'
     shell: 'cargo watch -- cargo run'
+  cacvote-server-frontend:
+    cwd: 'apps/cacvote-server/frontend'
+    shell: 'pnpm start'
 
   cacvote-jx-backend:
     cwd: 'apps/cacvote-jx-terminal/backend'

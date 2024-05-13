@@ -119,11 +119,19 @@ pub fn convert_vx_cvr_to_eg_plaintext_ballot(
         )
     })?;
 
+    let serial_number = match serial_number.to_string().parse::<f64>() {
+        Ok(serial_number) => serial_number.round() as u64,
+        Err(e) => {
+            return Err(Error::new(
+                Status::GenericFailure,
+                format!("Failed to parse serial number: {e}"),
+            ));
+        }
+    };
+
     let plaintext_ballot = ballot::convert_vx_cvr_to_eg_plaintext_ballot(
         vx_cvr,
-        serial_number
-            .as_u64()
-            .expect("Failed to convert serial number to u64"),
+        serial_number,
         eg_manifest,
         vx_election,
     )
@@ -154,10 +162,21 @@ pub fn convert_vx_cvr_to_eg_plaintext_ballot(
 pub fn encrypt_eg_plaintext_ballot(
     classpath: String,
     public_metadata_blob: &[u8],
-    eg_plaintext_ballot: serde_json::Value,
+    mut eg_plaintext_ballot: serde_json::Value,
     device_name: String,
 ) -> Result<serde_json::Value> {
     let classpath = PathBuf::from(classpath);
+
+    if let serde_json::Value::Object(object) = &mut eg_plaintext_ballot {
+        if let Some(serde_json::Value::Number(sn)) = object.get("sn") {
+            if sn.is_f64() {
+                let sn = sn.as_f64().unwrap().round() as u64;
+                let sn = serde_json::Value::Number(sn.into());
+                assert!(!sn.is_f64(), "Failed to convert serial number to integer");
+                object.insert("sn".to_string(), sn);
+            }
+        }
+    }
 
     let eg_plaintext_ballot: ballot::PlaintextBallot = serde_json::from_value(eg_plaintext_ballot)
         .map_err(|e| {

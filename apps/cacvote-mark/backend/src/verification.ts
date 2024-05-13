@@ -6,12 +6,7 @@ import * as uuid from 'uuid';
 import { Uuid, UuidSchema } from './cacvote-server/types';
 
 /**
- * A payload for verifying a ballot. This payload is encoded as a TLV structure
- * with the following tags:
- * - 0x01: Machine ID (string)
- * - 0x02: Common Access Card ID (string)
- * - 0x03: Election object ID (UUID)
- * - 0x04: SHA256(Encrypted ballot signature)
+ * A payload for verifying a ballot. This payload is encoded as a TLV structure.
  */
 export class BallotVerificationPayload {
   /**
@@ -30,9 +25,9 @@ export class BallotVerificationPayload {
   ) {}
 
   private static readonly MACHINE_ID_TAG = 0x02;
-  private static readonly COMMON_ACCESS_CARD_ID_TAG = 0x02;
-  private static readonly ELECTION_OBJECT_ID_TAG = 0x03;
-  private static readonly ENCRYPTED_BALLOT_SIGNATURE_HASH_TAG = 0x04;
+  private static readonly COMMON_ACCESS_CARD_ID_TAG = 0x03;
+  private static readonly ELECTION_OBJECT_ID_TAG = 0x04;
+  private static readonly ENCRYPTED_BALLOT_SIGNATURE_HASH_TAG = 0x05;
 
   /**
    * Encodes the payload as a TLV structure. Inverse of
@@ -98,12 +93,7 @@ export class BallotVerificationPayload {
 }
 
 /**
- * A buffer that has been signed.
- *
- * This buffer is encoded as a TLV structure with the following tags:
- * - 0x05: Buffer
- * - 0x06: Signature
- *
+ * A buffer that has been signed. This buffer is encoded as a TLV structure.
  */
 export class SignedBuffer {
   constructor(
@@ -111,8 +101,8 @@ export class SignedBuffer {
     private readonly signature: Buffer
   ) {}
 
-  private static readonly BUFFER_TAG = 0x05;
-  private static readonly SIGNATURE_TAG = 0x06;
+  private static readonly BUFFER_TAG = 0x06;
+  private static readonly SIGNATURE_TAG = 0x07;
 
   /**
    * Encodes the payload as a TLV structure. Inverse of `SignedBuffer.decode`.

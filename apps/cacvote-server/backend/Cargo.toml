@@ -42,6 +42,8 @@ serde_json = { workspace = true }
 sqlx = { workspace = true }
 thiserror = { workspace = true }
 time = { workspace = true }
+tlv = { workspace = true }
+tlv-derive = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 tower-http = { workspace = true, features = ["trace"] }
 tracing = { workspace = true }
