@@ -13,6 +13,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
     cargo sqlx database reset -y --source=db/migrations
 )
 (
-    cd services/cacvote-server
+    cd apps/cacvote-server/backend
     cargo sqlx database reset -y --source=db/migrations
 )

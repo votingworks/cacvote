@@ -14,8 +14,7 @@
 - `apps/cacvote-mark`: the CACVote Mark voter-facing application
 - `apps/cacvote-jx`: the CACVote Jurisdiction application for election
   management
-- `services/cacvote-server`: the CACVote server providing sync services for the
-  apps
+- `apps/cacvote-server`: the CACVote server providing sync services for the apps
 
 ## Development
 

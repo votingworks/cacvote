@@ -1,6 +1,6 @@
 procs:
-  cacvote-server:
-    cwd: 'services/cacvote-server'
+  cacvote-server-backend:
+    cwd: 'apps/cacvote-server/backend'
     shell: 'cargo watch -- cargo run'
 
   cacvote-jx-backend:

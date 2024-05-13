@@ -220,7 +220,7 @@ setup-postgresql() {
     fi
   done
 
-  setup-app-db services/cacvote-server postgres:cacvote
+  setup-app-db apps/cacvote-server/backend postgres:cacvote
   setup-app-db apps/cacvote-jx-terminal/backend postgres:cacvote_jx
 }
 

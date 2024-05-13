@@ -18,10 +18,11 @@ struct TestObject {
 
 fn load_keypair() -> color_eyre::Result<(Vec<u8>, PKey<Public>, PKey<Private>)> {
     // uses the dev VxAdmin keypair because it has the Jurisdiction field
-    let private_key_pem = include_bytes!("../../../libs/auth/certs/dev/vx-admin-private-key.pem");
+    let private_key_pem =
+        include_bytes!("../../../../libs/auth/certs/dev/vx-admin-private-key.pem");
     let private_key = PKey::private_key_from_pem(private_key_pem)?;
     let certificates =
-        include_bytes!("../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem").to_vec();
+        include_bytes!("../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem").to_vec();
     let x509 = X509::from_pem(&certificates)?;
     let public_key = x509.public_key()?;
     Ok((certificates, public_key, private_key))
