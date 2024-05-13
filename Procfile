@@ -1,1 +1,1 @@
-web: ./services/cacvote-server/target/release/cacvote-server
+web: ./apps/cacvote-server/backend/target/release/cacvote-server

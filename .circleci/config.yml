@@ -742,7 +742,7 @@ jobs:
       - run:
           name: Setup Database
           command: |
-            cd 'services/cacvote-server'
+            cd 'apps/cacvote-server/backend'
             cargo install sqlx-cli
             cargo sqlx migrate run --source db/migrations
       - run:

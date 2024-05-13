@@ -7,7 +7,7 @@ members = [
     "libs/electionguard-rs",
     "libs/logging",
     "libs/types-rs",
-    "services/cacvote-server",
+    "apps/cacvote-server/backend",
 ]
 
 [workspace.dependencies]
@@ -18,7 +18,7 @@ base64 = "0.21.4"
 base64-serde = "0.7.0"
 bitstream-io = "1.7.0"
 bitter = "0.6.1"
-cacvote-server = { path = "services/cacvote-server" }
+cacvote-server = { path = "apps/cacvote-server/backend" }
 clap = { version = "4.3.23", features = ["cargo", "derive", "env"] }
 color-eyre = "0.6.2"
 crc16 = "0.4.0"
