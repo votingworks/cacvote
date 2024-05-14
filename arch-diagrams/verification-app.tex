@@ -4,11 +4,15 @@
 \begin{document}
 Suppose we have a Bulletin Board with something like the following operations:
     \begin{description}
-        \item[post(m, id)] post item $m$, authenticated with ID.
+        \item[post(m, id)] post item $m$, authenticated with ID. Suppose that this returns some kind of \emph{receipt}, e.g. an ack signed by the server, to promise to upload this to the BB. (Note this is \emph{not} an inclusion proof - it's a promise to post it on the BB.) This receipt requires some pre-loaded validation data, e.g. the server or BB's sig verification key.
         \item[get\_inclusion\_proof(m)] get a proof that $m$ is included.
         \item[get\_all] get all the contents.
     \end{description}
     The exact details can vary. For example, Andrew Conway's bulletin board (**add details).
+
+    Suppose that at the close of polls (or shortly afterwards given some grace period) the BB publishes a root hash that includes everything that was uploaded before the deadline. Call this $H1$. We need to assume some out-of-band way for everyone to agree on $H1$ without trusting the BB or server.
+
+
 
     This verification app can be used in 4 modes:
     \begin{itemize}
@@ -39,10 +43,10 @@ Each mode uses a subset of the following subroutines:
     and ``invalid signature'' otherwise.
 \end{itemize}
 \label{Sticker signature verification}
-    \item \textbf{\BBInclusionCheck{}}:
+    \item \textbf{Vote \BBInclusionCheck{}}:
 
 \begin{itemize}
-    \item    Input: Voter CAC ID, Election Id, Ballot hash
+    \item    Input: Voter CAC ID, Election Id, Ballot hash, $H1$
     \item     Do: Query the BB  searching for a vote corresponding to the provided CAC ID and Election ID,
     \item Output: 
     \begin{itemize}
@@ -52,15 +56,23 @@ Each mode uses a subset of the following subroutines:
         \item ``False'' otherwise.
     \end{itemize}
 
-
 \end{itemize}
+    Note that this verifies inclusion---it does not check that the included vote is valid.
+
 \label{Vote BB presence-BB Inc}
     \item \textbf{\StickerBBUpload{}}:
 \begin{itemize}
-    \item Input: Sticker data with valid signature,
-    \item Do: Post the sticker data to the BB.
+    \item Setup: receipt validation info,
+    \item Input: Sticker data with valid signature
+    \item Do: Post the sticker data to the BB; validate receipt.
 \end{itemize}
 \label{Vote BB presence-upload}
+
+    \item \textbf{Sticker \BBInclusionCheck{}}
+    \begin{itemize}
+        \item Input: includes $H1$.
+        \item TODO - similar to Vote BB inclusion check.
+    \end{itemize}
 
     \item \textbf{Valid Vote Arrival}:
 \begin{itemize}
