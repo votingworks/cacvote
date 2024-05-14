@@ -145,7 +145,12 @@
       "name": "script"
     },
     {
-      "path": "apps/cacvote-server/backend"
+      "path": "apps/cacvote-server/backend",
+      "name": "apps/cacvote-server/backend"
+    },
+    {
+      "path": "apps/cacvote-server/frontend",
+      "name": "apps/cacvote-server/frontend"
     },
     {
       "path": "."
