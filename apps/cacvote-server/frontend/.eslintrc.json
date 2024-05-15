@@ -1,0 +1,7 @@
+{
+  "extends": ["plugin:vx/react"],
+  "rules": {
+    "vx/gts-jsdoc": "off",
+    "vx/gts-direct-module-export-access-only": "off"
+  }
+}

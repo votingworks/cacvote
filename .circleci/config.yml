@@ -102,6 +102,29 @@ jobs:
       - store_test_results:
           path: apps/cacvote-mark/frontend/reports/
 
+  # @votingworks/cacvote-server-frontend
+  test-apps-cacvote-server-frontend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/cacvote-server/frontend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/cacvote-server/frontend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/cacvote-server/frontend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/cacvote-server/frontend/reports/
+
   # @votingworks/exercises
   test-docs-exercises:
     executor: nodejs
@@ -830,6 +853,7 @@ workflows:
       - test-apps-cacvote-jx-terminal-frontend
       - test-apps-cacvote-mark-backend
       - test-apps-cacvote-mark-frontend
+      - test-apps-cacvote-server-frontend
       - test-docs-exercises
       - test-libs-auth
       - test-libs-backend
