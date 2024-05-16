@@ -39,9 +39,9 @@ pub use tag::Tag;
 /// #
 /// #[derive(Encode)]
 /// struct Test {
-///     #[tlv(tag = 0x01)]
+///     #[tlv(tag = 0x20)]
 ///     a: u8,
-///     #[tlv(tag = 0x02)]
+///     #[tlv(tag = 0x21)]
 ///     b: u16,
 /// }
 ///
@@ -49,13 +49,13 @@ pub use tag::Tag;
 /// let value = Test { a: 0x99, b: 0xabcd };
 /// let encoded = to_vec(&value)?;
 /// assert_eq!(encoded, [
-///     0x01, // `a` tag
-///     0x01, // `a` length
-///     0x99, // `a` value
-///     0x02, // `b` tag
-///     0x02, // `b` length
-///     0xab, // `b` value
-///     0xcd  // `b` value
+///     0x20, // `value.a` tag
+///     0x01, // `value.a` length
+///     0x99, // `value.a` value
+///     0x21, // `value.b` tag
+///     0x02, // `value.b` length
+///     0xab, // `value.b` value
+///     0xcd  // `value.b` value
 /// ]);
 /// # Ok(())
 /// # }
@@ -70,7 +70,7 @@ where
     Ok(buffer)
 }
 
-/// Encodes a value into a vector.
+/// Encodes a tagged value into a vector.
 ///
 /// # Errors
 ///
@@ -84,12 +84,12 @@ where
 /// # Examples
 ///
 /// ```
-/// # use tlv::{Encode, to_vec};
+/// # use tlv::{Encode, Tag, to_vec_tagged};
 /// #
 /// # fn main() -> std::io::Result<()> {
 /// let value: u16 = 0xbeef;
-/// let encoded = to_vec(value)?;
-/// assert_eq!(encoded, [0xbe, 0xef]);
+/// let encoded = to_vec_tagged(Tag::U8(0xff), value)?;
+/// assert_eq!(encoded, [0xff, 0x02, 0xbe, 0xef]);
 /// # Ok(())
 /// # }
 /// ```
@@ -97,33 +97,35 @@ where
 /// Most of the time you'll want to use this with a struct from `tlv-derive`:
 ///
 /// ```ignore
-/// # use tlv::{Encode, to_vec};
+/// # use tlv::{Encode, Tag, to_vec_tagged};
 /// # use tlv_derive::Encode;
 /// #
 /// #[derive(Encode)]
 /// struct Test {
-///     #[tlv(tag = 0x01)]
+///     #[tlv(tag = 0x20)]
 ///     a: u8,
-///     #[tlv(tag = 0x02)]
+///     #[tlv(tag = 0x21)]
 ///     b: u16,
 /// }
 ///
 /// # fn main() -> std::io::Result<()> {
 /// let value = Test { a: 0x99, b: 0xabcd };
-/// let encoded = to_vec(&value)?;
+/// let encoded = to_vec_tagged(Tag::U8(0xff), &value)?;
 /// assert_eq!(encoded, [
-///     0x01, // `a` tag
-///     0x01, // `a` length
-///     0x99, // `a` value
-///     0x02, // `b` tag
-///     0x02, // `b` length
-///     0xab, // `b` value
-///     0xcd  // `b` value
+///     0xff, // root tag
+///     0x07, // `value` length
+///     0x20, // `value.a` tag
+///     0x01, // `value.a` length
+///     0x99, // `value.a` value
+///     0x21, // `value.b` tag
+///     0x02, // `value.b` length
+///     0xab, // `value.b` value
+///     0xcd  // `value.b` value
 /// ]);
 /// # Ok(())
 /// # }
 /// ```
-pub fn to_vec_tagged<E>(tag: Tag, value: &E) -> std::io::Result<Vec<u8>>
+pub fn to_vec_tagged<E>(tag: Tag, value: E) -> std::io::Result<Vec<u8>>
 where
     E: Encode,
 {

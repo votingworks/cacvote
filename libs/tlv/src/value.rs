@@ -1,7 +1,7 @@
 use crate::{Decode, Encode, Length, Tag};
 
 /// Encodes a full TLV value into a writer.
-pub fn encode_tagged<E, W>(tag: Tag, value: &E, writer: &mut W) -> std::io::Result<()>
+pub fn encode_tagged<E, W>(tag: Tag, value: E, writer: &mut W) -> std::io::Result<()>
 where
     E: Encode,
     W: std::io::Write,
