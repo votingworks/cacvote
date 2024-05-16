@@ -1,5 +1,5 @@
 use proptest::proptest;
-use tlv::{Decode, Encode};
+use tlv::Encode;
 use tlv_derive::{Decode, Encode};
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -14,7 +14,7 @@ struct Test {
     d: u64,
 }
 
-#[derive(Debug, PartialEq, Encode)]
+#[derive(Debug, PartialEq, Encode, Decode)]
 struct Nesting {
     #[tlv(tag = 0x99)]
     a: u8,
@@ -22,7 +22,7 @@ struct Nesting {
     b: Test,
 }
 
-#[derive(Debug, PartialEq, Encode)]
+#[derive(Debug, PartialEq, Encode, Decode)]
 struct StringContainer {
     #[tlv(tag = 0x00)]
     s: String,
@@ -30,19 +30,18 @@ struct StringContainer {
 
 #[test]
 fn test_derive() {
-    let mut buf = Vec::new();
-    let mut encoder = tlv::Encoder::new(&mut buf);
     let value = Test {
         a: 1,
         b: 2,
         c: 3,
         d: 4,
     };
-    value.encode(&mut encoder).unwrap();
+    let encoded = tlv::to_vec(&value).unwrap();
+    assert_eq!(value.length().unwrap().value(), encoded.len() as u16);
 
     assert_eq!(
-        buf,
-        vec![
+        encoded,
+        [
             /* a TAG = */ 0x99, /* a LENGTH = */ 0x01, /* a VALUE = */ 0x01,
             /* b TAG = */ 0x00, /* b LENGTH = */ 0x02, /* b VALUE = */ 0x00, 0x02,
             /* c TAG = */ 0x01, /* c LENGTH = */ 0x04, /* c VALUE = */ 0x00, 0x00,
@@ -51,17 +50,13 @@ fn test_derive() {
         ]
     );
 
-    let mut decoder = tlv::Decoder::new(&buf[..]);
-    let decoded_value = Test::decode(&mut decoder, &tlv::Length::new(buf.len() as u16)).unwrap();
-
+    let decoded_value: Test = tlv::from_slice(&encoded).unwrap();
     assert_eq!(decoded_value, value);
 }
 
 #[test]
 fn test_nesting() {
-    let mut buf = Vec::new();
-    let mut encoder = tlv::Encoder::new(&mut buf);
-    let test = Nesting {
+    let value = Nesting {
         a: 1,
         b: Test {
             a: 2,
@@ -70,13 +65,14 @@ fn test_nesting() {
             d: 5,
         },
     };
-    test.encode(&mut encoder).unwrap();
+    let encoded = tlv::to_vec(&value).unwrap();
+    assert_eq!(value.length().unwrap().value(), encoded.len() as u16);
 
     assert_eq!(
-        buf,
-        vec![
+        encoded,
+        [
             /* a TAG = */ 0x99, /* a LENGTH = */ 0x01, /* a VALUE = */ 0x01,
-            /* b TAG = */ 0x00, /* b LENGTH = */ 0x0f, /* b VALUE = */
+            /* b TAG = */ 0x00, /* b LENGTH = */ 0x17, /* b VALUE = */
             /* b.a TAG = */ 0x99, /* b.a LENGTH = */ 0x01, /* b.a VALUE = */ 0x02,
             /* b.b TAG = */ 0x00, /* b.b LENGTH = */ 0x02, /* b.b VALUE = */ 0x00,
             0x03, /* b.c TAG = */ 0x01, /* b.c LENGTH = */ 0x04,
@@ -84,20 +80,19 @@ fn test_nesting() {
             /* b.d LENGTH = */ 0x08, /* b.d VALUE = */
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05,
         ]
-    )
+    );
+
+    let decoded_value: Nesting = tlv::from_slice(&encoded).unwrap();
+    assert_eq!(decoded_value, value);
 }
 
 proptest! {
     #[test]
-    fn test_string(value: String) {
-        let mut buf = Vec::new();
-        let mut encoder = tlv::Encoder::new(&mut buf);
-        let container = StringContainer { s: value.clone() };
-        container.encode(&mut encoder).unwrap();
+    fn test_string(s: String) {
+        let value = StringContainer { s };
+        let encoded = tlv::to_vec(&value).unwrap();
 
-        let mut decoder = tlv::Decoder::new(&buf[..]);
-        let decoded: String = decoder.decode(&tlv::Tag::U8(0x00)).unwrap();
-        assert_eq!(decoded, value);
-        assert_eq!(decoder.remaining().unwrap(), vec![]);
+        let decoded_value: StringContainer = tlv::from_slice(&encoded).unwrap();
+        assert_eq!(decoded_value, value);
     }
 }

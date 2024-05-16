@@ -1,5 +1,7 @@
 use std::io::Read;
 
+use crate::Encode;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Length {
     length: u16,
@@ -34,14 +36,8 @@ impl Length {
         }
     }
 
-    pub fn length(&self) -> u16 {
-        self.length
-    }
-}
-
-impl From<Length> for Vec<u8> {
-    fn from(value: Length) -> Self {
-        let length = value.length();
+    pub fn to_vec(&self) -> Vec<u8> {
+        let length = self.value();
 
         if length < Length::MEDIUM_LENGTH_MINIMUM {
             vec![length as u8]
@@ -54,6 +50,29 @@ impl From<Length> for Vec<u8> {
                 (length & 0xff) as u8,
             ]
         }
+    }
+
+    pub fn value(&self) -> u16 {
+        self.length
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.length == 0
+    }
+}
+
+impl Encode for Length {
+    fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
+    where
+        W: std::io::prelude::Write,
+    {
+        let bytes: Vec<u8> = self.to_vec();
+        writer.write_all(&bytes)
+    }
+
+    fn length(&self) -> std::io::Result<Length> {
+        let bytes: Vec<u8> = self.to_vec();
+        Ok(Length::new(bytes.len() as u16))
     }
 }
 

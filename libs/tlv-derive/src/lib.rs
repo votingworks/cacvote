@@ -1,3 +1,8 @@
+//! This crate provides procedural macros for the `tlv` crate. The macros are
+//! used to derive the `Encode` and `Decode` traits for structs. The `Encode`
+//! trait is used to encode a struct into a TLV format. The `Decode` trait is
+//! used to decode a struct from a TLV format.
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
@@ -22,31 +27,28 @@ pub fn encode_derive(input: TokenStream) -> TokenStream {
         },
         _ => panic!("only structs are supported"),
     };
-    let tags = entities.iter().map(|e| match e.tag {
-        tlv::Tag::U8(tag) => quote! { tlv::Tag::U8(#tag) },
-        tlv::Tag::U16(tag) => quote! { tlv::Tag::U16(#tag) },
-    });
+    let tags = entities
+        .iter()
+        .map(|e| match e.tag {
+            tlv::Tag::U8(tag) => quote! { tlv::Tag::U8(#tag) },
+            tlv::Tag::U16(tag) => quote! { tlv::Tag::U16(#tag) },
+        })
+        .collect::<Vec<_>>();
     let idents = entities.iter().map(|e| &e.ident).collect::<Vec<_>>();
     let gen = quote! {
-        impl<W: std::io::Write> tlv::Encode<W> for #name {
-            fn encode(&self, encoder: &mut tlv::Encoder<W>) -> std::io::Result<()> {
-                #(encoder.encode(&#tags, &self.#idents)?;)*
+        impl tlv::Encode for #name {
+            fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
+            where
+                W: std::io::Write,
+            {
+                #(tlv::value::encode_tagged(#tags, &self.#idents, writer)?;)*
                 Ok(())
             }
 
-            fn compute_length(&self) -> std::io::Result<(tlv::Length, Option<Vec<u8>>)> {
+            fn length(&self) -> std::io::Result<tlv::Length> {
                 let mut length = tlv::Length::new(0);
-                let mut data = Some(Vec::new());
-
-                #(let (field_length, mut field_data) = tlv::Encode::<W>::compute_length(&self.#idents)?;
-                length += field_length;
-                if let (Some(data), Some(mut field_data)) = (&mut data, field_data) {
-                    data.append(&mut field_data);
-                } else {
-                    data = None;
-                })*
-
-                Ok((length, data))
+                #(length += tlv::value::length_tagged(#tags, &self.#idents)?;)*
+                Ok(length)
             }
         }
     };
@@ -79,10 +81,18 @@ pub fn decode_derive(input: TokenStream) -> TokenStream {
     });
     let idents = entities.iter().map(|e| &e.ident).collect::<Vec<_>>();
     let gen = quote! {
-        impl<R: std::io::Read> tlv::Decode<R> for #name {
-            fn decode(decoder: &mut tlv::Decoder<R>, _length: &tlv::Length) -> std::io::Result<Self> {
-                #(let #idents = decoder.decode::<_>(&#tags)?;)*
-                Ok(Self { #(#idents),* })
+        impl tlv::Decode for #name {
+            fn decode<R>(reader: &mut R) -> std::io::Result<(Self, usize)>
+            where
+                R: std::io::Read
+            {
+                let __tlv_decode_read: usize = 0;
+                #(
+                    let (#idents, __tlv_decode_read) = match tlv::value::decode_tagged(#tags, reader)? {
+                        (value, read) => (value, read + __tlv_decode_read),
+                    };
+                )*
+                Ok((Self { #(#idents),* }, __tlv_decode_read))
             }
         }
     };
