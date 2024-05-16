@@ -805,6 +805,34 @@ jobs:
           command: |
             cargo test -p electionguard-rs
 
+  test-crate-tlv:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p tlv
+      - run:
+          name: Test
+          command: |
+            cargo test -p tlv
+
+  test-crate-tlv-derive:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p tlv-derive
+      - run:
+          name: Test
+          command: |
+            cargo test -p tlv-derive
+
   test-crate-types-rs:
     executor: nodejs
     resource_class: xlarge
@@ -885,6 +913,8 @@ workflows:
       - test-crate-cacvote-server
       - test-crate-electionguard
       - test-crate-electionguard-rs
+      - test-crate-tlv
+      - test-crate-tlv-derive
       - test-crate-types-rs
       - test-crate-vx-logging
       - validate-monorepo
