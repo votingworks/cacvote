@@ -2,12 +2,14 @@
 resolver = "2"
 members = [
     "apps/cacvote-jx-terminal/backend",
+    "apps/cacvote-server/backend",
     "libs/auth-rs",
     "libs/electionguard",
     "libs/electionguard-rs",
     "libs/logging",
+    "libs/tlv",
+    "libs/tlv-derive",
     "libs/types-rs",
-    "apps/cacvote-server/backend",
 ]
 
 [workspace.dependencies]
@@ -63,6 +65,8 @@ sha256 = "1.2.2"
 tempfile = "3.3.0"
 thiserror = "1.0.50"
 time = { version = "0.3.22", features = ["formatting", "parsing", "serde"] }
+tlv = { path = "libs/tlv" }
+tlv-derive = { path = "libs/tlv-derive" }
 tokio = { version = "1.29.1", default-features = false, features = [
     "sync",
     "macros",
