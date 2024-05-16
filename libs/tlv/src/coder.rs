@@ -78,24 +78,53 @@ impl Encode for bool {
     }
 }
 
+impl Decode for bool {
+    fn decode<R>(reader: &mut R) -> std::io::Result<(Self, usize)>
+    where
+        R: Read,
+    {
+        u8::decode(reader).map(|(value, size)| (value != 0, size))
+    }
+}
+
 impl Encode for [u8] {
     fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
     where
         W: Write,
     {
-        if self.len() > u16::MAX as usize {
-            return Err(std::io::ErrorKind::InvalidData.into());
-        }
+        u16::try_from(self.len())
+            .map_err(|_| std::io::ErrorKind::InvalidData.into())
+            .and_then(|_| writer.write_all(self))
+    }
 
+    fn encoded_length(&self) -> std::io::Result<Length> {
+        u16::try_from(self.len())
+            .map(Length::new)
+            .map_err(|_| std::io::ErrorKind::InvalidData.into())
+    }
+}
+
+impl<const N: usize> Encode for [u8; N] {
+    fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
+    where
+        W: Write,
+    {
         writer.write_all(self)
     }
 
     fn encoded_length(&self) -> std::io::Result<Length> {
-        if self.len() > u16::MAX as usize {
-            Err(std::io::ErrorKind::InvalidData.into())
-        } else {
-            Ok(Length::new(self.len() as u16))
-        }
+        Ok(Length::new(N as u16))
+    }
+}
+
+impl<const N: usize> Decode for [u8; N] {
+    fn decode<R>(reader: &mut R) -> std::io::Result<(Self, usize)>
+    where
+        R: Read,
+    {
+        let mut data = [0; N];
+        reader.read_exact(&mut data)?;
+        Ok((data, N))
     }
 }
 
@@ -112,23 +141,6 @@ impl Encode for Vec<u8> {
     }
 }
 
-impl Encode for String {
-    fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
-    where
-        W: Write,
-    {
-        writer.write_all(self.as_bytes())
-    }
-
-    fn encoded_length(&self) -> std::io::Result<Length> {
-        if self.len() > u16::MAX as usize {
-            Err(std::io::ErrorKind::InvalidData.into())
-        } else {
-            Ok(Length::new(self.len() as u16))
-        }
-    }
-}
-
 impl Decode for Vec<u8> {
     fn decode<R>(reader: &mut R) -> std::io::Result<(Self, usize)>
     where
@@ -138,6 +150,21 @@ impl Decode for Vec<u8> {
         reader.read_to_end(&mut data)?;
         let len = data.len();
         Ok((data, len))
+    }
+}
+
+impl Encode for String {
+    fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
+    where
+        W: Write,
+    {
+        writer.write_all(self.as_bytes())
+    }
+
+    fn encoded_length(&self) -> std::io::Result<Length> {
+        u16::try_from(self.len())
+            .map(Length::new)
+            .map_err(|_| std::io::ErrorKind::InvalidData.into())
     }
 }
 
@@ -161,5 +188,33 @@ impl Decode for () {
         R: Read,
     {
         Ok(((), 0))
+    }
+}
+
+const UUID_BYTES: usize = std::mem::size_of::<uuid::Bytes>();
+
+impl Encode for uuid::Uuid {
+    fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
+    where
+        W: Write,
+    {
+        let bytes = self.as_bytes();
+        assert_eq!(bytes.len(), UUID_BYTES);
+        writer.write_all(bytes)
+    }
+
+    fn encoded_length(&self) -> std::io::Result<Length> {
+        Ok(Length::new(UUID_BYTES as u16))
+    }
+}
+
+impl Decode for uuid::Uuid {
+    fn decode<R>(reader: &mut R) -> std::io::Result<(Self, usize)>
+    where
+        R: Read,
+    {
+        let mut data = [0; UUID_BYTES];
+        reader.read_exact(&mut data)?;
+        Ok((uuid::Uuid::from_bytes(data), UUID_BYTES))
     }
 }

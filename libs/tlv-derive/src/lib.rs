@@ -82,6 +82,7 @@ pub fn decode_derive(input: TokenStream) -> TokenStream {
     let idents = entities.iter().map(|e| &e.ident).collect::<Vec<_>>();
     let gen = quote! {
         impl tlv::Decode for #name {
+            #[allow(clippy::match_single_binding)]
             fn decode<R>(reader: &mut R) -> std::io::Result<(Self, usize)>
             where
                 R: std::io::Read

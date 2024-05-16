@@ -2670,6 +2670,7 @@ name = "tlv"
 version = "0.1.0"
 dependencies = [
  "proptest",
+ "uuid",
 ]
 
 [[package]]
@@ -2902,6 +2903,8 @@ dependencies = [
  "serde_json",
  "sqlx",
  "time",
+ "tlv",
+ "tlv-derive",
  "uuid",
 ]
 

@@ -11,14 +11,6 @@ pub enum Tag {
 }
 
 impl Tag {
-    /// Returns the length of the tag in bytes.
-    pub const fn len(&self) -> usize {
-        match self {
-            Self::U8(_) => std::mem::size_of::<u8>(),
-            Self::U16(_) => std::mem::size_of::<u16>(),
-        }
-    }
-
     /// Converts the tag into a byte representation.
     pub fn to_vec(&self) -> Vec<u8> {
         match self {
@@ -37,7 +29,10 @@ impl Encode for Tag {
     }
 
     fn encoded_length(&self) -> std::io::Result<Length> {
-        Ok(Length::new(self.len() as u16))
+        Ok(Length::new(match self {
+            Self::U8(_) => std::mem::size_of::<u8>(),
+            Self::U16(_) => std::mem::size_of::<u16>(),
+        } as u16))
     }
 }
 

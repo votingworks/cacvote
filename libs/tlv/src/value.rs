@@ -13,7 +13,7 @@ where
 }
 
 /// Computes the full TLV length for a tagged value.
-pub fn length_tagged<E>(tag: Tag, value: &E) -> std::io::Result<Length>
+pub fn length_tagged<E>(tag: Tag, value: E) -> std::io::Result<Length>
 where
     E: Encode,
 {

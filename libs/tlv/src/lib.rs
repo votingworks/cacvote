@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn test_full_tlv_tag_mismatch() {
         let value: u16 = 0xbeef;
-        let encoded = to_vec_tagged(Tag::U16(0x0102), &value).unwrap();
+        let encoded = to_vec_tagged(Tag::U16(0x0102), value).unwrap();
 
         from_slice_tagged::<Vec<u8>>(Tag::U16(0x0103), &encoded).unwrap_err();
     }
@@ -215,15 +215,15 @@ mod tests {
         // This is implemented in a way that is conducive to code generation.
         impl Encode for Test {
             fn encode<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                crate::value::encode_tagged(Tag::U8(0x01), &self.a, writer)?;
-                crate::value::encode_tagged(Tag::U8(0x02), &self.b, writer)?;
+                crate::value::encode_tagged(Tag::U8(0x01), self.a, writer)?;
+                crate::value::encode_tagged(Tag::U8(0x02), self.b, writer)?;
                 Ok(())
             }
 
             fn encoded_length(&self) -> std::io::Result<crate::Length> {
                 let mut length = Length::new(0);
-                length += crate::value::length_tagged(Tag::U8(0x01), &self.a)?;
-                length += crate::value::length_tagged(Tag::U8(0x01), &self.b)?;
+                length += crate::value::length_tagged(Tag::U8(0x01), self.a)?;
+                length += crate::value::length_tagged(Tag::U8(0x01), self.b)?;
                 Ok(length)
             }
         }
@@ -244,6 +244,7 @@ mod tests {
 
         // This is implemented in a way that is conducive to code generation.
         impl Decode for Test {
+            #[allow(clippy::match_single_binding)]
             fn decode<R: std::io::Read>(reader: &mut R) -> std::io::Result<(Self, usize)> {
                 let tlv_decode_read: usize = 0;
                 let (a, tlv_decode_read) = match crate::value::decode_tagged(Tag::U8(0x01), reader)?
@@ -296,11 +297,29 @@ mod tests {
         assert_eq!(to_vec(false).unwrap(), [0x00]);
     }
 
+    #[test]
+    fn test_uuid() {
+        use uuid::Uuid;
+
+        let uuid = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let encoded = to_vec(uuid).unwrap();
+        assert_eq!(
+            encoded,
+            [
+                0x55, 0x0e, 0x84, 0x00, 0xe2, 0x9b, 0x41, 0xd4, 0xa7, 0x16, 0x44, 0x66, 0x55, 0x44,
+                0x00, 0x00
+            ]
+        );
+
+        let decoded: Uuid = from_slice(&encoded).unwrap();
+        assert_eq!(decoded, uuid);
+    }
+
     proptest! {
         #[test]
         fn test_encode_decode_u8(tag_byte: u8, value: u8) {
             let tag = Tag::U8(tag_byte);
-            let encoded = to_vec_tagged(tag, &value).unwrap();
+            let encoded = to_vec_tagged(tag, value).unwrap();
 
             let decoded_value: u8 = from_slice_tagged(tag, &encoded).unwrap();
             assert_eq!(decoded_value, value);
@@ -309,7 +328,7 @@ mod tests {
         #[test]
         fn test_encode_decode_u16(tag_byte: u8, value: u16) {
             let tag = Tag::U8(tag_byte);
-            let encoded = to_vec_tagged(tag, &value).unwrap();
+            let encoded = to_vec_tagged(tag, value).unwrap();
 
             let decoded_value: u16 = from_slice_tagged(tag, &encoded).unwrap();
             assert_eq!(decoded_value, value);
@@ -318,7 +337,7 @@ mod tests {
         #[test]
         fn test_encode_decode_u32(tag_byte: u8, value: u32) {
             let tag = Tag::U8(tag_byte);
-            let encoded = to_vec_tagged(tag, &value).unwrap();
+            let encoded = to_vec_tagged(tag, value).unwrap();
 
             let decoded_value: u32 = from_slice_tagged(tag, &encoded).unwrap();
             assert_eq!(decoded_value, value);
@@ -327,9 +346,18 @@ mod tests {
         #[test]
         fn test_encode_decode_u64(tag_byte: u8, value: u64) {
             let tag = Tag::U8(tag_byte);
-            let encoded = to_vec_tagged(tag, &value).unwrap();
+            let encoded = to_vec_tagged(tag, value).unwrap();
 
             let decoded_value: u64 = from_slice_tagged(tag, &encoded).unwrap();
+            assert_eq!(decoded_value, value);
+        }
+
+        #[test]
+        fn test_encode_decode_fixed_slice(tag_byte: u8, value: [u8; 100]) {
+            let tag = Tag::U8(tag_byte);
+            let encoded = to_vec_tagged(tag, &value).unwrap();
+
+            let decoded_value: [u8; 100] = from_slice_tagged(tag, &encoded).unwrap();
             assert_eq!(decoded_value, value);
         }
 

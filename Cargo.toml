@@ -53,7 +53,7 @@ openssl = "0.10.56"
 pcsc = "2.8.0"
 pretty_assertions = "1.4.0"
 pretty_env_logger = "0.4.0"
-proptest = "1.2.0"
+proptest = "1.4.0"
 rayon = "1.7.0"
 regex = "1.9.1"
 reqwest = { version = "0.11.18", features = ["json"] }
