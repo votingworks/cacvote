@@ -37,7 +37,7 @@ pub fn encode_derive(input: TokenStream) -> TokenStream {
     let idents = entities.iter().map(|e| &e.ident).collect::<Vec<_>>();
     let gen = quote! {
         impl tlv::Encode for #name {
-            fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
+            fn encode<W>(&self, writer: &mut W) -> tlv::Result<()>
             where
                 W: std::io::Write,
             {
@@ -45,7 +45,7 @@ pub fn encode_derive(input: TokenStream) -> TokenStream {
                 Ok(())
             }
 
-            fn encoded_length(&self) -> std::io::Result<tlv::Length> {
+            fn encoded_length(&self) -> tlv::Result<tlv::Length> {
                 let mut length = tlv::Length::new(0);
                 #(length += tlv::value::length_tagged(#tags, &self.#idents)?;)*
                 Ok(length)
@@ -83,7 +83,7 @@ pub fn decode_derive(input: TokenStream) -> TokenStream {
     let gen = quote! {
         impl tlv::Decode for #name {
             #[allow(clippy::match_single_binding)]
-            fn decode<R>(reader: &mut R) -> std::io::Result<(Self, usize)>
+            fn decode<R>(reader: &mut R) -> tlv::Result<(Self, usize)>
             where
                 R: std::io::Read
             {

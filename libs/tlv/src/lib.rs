@@ -1,9 +1,12 @@
 pub mod coder;
+pub mod error;
 pub mod length;
+mod limited_reader;
 pub mod tag;
 pub mod value;
 
 pub use coder::{Decode, Encode};
+pub use error::{Error, Result};
 pub use length::Length;
 pub use tag::Tag;
 
@@ -21,9 +24,9 @@ pub use tag::Tag;
 /// # Examples
 ///
 /// ```
-/// # use tlv::{Encode, to_vec};
+/// # use tlv::{Encode, Result, to_vec};
 /// #
-/// # fn main() -> std::io::Result<()> {
+/// # fn main() -> Result<()> {
 /// let value: u16 = 0xbeef;
 /// let encoded = to_vec(value)?;
 /// assert_eq!(encoded, [0xbe, 0xef]);
@@ -32,14 +35,21 @@ pub use tag::Tag;
 /// ```
 ///
 /// Most of the time you'll want to use this with a struct from `tlv-derive`.
-pub fn to_vec<E>(value: E) -> std::io::Result<Vec<u8>>
+pub fn to_vec<E>(value: E) -> Result<Vec<u8>>
 where
     E: Encode,
 {
     let mut buffer = Vec::new();
     value.encode(&mut buffer)?;
-    assert_eq!(buffer.len(), value.encoded_length()?.value() as usize);
-    Ok(buffer)
+
+    let actual = buffer.len();
+    let expected = usize::from(value.encoded_length()?.value());
+
+    if actual != expected {
+        Err(Error::InvalidLength { actual, expected })
+    } else {
+        Ok(buffer)
+    }
 }
 
 /// Encodes a tagged value into a vector.
@@ -56,9 +66,9 @@ where
 /// # Examples
 ///
 /// ```
-/// # use tlv::{Encode, Tag, to_vec_tagged};
+/// # use tlv::{Encode, Result, Tag, to_vec_tagged};
 /// #
-/// # fn main() -> std::io::Result<()> {
+/// # fn main() -> Result<()> {
 /// let value: u16 = 0xbeef;
 /// let encoded = to_vec_tagged(Tag::U8(0xff), value)?;
 /// assert_eq!(encoded, [0xff, 0x02, 0xbe, 0xef]);
@@ -67,7 +77,7 @@ where
 /// ```
 ///
 /// Most of the time you'll want to use this with a struct from `tlv-derive`.
-pub fn to_vec_tagged<E>(tag: Tag, value: E) -> std::io::Result<Vec<u8>>
+pub fn to_vec_tagged<E>(tag: Tag, value: E) -> Result<Vec<u8>>
 where
     E: Encode,
 {
@@ -85,16 +95,16 @@ where
 /// # Examples
 ///
 /// ```
-/// # use tlv::{Decode, from_slice};
+/// # use tlv::{Decode, Result, from_slice};
 /// #
-/// # fn main() -> std::io::Result<()> {
+/// # fn main() -> Result<()> {
 /// let buffer = [0xbe, 0xef];
 /// let value: u16 = from_slice(&buffer)?;
 /// assert_eq!(value, 0xbeef);
 /// # Ok(())
 /// # }
 /// ```
-pub fn from_slice<D>(buffer: &[u8]) -> std::io::Result<D>
+pub fn from_slice<D>(buffer: &[u8]) -> Result<D>
 where
     D: Decode,
 {
@@ -102,7 +112,10 @@ where
     let (value, read) = D::decode(&mut cursor)?;
 
     if read != buffer.len() {
-        Err(std::io::ErrorKind::InvalidData.into())
+        Err(Error::InvalidLength {
+            expected: buffer.len(),
+            actual: read,
+        })
     } else {
         Ok(value)
     }
@@ -117,16 +130,16 @@ where
 /// # Examples
 ///
 /// ```
-/// # use tlv::{Decode, from_slice_tagged, Tag};
+/// # use tlv::{Decode, from_slice_tagged, Result, Tag};
 /// #
-/// # fn main() -> std::io::Result<()> {
+/// # fn main() -> Result<()> {
 /// let buffer = [0xff, 0x02, 0xbe, 0xef];
 /// let value: u16 = from_slice_tagged(Tag::U8(0xff), &buffer)?;
 /// assert_eq!(value, 0xbeef);
 /// # Ok(())
 /// # }
 /// ```
-pub fn from_slice_tagged<D>(tag: Tag, buffer: &[u8]) -> std::io::Result<D>
+pub fn from_slice_tagged<D>(tag: Tag, buffer: &[u8]) -> Result<D>
 where
     D: Decode,
 {
@@ -134,7 +147,10 @@ where
     let (value, read) = value::decode_tagged(tag, &mut cursor)?;
 
     if read != buffer.len() {
-        Err(std::io::ErrorKind::InvalidData.into())
+        Err(Error::InvalidLength {
+            expected: buffer.len(),
+            actual: read,
+        })
     } else {
         Ok(value)
     }
@@ -150,9 +166,9 @@ where
 /// # Examples
 ///
 /// ```
-/// # use tlv::{Decode, from_reader_tagged, Tag};
+/// # use tlv::{Decode, from_reader_tagged, Result, Tag};
 /// #
-/// # fn main() -> std::io::Result<()> {
+/// # fn main() -> Result<()> {
 /// let buffer = [0xff, 0x02, 0xbe, 0xef];
 /// let mut cursor = std::io::Cursor::new(&buffer);
 /// let (value, read) = from_reader_tagged::<u16, _>(Tag::U8(0xff), &mut cursor)?;
@@ -161,12 +177,12 @@ where
 /// # Ok(())
 /// # }
 /// ```
-pub fn from_reader_tagged<D, R>(tag: Tag, reader: &mut R) -> std::io::Result<(D, usize)>
+pub fn from_reader_tagged<D, R>(tag: Tag, reader: &mut R) -> Result<(D, usize)>
 where
     D: Decode,
     R: std::io::Read,
 {
-    value::decode_tagged(tag, reader)
+    Ok(value::decode_tagged(tag, reader)?)
 }
 
 #[cfg(test)]
@@ -175,7 +191,7 @@ mod tests {
 
     use crate::{
         from_reader_tagged, from_slice, from_slice_tagged, tag::Tag, to_vec, to_vec_tagged, Decode,
-        Encode, Length,
+        Encode, Length, Result,
     };
 
     #[test]
@@ -206,6 +222,22 @@ mod tests {
     }
 
     #[test]
+    fn test_multiple_decode_variable_length() {
+        let data = b"\x01\x05hello\x02\x05world";
+        let mut cursor = std::io::Cursor::new(&data);
+
+        let (hello, read) = from_reader_tagged::<String, _>(Tag::U8(0x01), &mut cursor).unwrap();
+        assert_eq!(hello, "hello");
+        assert_eq!(read, 7);
+
+        let (world, read) = from_reader_tagged::<String, _>(Tag::U8(0x02), &mut cursor).unwrap();
+        assert_eq!(world, "world");
+        assert_eq!(read, 7);
+
+        assert_eq!(cursor.position(), data.len() as u64);
+    }
+
+    #[test]
     fn test_encode_codegen() {
         struct Test {
             a: u8,
@@ -214,13 +246,13 @@ mod tests {
 
         // This is implemented in a way that is conducive to code generation.
         impl Encode for Test {
-            fn encode<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+            fn encode<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
                 crate::value::encode_tagged(Tag::U8(0x01), self.a, writer)?;
                 crate::value::encode_tagged(Tag::U8(0x02), self.b, writer)?;
                 Ok(())
             }
 
-            fn encoded_length(&self) -> std::io::Result<crate::Length> {
+            fn encoded_length(&self) -> Result<crate::Length> {
                 let mut length = Length::new(0);
                 length += crate::value::length_tagged(Tag::U8(0x01), self.a)?;
                 length += crate::value::length_tagged(Tag::U8(0x01), self.b)?;
@@ -245,7 +277,7 @@ mod tests {
         // This is implemented in a way that is conducive to code generation.
         impl Decode for Test {
             #[allow(clippy::match_single_binding)]
-            fn decode<R: std::io::Read>(reader: &mut R) -> std::io::Result<(Self, usize)> {
+            fn decode<R: std::io::Read>(reader: &mut R) -> Result<(Self, usize)> {
                 let tlv_decode_read: usize = 0;
                 let (a, tlv_decode_read) = match crate::value::decode_tagged(Tag::U8(0x01), reader)?
                 {

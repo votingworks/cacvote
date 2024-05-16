@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use crate::Encode;
+use crate::{Encode, Result};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Length {
@@ -17,7 +17,7 @@ impl Length {
         Self { length }
     }
 
-    pub fn from_reader<R: Read>(reader: &mut R) -> std::io::Result<Self> {
+    pub fn from_reader<R: Read>(reader: &mut R) -> Result<Self> {
         let mut buf = [0; 1];
         reader.read_exact(&mut buf)?;
 
@@ -62,15 +62,15 @@ impl Length {
 }
 
 impl Encode for Length {
-    fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
+    fn encode<W>(&self, writer: &mut W) -> Result<()>
     where
         W: std::io::prelude::Write,
     {
         let bytes: Vec<u8> = self.to_vec();
-        writer.write_all(&bytes)
+        Ok(writer.write_all(&bytes)?)
     }
 
-    fn encoded_length(&self) -> std::io::Result<Length> {
+    fn encoded_length(&self) -> Result<Length> {
         let bytes: Vec<u8> = self.to_vec();
         Ok(Length::new(bytes.len() as u16))
     }

@@ -1,4 +1,4 @@
-use crate::{Encode, Length};
+use crate::{Encode, Length, Result};
 
 /// A tag for TLV encoding.
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -21,14 +21,14 @@ impl Tag {
 }
 
 impl Encode for Tag {
-    fn encode<W>(&self, writer: &mut W) -> std::io::Result<()>
+    fn encode<W>(&self, writer: &mut W) -> Result<()>
     where
         W: std::io::Write,
     {
-        writer.write_all(&self.to_vec())
+        Ok(writer.write_all(&self.to_vec())?)
     }
 
-    fn encoded_length(&self) -> std::io::Result<Length> {
+    fn encoded_length(&self) -> Result<Length> {
         Ok(Length::new(match self {
             Self::U8(_) => std::mem::size_of::<u8>(),
             Self::U16(_) => std::mem::size_of::<u16>(),
