@@ -4,6 +4,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 
 use base64_serde::base64_serde_type;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -949,4 +950,29 @@ impl RegistrationPresenter {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MixEncryptedBallotsRequest {
     pub phases: NonZeroUsize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BallotVerificationPayload {
+    machine_id: String,
+    common_access_card_id: String,
+    election_object_id: Uuid,
+    encrypted_ballot_signature_hash: [u8; 32],
+}
+
+impl BallotVerificationPayload {
+    pub fn from_tlv(data: &[u8]) -> color_eyre::Result<Self> {
+        let mut tlv = tlv::Tlv::new(data);
+        let machine_id = tlv.get_string(0x01)?;
+        let common_access_card_id = tlv.get_string(0x02)?;
+        let election_object_id = tlv.get_uuid(0x03)?;
+        let encrypted_ballot_signature_hash = tlv.get_bytes(0x04)?;
+
+        Ok(Self {
+            machine_id,
+            common_access_card_id,
+            election_object_id,
+            encrypted_ballot_signature_hash,
+        })
+    }
 }

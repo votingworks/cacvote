@@ -6,8 +6,10 @@ members = [
     "libs/electionguard",
     "libs/electionguard-rs",
     "libs/logging",
+    "libs/tlv",
     "libs/types-rs",
     "apps/cacvote-server/backend",
+    "libs/tlv", "libs/tlv-derive",
 ]
 
 [workspace.dependencies]

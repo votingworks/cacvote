@@ -37,6 +37,7 @@ pub async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
         .route("/api/objects", post(create_object))
         .route("/api/objects/:object_id", get(get_object_by_id))
         .route("/api/journal-entries", get(get_journal_entries))
+        .route("/api/scanned-mailing-label-code", post(scanned_create_mailing_label_code))
         .route("/api/elections", get(list_elections))
         .route(
             "/api/elections/:election_id/cast-ballots",
@@ -126,6 +127,17 @@ async fn get_object_by_id(
         }
         None => Err(Error::NotFound),
     }
+}
+
+
+
+async fn scanned_create_mailing_label_code(
+    State(pool): State<PgPool>,
+    scanned_mailing_label_code:
+) -> Result<impl IntoResponse, Error> {
+    let mut conn = pool.acquire().await?;
+    let object_id = db::create_object(&mut conn, &object).await?;
+    Ok((StatusCode::CREATED, object_id.to_string()))
 }
 
 async fn list_elections(
