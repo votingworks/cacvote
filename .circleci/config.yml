@@ -748,7 +748,7 @@ jobs:
             DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cargo install sqlx-cli
-            script/migrate-db
+            script/reset-db
       - run:
           name: Build
           environment:
@@ -773,7 +773,7 @@ jobs:
             DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cargo install sqlx-cli
-            script/migrate-db
+            script/reset-db
       - run:
           name: Build
           environment:

@@ -79,7 +79,7 @@ function* generateTestJobForRustCrate(crate: CargoCrate): Iterable<string> {
     yield `          DATABASE_URL: ${databaseUrl}\n`;
     yield `        command: |\n`;
     yield `          cargo install sqlx-cli\n`;
-    yield `          script/migrate-db\n`;
+    yield `          script/reset-db\n`;
   }
 
   yield `    - run:\n`;
