@@ -746,7 +746,7 @@ jobs:
           name: Setup Database
           command: |
             cargo install sqlx-cli
-            script/reset-db
+            script/migrate-db
       - run:
           name: Build
           command: |
@@ -765,7 +765,7 @@ jobs:
           name: Setup Database
           command: |
             cargo install sqlx-cli
-            script/reset-db
+            script/migrate-db
       - run:
           name: Build
           command: |
