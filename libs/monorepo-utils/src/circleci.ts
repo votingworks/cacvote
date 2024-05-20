@@ -62,6 +62,9 @@ function* generateTestJobForNodeJsPackage(
 
 function* generateTestJobForRustCrate(crate: CargoCrate): Iterable<string> {
   const hasDatabase = existsSync(join(crate.absolutePath, 'db/migrations'));
+  const databaseUrl = hasDatabase
+    ? `postgresql://root@localhost:5432/${crate.name}`
+    : '';
 
   yield `${jobIdForRustCrate(crate)}:\n`;
   yield `  executor: ${hasDatabase ? 'rust-db' : 'nodejs'}\n`;
@@ -72,6 +75,8 @@ function* generateTestJobForRustCrate(crate: CargoCrate): Iterable<string> {
   if (hasDatabase) {
     yield `    - run:\n`;
     yield `        name: Setup Database\n`;
+    yield `        environment:\n`;
+    yield `          DATABASE_URL: ${databaseUrl}\n`;
     yield `        command: |\n`;
     yield `          cargo install sqlx-cli\n`;
     yield `          script/migrate-db\n`;
@@ -79,10 +84,18 @@ function* generateTestJobForRustCrate(crate: CargoCrate): Iterable<string> {
 
   yield `    - run:\n`;
   yield `        name: Build\n`;
+  if (hasDatabase) {
+    yield `        environment:\n`;
+    yield `          DATABASE_URL: ${databaseUrl}\n`;
+  }
   yield `        command: |\n`;
   yield `          cargo build -p ${crate.name}\n`;
   yield `    - run:\n`;
   yield `        name: Test\n`;
+  if (hasDatabase) {
+    yield `        environment:\n`;
+    yield `          DATABASE_URL: ${databaseUrl}\n`;
+  }
   yield `        command: |\n`;
   yield `          cargo test -p ${crate.name}\n`;
 }

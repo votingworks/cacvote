@@ -744,15 +744,21 @@ jobs:
       - checkout-and-install
       - run:
           name: Setup Database
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cargo install sqlx-cli
             script/migrate-db
       - run:
           name: Build
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cargo build -p cacvote-jx-terminal-backend
       - run:
           name: Test
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cargo test -p cacvote-jx-terminal-backend
 
@@ -763,15 +769,21 @@ jobs:
       - checkout-and-install
       - run:
           name: Setup Database
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cargo install sqlx-cli
             script/migrate-db
       - run:
           name: Build
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cargo build -p cacvote-server
       - run:
           name: Test
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cargo test -p cacvote-server
 
