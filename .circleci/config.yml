@@ -745,9 +745,8 @@ jobs:
       - run:
           name: Setup Database
           command: |
-            cd 'apps/cacvote-jx-terminal/backend'
             cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
+            script/reset-db
       - run:
           name: Build
           command: |
@@ -765,9 +764,8 @@ jobs:
       - run:
           name: Setup Database
           command: |
-            cd 'apps/cacvote-server/backend'
             cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
+            script/reset-db
       - run:
           name: Build
           command: |
