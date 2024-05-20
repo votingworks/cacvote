@@ -168,7 +168,7 @@ async fn list_cast_ballots_by_election(
         db::get_cast_ballot_ids_by_election(&mut conn, election_id)
             .await?
             .into_iter()
-            .map(|id| bulletin_board::CastBallot::new(id, election_id.clone()))
+            .map(|id| bulletin_board::CastBallot::new(id, election_id))
             .collect(),
     ))
 }

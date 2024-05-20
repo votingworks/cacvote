@@ -256,7 +256,6 @@ pub fn run_encrypt_ballot(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
     use types_rs::election::ElectionDefinition;
 
     use crate::{config::generate_election_config, manifest::ObjectId};

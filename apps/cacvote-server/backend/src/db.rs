@@ -341,14 +341,14 @@ pub(crate) async fn create_scanned_mailing_label_code(
 ) -> color_eyre::Result<Uuid> {
     let mut txn = conn.begin().await?;
     let original_payload = ballot_verification_payload;
-    let signed_buffer: SignedBuffer = tlv::from_slice(&original_payload)?;
+    let signed_buffer: SignedBuffer = tlv::from_slice(original_payload)?;
 
     // TODO: do something with `signed_buffer.signature()`?
     let ballot_verification_payload: BallotVerificationPayload =
         tlv::from_slice(signed_buffer.buffer())?;
 
     let Some(machine_id) =
-        get_machine_id_by_identifier(&mut *txn, ballot_verification_payload.machine_id()).await?
+        get_machine_id_by_identifier(&mut txn, ballot_verification_payload.machine_id()).await?
     else {
         bail!(
             "Machine with identifier {} not found",

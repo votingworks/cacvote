@@ -229,12 +229,12 @@ impl Payload {
     pub fn election_id(&self) -> Option<Uuid> {
         match self {
             Self::RegistrationRequest(_) => None,
-            Self::Registration(r) => Some(r.election_object_id.clone()),
+            Self::Registration(r) => Some(r.election_object_id),
             Self::Election(_) => None,
-            Self::CastBallot(cb) => Some(cb.election_object_id.clone()),
-            Self::EncryptedElectionTally(tally) => Some(tally.election_object_id.clone()),
-            Self::DecryptedElectionTally(tally) => Some(tally.election_object_id.clone()),
-            Self::ShuffledEncryptedCastBallots(ballots) => Some(ballots.election_object_id.clone()),
+            Self::CastBallot(cb) => Some(cb.election_object_id),
+            Self::EncryptedElectionTally(tally) => Some(tally.election_object_id),
+            Self::DecryptedElectionTally(tally) => Some(tally.election_object_id),
+            Self::ShuffledEncryptedCastBallots(ballots) => Some(ballots.election_object_id),
         }
     }
 

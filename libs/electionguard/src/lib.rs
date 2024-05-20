@@ -32,12 +32,12 @@ pub fn convert_vx_election_to_eg_manifest(
     })?;
 
     let eg_manifest: manifest::Manifest = vx_election.into();
-    Ok(serde_json::to_value(eg_manifest).map_err(|e| {
+    serde_json::to_value(eg_manifest).map_err(|e| {
         Error::new(
             Status::GenericFailure,
             format!("Failed to serialize EG manifest: {e}"),
         )
-    })?)
+    })
 }
 
 #[napi(object)]

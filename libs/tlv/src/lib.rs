@@ -182,7 +182,7 @@ where
     D: Decode,
     R: std::io::Read,
 {
-    Ok(value::decode_tagged(tag, reader)?)
+    value::decode_tagged(tag, reader)
 }
 
 #[cfg(test)]
@@ -387,7 +387,7 @@ mod tests {
         #[test]
         fn test_encode_decode_fixed_slice(tag_byte: u8, value: [u8; 100]) {
             let tag = Tag::U8(tag_byte);
-            let encoded = to_vec_tagged(tag, &value).unwrap();
+            let encoded = to_vec_tagged(tag, value).unwrap();
 
             let decoded_value: [u8; 100] = from_slice_tagged(tag, &encoded).unwrap();
             assert_eq!(decoded_value, value);
