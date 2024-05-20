@@ -789,6 +789,20 @@ jobs:
           command: |
             cargo test -p cacvote-server
 
+  test-crate-cacvote-server-client:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p cacvote-server-client
+      - run:
+          name: Test
+          command: |
+            cargo test -p cacvote-server-client
+
   test-crate-electionguard:
     executor: nodejs
     resource_class: xlarge
@@ -923,6 +937,7 @@ workflows:
       - test-crate-auth-rs
       - test-crate-cacvote-jx-terminal-backend
       - test-crate-cacvote-server
+      - test-crate-cacvote-server-client
       - test-crate-electionguard
       - test-crate-electionguard-rs
       - test-crate-tlv

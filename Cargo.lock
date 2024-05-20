@@ -351,7 +351,7 @@ dependencies = [
  "axum",
  "base64",
  "base64-serde",
- "cacvote-server",
+ "cacvote-server-client",
  "clap",
  "color-eyre",
  "dotenvy",
@@ -388,6 +388,7 @@ dependencies = [
  "axum",
  "base64",
  "base64-serde",
+ "cacvote-server-client",
  "clap",
  "color-eyre",
  "dotenvy",
@@ -406,6 +407,19 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "types-rs",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "cacvote-server-client"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
  "types-rs",
  "url",
  "uuid",
