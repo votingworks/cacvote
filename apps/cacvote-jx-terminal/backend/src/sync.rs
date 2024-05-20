@@ -1,6 +1,6 @@
 //! CACVote Server synchronization utilities.
 
-use cacvote_server::client::Client;
+use cacvote_server_client::Client;
 use tokio::time::sleep;
 use types_rs::cacvote::JurisdictionCode;
 

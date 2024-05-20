@@ -6,6 +6,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use axum::{
+    body::Bytes,
     extract::{DefaultBodyLimit, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -37,6 +38,10 @@ pub async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
         .route("/api/objects", post(create_object))
         .route("/api/objects/:object_id", get(get_object_by_id))
         .route("/api/journal-entries", get(get_journal_entries))
+        .route(
+            "/api/scanned-mailing-label-code",
+            post(scanned_create_mailing_label_code),
+        )
         .route("/api/elections", get(list_elections))
         .route(
             "/api/elections/:election_id/cast-ballots",
@@ -128,6 +133,17 @@ async fn get_object_by_id(
     }
 }
 
+async fn scanned_create_mailing_label_code(
+    State(pool): State<PgPool>,
+    scanned_mailing_label_code: Bytes,
+) -> Result<impl IntoResponse, Error> {
+    let mut conn = pool.acquire().await?;
+
+    let id = db::create_scanned_mailing_label_code(&mut conn, &scanned_mailing_label_code).await?;
+
+    Ok((StatusCode::CREATED, Json(json!({ "id": id }))))
+}
+
 async fn list_elections(
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<bulletin_board::Election>>, Error> {
@@ -152,7 +168,7 @@ async fn list_cast_ballots_by_election(
         db::get_cast_ballot_ids_by_election(&mut conn, election_id)
             .await?
             .into_iter()
-            .map(|id| bulletin_board::CastBallot::new(id, election_id.clone()))
+            .map(|id| bulletin_board::CastBallot::new(id, election_id))
             .collect(),
     ))
 }

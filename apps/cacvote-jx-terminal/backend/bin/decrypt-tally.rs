@@ -8,7 +8,7 @@ use types_rs::cacvote::Payload;
 use url::Url;
 use uuid::Uuid;
 
-use cacvote_server::client::Client;
+use cacvote_server_client::Client;
 
 #[derive(Debug, Parser)]
 struct Opts {

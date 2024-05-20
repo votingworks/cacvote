@@ -458,7 +458,7 @@ async fn generate_encrypted_election_tally(
     };
 
     match db::get_tallies_for_election(&mut transaction, election_id).await {
-        Ok(db::ElectionTallies::OnlyEncrypted(_)) | Ok(db::ElectionTallies::Both(..)) => {
+        Ok(db::ElectionTallies::OnlyEncrypted(_) | db::ElectionTallies::Both(..)) => {
             return (
                 StatusCode::CONFLICT,
                 Json(json!({ "error": "tally already exists" })),

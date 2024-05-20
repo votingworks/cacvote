@@ -10,9 +10,8 @@ const { createProxyMiddleware: proxy } = require('http-proxy-middleware');
 
 /**
  * @param {import('connect').Server} app
- * @param {number=} basePort
+ * @param {number=} backendPort
  */
-module.exports = function (app, basePort = 3000) {
-  app.use(proxy('/api', { target: `http://localhost:${basePort + 2}/` }));
-  app.use(proxy('/dock', { target: `http://localhost:${basePort + 2}/` }));
+module.exports = function (app, backendPort) {
+  app.use(proxy('/api', { target: `http://localhost:${backendPort}/` }));
 };

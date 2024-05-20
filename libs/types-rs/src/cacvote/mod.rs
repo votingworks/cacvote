@@ -6,6 +6,7 @@ use std::str::FromStr;
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+use tlv_derive::{Decode, Encode};
 use uuid::Uuid;
 
 use crate::election::BallotStyleId;
@@ -228,12 +229,12 @@ impl Payload {
     pub fn election_id(&self) -> Option<Uuid> {
         match self {
             Self::RegistrationRequest(_) => None,
-            Self::Registration(r) => Some(r.election_object_id.clone()),
+            Self::Registration(r) => Some(r.election_object_id),
             Self::Election(_) => None,
-            Self::CastBallot(cb) => Some(cb.election_object_id.clone()),
-            Self::EncryptedElectionTally(tally) => Some(tally.election_object_id.clone()),
-            Self::DecryptedElectionTally(tally) => Some(tally.election_object_id.clone()),
-            Self::ShuffledEncryptedCastBallots(ballots) => Some(ballots.election_object_id.clone()),
+            Self::CastBallot(cb) => Some(cb.election_object_id),
+            Self::EncryptedElectionTally(tally) => Some(tally.election_object_id),
+            Self::DecryptedElectionTally(tally) => Some(tally.election_object_id),
+            Self::ShuffledEncryptedCastBallots(ballots) => Some(ballots.election_object_id),
         }
     }
 
@@ -949,4 +950,128 @@ impl RegistrationPresenter {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MixEncryptedBallotsRequest {
     pub phases: NonZeroUsize,
+}
+
+/// A payload for verifying a ballot. This payload is encoded as a TLV structure.
+#[derive(Debug, Clone, PartialEq, Encode, Decode)]
+pub struct BallotVerificationPayload {
+    /// The machine ID of the voting machine.
+    #[tlv(tag = 0x02)]
+    machine_id: String,
+
+    /// The common access card ID of the voter.
+    #[tlv(tag = 0x03)]
+    common_access_card_id: String,
+
+    /// The election object ID from the database.
+    #[tlv(tag = 0x04)]
+    election_object_id: Uuid,
+
+    /// The SHA-256 hash of the encrypted ballot signature.
+    #[tlv(tag = 0x05)]
+    encrypted_ballot_signature_hash: [u8; 32],
+}
+
+impl BallotVerificationPayload {
+    /// Creates a new ballot verification payload.
+    pub const fn new(
+        machine_id: String,
+        common_access_card_id: String,
+        election_object_id: Uuid,
+        encrypted_ballot_signature_hash: [u8; 32],
+    ) -> Self {
+        Self {
+            machine_id,
+            common_access_card_id,
+            election_object_id,
+            encrypted_ballot_signature_hash,
+        }
+    }
+
+    /// Returns the machine ID of the voting machine.
+    pub fn machine_id(&self) -> &str {
+        &self.machine_id
+    }
+
+    /// Returns the common access card ID of the voter.
+    pub fn common_access_card_id(&self) -> &str {
+        &self.common_access_card_id
+    }
+
+    /// Returns the election object ID from the database.
+    pub fn election_object_id(&self) -> Uuid {
+        self.election_object_id
+    }
+
+    /// Returns the SHA-256 hash of the encrypted ballot signature.
+    pub fn encrypted_ballot_signature_hash(&self) -> &[u8; 32] {
+        &self.encrypted_ballot_signature_hash
+    }
+}
+
+/// A buffer that has been signed.
+#[derive(Debug, Clone, PartialEq, Encode, Decode)]
+pub struct SignedBuffer {
+    /// The buffer that was signed.
+    #[tlv(tag = 0x06)]
+    buffer: Vec<u8>,
+
+    /// The signature of the buffer.
+    #[tlv(tag = 0x07)]
+    signature: Vec<u8>,
+}
+
+impl SignedBuffer {
+    /// Creates a new signed buffer.
+    pub const fn new(buffer: Vec<u8>, signature: Vec<u8>) -> Self {
+        Self { buffer, signature }
+    }
+
+    /// Returns the buffer that was signed.
+    pub fn buffer(&self) -> &[u8] {
+        &self.buffer
+    }
+
+    /// Returns the signature of the buffer.
+    pub fn signature(&self) -> &[u8] {
+        &self.signature
+    }
+
+    /// Decodes the buffer into a type that implements the `tlv::Decode` trait.
+    pub fn decode_buffer<D>(&self) -> tlv::Result<D>
+    where
+        D: tlv::Decode,
+    {
+        let decoded: D = tlv::from_slice(&self.buffer)?;
+        Ok(decoded)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_ballot_verification_payload() {
+        let machine_id = "machine-id".to_owned();
+        let common_access_card_id = "common-access-card-id".to_owned();
+        let election_object_id = uuid::Uuid::new_v4();
+        let encrypted_ballot_signature_hash = [0; 32];
+
+        let payload = crate::cacvote::BallotVerificationPayload::new(
+            machine_id.clone(),
+            common_access_card_id.clone(),
+            election_object_id,
+            encrypted_ballot_signature_hash,
+        );
+
+        let encoded = tlv::to_vec(payload).unwrap();
+        let decoded: crate::cacvote::BallotVerificationPayload = tlv::from_slice(&encoded).unwrap();
+
+        assert_eq!(decoded.machine_id(), machine_id);
+        assert_eq!(decoded.common_access_card_id(), common_access_card_id);
+        assert_eq!(decoded.election_object_id(), election_object_id);
+        assert_eq!(
+            decoded.encrypted_ballot_signature_hash(),
+            &encrypted_ballot_signature_hash
+        );
+    }
 }

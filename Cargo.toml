@@ -4,6 +4,7 @@ members = [
     "apps/cacvote-jx-terminal/backend",
     "apps/cacvote-server/backend",
     "libs/auth-rs",
+    "libs/cacvote-server-client",
     "libs/electionguard",
     "libs/electionguard-rs",
     "libs/logging",
@@ -21,6 +22,7 @@ base64-serde = "0.7.0"
 bitstream-io = "1.7.0"
 bitter = "0.6.1"
 cacvote-server = { path = "apps/cacvote-server/backend" }
+cacvote-server-client = { path = "libs/cacvote-server-client" }
 clap = { version = "4.3.23", features = ["cargo", "derive", "env"] }
 color-eyre = "0.6.2"
 crc16 = "0.4.0"

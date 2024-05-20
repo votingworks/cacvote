@@ -24,7 +24,7 @@ export function App({ queryClient = createQueryClient() }: Props): JSX.Element {
         errorMessage={
           <Prose textCenter>
             <H1>Something went wrong</H1>
-            <P>Please restart the device.</P>
+            <P>Please reload the page.</P>
           </Prose>
         }
       >

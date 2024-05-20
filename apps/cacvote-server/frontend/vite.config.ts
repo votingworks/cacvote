@@ -26,8 +26,8 @@ export default defineConfig((env) => {
     {}
   );
 
-  const basePort = Number(process.env.BASE_PORT) || 3000;
-  const port = Number(process.env.PORT) || basePort;
+  const port = Number(process.env.PORT) || 3000;
+  const backendPort = Number(process.env.BACKEND_PORT) || 8000;
 
   return {
     server: {
@@ -91,7 +91,7 @@ export default defineConfig((env) => {
       {
         name: 'development-proxy',
         configureServer: (app) => {
-          setupProxy(app.middlewares, basePort);
+          setupProxy(app.middlewares, backendPort);
         },
       },
     ],

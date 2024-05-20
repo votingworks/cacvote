@@ -744,16 +744,22 @@ jobs:
       - checkout-and-install
       - run:
           name: Setup Database
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cd 'apps/cacvote-jx-terminal/backend'
             cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
+            cargo sqlx database reset -y --source=db/migrations
       - run:
           name: Build
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cargo build -p cacvote-jx-terminal-backend
       - run:
           name: Test
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cargo test -p cacvote-jx-terminal-backend
 
@@ -764,18 +770,38 @@ jobs:
       - checkout-and-install
       - run:
           name: Setup Database
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cd 'apps/cacvote-server/backend'
             cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
+            cargo sqlx database reset -y --source=db/migrations
       - run:
           name: Build
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cargo build -p cacvote-server
       - run:
           name: Test
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cargo test -p cacvote-server
+
+  test-crate-cacvote-server-client:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p cacvote-server-client
+      - run:
+          name: Test
+          command: |
+            cargo test -p cacvote-server-client
 
   test-crate-electionguard:
     executor: nodejs
@@ -911,6 +937,7 @@ workflows:
       - test-crate-auth-rs
       - test-crate-cacvote-jx-terminal-backend
       - test-crate-cacvote-server
+      - test-crate-cacvote-server-client
       - test-crate-electionguard
       - test-crate-electionguard-rs
       - test-crate-tlv
