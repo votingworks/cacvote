@@ -236,6 +236,8 @@ Routine: Run the subroutine \ref{Decryption proof processing} (\DecryptionProof{
     This is a lot of work. Prob not great for a mobile app, but maybe OK as an option...
 
 
+    \subsection{Implementation ideas}
+    Doing the final BB check requires knowing when the election should close, and initiating a download. On Android, it looks as if the AlarmManager class would help: \url{https://developer.android.com/develop/background-work/services/alarms/schedule}.
 
 
 \end{document}
