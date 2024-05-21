@@ -80,6 +80,7 @@ export * from './table';
 export * from './reports';
 export * from './test_mode';
 export * from './text';
+export * from './svg';
 export * from './themes';
 export * from './timer';
 export * from './touch_text_input';

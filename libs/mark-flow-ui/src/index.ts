@@ -6,6 +6,7 @@ export * from './components/review';
 export * from './components/voter_screen';
 export * from './config/globals';
 export * from './config/types';
+export * from './hooks/use_ballot_printer';
 export * from './hooks/use_ballot_style_manager';
 export * from './hooks/use_session_settings_manager';
 export * from './pages/cast_ballot_page';
