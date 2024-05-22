@@ -19,7 +19,7 @@ export function WizardHeaderTitle({
   step,
   title,
 }: {
-  step: React.ReactNode;
+  step?: React.ReactNode;
   title: React.ReactNode;
 }): JSX.Element {
   return (
@@ -55,7 +55,7 @@ const WizardActions = styled.div`
   width: 100%;
   margin-top: 20px;
   padding: 20px;
-  border-top: 2px solid #000000;
+  border-top: 3px solid #000000;
 `;
 
 const WizardActionsLeft = styled.div`
@@ -91,7 +91,7 @@ export function WizardButtonBar({
 
 export interface WizardProps {
   header: React.ReactNode;
-  footer: React.ReactNode;
+  footer?: React.ReactNode;
   actions: React.ReactNode;
   children: React.ReactNode;
 }
@@ -106,7 +106,7 @@ export function Wizard({
     <WizardContainer>
       <WizardHeader>{header}</WizardHeader>
       <WizardBody>{children}</WizardBody>
-      <WizardFooter>{footer}</WizardFooter>
+      {footer && <WizardFooter>{footer}</WizardFooter>}
       <WizardActions>{actions}</WizardActions>
     </WizardContainer>
   );
