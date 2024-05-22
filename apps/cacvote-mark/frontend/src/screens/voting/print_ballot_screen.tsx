@@ -1,13 +1,16 @@
-import { PrintPage as MarkFlowPrintPage } from '@votingworks/mark-flow-ui';
+import { useBallotPrinter } from '@votingworks/mark-flow-ui';
 import {
   BallotStyleId,
   ElectionDefinition,
   PrecinctId,
-  PrintOptions,
   VotesDict,
 } from '@votingworks/types';
-import { printElement } from '@votingworks/ui';
+import { H2, Main, P, Screen, appStrings, printElement } from '@votingworks/ui';
 import { useEffect, useRef } from 'react';
+import styled from 'styled-components';
+import { ArrowDownIcon } from '../../components/arrow_down_icon';
+import { BallotIcon } from '../../components/ballot_icon';
+import { ThermalPrinterIcon } from '../../components/thermal_printer_icon';
 
 export interface PrintBallotScreenProps {
   electionDefinition: ElectionDefinition;
@@ -19,48 +22,65 @@ export interface PrintBallotScreenProps {
   onPrintCompleted: () => void;
 }
 
+const ArrowDownIconContainer = styled.div`
+  margin-top: 40px;
+`;
+
+export function PrintBallotScreenStatic(): JSX.Element {
+  return (
+    <Screen>
+      <Main centerChild padded>
+        <H2>{appStrings.titleBmdPrintScreen()}</H2>
+        <P
+          style={{
+            marginTop: '20px',
+            marginBottom: '40px',
+            textAlign: 'center',
+          }}
+        >
+          Tear off ballot from printer
+          <br />
+          and come back for instructions.
+        </P>
+        <ThermalPrinterIcon />
+        <BallotIcon />
+        <ArrowDownIconContainer>
+          <ArrowDownIcon />
+        </ArrowDownIconContainer>
+      </Main>
+    </Screen>
+  );
+}
+
 export function PrintBallotScreen({
-  electionDefinition,
-  ballotStyleId,
-  precinctId,
-  votes,
-  generateBallotId,
-  isLiveMode,
   onPrintCompleted,
+  ...rest
 }: PrintBallotScreenProps): JSX.Element {
   const printTimer = useRef<number>();
 
+  const printBallot = useBallotPrinter({
+    ...rest,
+
+    printElement: (element, printOptions) =>
+      printElement(element, {
+        ...printOptions,
+        deviceName: process.env.REACT_APP_BALLOT_PRINTER,
+      }),
+
+    onPrintStarted() {
+      printTimer.current = window.setTimeout(
+        onPrintCompleted,
+        process.env.IS_INTEGRATION_TEST === 'true' ? 500 : 5000
+      );
+    },
+  });
+
   useEffect(() => {
+    printBallot();
     return () => {
       window.clearTimeout(printTimer.current);
     };
-  }, []);
+  }, [printBallot]);
 
-  function printElementToBallotPrinter(
-    element: JSX.Element,
-    printOptions: PrintOptions
-  ) {
-    return printElement(element, {
-      ...printOptions,
-      deviceName: process.env.REACT_APP_BALLOT_PRINTER,
-    });
-  }
-
-  return (
-    <MarkFlowPrintPage
-      electionDefinition={electionDefinition}
-      ballotStyleId={ballotStyleId}
-      precinctId={precinctId}
-      generateBallotId={generateBallotId}
-      isLiveMode={isLiveMode}
-      votes={votes}
-      printElement={printElementToBallotPrinter}
-      onPrintStarted={() => {
-        printTimer.current = window.setTimeout(
-          onPrintCompleted,
-          process.env.IS_INTEGRATION_TEST === 'true' ? 500 : 5000
-        );
-      }}
-    />
-  );
+  return <PrintBallotScreenStatic />;
 }
