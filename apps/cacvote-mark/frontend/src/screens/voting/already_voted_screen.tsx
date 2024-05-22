@@ -1,5 +1,5 @@
-import { PostVoteScreen } from './post_vote_screen';
+import { SealBallotInEnvelopeScreen } from './seal_ballot_in_envelope_screen';
 
 export function AlreadyVotedScreen(): JSX.Element {
-  return <PostVoteScreen />;
+  return <SealBallotInEnvelopeScreen onNext={() => {}} />;
 }

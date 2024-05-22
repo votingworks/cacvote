@@ -55,6 +55,10 @@ interface PostVoteState {
   type: 'post_vote';
 }
 
+interface PromptToRemoveCommonAccessCardState {
+  type: 'prompt_to_remove_common_access_card';
+}
+
 type VoterFlowState =
   | InitState
   | MarkState
@@ -63,7 +67,8 @@ type VoterFlowState =
   | ReviewPrintedBallotState
   | DestroyPrintedBallotState
   | SubmitState
-  | PostVoteState;
+  | PostVoteState
+  | PromptToRemoveCommonAccessCardState;
 
 interface RegisteredStateScreenProps {
   onIsVotingSessionInProgressChanged: (
@@ -233,12 +238,40 @@ function RegisteredStateScreen({
     });
   }
 
-  function onSubmitted() {
+  function onConfirmBallotSealedInEnvelope() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'post_vote');
+      return {
+        type: 'prompt_to_remove_common_access_card',
+      };
+    });
+  }
+
+  function onSubmitSuccess() {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'submit');
       return {
         type: 'post_vote',
+      };
+    });
+  }
+
+  function onCancelSubmit() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'submit');
+      return {
+        type: 'review_printed',
         votes: prev.votes,
+        serialNumber: prev.serialNumber,
+      };
+    });
+  }
+
+  function onReturnToSealBallotInEnvelope() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'prompt_to_remove_common_access_card');
+      return {
+        type: 'post_vote',
       };
     });
   }
@@ -325,12 +358,24 @@ function RegisteredStateScreen({
         <Voting.SubmitScreen
           votes={voterFlowState.votes}
           serialNumber={voterFlowState.serialNumber}
-          onSubmitted={onSubmitted}
+          onSubmitSuccess={onSubmitSuccess}
+          onCancel={onCancelSubmit}
         />
       );
 
     case 'post_vote':
-      return <Voting.PostVoteScreen />;
+      return (
+        <Voting.SealBallotInEnvelopeScreen
+          onNext={onConfirmBallotSealedInEnvelope}
+        />
+      );
+
+    case 'prompt_to_remove_common_access_card':
+      return (
+        <Voting.RemoveCommonAccessCardToPrintMailLabelScreen
+          onCancel={onReturnToSealBallotInEnvelope}
+        />
+      );
 
     default:
       throwIllegalValue(voterFlowState);

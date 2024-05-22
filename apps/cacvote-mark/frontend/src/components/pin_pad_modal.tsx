@@ -65,6 +65,7 @@ export function PinPadModal({
   return (
     <Modal
       title={title}
+      ariaLabel="Enter your PIN"
       onOverlayClick={dismissPinModal}
       content={
         <React.Fragment>

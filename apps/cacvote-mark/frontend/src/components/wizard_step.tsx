@@ -114,7 +114,7 @@ export function WizardSteps<T extends string>({
   steps,
 }: {
   current: NoInfer<T>;
-  steps: Array<{ id: T; title: string }>;
+  steps: ReadonlyArray<{ id: T; title: string }>;
 }): JSX.Element {
   const currentIndex = steps.findIndex((step) => step.id === current);
 
