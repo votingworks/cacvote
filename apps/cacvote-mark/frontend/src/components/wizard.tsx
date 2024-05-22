@@ -44,7 +44,7 @@ const WizardFooter = styled.div`
   justify-content: space-evenly;
   align-items: center;
   width: 100%;
-  margin-top: 20px;
+  margin: auto auto 20px auto;
 `;
 
 const WizardActions = styled.div`

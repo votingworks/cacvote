@@ -9,6 +9,7 @@ import {
   WizardHeaderTitle,
 } from '../../components/wizard';
 import { WizardSteps } from '../../components/wizard_step';
+import { steps } from './steps';
 
 const ButtonsRow = styled.div`
   display: flex;
@@ -54,17 +55,7 @@ export function ReviewPrintedBallotScreen({
           header={
             <WizardHeaderTitle step="Step 1" title="Review Your Ballot" />
           }
-          footer={
-            <WizardSteps
-              current="review"
-              steps={[
-                { id: 'review', title: 'Review Ballot' },
-                { id: 'seal', title: 'Seal Ballot in Envelope' },
-                { id: 'label', title: 'Attach Mail Label' },
-                { id: 'mail', title: 'Mail Ballot' },
-              ]}
-            />
-          }
+          footer={<WizardSteps steps={steps} current="review" />}
           actions={
             <WizardButtonBar
               rightButton={
