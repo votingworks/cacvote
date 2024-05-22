@@ -39,6 +39,12 @@ interface ReviewPrintedBallotState {
   serialNumber: number;
 }
 
+interface DestroyPrintedBallotState {
+  type: 'destroy_printed';
+  votes: VotesDict;
+  serialNumber: number;
+}
+
 interface SubmitState {
   type: 'submit';
   votes: VotesDict;
@@ -55,6 +61,7 @@ type VoterFlowState =
   | ReviewOnscreenState
   | PrintBallotState
   | ReviewPrintedBallotState
+  | DestroyPrintedBallotState
   | SubmitState
   | PostVoteState;
 
@@ -198,8 +205,30 @@ function RegisteredStateScreen({
     setVoterFlowState((prev) => {
       assert(prev?.type === 'review_printed');
       return {
+        type: 'destroy_printed',
+        votes: prev.votes,
+        serialNumber: prev.serialNumber,
+      };
+    });
+  }
+
+  function onConfirmBallotDestroyed() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'destroy_printed');
+      return {
         type: 'review_onscreen',
         votes: prev.votes,
+      };
+    });
+  }
+
+  function onCancelBallotDestroyed() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'destroy_printed');
+      return {
+        type: 'review_printed',
+        votes: prev.votes,
+        serialNumber: prev.serialNumber,
       };
     });
   }
@@ -280,6 +309,14 @@ function RegisteredStateScreen({
         <Voting.ReviewPrintedBallotScreen
           onConfirm={onConfirmPrintedBallotSelections}
           onReject={onRejectPrintedBallotSelections}
+        />
+      );
+
+    case 'destroy_printed':
+      return (
+        <Voting.DestroyBallotScreen
+          onConfirm={onConfirmBallotDestroyed}
+          onCancel={onCancelBallotDestroyed}
         />
       );
 

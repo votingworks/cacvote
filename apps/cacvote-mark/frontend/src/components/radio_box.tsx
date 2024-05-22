@@ -15,7 +15,7 @@ const RadioBoxInput = styled.input`
   height: 100%;
 `;
 
-const RadioBoxStyled = styled.div<{ selected?: boolean }>`
+const RadioBoxStyled = styled.label<{ selected?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,13 +50,8 @@ export function RadioBox({
 
   return (
     <RadioBoxContainer onClick={onClick}>
-      <RadioBoxInput
-        type="radio"
-        checked={selected}
-        readOnly
-        aria-labelledby={id}
-      />
-      <RadioBoxStyled id={id} selected={selected}>
+      <RadioBoxInput type="radio" checked={selected} readOnly id={id} />
+      <RadioBoxStyled htmlFor={id} selected={selected}>
         <div>{children}</div>
       </RadioBoxStyled>
     </RadioBoxContainer>

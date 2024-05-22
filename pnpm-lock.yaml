@@ -464,6 +464,9 @@ importers:
       '@votingworks/cacvote-mark-backend':
         specifier: workspace:*
         version: link:../backend
+      '@votingworks/fixtures':
+        specifier: workspace:*
+        version: link:../../../libs/fixtures
       '@votingworks/grout':
         specifier: workspace:*
         version: link:../../../libs/grout

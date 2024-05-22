@@ -1,4 +1,5 @@
 export * from './already_voted_screen';
+export * from './destroy_ballot_screen';
 export * from './mark_screen';
 export * from './post_vote_screen';
 export * from './print_ballot_screen';
