@@ -5,7 +5,8 @@ import {
   VotesDict,
   getContests,
 } from '@votingworks/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Uuid, VoterStatus } from '@votingworks/cacvote-mark-backend';
 import { getElectionConfiguration, getVoterStatus } from '../api';
 import * as Registration from './registration';
 import * as Voting from './voting';
@@ -53,10 +54,31 @@ interface SubmitState {
 
 interface PostVoteState {
   type: 'post_vote';
+  castBallotObjectId: Uuid;
 }
 
 interface PromptToRemoveCommonAccessCardState {
   type: 'prompt_to_remove_common_access_card';
+  castBallotObjectId: Uuid;
+}
+
+interface PrintMailingLabelState {
+  type: 'print_mailing_label';
+  castBallotObjectId: Uuid;
+}
+
+interface AttachMailingLabelState {
+  type: 'attach_mailing_label';
+  castBallotObjectId: Uuid;
+}
+
+interface MailBallotState {
+  type: 'mail_ballot';
+  castBallotObjectId: Uuid;
+}
+
+interface FinishState {
+  type: 'finish';
 }
 
 type VoterFlowState =
@@ -68,16 +90,20 @@ type VoterFlowState =
   | DestroyPrintedBallotState
   | SubmitState
   | PostVoteState
-  | PromptToRemoveCommonAccessCardState;
+  | PromptToRemoveCommonAccessCardState
+  | PrintMailingLabelState
+  | AttachMailingLabelState
+  | MailBallotState
+  | FinishState;
 
 interface RegisteredStateScreenProps {
-  onIsVotingSessionInProgressChanged: (
-    isVotingSessionInProgress: boolean
-  ) => void;
+  voterStatus?: VoterStatus;
+  setIsVoterSessionStillActive: (isVotingSessionStillActive: boolean) => void;
 }
 
 function RegisteredStateScreen({
-  onIsVotingSessionInProgressChanged,
+  voterStatus,
+  setIsVoterSessionStillActive,
 }: RegisteredStateScreenProps): JSX.Element | null {
   const getElectionConfigurationQuery = getElectionConfiguration.useQuery();
   const electionConfiguration = getElectionConfigurationQuery.data;
@@ -85,23 +111,42 @@ function RegisteredStateScreen({
     type: 'init',
   });
 
-  if (!electionConfiguration) {
+  useEffect(() => {
+    if (
+      voterFlowState.type === 'prompt_to_remove_common_access_card' &&
+      !voterStatus
+    ) {
+      // the voter has removed the common access card, so we can proceed
+      setVoterFlowState((prev) => {
+        assert(prev?.type === 'prompt_to_remove_common_access_card');
+        return {
+          type: 'print_mailing_label',
+          castBallotObjectId: prev.castBallotObjectId,
+        };
+      });
+    }
+  }, [voterFlowState, voterStatus]);
+
+  if (voterStatus && !electionConfiguration) {
     return null;
   }
 
-  const { electionDefinition, ballotStyleId, precinctId } =
-    electionConfiguration;
-  const ballotStyle = find(
-    electionDefinition.election.ballotStyles,
-    (bs) => bs.id === ballotStyleId
-  );
-  const contests = getContests({
-    election: electionDefinition.election,
-    ballotStyle,
-  });
+  const ballotStyle =
+    electionConfiguration &&
+    find(
+      electionConfiguration.electionDefinition.election.ballotStyles,
+      (bs) => bs.id === electionConfiguration.ballotStyleId
+    );
+  const contests =
+    electionConfiguration && ballotStyle
+      ? getContests({
+          election: electionConfiguration.electionDefinition.election,
+          ballotStyle,
+        })
+      : [];
 
   function onStartVoting() {
-    onIsVotingSessionInProgressChanged(true);
+    setIsVoterSessionStillActive(true);
     setVoterFlowState((prev) => {
       assert(prev?.type === 'init');
       return {
@@ -238,20 +283,12 @@ function RegisteredStateScreen({
     });
   }
 
-  function onConfirmBallotSealedInEnvelope() {
-    setVoterFlowState((prev) => {
-      assert(prev?.type === 'post_vote');
-      return {
-        type: 'prompt_to_remove_common_access_card',
-      };
-    });
-  }
-
-  function onSubmitSuccess() {
+  function onSubmitSuccess(castBallotObjectId: Uuid) {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'submit');
       return {
         type: 'post_vote',
+        castBallotObjectId,
       };
     });
   }
@@ -267,28 +304,93 @@ function RegisteredStateScreen({
     });
   }
 
+  function onConfirmBallotSealedInEnvelope() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'post_vote');
+      return {
+        type: 'prompt_to_remove_common_access_card',
+        castBallotObjectId: prev.castBallotObjectId,
+      };
+    });
+  }
+
   function onReturnToSealBallotInEnvelope() {
     setVoterFlowState((prev) => {
       assert(prev?.type === 'prompt_to_remove_common_access_card');
       return {
         type: 'post_vote',
+        castBallotObjectId: prev.castBallotObjectId,
       };
     });
   }
 
+  function onMailingLabelPrintCompleted() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'print_mailing_label');
+      return {
+        type: 'attach_mailing_label',
+        castBallotObjectId: prev.castBallotObjectId,
+      };
+    });
+  }
+
+  function onConfirmMailingLabelAttached() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'attach_mailing_label');
+      return {
+        type: 'mail_ballot',
+        castBallotObjectId: prev.castBallotObjectId,
+      };
+    });
+  }
+
+  function onReprintMailingLabelPressed() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'attach_mailing_label');
+      return {
+        type: 'print_mailing_label',
+        castBallotObjectId: prev.castBallotObjectId,
+      };
+    });
+  }
+
+  function onReturnToAttachMailingLabel() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'mail_ballot');
+      return {
+        type: 'attach_mailing_label',
+        castBallotObjectId: prev.castBallotObjectId,
+      };
+    });
+  }
+
+  function onConfirmBallotMailInstructions() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'mail_ballot');
+      return {
+        type: 'finish',
+      };
+    });
+  }
+
+  function onFinishedScreenDismissed() {
+    setIsVoterSessionStillActive(false);
+    setVoterFlowState({ type: 'init' });
+  }
+
   switch (voterFlowState.type) {
     case 'init':
-      return (
+      return electionConfiguration ? (
         <Voting.StartScreen
-          electionDefinition={electionDefinition}
+          electionDefinition={electionConfiguration.electionDefinition}
           onStartVoting={onStartVoting}
         />
-      );
+      ) : null;
 
     case 'mark':
-      return (
+      return electionConfiguration ? (
         <Voting.MarkScreen
-          electionDefinition={electionDefinition}
+          electionDefinition={electionConfiguration.electionDefinition}
           contests={contests}
           contestIndex={voterFlowState.contestIndex}
           votes={voterFlowState.votes}
@@ -296,46 +398,46 @@ function RegisteredStateScreen({
           goNext={goMarkNext}
           goPrevious={goMarkPrevious}
         />
-      );
+      ) : null;
 
     case 'review_onscreen':
       if (typeof voterFlowState.contestIndex === 'number') {
-        return (
+        return electionConfiguration ? (
           <Voting.ReviewMarkScreen
-            electionDefinition={electionDefinition}
+            electionDefinition={electionConfiguration.electionDefinition}
             contests={contests}
             contestIndex={voterFlowState.contestIndex}
             votes={voterFlowState.votes}
             updateVote={updateVote}
             onReturnToReview={onReturnToReview}
           />
-        );
+        ) : null;
       }
 
-      return (
+      return electionConfiguration ? (
         <Voting.ReviewOnscreenBallotScreen
-          electionDefinition={electionDefinition}
+          electionDefinition={electionConfiguration.electionDefinition}
           contests={contests}
-          precinctId={precinctId}
+          precinctId={electionConfiguration.precinctId}
           votes={voterFlowState.votes}
           goToIndex={onReviewContestAtIndex}
           onConfirm={onReviewConfirm}
         />
-      );
+      ) : null;
 
     case 'print_ballot':
-      return (
+      return electionConfiguration ? (
         <Voting.PrintBallotScreen
-          electionDefinition={electionDefinition}
-          ballotStyleId={ballotStyleId}
-          precinctId={precinctId}
+          electionDefinition={electionConfiguration.electionDefinition}
+          ballotStyleId={electionConfiguration.ballotStyleId}
+          precinctId={electionConfiguration.precinctId}
           votes={voterFlowState.votes}
           generateBallotId={() => `${voterFlowState.serialNumber}`}
           // TODO: use live vs test mode?
           isLiveMode={false}
           onPrintCompleted={onPrintBallotCompleted}
         />
-      );
+      ) : null;
 
     case 'review_printed':
       return (
@@ -377,30 +479,49 @@ function RegisteredStateScreen({
         />
       );
 
+    case 'print_mailing_label':
+      return (
+        <Voting.PrintMailingLabelScreen
+          castBallotObjectId={voterFlowState.castBallotObjectId}
+          onPrintCompleted={onMailingLabelPrintCompleted}
+        />
+      );
+
+    case 'attach_mailing_label':
+      return (
+        <Voting.AttachMailingLabelScreen
+          onConfirmMailingLabelAttached={onConfirmMailingLabelAttached}
+          onReprintMailingLabelPressed={onReprintMailingLabelPressed}
+        />
+      );
+
+    case 'mail_ballot':
+      return (
+        <Voting.MailBallotScreen
+          onBack={onReturnToAttachMailingLabel}
+          onDone={onConfirmBallotMailInstructions}
+        />
+      );
+
+    case 'finish':
+      return <Voting.FinishedScreen onDone={onFinishedScreenDismissed} />;
+
     default:
       throwIllegalValue(voterFlowState);
   }
 }
 
-export function VoterFlowScreen(): JSX.Element | null {
-  const [isVotingSessionInProgress, setIsVotingSessionInProgress] =
-    useState(false);
+export interface VoterFlowScreenProps {
+  setIsVoterSessionStillActive: (isVoterSessionStillActive: boolean) => void;
+}
+
+export function VoterFlowScreen({
+  setIsVoterSessionStillActive,
+}: VoterFlowScreenProps): JSX.Element | null {
   const getVoterStatusQuery = getVoterStatus.useQuery();
-  const voterStatus = getVoterStatusQuery.data;
+  const voterStatus = getVoterStatusQuery.data?.status;
 
-  if (!voterStatus) {
-    return null;
-  }
-
-  if (isVotingSessionInProgress) {
-    return (
-      <RegisteredStateScreen
-        onIsVotingSessionInProgressChanged={setIsVotingSessionInProgress}
-      />
-    );
-  }
-
-  switch (voterStatus.status) {
+  switch (voterStatus) {
     case 'unregistered':
       return <Registration.StartScreen />;
 
@@ -408,9 +529,11 @@ export function VoterFlowScreen(): JSX.Element | null {
       return <Registration.StatusScreen />;
 
     case 'registered':
+    case undefined:
       return (
         <RegisteredStateScreen
-          onIsVotingSessionInProgressChanged={setIsVotingSessionInProgress}
+          voterStatus={voterStatus}
+          setIsVoterSessionStillActive={setIsVoterSessionStillActive}
         />
       );
 
@@ -418,6 +541,6 @@ export function VoterFlowScreen(): JSX.Element | null {
       return <Voting.AlreadyVotedScreen />;
 
     default:
-      throwIllegalValue(voterStatus.status);
+      throwIllegalValue(voterStatus);
   }
 }

@@ -327,15 +327,53 @@ function buildApi({
           signature
         );
 
-        const signatureHash = createHash('sha256').update(signature).digest();
+        (await store.addObject(object)).unsafeUnwrap();
+
+        return ok({ id: objectId });
+      });
+    },
+
+    async printMailingLabel(input: { castBallotObjectId: Uuid }) {
+      return asyncResultBlock(async (bail) => {
+        const castBallotObject = store.getObjectById(input.castBallotObjectId);
+
+        if (!castBallotObject) {
+          return err(
+            new Error(`Cast ballot not found: ${input.castBallotObjectId}`)
+          );
+        }
+
+        const castBallotPayload = castBallotObject
+          .getPayloadAsObjectType('CastBallot')
+          .okOrElse(bail);
+        const castBallot = castBallotPayload.getData();
+
+        const electionObject = store.getObjectById(
+          castBallot.getElectionObjectId()
+        );
+
+        if (!electionObject) {
+          return err(
+            new Error(`Election not found: ${castBallot.getElectionObjectId()}`)
+          );
+        }
+
+        const electionPayload = electionObject
+          .getPayloadAsObjectType(ElectionObjectType)
+          .okOrElse(bail);
+
+        const election = electionPayload.getData();
+
+        const signatureHash = createHash('sha256')
+          .update(castBallotObject.getSignature())
+          .digest();
         const ballotValidationPayload = new BallotVerificationPayload(
           VX_MACHINE_ID,
-          commonAccessCardId,
-          electionObjectId,
+          castBallot.getCommonAccessCardId(),
+          castBallot.getElectionObjectId(),
           signatureHash
         );
         const ballotValidationPayloadBuffer = ballotValidationPayload.encode();
-
         const machineAuthConfig = getMachineCertPathAndPrivateKey();
         const ballotValidationPayloadSignature = await cryptography.signMessage(
           {
@@ -362,9 +400,7 @@ function buildApi({
           { input: pdf }
         );
 
-        (await store.addObject(object)).unsafeUnwrap();
-
-        return ok({ id: objectId });
+        return ok();
       });
     },
 

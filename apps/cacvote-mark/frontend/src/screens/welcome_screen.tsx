@@ -1,6 +1,6 @@
 import { H1, Main, P, Screen } from '@votingworks/ui';
 
-export function NoCardScreen(): JSX.Element {
+export function WelcomeScreen(): JSX.Element {
   return (
     <Screen>
       <Main centerChild>

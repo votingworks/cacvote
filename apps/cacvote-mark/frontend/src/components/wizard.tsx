@@ -11,8 +11,9 @@ const WizardContainer = styled.div`
   height: 100%;
 `;
 
-const WizardHeader = styled.div`
+const WizardHeader = styled.div<{ centerContent?: boolean }>`
   text-align: center;
+  margin-bottom: ${({ centerContent }) => (centerContent ? 'auto' : '0')};
 `;
 
 export function WizardHeaderTitle({
@@ -38,7 +39,7 @@ const WizardBody = styled.div`
   width: 100%;
 `;
 
-const WizardFooter = styled.div`
+const WizardFooter = styled.div<{ centerContent?: boolean }>`
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
@@ -74,6 +75,19 @@ const WizardActionsRight = styled.div`
   width: 100%;
 `;
 
+const ButtonBarContainer = styled.div<{ count: number }>`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  width: 100%;
+
+  button {
+    font-size: 0.7rem;
+    min-width: ${({ count }) =>
+      count === 1 ? '50%' : count === 2 ? '95%' : 'auto'};
+  }
+`;
+
 export function WizardButtonBar({
   leftButton,
   rightButton,
@@ -82,10 +96,12 @@ export function WizardButtonBar({
   rightButton?: React.ReactNode;
 }): JSX.Element {
   return (
-    <React.Fragment>
+    <ButtonBarContainer
+      count={leftButton && rightButton ? 2 : leftButton || rightButton ? 1 : 0}
+    >
       {leftButton && <WizardActionsLeft>{leftButton}</WizardActionsLeft>}
       {rightButton && <WizardActionsRight>{rightButton}</WizardActionsRight>}
-    </React.Fragment>
+    </ButtonBarContainer>
   );
 }
 
@@ -94,6 +110,7 @@ export interface WizardProps {
   footer?: React.ReactNode;
   actions: React.ReactNode;
   children: React.ReactNode;
+  centerContent?: boolean;
 }
 
 export function Wizard({
@@ -101,12 +118,15 @@ export function Wizard({
   footer,
   actions,
   children,
+  centerContent,
 }: WizardProps): JSX.Element {
   return (
     <WizardContainer>
-      <WizardHeader>{header}</WizardHeader>
+      <WizardHeader centerContent={centerContent}>{header}</WizardHeader>
       <WizardBody>{children}</WizardBody>
-      {footer && <WizardFooter>{footer}</WizardFooter>}
+      {footer && (
+        <WizardFooter centerContent={centerContent}>{footer}</WizardFooter>
+      )}
       <WizardActions>{actions}</WizardActions>
     </WizardContainer>
   );
