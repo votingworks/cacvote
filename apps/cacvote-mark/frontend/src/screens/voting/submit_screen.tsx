@@ -1,3 +1,4 @@
+import { Uuid } from '@votingworks/cacvote-mark-backend';
 import { VotesDict } from '@votingworks/types';
 import { Main, Prose, Screen, fontSizeTheme } from '@votingworks/ui';
 import { useEffect } from 'react';
@@ -8,7 +9,7 @@ import { COMMON_ACCESS_CARD_PIN_LENGTH } from '../../globals';
 export interface SubmitScreenProps {
   votes: VotesDict;
   serialNumber: number;
-  onSubmitSuccess: () => void;
+  onSubmitSuccess: (castBallotObjectId: Uuid) => void;
   onCancel: () => void;
 }
 
@@ -27,8 +28,9 @@ export function SubmitScreen({
   }
 
   useEffect(() => {
-    if (castBallotMutation.data?.ok()) {
-      onSubmitSuccess();
+    const castBallotResult = castBallotMutation.data;
+    if (castBallotResult?.isOk()) {
+      onSubmitSuccess(castBallotResult.ok().id);
     }
   }, [castBallotMutation.data, onSubmitSuccess]);
 
