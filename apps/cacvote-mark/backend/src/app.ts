@@ -1,33 +1,50 @@
-import { cac } from '@votingworks/auth';
 import {
-  err,
-  ok,
+  cac,
+  cryptography,
+  getMachineCertPathAndPrivateKey,
+} from '@votingworks/auth';
+import { VX_MACHINE_ID, buildCastVoteRecord } from '@votingworks/backend';
+import {
   Optional,
   Result,
+  asyncResultBlock,
+  err,
+  ok,
   throwIllegalValue,
 } from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
 import {
+  BallotIdSchema,
   BallotStyleId,
+  BallotType,
   ElectionDefinition,
   PrecinctId,
-  unsafeParse,
   VotesDict,
+  unsafeParse,
 } from '@votingworks/types';
+import { Buffer } from 'buffer';
+import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import express, { Application } from 'express';
-import { isDeepStrictEqual } from 'util';
-import { v4 } from 'uuid';
 import { DateTime } from 'luxon';
-import { Auth, AuthStatus } from './types/auth';
-import { Workspace } from './workspace';
+import { Readable } from 'stream';
+import { isDeepStrictEqual } from 'util';
+import { z } from 'zod';
 import {
+  Election,
+  ElectionObjectType,
   JurisdictionCode,
   Payload,
   RegistrationRequest,
   SignedObject,
   Uuid,
-  UuidSchema,
 } from './cacvote-server/types';
+import { createEncryptedBallotPayload } from './electionguard';
+import { MAILING_LABEL_PRINTER } from './globals';
+import * as mailingLabel from './mailing_label';
+import { Auth, AuthStatus } from './types/auth';
+import { BallotVerificationPayload, SignedBuffer } from './verification';
+import { Workspace } from './workspace';
 
 export type VoterStatus =
   | 'unregistered'
@@ -155,9 +172,10 @@ function buildApi({
       }
 
       const certificates = await auth.getCertificate();
-      const objectId = unsafeParse(UuidSchema, v4());
+      const objectId = Uuid();
       const object = new SignedObject(
         objectId,
+        undefined,
         payload,
         certificates,
         generateSignatureResult.ok()
@@ -181,17 +199,209 @@ function buildApi({
         return undefined;
       }
 
-      // TODO: get election configuration for the user
-      return undefined;
+      const registrationInfo = store
+        .forEachRegistration({
+          commonAccessCardId: authStatus.card.commonAccessCardId,
+        })
+        .first();
+
+      if (!registrationInfo) {
+        return undefined;
+      }
+
+      const electionObjectId =
+        registrationInfo.registration.getElectionObjectId();
+      const electionObject = store.getObjectById(electionObjectId);
+
+      if (!electionObject) {
+        throw new Error(`Election not found: ${electionObjectId}`);
+      }
+
+      const electionPayloadResult = electionObject.getPayload();
+
+      if (electionPayloadResult.isErr()) {
+        throw new Error(electionPayloadResult.err().message);
+      }
+
+      const electionPayload = electionPayloadResult.ok();
+      const election = electionPayload.getData();
+
+      if (!(election instanceof Election)) {
+        throw new Error(
+          `Expected 'Election' but was ${electionPayload.getObjectType()}`
+        );
+      }
+
+      return {
+        electionDefinition: election.getElectionDefinition(),
+        ballotStyleId: registrationInfo.registration.getBallotStyleId(),
+        precinctId: registrationInfo.registration.getPrecinctId(),
+      };
     },
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    castBallot(_input: {
+    castBallot(input: {
       votes: VotesDict;
+      serialNumber: number;
       pin: string;
-    }): Promise<Result<Uuid, cac.GenerateSignatureError>> {
-      // TODO: cast and print the ballot
-      throw new Error('Not implemented');
+    }): Promise<
+      Result<
+        { id: Uuid },
+        cac.GenerateSignatureError | SyntaxError | z.ZodError
+      >
+    > {
+      return asyncResultBlock(async (bail) => {
+        const authStatus = await getAuthStatus();
+
+        if (authStatus.status !== 'has_card') {
+          throw new Error('Not logged in');
+        }
+
+        const { commonAccessCardId } = authStatus.card;
+        // TODO: Handle multiple registrations
+        const registration = store
+          .forEachRegistration({ commonAccessCardId })
+          .first();
+
+        if (!registration) {
+          throw new Error('Not registered');
+        }
+
+        const electionObjectId =
+          registration.registration.getElectionObjectId();
+        const electionObject = store.getObjectById(electionObjectId);
+
+        if (!electionObject) {
+          throw new Error(`Election not found: ${electionObjectId}`);
+        }
+
+        const electionPayload = electionObject
+          .getPayloadAsObjectType(ElectionObjectType)
+          .okOrElse(bail);
+        const election = electionPayload.getData();
+        const electionDefinition = election.getElectionDefinition();
+
+        const ballotId = `${input.serialNumber}`;
+        const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
+        const castVoteRecord = buildCastVoteRecord({
+          electionDefinition,
+          electionId: electionDefinition.electionHash,
+          scannerId: VX_MACHINE_ID,
+          // TODO: what should the batch ID be?
+          batchId: '',
+          castVoteRecordId,
+          interpretation: {
+            type: 'InterpretedBmdPage',
+            metadata: {
+              ballotStyleId: registration.registration.getBallotStyleId(),
+              precinctId: registration.registration.getPrecinctId(),
+              ballotType: BallotType.Absentee,
+              electionHash: electionDefinition.electionHash,
+              // TODO: support test mode
+              isTestMode: false,
+            },
+            votes: input.votes,
+          },
+          ballotMarkingMode: 'machine',
+        });
+
+        const payload = createEncryptedBallotPayload(
+          commonAccessCardId,
+          electionPayload,
+          registration.registration.getRegistrationRequestObjectId(),
+          registration.object.getId(),
+          electionObjectId,
+          castVoteRecord,
+          input.serialNumber
+        );
+
+        const signature = (
+          await auth.generateSignature(payload.toBuffer(), { pin: input.pin })
+        ).okOrElse(bail);
+        const commonAccessCardCertificate = await auth.getCertificate();
+        const objectId = Uuid();
+        const object = new SignedObject(
+          objectId,
+          electionObjectId,
+          payload.toBuffer(),
+          commonAccessCardCertificate,
+          signature
+        );
+
+        (await store.addObject(object)).unsafeUnwrap();
+
+        return ok({ id: objectId });
+      });
+    },
+
+    async printMailingLabel(input: { castBallotObjectId: Uuid }) {
+      return asyncResultBlock(async (bail) => {
+        const castBallotObject = store.getObjectById(input.castBallotObjectId);
+
+        if (!castBallotObject) {
+          return err(
+            new Error(`Cast ballot not found: ${input.castBallotObjectId}`)
+          );
+        }
+
+        const castBallotPayload = castBallotObject
+          .getPayloadAsObjectType('CastBallot')
+          .okOrElse(bail);
+        const castBallot = castBallotPayload.getData();
+
+        const electionObject = store.getObjectById(
+          castBallot.getElectionObjectId()
+        );
+
+        if (!electionObject) {
+          return err(
+            new Error(`Election not found: ${castBallot.getElectionObjectId()}`)
+          );
+        }
+
+        const electionPayload = electionObject
+          .getPayloadAsObjectType(ElectionObjectType)
+          .okOrElse(bail);
+
+        const election = electionPayload.getData();
+
+        const signatureHash = createHash('sha256')
+          .update(castBallotObject.getSignature())
+          .digest();
+        const ballotValidationPayload = new BallotVerificationPayload(
+          VX_MACHINE_ID,
+          castBallot.getCommonAccessCardId(),
+          castBallot.getElectionObjectId(),
+          signatureHash
+        );
+        const ballotValidationPayloadBuffer = ballotValidationPayload.encode();
+        const machineAuthConfig = getMachineCertPathAndPrivateKey();
+        const ballotValidationPayloadSignature = await cryptography.signMessage(
+          {
+            message: Readable.from(ballotValidationPayloadBuffer),
+            signingPrivateKey: machineAuthConfig.privateKey,
+          }
+        );
+        const signedBuffer = new SignedBuffer(
+          ballotValidationPayloadBuffer,
+          ballotValidationPayloadSignature
+        );
+        const qrCodeData = Buffer.from(
+          signedBuffer.encode().toString('base64')
+        );
+
+        const pdf = await mailingLabel.buildPdf({
+          mailingAddress: election.getMailingAddress(),
+          qrCodeData,
+        });
+
+        execFileSync(
+          'lpr',
+          ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
+          { input: pdf }
+        );
+
+        return ok();
+      });
     },
 
     logOut() {

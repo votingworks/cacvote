@@ -73,6 +73,10 @@ export const getAuthStatus = {
       );
 
       eventSource.addEventListener('message', (event) => {
+        void queryClient.invalidateQueries({
+          predicate: (query) =>
+            query.queryKey[0] !== getAuthStatus.queryKey()[0],
+        });
         const authStatus = grout.deserialize(event.data) as AuthStatus;
         queryClient.setQueryData(getAuthStatus.queryKey(), authStatus);
       });
@@ -101,10 +105,11 @@ export const getVoterStatus = {
     const apiClient = useApiClient();
     return useQuery(
       this.queryKey(),
-      async () => (await apiClient.getVoterStatus()) ?? null,
-      {
-        staleTime: 0,
-      }
+      async () => {
+        const voterStatus = await apiClient.getVoterStatus();
+        return voterStatus ?? null;
+      },
+      { staleTime: 0 }
     );
   },
 } as const;
@@ -152,6 +157,18 @@ export const castBallot = {
     const apiClient = useApiClient();
     const queryClient = useQueryClient();
     return useMutation(apiClient.castBallot, {
+      async onSuccess() {
+        await queryClient.invalidateQueries();
+      },
+    });
+  },
+} as const;
+
+export const printMailingLabel = {
+  useMutation() {
+    const apiClient = useApiClient();
+    const queryClient = useQueryClient();
+    return useMutation(apiClient.printMailingLabel, {
       async onSuccess() {
         await queryClient.invalidateQueries();
       },

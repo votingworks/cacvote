@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                  id,\n                  object_id,\n                  election_id,\n                  jurisdiction,\n                  object_type,\n                  action as \"action: JournalEntryAction\",\n                  created_at\n                FROM journal_entries\n                WHERE created_at > (SELECT created_at FROM journal_entries WHERE id = $1)\n                  AND jurisdiction = $2\n                ORDER BY created_at\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "object_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "jurisdiction",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "object_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "action: JournalEntryAction",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6605868b6a6b1203dbe305b7137cef7a64d33439f59e15c0eee66ae521dbf4e2"
+}

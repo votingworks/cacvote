@@ -61,6 +61,14 @@
       "name": "libs/dev-dock/frontend"
     },
     {
+      "path": "libs/electionguard",
+      "name": "libs/electionguard"
+    },
+    {
+      "path": "libs/electionguard-rs",
+      "name": "libs/electionguard-rs"
+    },
+    {
       "path": "libs/eslint-plugin-vx",
       "name": "libs/eslint-plugin-vx"
     },
@@ -137,7 +145,12 @@
       "name": "script"
     },
     {
-      "path": "services/cacvote-server"
+      "path": "apps/cacvote-server/backend",
+      "name": "apps/cacvote-server/backend"
+    },
+    {
+      "path": "apps/cacvote-server/frontend",
+      "name": "apps/cacvote-server/frontend"
     },
     {
       "path": "."
@@ -160,7 +173,9 @@
       "canonicalizes",
       "cardless",
       "castability",
+      "CLASSPATH",
       "cvrs",
+      "ELECTIONGUARD",
       "frontends",
       "hmpb",
       "imdebug",

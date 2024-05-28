@@ -1,5 +1,5 @@
 import { cac } from '@votingworks/auth';
-import { assertDefined, throwIllegalValue } from '@votingworks/basics';
+import { throwIllegalValue } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
 import { Server } from 'http';
 import { buildApp } from './app';
@@ -36,7 +36,12 @@ function getDefaultAuth(): Auth {
           return { status: 'no_card' };
 
         case 'ready': {
-          const cardDetails = assertDefined(status.cardDetails);
+          const { cardDetails } = status;
+
+          if (!cardDetails) {
+            return { status: 'no_card' };
+          }
+
           return {
             status: 'has_card',
             card: cardDetails,

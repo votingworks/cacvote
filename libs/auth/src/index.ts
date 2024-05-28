@@ -15,3 +15,4 @@ export * from './jurisdictions';
 export * from './live_check';
 export * from './mock_file_card';
 export * from './test_utils';
+export { constructTlv, parseTlv, parseTlvList } from './apdu';

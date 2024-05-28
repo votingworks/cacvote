@@ -36,3 +36,8 @@ const DEFAULT_ALLOWED_EXPORT_PATTERNS =
 export const SCAN_ALLOWED_EXPORT_PATTERNS =
   process.env.SCAN_ALLOWED_EXPORT_PATTERNS?.split(',') ??
   DEFAULT_ALLOWED_EXPORT_PATTERNS;
+
+/**
+ * Path to the ElectionGuard JAR file.
+ */
+export const ELECTIONGUARD_CLASSPATH = process.env.EG_CLASSPATH;

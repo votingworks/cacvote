@@ -2,11 +2,7 @@ APP := cacvote-jx-terminal
 
 ALL: build
 
-clean: clean-frontend clean-backend
-
-clean-frontend:
-	@echo "🧹 Cleaning frontend…"
-	@cd frontend && dx clean
+clean: clean-backend
 
 clean-backend:
 	@echo "🧹 Cleaning backend…"
@@ -16,7 +12,7 @@ build: build-frontend build-backend
 
 build-frontend:
 	@echo "🛠️ Building frontend…"
-	@cd frontend && dx build --release
+	@cd frontend && pnpm build
 
 build-backend:
 	@echo "🛠️ Building backend…"
@@ -25,7 +21,7 @@ build-backend:
 dist: build
 	@echo "📦 Packaging application…"
 	@rm -rf dist && mkdir dist
-	@cp -r frontend/dist dist/public
+	@cp -r frontend/build dist/public
 	@cp ../../target/release/$(APP)-backend dist/$(APP)
 	@echo "- \e[34;4mdist/public\e[0m: frontend assets"
 	@echo "- \e[34;4mdist/$(APP)\e[0m: application binary"

@@ -1,0 +1,19 @@
+[package]
+edition = "2021"
+name = "electionguard"
+version = "0.0.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+color-eyre = { workspace = true }
+electionguard-rs = { workspace = true }
+napi = { workspace = true }
+napi-derive = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+types-rs = { workspace = true }
+
+[build-dependencies]
+napi-build = "2.0.1"

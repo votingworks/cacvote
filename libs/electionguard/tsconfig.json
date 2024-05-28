@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.shared.json",
+  "include": ["index.d.ts", "index.test.ts", "types.d.ts"],
+  "exclude": [],
+  "compilerOptions": {
+    "module": "node16",
+    "lib": ["esnext"],
+    "composite": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "references": [
+    { "path": "../../libs/eslint-plugin-vx/tsconfig.build.json" },
+    { "path": "../../libs/fs/tsconfig.build.json" }
+  ]
+}
