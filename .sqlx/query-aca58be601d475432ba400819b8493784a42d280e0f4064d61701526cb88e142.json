@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id,\n            object_id,\n            election_id,\n            jurisdiction as \"jurisdiction_code: cacvote::JurisdictionCode\",\n            object_type,\n            action,\n            created_at\n        FROM journal_entries\n        WHERE object_id IS NOT NULL\n          AND object_type IN ($1, $2)\n          AND object_id NOT IN (SELECT id FROM objects)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "object_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "jurisdiction_code: cacvote::JurisdictionCode",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "object_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "action",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "aca58be601d475432ba400819b8493784a42d280e0f4064d61701526cb88e142"
+}

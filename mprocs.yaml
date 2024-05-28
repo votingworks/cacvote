@@ -1,17 +1,17 @@
 procs:
-  cacvote-server:
-    cwd: 'services/cacvote-server'
-    shell: 'cargo watch -x run'
+  cacvote-server-backend:
+    cwd: 'apps/cacvote-server/backend'
+    shell: 'cargo watch -- cargo run'
+  cacvote-server-frontend:
+    cwd: 'apps/cacvote-server/frontend'
+    shell: 'pnpm start'
 
   cacvote-jx-backend:
     cwd: 'apps/cacvote-jx-terminal/backend'
-    shell: 'cargo watch -x run'
+    shell: 'cargo watch -- cargo run --bin cacvote-jx-terminal-backend'
   cacvote-jx-frontend:
     cwd: 'apps/cacvote-jx-terminal/frontend'
-    shell: 'dx serve --port 5000'
-  cacvote-jx-frontend-css:
-    cwd: 'apps/cacvote-jx-terminal/frontend'
-    shell: 'pnpm tailwindcss -i input.css -o ./public/styles.css --watch'
+    shell: 'pnpm start'
 
   cacvote-mark:
     cwd: 'apps/cacvote-mark/frontend'

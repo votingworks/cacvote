@@ -1,7 +1,10 @@
 import { Buffer } from 'buffer';
 import puppeteer from 'puppeteer';
 import { dirSync } from 'tmp';
-import xml, { XmlAttrs, XmlObject } from 'xml';
+import xml from 'xml';
+import { QrCode } from './rendering/qrcode';
+import { randomTrackingNumberBarcode } from './rendering/random_barcode';
+import { line, offset, rect, svg, text } from './rendering/utils';
 
 export const SIZE_INCHES = {
   width: 4,
@@ -13,70 +16,13 @@ export const SIZE_POINTS = {
   height: SIZE_INCHES.height * 96,
 } as const;
 
-function svg(attributes: XmlAttrs = {}, ...children: XmlObject[]): XmlObject {
-  return { svg: [{ _attr: attributes }, ...children] };
-}
-
-function g(attributes: XmlAttrs = {}, ...children: XmlObject[]): XmlObject {
-  return { g: [{ _attr: attributes }, ...children] };
-}
-
-function offset(
-  { x, y }: { x: number; y: number },
-  ...children: XmlObject[]
-): XmlObject {
-  return g({ transform: `translate(${x}, ${y})` }, ...children);
-}
-
-function rect(attributes: XmlAttrs = {}): XmlObject {
-  return { rect: [{ _attr: attributes }] };
-}
-
-function line(attributes: XmlAttrs = {}): XmlObject {
-  return { line: [{ _attr: attributes }] };
-}
-
-function text(value: string, attributes: XmlAttrs): XmlObject {
-  return { text: [{ _attr: attributes }, value] };
-}
-
-function trackingNumberBarcode({
-  width,
-  height,
+export function buildSvg({
+  mailingAddress,
+  qrCodeData,
 }: {
-  width: number;
-  height: number;
-}): XmlObject {
-  const lines: XmlObject[] = [];
-
-  let bias = 0;
-
-  for (let i = 0; i < width * 2; i += 1) {
-    if (Math.random() < 0.5 - bias) {
-      lines.push(
-        line({
-          x1: i,
-          y1: 0,
-          x2: i,
-          y2: height,
-          stroke: 'black',
-          'stroke-width': 1,
-        })
-      );
-      bias += 0.1;
-    } else {
-      bias -= 0.1;
-    }
-  }
-
-  return g({}, ...lines);
-}
-
-export function buildSvg2(): string {
-  return xml({});
-}
-
-export function buildSvg(): string {
+  mailingAddress: string;
+  qrCodeData: Uint8Array;
+}): string {
   const padding = {
     x: 5.76,
     y: 12.48,
@@ -87,6 +33,8 @@ export function buildSvg(): string {
   } as const;
   const thickBorderSize = 4;
   const mediumBorderSize = 3;
+
+  const mailingAddressLines = mailingAddress.split('\n').map((l) => l.trim());
 
   return xml(
     svg(
@@ -181,21 +129,7 @@ export function buildSvg(): string {
           ),
 
           // QR Code
-          offset(
-            { x: 290, y: 8 },
-            svg(
-              { width: 80, height: 70 },
-              {
-                path: {
-                  _attr: {
-                    d: 'm 16,16 0,16 0,16 0,16 0,16 0,16 0,16 0,16 16,0 16,0 16,0 16,0 16,0 16,0 16,0 0,-16 0,-16 0,-16 0,-16 0,-16 0,-16 0,-16 -16,0 -16,0 -16,0 -16,0 -16,0 -16,0 -16,0 z m 128,0 0,16 0,16 16,0 0,-16 16,0 0,-16 -16,0 -16,0 z m 32,16 0,16 16,0 0,-16 -16,0 z m 16,16 0,16 16,0 16,0 0,-16 0,-16 0,-16 -16,0 0,16 0,16 -16,0 z m 0,16 -16,0 -16,0 -16,0 0,16 16,0 16,0 0,16 -16,0 0,16 16,0 0,16 16,0 0,-16 16,0 0,16 -16,0 0,16 -16,0 0,16 16,0 16,0 0,16 16,0 0,-16 0,-16 0,-16 0,-16 0,-16 -16,0 0,-16 -16,0 0,-16 z m 16,112 -16,0 0,16 -16,0 0,16 0,16 16,0 0,16 0,16 -16,0 -16,0 0,-16 16,0 0,-16 -16,0 0,-16 0,-16 -16,0 0,-16 16,0 0,16 16,0 0,-16 0,-16 -16,0 -16,0 0,-16 -16,0 -16,0 -16,0 0,16 -16,0 0,16 -16,0 0,-16 16,0 0,-16 -16,0 -16,0 0,16 -16,0 0,16 0,16 0,16 16,0 0,-16 16,0 16,0 16,0 0,-16 16,0 0,-16 16,0 0,16 -16,0 0,16 16,0 0,16 -16,0 0,16 16,0 16,0 0,16 0,16 0,16 16,0 0,16 16,0 16,0 16,0 0,16 -16,0 -16,0 -16,0 0,-16 -16,0 0,16 0,16 16,0 0,16 -16,0 0,16 16,0 16,0 0,-16 16,0 0,16 16,0 16,0 16,0 16,0 0,-16 16,0 0,16 16,0 16,0 16,0 0,-16 -16,0 -16,0 0,-16 -16,0 0,-16 -16,0 0,16 -16,0 -16,0 0,16 -16,0 0,-16 16,0 0,-16 0,-16 0,-16 16,0 0,-16 -16,0 -16,0 0,-16 16,0 0,-16 0,-16 0,-16 -16,0 0,-16 z m 48,128 0,-16 -16,0 0,16 16,0 z m 32,16 16,0 16,0 0,-16 -16,0 -16,0 0,16 z m 32,-16 16,0 0,-16 0,-16 0,-16 0,-16 -16,0 -16,0 -16,0 0,-16 -16,0 0,16 -16,0 0,16 0,16 16,0 0,-16 16,0 0,16 0,16 16,0 16,0 0,16 z m -48,-80 0,-16 -16,0 -16,0 0,16 16,0 16,0 z m 16,0 16,0 0,-16 0,-16 0,-16 16,0 0,16 16,0 0,16 16,0 0,-16 0,-16 -16,0 0,-16 16,0 0,-16 -16,0 -16,0 0,16 -16,0 0,-16 -16,0 0,16 -16,0 0,16 16,0 0,16 0,16 0,16 z m -16,-48 -16,0 0,16 16,0 0,-16 z m 64,32 -16,0 0,16 16,0 0,-16 z m -224,0 0,-16 -16,0 0,16 16,0 z m -16,0 -16,0 -16,0 -16,0 0,16 16,0 16,0 16,0 0,-16 z m -64,0 -16,0 0,16 16,0 0,-16 z m 0,-48 0,-16 -16,0 0,16 16,0 z m 112,-16 16,0 0,-16 0,-16 -16,0 0,16 0,16 z m 96,-128 0,16 0,16 0,16 0,16 0,16 0,16 0,16 16,0 16,0 16,0 16,0 16,0 16,0 16,0 0,-16 0,-16 0,-16 0,-16 0,-16 0,-16 0,-16 -16,0 -16,0 -16,0 -16,0 -16,0 -16,0 -16,0 z m -208,16 16,0 16,0 16,0 16,0 16,0 0,16 0,16 0,16 0,16 0,16 -16,0 -16,0 -16,0 -16,0 -16,0 0,-16 0,-16 0,-16 0,-16 0,-16 z m 224,0 16,0 16,0 16,0 16,0 16,0 0,16 0,16 0,16 0,16 0,16 -16,0 -16,0 -16,0 -16,0 -16,0 0,-16 0,-16 0,-16 0,-16 0,-16 z m -208,16 0,16 0,16 0,16 16,0 16,0 16,0 0,-16 0,-16 0,-16 -16,0 -16,0 -16,0 z m 224,0 0,16 0,16 0,16 16,0 16,0 16,0 0,-16 0,-16 0,-16 -16,0 -16,0 -16,0 z m -32,96 0,16 16,0 0,-16 -16,0 z m -224,96 0,16 0,16 0,16 0,16 0,16 0,16 0,16 16,0 16,0 16,0 16,0 16,0 16,0 16,0 0,-16 0,-16 0,-16 0,-16 0,-16 0,-16 0,-16 -16,0 -16,0 -16,0 -16,0 -16,0 -16,0 -16,0 z m 16,16 16,0 16,0 16,0 16,0 16,0 0,16 0,16 0,16 0,16 0,16 -16,0 -16,0 -16,0 -16,0 -16,0 0,-16 0,-16 0,-16 0,-16 0,-16 z m 16,16 0,16 0,16 0,16 16,0 16,0 16,0 0,-16 0,-16 0,-16 -16,0 -16,0 -16,0 z m 288,48 0,16 16,0 0,-16 -16,0 z',
-                    transform: 'scale(0.20)',
-                    style: 'fill: #000000; stroke: none;',
-                  },
-                },
-              }
-            )
-          ),
+          offset({ x: 290, y: 8 }, QrCode(qrCodeData)),
 
           // USPS Priority Mail
           offset(
@@ -223,50 +157,6 @@ export function buildSvg(): string {
             )
           ),
 
-          // Return Address
-          offset(
-            { x: 12, y: 84 + 35 },
-            svg(
-              { width: inner.width, height: 96 },
-              text('Jane Doe', {
-                x: 0,
-                y: 0,
-                'dominant-baseline': 'hanging',
-                'font-size': 10,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('Example Military Base', {
-                x: 0,
-                y: 11,
-                'dominant-baseline': 'hanging',
-                'font-size': 10,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('1234 Main St', {
-                x: 0,
-                y: 22,
-                'dominant-baseline': 'hanging',
-                'font-size': 10,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('Anytown, CA 95959', {
-                x: 0,
-                y: 33,
-                'dominant-baseline': 'hanging',
-                'font-size': 10,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              })
-            )
-          ),
-
           // Shipping Address
           offset(
             { x: 12, y: 84 + 35 + 39 + 13 + 55 },
@@ -290,33 +180,17 @@ export function buildSvg(): string {
                 fill: 'black',
                 style: 'text-transform: uppercase;',
               }),
-              text('Ballot Receiving Center', {
-                x: 55,
-                y: 0,
-                'dominant-baseline': 'hanging',
-                'font-size': 14,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('1234 Main St', {
-                x: 55,
-                y: 16,
-                'dominant-baseline': 'hanging',
-                'font-size': 14,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              }),
-              text('Anytown, CA 95959', {
-                x: 55,
-                y: 32,
-                'dominant-baseline': 'hanging',
-                'font-size': 14,
-                'font-family': 'open-sans, sans-serif',
-                fill: 'black',
-                style: 'text-transform: uppercase;',
-              })
+              ...mailingAddressLines.map((l, i) =>
+                text(l, {
+                  x: 55,
+                  y: i * 16,
+                  'dominant-baseline': 'hanging',
+                  'font-size': 14,
+                  'font-family': 'open-sans, sans-serif',
+                  fill: 'black',
+                  style: 'text-transform: uppercase;',
+                })
+              )
             )
           ),
 
@@ -337,7 +211,7 @@ export function buildSvg(): string {
               }),
               offset(
                 { x: 0, y: 12 },
-                trackingNumberBarcode({
+                randomTrackingNumberBarcode({
                   width: inner.width - inner.width / 10,
                   height: 72,
                 }),
@@ -361,8 +235,14 @@ export function buildSvg(): string {
   ).toString();
 }
 
-export async function buildPdf(): Promise<Buffer> {
-  const content = buildSvg();
+export async function buildPdf({
+  mailingAddress,
+  qrCodeData,
+}: {
+  mailingAddress: string;
+  qrCodeData: Uint8Array;
+}): Promise<Buffer> {
+  const content = buildSvg({ mailingAddress, qrCodeData });
   const userDataDirTemp = dirSync({ unsafeCleanup: true });
   const browser = await puppeteer.launch({
     executablePath: '/usr/bin/chromium',

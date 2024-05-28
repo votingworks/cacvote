@@ -54,6 +54,7 @@ async function getSignedObjectForPayload(
   });
   return new SignedObject(
     Uuid(),
+    Uuid(),
     payloadBuffer,
     await getSigningKeyCertificateAuthority(),
     signature
@@ -196,6 +197,7 @@ test('sync / getJournalEntries success / no entries', async () => {
 test('sync / getJournalEntries success / with entries', async () => {
   const journalEntryId = Uuid();
   const objectId = Uuid();
+  const electionId = Uuid();
   const jurisdictionCode = unsafeParse(
     JurisdictionCodeSchema,
     'st.test-jurisdiction'
@@ -203,6 +205,7 @@ test('sync / getJournalEntries success / with entries', async () => {
   const journalEntry = new JournalEntry(
     journalEntryId,
     objectId,
+    electionId,
     jurisdictionCode,
     'objectType',
     'create',
@@ -355,6 +358,7 @@ test('sync / fetches RegistrationRequest objects', async () => {
   const journalEntry = new JournalEntry(
     Uuid(),
     object.getId(),
+    undefined,
     jurisdictionCode,
     RegistrationRequestObjectType,
     'create',
@@ -389,6 +393,7 @@ test('sync / fetch ignores unknown object types', async () => {
   const journalEntry = new JournalEntry(
     Uuid(),
     objectId,
+    undefined,
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
     'UnknownType',
     'create',
@@ -414,9 +419,11 @@ test('sync / fetch ignores unknown object types', async () => {
 
 test('sync / fetch failing to get object', async () => {
   const objectId = Uuid();
+  const electionId = Uuid();
   const journalEntry = new JournalEntry(
     Uuid(),
     objectId,
+    electionId,
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
     'Registration',
     'create',
@@ -455,9 +462,11 @@ test('sync / fetch failing to get object', async () => {
 
 test('sync / fetch object but object does not exist', async () => {
   const objectId = Uuid();
+  const electionId = Uuid();
   const journalEntry = new JournalEntry(
     Uuid(),
     objectId,
+    electionId,
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
     'Registration',
     'create',
@@ -504,6 +513,7 @@ test('sync / fetch object but cannot add to store', async () => {
   const journalEntry = new JournalEntry(
     Uuid(),
     object.getId(),
+    Uuid(),
     unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
     RegistrationRequestObjectType,
     'create',

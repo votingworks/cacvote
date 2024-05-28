@@ -23,9 +23,9 @@ pub(crate) fn verify_cast_vote_record(
     let common_access_card_certificate = match X509::from_pem(common_access_card_certificate) {
         Ok(x509) => x509,
         Err(err) => {
-            return VerificationStatus::Error(format!(
-                "error parsing X509 certificate from PEM format: {err}"
-            ));
+            return VerificationStatus::Error {
+                message: format!("error parsing X509 certificate from PEM format: {err}"),
+            };
         }
     };
 
@@ -37,18 +37,18 @@ pub(crate) fn verify_cast_vote_record(
             return VerificationStatus::Failure;
         }
         Err(err) => {
-            return VerificationStatus::Error(format!(
-                "error verifying CAC certificate against {ca:?} CA: {err}"
-            ));
+            return VerificationStatus::Error {
+                message: format!("error verifying CAC certificate against {ca:?} CA: {err}"),
+            };
         }
     }
 
     let public_key = match common_access_card_certificate.public_key() {
         Ok(public_key) => public_key,
         Err(err) => {
-            return VerificationStatus::Error(format!(
-                "error extracting public key from X509 certificate: {err}"
-            ));
+            return VerificationStatus::Error {
+                message: format!("error extracting public key from X509 certificate: {err}"),
+            };
         }
     };
 
@@ -60,7 +60,9 @@ pub(crate) fn verify_cast_vote_record(
             return VerificationStatus::Failure;
         }
         Err(err) => {
-            return VerificationStatus::Error(format!("error verifying signature: {err}"));
+            return VerificationStatus::Error {
+                message: format!("error verifying signature: {err}"),
+            };
         }
     }
 
@@ -71,9 +73,9 @@ pub(crate) fn verify_cast_vote_record(
         middle_name,
     }) = extract_common_name_metadata(&common_access_card_certificate)
     else {
-        return VerificationStatus::Error(
-            "could not extract and parse CN field from X509 certificate".to_owned(),
-        );
+        return VerificationStatus::Error {
+            message: "could not extract and parse CN field from X509 certificate".to_owned(),
+        };
     };
     let display_name = format!("{surname}, {given_name} {middle_name}")
         .trim()

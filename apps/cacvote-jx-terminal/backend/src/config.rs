@@ -1,6 +1,6 @@
 //! Application configuration.
 
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 use clap::Parser;
 use types_rs::cacvote::JurisdictionCode;
@@ -35,9 +35,13 @@ pub(crate) struct Config {
 
     /// Directory to serve static files from.
     #[arg(long, env = "PUBLIC_DIR")]
-    pub(crate) public_dir: Option<std::path::PathBuf>,
+    pub(crate) public_dir: Option<PathBuf>,
 
     /// Log level.
     #[arg(long, env = "LOG_LEVEL", default_value = "info")]
     pub(crate) log_level: tracing::Level,
+
+    /// ElectionGuard Java CLI CLASSPATH.
+    #[arg(long, env = "EG_CLASSPATH")]
+    pub(crate) eg_classpath: PathBuf,
 }

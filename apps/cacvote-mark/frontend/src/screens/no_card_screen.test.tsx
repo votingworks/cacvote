@@ -1,7 +1,7 @@
 import { renderWithThemes as render } from '@votingworks/ui';
-import { NoCardScreen } from './no_card_screen';
+import { WelcomeScreen } from './welcome_screen';
 
 test('renders', () => {
-  const { container } = render(<NoCardScreen />);
+  const { container } = render(<WelcomeScreen />);
   expect(container).toMatchSnapshot();
 });

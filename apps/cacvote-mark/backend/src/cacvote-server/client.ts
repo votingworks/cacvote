@@ -52,7 +52,7 @@ export class Client {
   async createObject(signedObject: SignedObject): Promise<ClientResult<Uuid>> {
     return asyncResultBlock(async (bail) => {
       const response = (
-        await this.post('/api/objects', JSON.stringify(signedObject))
+        await this.post('/api/objects', JSON.stringify(signedObject, null, 2))
       ).okOrElse(bail);
 
       if (!response.ok) {

@@ -1,27 +1,23 @@
-import { Button, H1, Main, P, Screen } from '@votingworks/ui';
+import { throwIllegalValue } from '@votingworks/basics';
+import { Button, Main, P, Screen } from '@votingworks/ui';
+import { useState } from 'react';
 import styled from 'styled-components';
-import { ReviewIcon } from './review_icon';
+import { RadioBox } from '../../components/radio_box';
+import {
+  Wizard,
+  WizardButtonBar,
+  WizardHeaderTitle,
+} from '../../components/wizard';
+import { WizardSteps } from '../../components/wizard_step';
+import { steps } from './steps';
 
-export const IconAndBody = styled.div`
+const ButtonsRow = styled.div`
   display: flex;
   flex-direction: row;
-  justify-content: center;
-  width: 74%;
-
-  > * {
-    padding: 20px;
-    max-width: 65%;
-  }
-`;
-
-export const ButtonsRow = styled.div`
-  display: flex;
-  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
+  width: 100%;
   margin-top: 20px;
-
-  > * + * {
-    margin-left: 20px;
-  }
 `;
 
 export interface ReviewPrintedBallotScreenProps {
@@ -29,31 +25,81 @@ export interface ReviewPrintedBallotScreenProps {
   onReject: () => void;
 }
 
+enum ReviewStepChoice {
+  Yes = 'yes',
+  No = 'no',
+}
+
+const FirstWord = styled.div`
+  font-weight: 700;
+`;
+
 export function ReviewPrintedBallotScreen({
   onConfirm: onConfirmPrintedBallotSelections,
   onReject: onRejectPrintedBallotSelections,
-}: ReviewPrintedBallotScreenProps): JSX.Element | null {
+}: ReviewPrintedBallotScreenProps): JSX.Element {
+  const [choice, setChoice] = useState<ReviewStepChoice>();
+
+  function onNext() {
+    if (choice === ReviewStepChoice.Yes) {
+      onConfirmPrintedBallotSelections();
+    } else if (choice === ReviewStepChoice.No) {
+      onRejectPrintedBallotSelections();
+    }
+  }
+
   return (
     <Screen>
       <Main centerChild>
-        <IconAndBody>
-          <ReviewIcon />
-          <div>
-            <H1>Review Your Ballot</H1>
-            <P>
-              Please check your selections on the printed ballot paper, then
-              select one of the choices below.
-            </P>
-            <ButtonsRow>
-              <Button icon="Done" onPress={onConfirmPrintedBallotSelections}>
-                My Printed Ballot is Correct
-              </Button>
-              <Button icon="Warning" onPress={onRejectPrintedBallotSelections}>
-                I Need to Make Changes
-              </Button>
-            </ButtonsRow>
-          </div>
-        </IconAndBody>
+        <Wizard
+          header={
+            <WizardHeaderTitle step="Step 1" title="Review Your Ballot" />
+          }
+          footer={<WizardSteps steps={steps} current="review" />}
+          actions={
+            <WizardButtonBar
+              rightButton={
+                <Button
+                  rightIcon={choice ? 'Next' : undefined}
+                  onPress={onNext}
+                  disabled={!choice}
+                  variant={choice ? 'primary' : undefined}
+                >
+                  {(() => {
+                    switch (choice) {
+                      case ReviewStepChoice.Yes:
+                        return 'Up Next: Enter Pin';
+                      case ReviewStepChoice.No:
+                        return 'Up Next: Destroy Ballot';
+                      case undefined:
+                        return 'Make a selection';
+                      default:
+                        throwIllegalValue(choice);
+                    }
+                  })()}
+                </Button>
+              }
+            />
+          }
+        >
+          <P style={{ fontSize: '34px', fontWeight: 400 }}>
+            Are all the printed selections correct?
+          </P>
+          <ButtonsRow>
+            <RadioBox
+              selected={choice === ReviewStepChoice.Yes}
+              onClick={() => setChoice(ReviewStepChoice.Yes)}
+            >
+              <FirstWord>Yes,</FirstWord> My printed selections are correct.
+            </RadioBox>
+            <RadioBox
+              selected={choice === ReviewStepChoice.No}
+              onClick={() => setChoice(ReviewStepChoice.No)}
+            >
+              <FirstWord>No,</FirstWord> I need to make changes.
+            </RadioBox>
+          </ButtonsRow>
+        </Wizard>
       </Main>
     </Screen>
   );

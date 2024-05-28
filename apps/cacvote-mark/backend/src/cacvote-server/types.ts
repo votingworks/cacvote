@@ -1,6 +1,13 @@
 // eslint-disable-next-line max-classes-per-file
 import { certs, cryptography } from '@votingworks/auth';
-import { Result, ok, wrapException } from '@votingworks/basics';
+import {
+  Optional,
+  Result,
+  err,
+  ok,
+  throwIllegalValue,
+  wrapException,
+} from '@votingworks/basics';
 import {
   BallotStyleId,
   BallotStyleIdSchema,
@@ -20,6 +27,12 @@ import { ZodError, z } from 'zod';
 export const ElectionObjectType = 'Election';
 export const RegistrationRequestObjectType = 'RegistrationRequest';
 export const RegistrationObjectType = 'Registration';
+export const CastBallotObjectType = 'CastBallot';
+export type PayloadObjectType =
+  | typeof ElectionObjectType
+  | typeof RegistrationRequestObjectType
+  | typeof RegistrationObjectType
+  | typeof CastBallotObjectType;
 export type Uuid = NewType<string, 'Uuid'>;
 
 export function Uuid(): Uuid {
@@ -48,6 +61,8 @@ export class JournalEntry {
   constructor(
     private readonly id: Uuid,
     private readonly objectId: Uuid,
+    // eslint-disable-next-line vx/gts-use-optionals
+    private readonly electionId: Optional<Uuid>,
     private readonly jurisdictionCode: JurisdictionCode,
     private readonly objectType: string,
     private readonly action: JournalEntryAction,
@@ -60,6 +75,10 @@ export class JournalEntry {
 
   getObjectId(): Uuid {
     return this.objectId;
+  }
+
+  getElectionId(): Optional<Uuid> {
+    return this.electionId;
   }
 
   getJurisdictionCode(): JurisdictionCode {
@@ -82,6 +101,7 @@ export class JournalEntry {
     return {
       id: this.id.toString(),
       objectId: this.objectId.toString(),
+      electionId: this.electionId?.toString(),
       jurisdictionCode: this.jurisdictionCode,
       objectType: this.objectType,
       action: this.action,
@@ -90,9 +110,10 @@ export class JournalEntry {
   }
 }
 
-export const RawJournalEntrySchema: z.ZodSchema<{
+export const JournalEntryStructSchema: z.ZodSchema<{
   id: Uuid;
   objectId: Uuid;
+  electionId?: Uuid;
   jurisdictionCode: JurisdictionCode;
   objectType: string;
   action: string;
@@ -100,6 +121,7 @@ export const RawJournalEntrySchema: z.ZodSchema<{
 }> = z.object({
   id: UuidSchema,
   objectId: UuidSchema,
+  electionId: UuidSchema.optional(),
   jurisdictionCode: JurisdictionCodeSchema,
   objectType: z.string(),
   action: z.string(),
@@ -107,11 +129,12 @@ export const RawJournalEntrySchema: z.ZodSchema<{
 });
 
 export const JournalEntrySchema: z.ZodSchema<JournalEntry> =
-  RawJournalEntrySchema.transform(
+  JournalEntryStructSchema.transform(
     (o) =>
       new JournalEntry(
         o.id,
         o.objectId,
+        o.electionId,
         o.jurisdictionCode,
         o.objectType,
         o.action,
@@ -122,7 +145,9 @@ export const JournalEntrySchema: z.ZodSchema<JournalEntry> =
 export class Election {
   constructor(
     private readonly jurisdictionCode: JurisdictionCode,
-    private readonly electionDefinition: ElectionDefinition
+    private readonly electionDefinition: ElectionDefinition,
+    private readonly mailingAddress: string,
+    private readonly electionguardElectionMetadataBlob: Buffer
   ) {}
 
   getJurisdictionCode(): JurisdictionCode {
@@ -133,10 +158,21 @@ export class Election {
     return this.electionDefinition;
   }
 
+  getMailingAddress(): string {
+    return this.mailingAddress;
+  }
+
+  getElectionguardElectionMetadataBlob(): Buffer {
+    return this.electionguardElectionMetadataBlob;
+  }
+
   toJSON(): unknown {
     return {
       jurisdictionCode: this.jurisdictionCode,
       electionDefinition: this.electionDefinition,
+      mailingAddress: this.mailingAddress,
+      electionguardElectionMetadataBlob:
+        this.electionguardElectionMetadataBlob.toString('base64'),
     };
   }
 }
@@ -147,11 +183,21 @@ const ElectionStructSchema = z.object({
     .string()
     .transform((s) => Buffer.from(s, 'base64').toString('utf-8'))
     .transform((s) => safeParseElectionDefinition(s).unsafeUnwrap()),
+  mailingAddress: z.string(),
+  electionguardElectionMetadataBlob: z
+    .string()
+    .transform((s) => Buffer.from(s, 'base64')),
 });
 
 export const ElectionSchema: z.ZodSchema<Election> =
   ElectionStructSchema.transform(
-    (o) => new Election(o.jurisdictionCode, o.electionDefinition)
+    (o) =>
+      new Election(
+        o.jurisdictionCode,
+        o.electionDefinition,
+        o.mailingAddress,
+        o.electionguardElectionMetadataBlob
+      )
   ) as unknown as z.ZodSchema<Election>;
 
 export class RegistrationRequest {
@@ -271,7 +317,68 @@ export const RegistrationSchema: z.ZodSchema<Registration> =
       )
   ) as unknown as z.ZodSchema<Registration>;
 
-export type PayloadInner = Election | Registration | RegistrationRequest;
+export class CastBallot {
+  constructor(
+    private readonly commonAccessCardId: string,
+    private readonly jurisdictionCode: JurisdictionCode,
+    private readonly registrationRequestObjectId: Uuid,
+    private readonly registrationObjectId: Uuid,
+    private readonly electionObjectId: Uuid,
+    private readonly electionguardEncryptedBallot: string
+  ) {}
+
+  getCommonAccessCardId(): string {
+    return this.commonAccessCardId;
+  }
+
+  getJurisdictionCode(): JurisdictionCode {
+    return this.jurisdictionCode;
+  }
+
+  getRegistrationRequestObjectId(): Uuid {
+    return this.registrationRequestObjectId;
+  }
+
+  getRegistrationObjectId(): Uuid {
+    return this.registrationObjectId;
+  }
+
+  getElectionObjectId(): Uuid {
+    return this.electionObjectId;
+  }
+
+  getElectionguardEncryptedBallot(): string {
+    return this.electionguardEncryptedBallot;
+  }
+}
+
+const CastBallotStructSchema = z.object({
+  commonAccessCardId: z.string(),
+  jurisdictionCode: JurisdictionCodeSchema,
+  registrationRequestObjectId: UuidSchema,
+  registrationObjectId: UuidSchema,
+  electionObjectId: UuidSchema,
+  electionguardEncryptedBallot: z.string(),
+});
+
+export const CastBallotSchema: z.ZodSchema<CastBallot> =
+  CastBallotStructSchema.transform(
+    (o) =>
+      new CastBallot(
+        o.commonAccessCardId,
+        o.jurisdictionCode,
+        o.registrationRequestObjectId,
+        o.registrationObjectId,
+        o.electionObjectId,
+        o.electionguardEncryptedBallot
+      )
+  ) as unknown as z.ZodSchema<CastBallot>;
+
+export type PayloadInner =
+  | Election
+  | Registration
+  | RegistrationRequest
+  | CastBallot;
 
 export class Payload<T extends PayloadInner = PayloadInner> {
   constructor(
@@ -312,6 +419,10 @@ export class Payload<T extends PayloadInner = PayloadInner> {
   ): Payload<RegistrationRequest> {
     return new Payload(RegistrationRequestObjectType, data);
   }
+
+  static CastBallot(data: CastBallot): Payload<CastBallot> {
+    return new Payload(CastBallotObjectType, data);
+  }
 }
 
 export const PayloadSchema: z.ZodSchema<Payload> = z
@@ -325,45 +436,71 @@ export const PayloadSchema: z.ZodSchema<Payload> = z
     z
       .object({ objectType: z.literal(RegistrationRequestObjectType) })
       .merge(RegistrationRequestStructSchema),
+    z
+      .object({ objectType: z.literal(CastBallotObjectType) })
+      .merge(CastBallotStructSchema),
   ])
   .transform((o) => {
-    if (o.objectType === ElectionObjectType) {
-      return Payload.Election(
-        new Election(o.jurisdictionCode, o.electionDefinition)
-      );
-    }
+    switch (o.objectType) {
+      case ElectionObjectType: {
+        return Payload.Election(
+          new Election(
+            o.jurisdictionCode,
+            o.electionDefinition,
+            o.mailingAddress,
+            o.electionguardElectionMetadataBlob
+          )
+        );
+      }
 
-    if (o.objectType === RegistrationObjectType) {
-      return Payload.Registration(
-        new Registration(
-          o.commonAccessCardId,
-          o.jurisdictionCode,
-          o.registrationRequestObjectId,
-          o.electionObjectId,
-          o.ballotStyleId,
-          o.precinctId
-        )
-      );
-    }
+      case RegistrationObjectType: {
+        return Payload.Registration(
+          new Registration(
+            o.commonAccessCardId,
+            o.jurisdictionCode,
+            o.registrationRequestObjectId,
+            o.electionObjectId,
+            o.ballotStyleId,
+            o.precinctId
+          )
+        );
+      }
 
-    if (o.objectType === RegistrationRequestObjectType) {
-      return Payload.RegistrationRequest(
-        new RegistrationRequest(
-          o.commonAccessCardId,
-          o.jurisdictionCode,
-          o.givenName,
-          o.familyName,
-          o.createdAt
-        )
-      );
-    }
+      case RegistrationRequestObjectType: {
+        return Payload.RegistrationRequest(
+          new RegistrationRequest(
+            o.commonAccessCardId,
+            o.jurisdictionCode,
+            o.givenName,
+            o.familyName,
+            o.createdAt
+          )
+        );
+      }
 
-    throw new Error(`Unknown object type: ${JSON.stringify(o)}`);
+      case CastBallotObjectType: {
+        return Payload.CastBallot(
+          new CastBallot(
+            o.commonAccessCardId,
+            o.jurisdictionCode,
+            o.registrationRequestObjectId,
+            o.registrationObjectId,
+            o.electionObjectId,
+            o.electionguardEncryptedBallot
+          )
+        );
+      }
+
+      default:
+        throwIllegalValue(o);
+    }
   }) as unknown as z.ZodSchema<Payload>;
 
 export class SignedObject {
   constructor(
     private readonly id: Uuid,
+    // eslint-disable-next-line vx/gts-use-optionals
+    private readonly electionId: Optional<Uuid>,
     private readonly payload: Buffer,
     private readonly certificates: Buffer,
     private readonly signature: Buffer
@@ -373,12 +510,53 @@ export class SignedObject {
     return this.id;
   }
 
+  getElectionId(): Optional<Uuid> {
+    return this.electionId;
+  }
+
   getPayloadRaw(): Buffer {
     return this.payload;
   }
 
   getPayload(): Result<Payload, ZodError | SyntaxError> {
     return safeParseJson(this.payload.toString(), PayloadSchema);
+  }
+
+  getPayloadAsObjectType(
+    objectType: typeof ElectionObjectType
+  ): Result<Payload<Election>, ZodError | SyntaxError>;
+  getPayloadAsObjectType(
+    objectType: typeof RegistrationRequestObjectType
+  ): Result<Payload<RegistrationRequest>, ZodError | SyntaxError>;
+  getPayloadAsObjectType(
+    objectType: typeof RegistrationObjectType
+  ): Result<Payload<Registration>, ZodError | SyntaxError>;
+  getPayloadAsObjectType(
+    objectType: typeof CastBallotObjectType
+  ): Result<Payload<CastBallot>, ZodError | SyntaxError>;
+  // eslint-disable-next-line vx/gts-no-return-type-only-generics
+  getPayloadAsObjectType<T extends PayloadInner>(
+    objectType: PayloadObjectType
+  ): Result<Payload<T>, ZodError | SyntaxError> {
+    const parsePayloadResult = this.getPayload();
+    if (parsePayloadResult.isErr()) {
+      return parsePayloadResult;
+    }
+
+    const payload = parsePayloadResult.ok();
+    if (payload.getObjectType() === objectType) {
+      return ok(payload as Payload<T>);
+    }
+
+    return err(
+      new ZodError([
+        {
+          code: 'custom',
+          message: `Expected payload object type ${objectType}, got ${payload.getObjectType()}`,
+          path: ['objectType'],
+        },
+      ])
+    );
   }
 
   getCertificates(): Buffer {
@@ -429,6 +607,7 @@ export class SignedObject {
   toJSON(): unknown {
     return {
       id: this.id.toString(),
+      electionId: this.electionId?.toString(),
       payload: this.payload.toString('base64'),
       certificates: this.certificates.toString('base64'),
       signature: this.signature.toString('base64'),
@@ -439,6 +618,7 @@ export class SignedObject {
 export const SignedObjectSchema: z.ZodSchema<SignedObject> = z
   .object({
     id: UuidSchema,
+    electionId: UuidSchema.optional(),
     payload: z.string(),
     certificates: z.string(),
     signature: z.string(),
@@ -447,6 +627,7 @@ export const SignedObjectSchema: z.ZodSchema<SignedObject> = z
     (o) =>
       new SignedObject(
         o.id,
+        o.electionId,
         Buffer.from(o.payload, 'base64'),
         Buffer.from(o.certificates, 'base64'),
         Buffer.from(o.signature, 'base64')

@@ -43,6 +43,8 @@ import {
   faBatteryQuarter,
   faBatteryEmpty,
   faBolt,
+  faUnlock,
+  faShuffle,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   faXmarkCircle,
@@ -307,8 +309,16 @@ export const Icons = {
     return <FaIcon {...props} type={faGear} />;
   },
 
+  Shuffle(props) {
+    return <FaIcon {...props} type={faShuffle} />;
+  },
+
   TextSize(props) {
     return <FaIcon {...props} type={faTextHeight} />;
+  },
+
+  Unlock(props) {
+    return <FaIcon {...props} type={faUnlock} />;
   },
 
   Warning(props) {

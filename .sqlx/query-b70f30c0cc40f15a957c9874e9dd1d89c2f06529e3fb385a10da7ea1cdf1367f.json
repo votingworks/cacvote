@@ -1,0 +1,116 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            cb.id AS cast_ballot_id,\n            cb.election_id as cast_ballot_election_id,\n            cb.payload AS cast_ballot_payload,\n            cb.certificates AS cast_ballot_certificates,\n            cb.signature AS cast_ballot_signature,\n            rr.id AS registration_request_id,\n            rr.election_id AS registration_request_election_id,\n            rr.payload AS registration_request_payload,\n            rr.certificates AS registration_request_certificates,\n            rr.signature AS registration_request_signature,\n            r.id AS registration_id,\n            r.election_id AS registration_election_id,\n            r.payload AS registration_payload,\n            r.certificates AS registration_certificates,\n            r.signature AS registration_signature,\n            cb.created_at AS created_at\n        FROM objects AS cb\n        -- join on registration request\n        INNER JOIN objects AS rr\n            ON (convert_from(cb.payload, 'UTF8')::jsonb ->> $1)::uuid = rr.id\n        -- join on registration\n        INNER JOIN objects AS r\n            ON (convert_from(cb.payload, 'UTF8')::jsonb ->> $2)::uuid = r.id\n        WHERE rr.object_type = $3\n          AND cb.object_type = $4\n          AND r.object_type = $5\n        ORDER BY cb.created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cast_ballot_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "cast_ballot_election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "cast_ballot_payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "cast_ballot_certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "cast_ballot_signature",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "registration_request_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "registration_request_election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "registration_request_payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 8,
+        "name": "registration_request_certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 9,
+        "name": "registration_request_signature",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 10,
+        "name": "registration_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "registration_election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
+        "name": "registration_payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 13,
+        "name": "registration_certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 14,
+        "name": "registration_signature",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 15,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b70f30c0cc40f15a957c9874e9dd1d89c2f06529e3fb385a10da7ea1cdf1367f"
+}

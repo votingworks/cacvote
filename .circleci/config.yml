@@ -102,6 +102,29 @@ jobs:
       - store_test_results:
           path: apps/cacvote-mark/frontend/reports/
 
+  # @votingworks/cacvote-server-frontend
+  test-apps-cacvote-server-frontend:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir apps/cacvote-server/frontend build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir apps/cacvote-server/frontend lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir apps/cacvote-server/frontend test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: apps/cacvote-server/frontend/reports/
+
   # @votingworks/exercises
   test-docs-exercises:
     executor: nodejs
@@ -308,6 +331,29 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: libs/dev-dock/frontend/reports/
+
+  # @votingworks/electionguard
+  test-libs-electionguard:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/electionguard build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/electionguard lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/electionguard test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/electionguard/reports/
 
   # eslint-plugin-vx
   test-libs-eslint-plugin-vx:
@@ -698,32 +744,24 @@ jobs:
       - checkout-and-install
       - run:
           name: Setup Database
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cd 'apps/cacvote-jx-terminal/backend'
             cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
+            cargo sqlx database reset -y --source=db/migrations
       - run:
           name: Build
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cargo build -p cacvote-jx-terminal-backend
       - run:
           name: Test
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-jx-terminal-backend
           command: |
             cargo test -p cacvote-jx-terminal-backend
-
-  test-crate-cacvote-jx-terminal-frontend:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p cacvote-jx-terminal-frontend
-      - run:
-          name: Test
-          command: |
-            cargo test -p cacvote-jx-terminal-frontend
 
   test-crate-cacvote-server:
     executor: rust-db
@@ -732,18 +770,94 @@ jobs:
       - checkout-and-install
       - run:
           name: Setup Database
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
-            cd 'services/cacvote-server'
+            cd 'apps/cacvote-server/backend'
             cargo install sqlx-cli
-            cargo sqlx migrate run --source db/migrations
+            cargo sqlx database reset -y --source=db/migrations
       - run:
           name: Build
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cargo build -p cacvote-server
       - run:
           name: Test
+          environment:
+            DATABASE_URL: postgresql://root@localhost:5432/cacvote-server
           command: |
             cargo test -p cacvote-server
+
+  test-crate-cacvote-server-client:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p cacvote-server-client
+      - run:
+          name: Test
+          command: |
+            cargo test -p cacvote-server-client
+
+  test-crate-electionguard:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p electionguard
+      - run:
+          name: Test
+          command: |
+            cargo test -p electionguard
+
+  test-crate-electionguard-rs:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p electionguard-rs
+      - run:
+          name: Test
+          command: |
+            cargo test -p electionguard-rs
+
+  test-crate-tlv:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p tlv
+      - run:
+          name: Test
+          command: |
+            cargo test -p tlv
+
+  test-crate-tlv-derive:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            cargo build -p tlv-derive
+      - run:
+          name: Test
+          command: |
+            cargo test -p tlv-derive
 
   test-crate-types-rs:
     executor: nodejs
@@ -758,20 +872,6 @@ jobs:
           name: Test
           command: |
             cargo test -p types-rs
-
-  test-crate-ui-rs:
-    executor: nodejs
-    resource_class: xlarge
-    steps:
-      - checkout-and-install
-      - run:
-          name: Build
-          command: |
-            cargo build -p ui-rs
-      - run:
-          name: Test
-          command: |
-            cargo test -p ui-rs
 
   test-crate-vx-logging:
     executor: nodejs
@@ -807,6 +907,7 @@ workflows:
       - test-apps-cacvote-jx-terminal-frontend
       - test-apps-cacvote-mark-backend
       - test-apps-cacvote-mark-frontend
+      - test-apps-cacvote-server-frontend
       - test-docs-exercises
       - test-libs-auth
       - test-libs-backend
@@ -816,6 +917,7 @@ workflows:
       - test-libs-db
       - test-libs-dev-dock-backend
       - test-libs-dev-dock-frontend
+      - test-libs-electionguard
       - test-libs-eslint-plugin-vx
       - test-libs-fixtures
       - test-libs-fs
@@ -834,10 +936,13 @@ workflows:
       - test-libs-utils
       - test-crate-auth-rs
       - test-crate-cacvote-jx-terminal-backend
-      - test-crate-cacvote-jx-terminal-frontend
       - test-crate-cacvote-server
+      - test-crate-cacvote-server-client
+      - test-crate-electionguard
+      - test-crate-electionguard-rs
+      - test-crate-tlv
+      - test-crate-tlv-derive
       - test-crate-types-rs
-      - test-crate-ui-rs
       - test-crate-vx-logging
       - validate-monorepo
 

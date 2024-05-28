@@ -1,23 +1,20 @@
-import { throwIllegalValue } from '@votingworks/basics';
-import { AuthStatus } from '@votingworks/cacvote-mark-backend';
-import { getAuthStatus } from './api';
-import { HasCardScreen } from './screens/has_card_screen';
-import { NoCardScreen } from './screens/no_card_screen';
+import { useState } from 'react';
+import * as api from './api';
+import { WelcomeScreen } from './screens/welcome_screen';
+import { VoterFlowScreen } from './screens/voter_flow_screen';
 
 export function AppRoot(): JSX.Element {
-  const authStatusQuery = getAuthStatus.useQuery();
-  const authStatus: AuthStatus = authStatusQuery.isSuccess
-    ? authStatusQuery.data
-    : { status: 'no_card' };
+  const [isVoterSessionStillActive, setIsVoterSessionStillActive] =
+    useState(false);
+  const getVoterStatusQuery = api.getVoterStatus.useQuery();
 
-  switch (authStatus.status) {
-    case 'no_card':
-      return <NoCardScreen />;
-
-    case 'has_card':
-      return <HasCardScreen />;
-
-    default:
-      throwIllegalValue(authStatus);
+  if (isVoterSessionStillActive || getVoterStatusQuery.data?.status) {
+    return (
+      <VoterFlowScreen
+        setIsVoterSessionStillActive={setIsVoterSessionStillActive}
+      />
+    );
   }
+
+  return <WelcomeScreen />;
 }
