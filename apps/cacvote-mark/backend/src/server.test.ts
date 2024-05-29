@@ -16,11 +16,11 @@ afterEach(() => {
   workdir = '';
 });
 
-test('can start server', () => {
+test('can start server', async () => {
   const logger = fakeLogger();
   const auth = buildMockAuth();
 
-  const server = start({
+  const server = await start({
     auth,
     logger,
     port: 0,
