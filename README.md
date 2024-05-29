@@ -23,6 +23,13 @@ repository root.
 
 > Tip: stop and restart the services in `mprocs` with `x` and `r` respectively.
 
+You can use `mprocs` with the `mprocs-usability-test.yaml` configuration file to
+run just the CACVote Mark app in a way that's suitable for usability testing:
+
+```sh
+mprocs -c mprocs-usability-test.yaml
+```
+
 ## Release
 
 Each app/service can be built and run individually. Try `make run` in each
