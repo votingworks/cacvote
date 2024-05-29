@@ -2,7 +2,6 @@ import { Buffer } from 'buffer';
 import { readFile } from 'fs/promises';
 import { cryptography } from '@votingworks/auth';
 import { Readable } from 'stream';
-import { unsafeParse } from '@votingworks/types';
 import { join } from 'path';
 import { DateTime } from 'luxon';
 import {
@@ -27,7 +26,7 @@ export async function main(): Promise<void> {
   const payload = Payload.RegistrationRequest(
     new RegistrationRequest(
       '0123456789',
-      unsafeParse(JurisdictionCodeSchema, 'st.dev-jurisdiction'),
+      JurisdictionCodeSchema.parse('st.dev-jurisdiction'),
       'Jane',
       'Doe',
       DateTime.now()

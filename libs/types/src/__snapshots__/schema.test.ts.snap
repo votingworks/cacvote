@@ -59,6 +59,7 @@ exports[`parsing gives specific errors for nested objects 1`] = `
             "message": "Expected string, received number"
           },
           {
+            "received": "candidate",
             "code": "invalid_literal",
             "expected": "yesno",
             "path": [
@@ -180,6 +181,7 @@ exports[`safeParseVxfElectionDefinition computes the election hash: "fa2ee0ab167
 exports[`supports ballot layout paper size 1`] = `
 [ZodError: [
   {
+    "received": "A4",
     "code": "invalid_enum_value",
     "options": [
       "letter",
@@ -193,7 +195,7 @@ exports[`supports ballot layout paper size 1`] = `
       "ballotLayout",
       "paperSize"
     ],
-    "message": "Invalid enum value. Expected 'letter' | 'legal' | 'custom-8.5x17' | 'custom-8.5x18' | 'custom-8.5x21' | 'custom-8.5x22'"
+    "message": "Invalid enum value. Expected 'letter' | 'legal' | 'custom-8.5x17' | 'custom-8.5x18' | 'custom-8.5x21' | 'custom-8.5x22', received 'A4'"
   }
 ]]
 `;

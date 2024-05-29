@@ -83,7 +83,10 @@ test('voter flow happy path', async () => {
   renderWithThemes(
     <ApiClientContext.Provider value={apiClient}>
       <QueryClientProvider client={queryClient}>
-        <VoterFlowScreen setIsVoterSessionStillActive={jest.fn()} />
+        <VoterFlowScreen
+          isVoterSessionStillActive
+          setIsVoterSessionStillActive={jest.fn()}
+        />
       </QueryClientProvider>
     </ApiClientContext.Provider>
   );

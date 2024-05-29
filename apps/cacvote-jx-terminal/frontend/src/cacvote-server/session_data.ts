@@ -7,7 +7,6 @@ import {
   PrecinctId,
   PrecinctIdSchema,
   safeParseElectionDefinition,
-  unsafeParse,
 } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
@@ -122,8 +121,8 @@ export const EncryptedElectionTallySchema: z.ZodSchema<EncryptedElectionTally> =
   EncryptedElectionTallyStructSchema.transform(
     (struct) =>
       new EncryptedElectionTally(
-        unsafeParse(JurisdictionCodeSchema, struct.jurisdictionCode),
-        unsafeParse(UuidSchema, struct.electionObjectId),
+        JurisdictionCodeSchema.parse(struct.jurisdictionCode),
+        UuidSchema.parse(struct.electionObjectId),
         Buffer.from(struct.electionguardEncryptedTally, 'base64')
       )
   ) as unknown as z.ZodSchema<EncryptedElectionTally>;
@@ -173,10 +172,7 @@ export const EncryptedElectionTallyPresenterSchema: z.ZodSchema<EncryptedElectio
   EncryptedElectionTallyPresenterStructSchema.transform(
     (struct) =>
       new EncryptedElectionTallyPresenter(
-        unsafeParse(
-          EncryptedElectionTallySchema,
-          struct.encryptedElectionTally
-        ),
+        EncryptedElectionTallySchema.parse(struct.encryptedElectionTally),
         DateTime.fromISO(struct.createdAt),
         struct.syncedAt ? DateTime.fromISO(struct.syncedAt) : undefined
       )
@@ -228,8 +224,8 @@ export const DecryptedElectionTallySchema: z.ZodSchema<DecryptedElectionTally> =
   DecryptedElectionTallyStructSchema.transform(
     (struct) =>
       new DecryptedElectionTally(
-        unsafeParse(JurisdictionCodeSchema, struct.jurisdictionCode),
-        unsafeParse(UuidSchema, struct.electionObjectId),
+        JurisdictionCodeSchema.parse(struct.jurisdictionCode),
+        UuidSchema.parse(struct.electionObjectId),
         Buffer.from(struct.electionguardDecryptedTally, 'base64')
       )
   ) as unknown as z.ZodSchema<DecryptedElectionTally>;
@@ -279,10 +275,7 @@ export const DecryptedElectionTallyPresenterSchema: z.ZodSchema<DecryptedElectio
   DecryptedElectionTallyPresenterStructSchema.transform(
     (struct) =>
       new DecryptedElectionTallyPresenter(
-        unsafeParse(
-          DecryptedElectionTallySchema,
-          struct.decryptedElectionTally
-        ),
+        DecryptedElectionTallySchema.parse(struct.decryptedElectionTally),
         DateTime.fromISO(struct.createdAt),
         struct.syncedAt ? DateTime.fromISO(struct.syncedAt) : undefined
       )
@@ -350,8 +343,8 @@ export const ShuffledEncryptedCastBallotsPresenterSchema: z.ZodSchema<ShuffledEn
   ShuffledEncryptedCastBallotsPresenterStructSchema.transform(
     (struct) =>
       new ShuffledEncryptedCastBallotsPresenter(
-        unsafeParse(JurisdictionCodeSchema, struct.jurisdictionCode),
-        unsafeParse(UuidSchema, struct.electionObjectId),
+        JurisdictionCodeSchema.parse(struct.jurisdictionCode),
+        UuidSchema.parse(struct.electionObjectId),
         Buffer.from(struct.electionguardShuffledBallots, 'base64'),
         DateTime.fromISO(struct.createdAt),
         struct.syncedAt ? DateTime.fromISO(struct.syncedAt) : undefined
@@ -414,7 +407,7 @@ export const ElectionInfoSchema: z.ZodSchema<ElectionInfo> =
   ElectionInfoStructSchema.transform(
     (struct) =>
       new ElectionInfo(
-        unsafeParse(JurisdictionCodeSchema, struct.jurisdictionCode),
+        JurisdictionCodeSchema.parse(struct.jurisdictionCode),
         safeParseElectionDefinition(
           Buffer.from(struct.electionDefinition, 'base64').toString('utf-8')
         ).unsafeUnwrap(),
@@ -485,21 +478,14 @@ export const ElectionPresenterSchema: z.ZodSchema<ElectionPresenter> =
   ElectionPresenterStructSchema.transform(
     (struct) =>
       new ElectionPresenter(
-        unsafeParse(UuidSchema, struct.id),
-        unsafeParse(ElectionInfoSchema, struct.election),
+        UuidSchema.parse(struct.id),
+        ElectionInfoSchema.parse(struct.election),
         struct.encryptedTally &&
-          unsafeParse(
-            EncryptedElectionTallyPresenterSchema,
-            struct.encryptedTally
-          ),
+          EncryptedElectionTallyPresenterSchema.parse(struct.encryptedTally),
         struct.decryptedTally &&
-          unsafeParse(
-            DecryptedElectionTallyPresenterSchema,
-            struct.decryptedTally
-          ),
+          DecryptedElectionTallyPresenterSchema.parse(struct.decryptedTally),
         struct.shuffledEncryptedCastBallots &&
-          unsafeParse(
-            ShuffledEncryptedCastBallotsPresenterSchema,
+          ShuffledEncryptedCastBallotsPresenterSchema.parse(
             struct.shuffledEncryptedCastBallots
           )
       )
@@ -559,7 +545,7 @@ export const RegistrationRequestSchema: z.ZodSchema<RegistrationRequest> =
     (struct) =>
       new RegistrationRequest(
         struct.commonAccessCardId,
-        unsafeParse(JurisdictionCodeSchema, struct.jurisdictionCode),
+        JurisdictionCodeSchema.parse(struct.jurisdictionCode),
         struct.givenName,
         struct.familyName
       )
@@ -650,11 +636,11 @@ export const RegistrationSchema: z.ZodSchema<Registration> =
     (struct) =>
       new Registration(
         struct.commonAccessCardId,
-        unsafeParse(JurisdictionCodeSchema, struct.jurisdictionCode),
-        unsafeParse(UuidSchema, struct.registrationRequestObjectId),
-        unsafeParse(UuidSchema, struct.electionObjectId),
-        unsafeParse(BallotStyleIdSchema, struct.ballotStyleId),
-        unsafeParse(PrecinctIdSchema, struct.precinctId)
+        JurisdictionCodeSchema.parse(struct.jurisdictionCode),
+        UuidSchema.parse(struct.registrationRequestObjectId),
+        UuidSchema.parse(struct.electionObjectId),
+        BallotStyleIdSchema.parse(struct.ballotStyleId),
+        PrecinctIdSchema.parse(struct.precinctId)
       )
   ) as unknown as z.ZodSchema<Registration>;
 
@@ -739,7 +725,7 @@ export const RegistrationPresenterSchema: z.ZodSchema<RegistrationPresenter> =
         struct.displayName,
         struct.electionTitle,
         struct.electionHash,
-        unsafeParse(RegistrationSchema, struct.registration),
+        RegistrationSchema.parse(struct.registration),
         DateTime.fromISO(struct.createdAt),
         struct.isSynced
       )
@@ -833,9 +819,9 @@ export const CastBallotPresenterSchema: z.ZodSchema<CastBallotPresenter> =
     (struct) =>
       new CastBallotPresenter(
         struct.castBallot,
-        unsafeParse(RegistrationRequestSchema, struct.registrationRequest),
-        unsafeParse(RegistrationSchema, struct.registration),
-        unsafeParse(UuidSchema, struct.registrationId),
+        RegistrationRequestSchema.parse(struct.registrationRequest),
+        RegistrationSchema.parse(struct.registration),
+        UuidSchema.parse(struct.registrationId),
         struct.verificationStatus,
         DateTime.fromISO(struct.createdAt)
       )
@@ -910,12 +896,10 @@ export const AuthenticatedSessionDataSchema: z.ZodSchema<AuthenticatedSessionDat
     (struct) =>
       new AuthenticatedSessionData(
         struct.jurisdictionCode,
-        struct.elections.map((e) => unsafeParse(ElectionPresenterSchema, e)),
+        struct.elections.map((e) => ElectionPresenterSchema.parse(e)),
         struct.pendingRegistrationRequests,
-        struct.registrations.map((r) =>
-          unsafeParse(RegistrationPresenterSchema, r)
-        ),
-        struct.castBallots.map((c) => unsafeParse(CastBallotPresenterSchema, c))
+        struct.registrations.map((r) => RegistrationPresenterSchema.parse(r)),
+        struct.castBallots.map((c) => CastBallotPresenterSchema.parse(c))
       )
   ) as unknown as z.ZodSchema<AuthenticatedSessionData>;
 

@@ -1,5 +1,4 @@
 import { deferred } from '@votingworks/basics';
-import { unsafeParse } from '@votingworks/types';
 import app, { Application, Request, Response } from 'express';
 import {
   IncomingMessage,
@@ -128,7 +127,7 @@ export class MockCacvoteAppBuilder {
         return;
       }
 
-      const id = unsafeParse(UuidSchema, req.params.id);
+      const id = UuidSchema.parse(req.params.id);
       const object = this.objects.get(id);
       if (object) {
         res.status(200).json(object);

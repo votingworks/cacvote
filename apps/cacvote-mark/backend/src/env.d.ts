@@ -3,7 +3,8 @@ declare namespace NodeJS {
     readonly CI?: string;
     readonly NODE_ENV: 'development' | 'production' | 'test';
     readonly IS_INTEGRATION_TEST?: string;
-    readonly USE_MOCK_CACVOTE_SERVER?: string;
+    readonly USABILITY_TEST_ELECTION_PATH?: string;
+    readonly USABILITY_TEST_EXPIRATION_MINUTES?: string;
     readonly BASE_PORT?: string;
     readonly PORT?: string;
     readonly VX_CODE_VERSION?: string;

@@ -1,10 +1,10 @@
 import { deferred, extractErrorMessage, sleep } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
-import { Client } from './client';
+import { ClientApi } from './client';
 import { Store } from '../store';
 
 async function pullJournalEntries(
-  client: Client,
+  client: ClientApi,
   store: Store,
   logger: Logger
 ): Promise<void> {
@@ -48,7 +48,7 @@ async function pullJournalEntries(
 }
 
 async function pushObjects(
-  client: Client,
+  client: ClientApi,
   store: Store,
   logger: Logger
 ): Promise<void> {
@@ -96,7 +96,7 @@ async function pushObjects(
 }
 
 async function pullObjects(
-  client: Client,
+  client: ClientApi,
   store: Store,
   logger: Logger
 ): Promise<void> {
@@ -176,7 +176,7 @@ async function pullObjects(
  * Perform a sync with the CACVote Server now.
  */
 export async function sync(
-  client: Client,
+  client: ClientApi,
   store: Store,
   logger: Logger
 ): Promise<void> {
@@ -213,7 +213,7 @@ const SYNC_INTERVAL = 1000 * 5;
  * syncing.
  */
 export function syncPeriodically(
-  client: Client,
+  client: ClientApi,
   store: Store,
   logger: Logger,
   interval = SYNC_INTERVAL

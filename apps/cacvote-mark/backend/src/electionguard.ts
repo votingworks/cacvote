@@ -1,11 +1,12 @@
 import { ELECTIONGUARD_CLASSPATH, VX_MACHINE_ID } from '@votingworks/backend';
+import { assert, assertDefined } from '@votingworks/basics';
 import {
   convertVxCvrToEgPlaintextBallot,
   encryptEgPlaintextBallot,
   extractManifestFromPublicMetadataBlob,
 } from '@votingworks/electionguard';
 import { CVR } from '@votingworks/types';
-import { assert, assertDefined } from '@votingworks/basics';
+import { Buffer } from 'buffer';
 import { CastBallot, Election, Payload, Uuid } from './cacvote-server/types';
 
 /**
@@ -51,7 +52,7 @@ export function createEncryptedBallotPayload(
       registrationRequestObjectId,
       registrationObjectId,
       electionObjectId,
-      JSON.stringify(encryptedBallot, null, 2)
+      Buffer.from(JSON.stringify(encryptedBallot, null, 2))
     )
   );
 }

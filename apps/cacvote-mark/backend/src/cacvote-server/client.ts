@@ -5,8 +5,8 @@ import {
   err,
   ok,
 } from '@votingworks/basics';
+import { safeParseJson } from '@votingworks/types';
 import fetch, { Headers, Request } from 'cross-fetch';
-import { safeParse, safeParseJson } from '@votingworks/types';
 import { ZodError, z } from 'zod';
 import {
   JournalEntry,
@@ -23,7 +23,41 @@ export type ClientError =
 
 export type ClientResult<T> = Result<T, ClientError>;
 
-export class Client {
+export interface ClientApi {
+  /**
+   * Check that the server is responding.
+   */
+  checkStatus(): Promise<ClientResult<void>>;
+
+  /**
+   * Create an object on the server.
+   */
+  createObject(signedObject: SignedObject): Promise<ClientResult<Uuid>>;
+
+  /**
+   * Retrieve an object from the server.
+   */
+  getObjectById(uuid: Uuid): Promise<ClientResult<Optional<SignedObject>>>;
+
+  /**
+   * Get journal entries from the server.
+   *
+   * @example
+   *
+   * ```ts
+   * const client = Client.localhost();
+   *
+   * // Get all journal entries.
+   * const journalEntries = await client.getJournalEntries();
+   *
+   * // Get journal entries since a specific entry.
+   * const journalEntriesSince = await client.getJournalEntries(journalEntries[0].getId());
+   * ```
+   */
+  getJournalEntries(since?: Uuid): Promise<ClientResult<JournalEntry[]>>;
+}
+
+export class Client implements ClientApi {
   constructor(private readonly baseUrl: URL) {}
 
   /**
@@ -59,9 +93,14 @@ export class Client {
         bail({ type: 'network', message: response.statusText });
       }
 
-      return safeParse(UuidSchema, await response.text()).okOrElse<ZodError>(
-        (error) => bail({ type: 'schema', error, message: error.message })
-      );
+      const parsed = UuidSchema.safeParse(await response.text());
+      return parsed.success
+        ? ok(parsed.data)
+        : err({
+            type: 'schema',
+            error: parsed.error,
+            message: parsed.error.message,
+          });
     });
   }
 
@@ -120,16 +159,16 @@ export class Client {
         bail({ type: 'network', message: response.statusText });
       }
 
-      return safeParse(
-        z.array(JournalEntrySchema),
-        await response.json()
-      ).okOrElse<ZodError>((error) =>
-        bail({
-          type: 'schema',
-          error,
-          message: error.message,
-        })
-      );
+      const parsed = z
+        .array(JournalEntrySchema)
+        .safeParse(await response.json());
+      return parsed.success
+        ? ok(parsed.data)
+        : err({
+            type: 'schema',
+            error: parsed.error,
+            message: parsed.error.message,
+          });
     });
   }
 

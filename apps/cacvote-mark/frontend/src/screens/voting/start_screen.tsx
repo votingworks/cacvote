@@ -23,6 +23,7 @@ export function StartScreen({
         <Button variant="primary" onPress={onStartVoting}>
           Start Voting
         </Button>
+        <Text small>Do not remove your card until instructed.</Text>
       </Main>
     </Screen>
   );

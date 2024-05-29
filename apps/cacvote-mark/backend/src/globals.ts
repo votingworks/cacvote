@@ -62,11 +62,19 @@ export const CACVOTE_URL = process.env.CACVOTE_URL
   : undefined;
 
 /**
- * Should we mock the CACVote Server?
+ * What is the path to the election file for the usability test? If this is set,
+ * we mock the CACVote Server.
  */
-export const USE_MOCK_CACVOTE_SERVER =
-  (process.env.USE_MOCK_CACVOTE_SERVER === 'true' || IS_INTEGRATION_TEST) &&
-  process.env.USE_MOCK_CACVOTE_SERVER !== 'false';
+export const { USABILITY_TEST_ELECTION_PATH } = process.env;
+
+/**
+ * How many minutes should we wait before expiring a completed voting session
+ * during the usability test?
+ */
+export const USABILITY_TEST_EXPIRATION_MINUTES =
+  safeParseInt(process.env.USABILITY_TEST_EXPIRATION_MINUTES, {
+    min: 1,
+  }).ok() ?? 2;
 
 /**
  * What is the name of the mailing label printer?

@@ -1,6 +1,5 @@
 /* eslint-disable max-classes-per-file */
 import { constructTlv, parseTlvList } from '@votingworks/auth';
-import { unsafeParse } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import * as uuid from 'uuid';
 import { Uuid, UuidSchema } from './cacvote-server/types';
@@ -76,8 +75,7 @@ export class BallotVerificationPayload {
 
     const machineId = machineIdBytes.toString('utf-8');
     const commonAccessCardId = commonAccessCardIdBytes.toString('utf-8');
-    const electionObjectId = unsafeParse(
-      UuidSchema,
+    const electionObjectId = UuidSchema.parse(
       uuid.stringify(electionObjectIdBytes)
     );
 

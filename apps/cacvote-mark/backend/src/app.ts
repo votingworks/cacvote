@@ -103,8 +103,18 @@ function buildApi({
         return { status: 'registration_pending' };
       }
 
-      // TODO: check for a submitted ballot to see if the voter has voted
-      return { status: 'registered' };
+      const castBallot = store
+        .forEachCastBallot({
+          commonAccessCardId,
+          electionObjectId: registration.registration.getElectionObjectId(),
+        })
+        .first();
+
+      if (!castBallot) {
+        return { status: 'registered' };
+      }
+
+      return { status: 'voted' };
     },
 
     async getRegistrationRequests(): Promise<RegistrationRequest[]> {

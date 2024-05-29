@@ -17,8 +17,8 @@ export function FinishedScreenStatic(): JSX.Element {
         <CircledCheckmarkIcon />
         <H4>Don&rsquo;t forget to mail your ballot.</H4>
         <NarrowP>
-          Tracking updates will be sent automatically to the email registered on
-          your Common Access Card.
+          Your ballot will also be electronically delivered to your local
+          election official.
         </NarrowP>
       </Main>
     </Screen>

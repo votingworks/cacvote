@@ -1,8 +1,9 @@
 import { err, ok } from '@votingworks/basics';
+import { safeParseJson } from '@votingworks/types';
 import { Buffer } from 'buffer';
-import { safeParseJson, unsafeParse } from '@votingworks/types';
 import { DateTime } from 'luxon';
 import { mockCacvoteServer } from '../../test/mock_cacvote_server';
+import { ClientResult } from './client';
 import {
   JournalEntry,
   JurisdictionCode,
@@ -12,13 +13,9 @@ import {
   Uuid,
   UuidSchema,
 } from './types';
-import { ClientResult } from './client';
 
-const uuid = unsafeParse(UuidSchema, '123e4567-e89b-12d3-a456-426614174000');
-const jurisdictionCode = unsafeParse(
-  JurisdictionCodeSchema,
-  'st.test-jurisdiction'
-);
+const uuid = UuidSchema.parse('123e4567-e89b-12d3-a456-426614174000');
+const jurisdictionCode = JurisdictionCodeSchema.parse('st.test-jurisdiction');
 
 test('checkStatus success', async () => {
   const server = await mockCacvoteServer((req, res) => {

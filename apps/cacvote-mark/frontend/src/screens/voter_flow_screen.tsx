@@ -512,10 +512,12 @@ function RegisteredStateScreen({
 }
 
 export interface VoterFlowScreenProps {
+  isVoterSessionStillActive: boolean;
   setIsVoterSessionStillActive: (isVoterSessionStillActive: boolean) => void;
 }
 
 export function VoterFlowScreen({
+  isVoterSessionStillActive,
   setIsVoterSessionStillActive,
 }: VoterFlowScreenProps): JSX.Element | null {
   const getVoterStatusQuery = getVoterStatus.useQuery();
@@ -529,16 +531,18 @@ export function VoterFlowScreen({
       return <Registration.StatusScreen />;
 
     case 'registered':
+    case 'voted':
     case undefined:
+      if (!isVoterSessionStillActive && voterStatus === 'voted') {
+        return <Voting.AlreadyVotedScreen />;
+      }
+
       return (
         <RegisteredStateScreen
           voterStatus={voterStatus}
           setIsVoterSessionStillActive={setIsVoterSessionStillActive}
         />
       );
-
-    case 'voted':
-      return <Voting.AlreadyVotedScreen />;
 
     default:
       throwIllegalValue(voterStatus);

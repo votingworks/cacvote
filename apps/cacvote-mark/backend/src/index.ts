@@ -24,8 +24,8 @@ function resolveWorkspace(): Workspace {
   return createWorkspace(workspacePath);
 }
 
-function main(): number {
-  server.start({
+async function main(): Promise<number> {
+  await server.start({
     port: PORT,
     logger,
     workspace: resolveWorkspace(),
@@ -34,13 +34,15 @@ function main(): number {
 }
 
 if (require.main === module) {
-  try {
-    process.exitCode = main();
-  } catch (error) {
-    void logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: `Error in starting VxMark backend: ${(error as Error).stack}`,
-      disposition: 'failure',
-    });
-    process.exitCode = 1;
-  }
+  void (async () => {
+    try {
+      process.exitCode = await main();
+    } catch (error) {
+      void logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: `Error in starting VxMark backend: ${(error as Error).stack}`,
+        disposition: 'failure',
+      });
+      process.exitCode = 1;
+    }
+  })();
 }
