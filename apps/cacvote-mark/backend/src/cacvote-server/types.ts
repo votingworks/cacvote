@@ -15,7 +15,6 @@ import {
   NewType,
   PrecinctId,
   PrecinctIdSchema,
-  safeParse,
   safeParseElectionDefinition,
   safeParseJson,
 } from '@votingworks/types';
@@ -35,27 +34,74 @@ export type PayloadObjectType =
   | typeof CastBallotObjectType;
 export type Uuid = NewType<string, 'Uuid'>;
 
+function propertyTransform<
+  T extends object,
+  K extends keyof T & string,
+  S extends
+    | z.ZodEffects<z.ZodTypeAny, unknown, unknown>
+    | z.ZodOptional<z.ZodEffects<z.ZodTypeAny, unknown, unknown>>,
+>(
+  schema: S,
+  key: K
+): (
+  arg: T,
+  ctx: z.RefinementCtx
+) => { [P in keyof T]: P extends K ? z.output<S> : T[P] } {
+  return (o, ctx) => {
+    const parsed = schema.safeParse(o[key]);
+
+    if (parsed.error) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Invalid jurisdiction code',
+        path: [key],
+      });
+
+      return z.NEVER;
+    }
+
+    // eslint-disable-next-line vx/gts-spread-like-types
+    return { ...o, [key]: parsed.data } as unknown as {
+      [P in keyof T]: P extends typeof key ? z.output<S> : T[P];
+    };
+  };
+}
+
 export function Uuid(): Uuid {
   return v4() as Uuid;
 }
 
-export const UuidSchema = z.string().refine(validate, {
-  message: 'Invalid UUID',
-}) as unknown as z.ZodSchema<Uuid>;
+export const UuidSchema = z.string().transform((s, ctx) => {
+  if (!validate(s)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Invalid UUID',
+    });
+
+    return z.NEVER;
+  }
+
+  return s as Uuid;
+});
 
 export type JurisdictionCode = NewType<string, 'JurisdictionCode'>;
 
-export const JurisdictionCodeSchema = z
-  .string()
-  .refine((s) => /^[a-z]{2}\.[-_a-z0-9]+$/i.test(s), {
-    message: 'Invalid jurisdiction code',
-  }) as unknown as z.ZodSchema<JurisdictionCode>;
+export const JurisdictionCodeSchema = z.string().transform((s, ctx) => {
+  if (!/^[a-z]{2}\.[-_a-z0-9]+$/i.test(s)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Invalid jurisdiction code',
+    });
+
+    return z.NEVER;
+  }
+
+  return s as JurisdictionCode;
+});
 
 export type JournalEntryAction = 'create' | 'delete' | string;
 
-export const DateTimeSchema = z
-  .string()
-  .transform(DateTime.fromISO) as unknown as z.ZodSchema<DateTime>;
+export const DateTimeSchema = z.string().transform((s) => DateTime.fromISO(s));
 
 export class JournalEntry {
   constructor(
@@ -97,7 +143,7 @@ export class JournalEntry {
     return this.createdAt;
   }
 
-  toJSON(): unknown {
+  toJSON(): JournalEntryStruct {
     return {
       id: this.id.toString(),
       objectId: this.objectId.toString(),
@@ -110,26 +156,35 @@ export class JournalEntry {
   }
 }
 
-export const JournalEntryStructSchema: z.ZodSchema<{
-  id: Uuid;
-  objectId: Uuid;
-  electionId?: Uuid;
-  jurisdictionCode: JurisdictionCode;
+export interface JournalEntryStruct {
+  id: string;
+  objectId: string;
+  electionId?: string;
+  jurisdictionCode: string;
   objectType: string;
   action: string;
-  createdAt: DateTime;
-}> = z.object({
-  id: UuidSchema,
-  objectId: UuidSchema,
-  electionId: UuidSchema.optional(),
-  jurisdictionCode: JurisdictionCodeSchema,
-  objectType: z.string(),
-  action: z.string(),
-  createdAt: DateTimeSchema,
-});
+  createdAt: string;
+}
 
-export const JournalEntrySchema: z.ZodSchema<JournalEntry> =
-  JournalEntryStructSchema.transform(
+export const JournalEntryStructSchema: z.ZodSchema<JournalEntryStruct> =
+  z.object({
+    id: z.string(),
+    objectId: z.string(),
+    electionId: z.string().optional(),
+    jurisdictionCode: z.string(),
+    objectType: z.string(),
+    action: z.string(),
+    createdAt: z.string(),
+  });
+
+export const JournalEntrySchema = JournalEntryStructSchema.transform(
+  propertyTransform(UuidSchema, 'id')
+)
+  .transform(propertyTransform(UuidSchema, 'objectId'))
+  .transform(propertyTransform(UuidSchema.optional(), 'electionId'))
+  .transform(propertyTransform(JurisdictionCodeSchema, 'jurisdictionCode'))
+  .transform(propertyTransform(DateTimeSchema, 'createdAt'))
+  .transform(
     (o) =>
       new JournalEntry(
         o.id,
@@ -140,7 +195,7 @@ export const JournalEntrySchema: z.ZodSchema<JournalEntry> =
         o.action,
         o.createdAt
       )
-  ) as unknown as z.ZodSchema<JournalEntry>;
+  );
 
 export class Election {
   constructor(
@@ -166,10 +221,12 @@ export class Election {
     return this.electionguardElectionMetadataBlob;
   }
 
-  toJSON(): unknown {
+  toJSON(): ElectionStruct {
     return {
       jurisdictionCode: this.jurisdictionCode,
-      electionDefinition: this.electionDefinition,
+      electionDefinition: Buffer.from(
+        this.electionDefinition.electionData
+      ).toString('base64'),
       mailingAddress: this.mailingAddress,
       electionguardElectionMetadataBlob:
         this.electionguardElectionMetadataBlob.toString('base64'),
@@ -177,28 +234,31 @@ export class Election {
   }
 }
 
-const ElectionStructSchema = z.object({
-  jurisdictionCode: JurisdictionCodeSchema,
-  electionDefinition: z
-    .string()
-    .transform((s) => Buffer.from(s, 'base64').toString('utf-8'))
-    .transform((s) => safeParseElectionDefinition(s).unsafeUnwrap()),
-  mailingAddress: z.string(),
-  electionguardElectionMetadataBlob: z
-    .string()
-    .transform((s) => Buffer.from(s, 'base64')),
-});
+interface ElectionStruct {
+  jurisdictionCode: string;
+  electionDefinition: string;
+  mailingAddress: string;
+  electionguardElectionMetadataBlob: string;
+}
 
-export const ElectionSchema: z.ZodSchema<Election> =
-  ElectionStructSchema.transform(
-    (o) =>
-      new Election(
-        o.jurisdictionCode,
-        o.electionDefinition,
-        o.mailingAddress,
-        o.electionguardElectionMetadataBlob
-      )
-  ) as unknown as z.ZodSchema<Election>;
+const ElectionStructSchema = z.object({
+  jurisdictionCode: z.string(),
+  electionDefinition: z.string(),
+  mailingAddress: z.string(),
+  electionguardElectionMetadataBlob: z.string(),
+}) satisfies z.ZodSchema<ElectionStruct>;
+
+export const ElectionSchema = ElectionStructSchema.transform(
+  (o) =>
+    new Election(
+      JurisdictionCodeSchema.parse(o.jurisdictionCode),
+      safeParseElectionDefinition(
+        Buffer.from(o.electionDefinition, 'base64').toString('utf-8')
+      ).unsafeUnwrap(),
+      o.mailingAddress,
+      Buffer.from(o.electionguardElectionMetadataBlob, 'base64')
+    )
+);
 
 export class RegistrationRequest {
   constructor(
@@ -229,7 +289,7 @@ export class RegistrationRequest {
     return this.createdAt;
   }
 
-  toJSON(): unknown {
+  toJSON(): RegistrationRequestStruct {
     return {
       commonAccessCardId: this.commonAccessCardId,
       jurisdictionCode: this.jurisdictionCode,
@@ -240,25 +300,33 @@ export class RegistrationRequest {
   }
 }
 
+interface RegistrationRequestStruct {
+  commonAccessCardId: string;
+  jurisdictionCode: string;
+  givenName: string;
+  familyName: string;
+  createdAt: string;
+}
+
 const RegistrationRequestStructSchema = z.object({
   commonAccessCardId: z.string(),
-  jurisdictionCode: JurisdictionCodeSchema,
+  jurisdictionCode: z.string(),
   givenName: z.string(),
   familyName: z.string(),
-  createdAt: DateTimeSchema,
-});
+  createdAt: z.string(),
+}) satisfies z.ZodSchema<RegistrationRequestStruct>;
 
-export const RegistrationRequestSchema: z.ZodSchema<RegistrationRequest> =
+export const RegistrationRequestSchema =
   RegistrationRequestStructSchema.transform(
     (o) =>
       new RegistrationRequest(
         o.commonAccessCardId,
-        o.jurisdictionCode,
+        JurisdictionCodeSchema.parse(o.jurisdictionCode),
         o.givenName,
         o.familyName,
-        o.createdAt
+        DateTime.fromISO(o.createdAt)
       )
-  ) as unknown as z.ZodSchema<RegistrationRequest>;
+  );
 
 export class Registration {
   constructor(
@@ -293,6 +361,26 @@ export class Registration {
   getPrecinctId(): PrecinctId {
     return this.precinctId;
   }
+
+  toJSON(): RegistrationStruct {
+    return {
+      commonAccessCardId: this.commonAccessCardId,
+      jurisdictionCode: this.jurisdictionCode,
+      registrationRequestObjectId: this.registrationRequestObjectId.toString(),
+      electionObjectId: this.electionObjectId.toString(),
+      ballotStyleId: this.ballotStyleId,
+      precinctId: this.precinctId,
+    };
+  }
+}
+
+export interface RegistrationStruct {
+  commonAccessCardId: string;
+  jurisdictionCode: string;
+  registrationRequestObjectId: string;
+  electionObjectId: string;
+  ballotStyleId: string;
+  precinctId: string;
 }
 
 const RegistrationStructSchema = z.object({
@@ -302,7 +390,7 @@ const RegistrationStructSchema = z.object({
   electionObjectId: UuidSchema,
   ballotStyleId: BallotStyleIdSchema,
   precinctId: PrecinctIdSchema,
-});
+}) satisfies z.ZodSchema<RegistrationStruct>;
 
 export const RegistrationSchema: z.ZodSchema<Registration> =
   RegistrationStructSchema.transform(
@@ -324,7 +412,7 @@ export class CastBallot {
     private readonly registrationRequestObjectId: Uuid,
     private readonly registrationObjectId: Uuid,
     private readonly electionObjectId: Uuid,
-    private readonly electionguardEncryptedBallot: string
+    private readonly electionguardEncryptedBallot: Buffer
   ) {}
 
   getCommonAccessCardId(): string {
@@ -347,32 +435,73 @@ export class CastBallot {
     return this.electionObjectId;
   }
 
-  getElectionguardEncryptedBallot(): string {
+  getElectionguardEncryptedBallot(): Buffer {
     return this.electionguardEncryptedBallot;
   }
+
+  toJSON(): CastBallotStruct {
+    return {
+      commonAccessCardId: this.commonAccessCardId,
+      jurisdictionCode: this.jurisdictionCode,
+      registrationRequestObjectId: this.registrationRequestObjectId.toString(),
+      registrationObjectId: this.registrationObjectId.toString(),
+      electionObjectId: this.electionObjectId.toString(),
+      electionguardEncryptedBallot:
+        this.electionguardEncryptedBallot.toString('base64'),
+    };
+  }
+}
+
+export interface CastBallotStruct {
+  commonAccessCardId: string;
+  jurisdictionCode: string;
+  registrationRequestObjectId: string;
+  registrationObjectId: string;
+  electionObjectId: string;
+  electionguardEncryptedBallot: string;
 }
 
 const CastBallotStructSchema = z.object({
   commonAccessCardId: z.string(),
-  jurisdictionCode: JurisdictionCodeSchema,
-  registrationRequestObjectId: UuidSchema,
-  registrationObjectId: UuidSchema,
-  electionObjectId: UuidSchema,
+  jurisdictionCode: z.string(),
+  registrationRequestObjectId: z.string(),
+  registrationObjectId: z.string(),
+  electionObjectId: z.string(),
   electionguardEncryptedBallot: z.string(),
+}) satisfies z.ZodSchema<CastBallotStruct>;
+
+const Base64BufferSchema = z.string().transform((s, ctx) => {
+  try {
+    return Buffer.from(s, 'base64');
+  } catch (e) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Invalid base64 encoding',
+    });
+
+    return z.NEVER;
+  }
 });
 
-export const CastBallotSchema: z.ZodSchema<CastBallot> =
-  CastBallotStructSchema.transform(
-    (o) =>
-      new CastBallot(
-        o.commonAccessCardId,
-        o.jurisdictionCode,
-        o.registrationRequestObjectId,
-        o.registrationObjectId,
-        o.electionObjectId,
-        o.electionguardEncryptedBallot
-      )
-  ) as unknown as z.ZodSchema<CastBallot>;
+export const CastBallotSchema = CastBallotStructSchema.transform(
+  propertyTransform(JurisdictionCodeSchema, 'jurisdictionCode')
+)
+  .transform(propertyTransform(UuidSchema, 'registrationRequestObjectId'))
+  .transform(propertyTransform(UuidSchema, 'registrationObjectId'))
+  .transform(propertyTransform(UuidSchema, 'electionObjectId'))
+  .transform(
+    propertyTransform(Base64BufferSchema, 'electionguardEncryptedBallot')
+  )
+  .transform((o) => {
+    return new CastBallot(
+      o.commonAccessCardId,
+      o.jurisdictionCode,
+      o.registrationRequestObjectId,
+      o.registrationObjectId,
+      o.electionObjectId,
+      o.electionguardEncryptedBallot
+    );
+  });
 
 export type PayloadInner =
   | Election
@@ -398,7 +527,7 @@ export class Payload<T extends PayloadInner = PayloadInner> {
     // matches the format expected by the server and by `PayloadSchema`
     return {
       objectType: this.objectType,
-      ...this.data,
+      ...this.data.toJSON(),
     };
   }
 
@@ -443,52 +572,19 @@ export const PayloadSchema: z.ZodSchema<Payload> = z
   .transform((o) => {
     switch (o.objectType) {
       case ElectionObjectType: {
-        return Payload.Election(
-          new Election(
-            o.jurisdictionCode,
-            o.electionDefinition,
-            o.mailingAddress,
-            o.electionguardElectionMetadataBlob
-          )
-        );
+        return Payload.Election(ElectionSchema.parse(o));
       }
 
       case RegistrationObjectType: {
-        return Payload.Registration(
-          new Registration(
-            o.commonAccessCardId,
-            o.jurisdictionCode,
-            o.registrationRequestObjectId,
-            o.electionObjectId,
-            o.ballotStyleId,
-            o.precinctId
-          )
-        );
+        return Payload.Registration(RegistrationSchema.parse(o));
       }
 
       case RegistrationRequestObjectType: {
-        return Payload.RegistrationRequest(
-          new RegistrationRequest(
-            o.commonAccessCardId,
-            o.jurisdictionCode,
-            o.givenName,
-            o.familyName,
-            o.createdAt
-          )
-        );
+        return Payload.RegistrationRequest(RegistrationRequestSchema.parse(o));
       }
 
       case CastBallotObjectType: {
-        return Payload.CastBallot(
-          new CastBallot(
-            o.commonAccessCardId,
-            o.jurisdictionCode,
-            o.registrationRequestObjectId,
-            o.registrationObjectId,
-            o.electionObjectId,
-            o.electionguardEncryptedBallot
-          )
-        );
+        return Payload.CastBallot(CastBallotSchema.parse(o));
       }
 
       default:
@@ -576,9 +672,10 @@ export class SignedObject {
     }
 
     const fields = await certs.getCertSubjectFields(this.certificates);
-    return safeParse(
-      JurisdictionCodeSchema,
-      fields.get(certs.VX_CUSTOM_CERT_FIELD.JURISDICTION)
+    return ok(
+      JurisdictionCodeSchema.parse(
+        fields.get(certs.VX_CUSTOM_CERT_FIELD.JURISDICTION)
+      )
     );
   }
 

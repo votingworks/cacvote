@@ -1,4 +1,3 @@
-import { unsafeParse } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import * as fc from 'fast-check';
 import { UuidSchema } from './cacvote-server/types';
@@ -19,7 +18,7 @@ test(BallotVerificationPayload.name, () => {
         const original = new BallotVerificationPayload(
           machineId,
           commonAccessCardId,
-          unsafeParse(UuidSchema, electionObjectId),
+          UuidSchema.parse(electionObjectId),
           Buffer.from(signatureHash)
         );
 

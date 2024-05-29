@@ -3,7 +3,6 @@ import {
   DEFAULT_SYSTEM_SETTINGS,
   SystemSettings,
   safeParseSystemSettings,
-  unsafeParse,
 } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import { readFile } from 'fs/promises';
@@ -122,7 +121,7 @@ test('forEachRegistrationRequest', async () => {
 
   const registrationRequest = new RegistrationRequest(
     commonAccessCardId,
-    unsafeParse(JurisdictionCodeSchema, 'st.test-jurisdiction'),
+    JurisdictionCodeSchema.parse('st.test-jurisdiction'),
     'Given Name',
     'Family Name',
     DateTime.now()

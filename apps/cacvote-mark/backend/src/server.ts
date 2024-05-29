@@ -2,12 +2,19 @@ import { cac } from '@votingworks/auth';
 import { throwIllegalValue } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
 import { Server } from 'http';
+import { DateTime } from 'luxon';
+import { readElection } from '@votingworks/fs';
 import { buildApp } from './app';
 import { Client } from './cacvote-server/client';
 import { syncPeriodically } from './cacvote-server/sync';
-import { CACVOTE_URL } from './globals';
+import {
+  CACVOTE_URL,
+  USABILITY_TEST_ELECTION_PATH,
+  USABILITY_TEST_EXPIRATION_MINUTES,
+} from './globals';
 import { Auth } from './types/auth';
 import { Workspace } from './workspace';
+import { UsabilityTestClient } from './cacvote-server/usability_test_client';
 
 export interface StartOptions {
   auth?: Auth;
@@ -82,13 +89,43 @@ function getCacvoteServerClient(): Client {
 /**
  * Starts the server with all the default options.
  */
-export function start({ auth, logger, port, workspace }: StartOptions): Server {
+export async function start({
+  auth,
+  logger,
+  port,
+  workspace,
+}: StartOptions): Promise<Server> {
   const resolvedAuth = auth ?? getDefaultAuth();
   const app = buildApp({
     workspace,
     auth: resolvedAuth,
   });
-  syncPeriodically(getCacvoteServerClient(), workspace.store, logger);
+
+  if (USABILITY_TEST_ELECTION_PATH) {
+    const electionDefinition = (
+      await readElection(USABILITY_TEST_ELECTION_PATH)
+    ).unsafeUnwrap();
+    const client = (
+      await UsabilityTestClient.withElection(electionDefinition, { logger })
+    ).unsafeUnwrap();
+
+    syncPeriodically(client, workspace.store, logger);
+
+    void logger.log(LogEventId.ApplicationStartup, 'system', {
+      message: 'Starting mock CACVote Server client',
+    });
+
+    setInterval(() => {
+      client.autoExpireCompletedVotingSessions({
+        before: DateTime.now().minus({
+          minutes: USABILITY_TEST_EXPIRATION_MINUTES,
+        }),
+      });
+    }, 1000);
+  } else {
+    const client = getCacvoteServerClient();
+    syncPeriodically(client, workspace.store, logger);
+  }
 
   return app.listen(
     port,

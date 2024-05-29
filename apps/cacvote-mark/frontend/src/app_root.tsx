@@ -11,6 +11,7 @@ export function AppRoot(): JSX.Element {
   if (isVoterSessionStillActive || getVoterStatusQuery.data?.status) {
     return (
       <VoterFlowScreen
+        isVoterSessionStillActive={isVoterSessionStillActive}
         setIsVoterSessionStillActive={setIsVoterSessionStillActive}
       />
     );

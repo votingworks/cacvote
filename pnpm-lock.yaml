@@ -169,8 +169,8 @@ importers:
         specifier: 9.0.1
         version: 9.0.1
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@jest/types':
         specifier: ^29.6.1
@@ -368,8 +368,8 @@ importers:
         specifier: ^1.0.1
         version: 1.0.1
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/debug':
         specifier: 4.1.8
@@ -908,8 +908,8 @@ importers:
         specifier: 17.7.1
         version: 17.7.1
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/combined-stream':
         specifier: ^1.0.3
@@ -1056,8 +1056,8 @@ importers:
         specifier: 9.0.1
         version: 9.0.1
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/debug':
         specifier: 4.1.8
@@ -1153,8 +1153,8 @@ importers:
         specifier: ^0.9.0
         version: 0.9.0
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/jest':
         specifier: ^29.5.3
@@ -1254,8 +1254,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/jest':
         specifier: ^29.5.3
@@ -1717,8 +1717,8 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/debug':
         specifier: 4.1.8
@@ -1976,8 +1976,8 @@ importers:
         specifier: 17.7.1
         version: 17.7.1
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/debug':
         specifier: 4.1.8
@@ -2112,8 +2112,8 @@ importers:
         specifier: 1.4.0
         version: 1.4.0(react@18.2.0)
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@storybook/cli':
         specifier: ^7.2.2
@@ -2390,8 +2390,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/debug':
         specifier: 4.1.8
@@ -2612,8 +2612,8 @@ importers:
         specifier: ^0.12.4
         version: 0.12.4
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/jest':
         specifier: ^29.5.3
@@ -2784,8 +2784,8 @@ importers:
         specifier: 1.4.0
         version: 1.4.0(react@18.2.0)
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@storybook/cli':
         specifier: ^7.2.2
@@ -3080,8 +3080,8 @@ importers:
         specifier: 17.7.1
         version: 17.7.1
       zod:
-        specifier: 3.14.4
-        version: 3.14.4
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/debug':
         specifier: 4.1.8
@@ -20166,6 +20166,6 @@ packages:
       readable-stream: 3.6.2
     dev: false
 
-  /zod@3.14.4:
-    resolution: {integrity: sha512-U9BFLb2GO34Sfo9IUYp0w3wJLlmcyGoMd75qU9yf+DrdGA4kEx6e+l9KOkAlyUO0PSQzZCa3TR4qVlcmwqSDuw==}
+  /zod@3.23.5:
+    resolution: {integrity: sha512-fkwiq0VIQTksNNA131rDOsVJcns0pfVUjHzLrNBiF/O/Xxb5lQyEXkhZWcJ7npWsYlvs+h0jFWXXy4X46Em1JA==}
     dev: false

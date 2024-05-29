@@ -7,17 +7,14 @@ import {
   iter,
 } from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
-import {
-  SystemSettings,
-  safeParse,
-  safeParseSystemSettings,
-  unsafeParse,
-} from '@votingworks/types';
+import { SystemSettings, safeParseSystemSettings } from '@votingworks/types';
 import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
 import { join } from 'path';
 import { ZodError } from 'zod';
 import {
+  CastBallot,
+  CastBallotObjectType,
   Election,
   ElectionObjectType,
   JournalEntry,
@@ -116,18 +113,10 @@ export class Store {
 
     return result
       ? new JournalEntry(
-          safeParse(UuidSchema, result.id).assertOk('assuming valid UUID'),
-          safeParse(UuidSchema, result.object_id).assertOk(
-            'assuming valid UUID'
-          ),
-          result.election_id
-            ? safeParse(UuidSchema, result.election_id).assertOk(
-                'assuming valid UUID'
-              )
-            : undefined,
-          safeParse(JurisdictionCodeSchema, result.jurisdiction).assertOk(
-            'assuming valid jurisdiction code'
-          ),
+          UuidSchema.parse(result.id),
+          UuidSchema.parse(result.object_id),
+          result.election_id ? UuidSchema.parse(result.election_id) : undefined,
+          JurisdictionCodeSchema.parse(result.jurisdiction),
           result.object_type,
           result.action,
           DateTime.fromSQL(result.created_at)
@@ -153,12 +142,10 @@ export class Store {
     return rows.map(
       (row) =>
         new JournalEntry(
-          unsafeParse(UuidSchema, row.id),
-          unsafeParse(UuidSchema, row.object_id),
-          row.election_id
-            ? unsafeParse(UuidSchema, row.election_id)
-            : undefined,
-          unsafeParse(JurisdictionCodeSchema, row.jurisdiction),
+          UuidSchema.parse(row.id),
+          UuidSchema.parse(row.object_id),
+          row.election_id ? UuidSchema.parse(row.election_id) : undefined,
+          JurisdictionCodeSchema.parse(row.jurisdiction),
           row.object_type,
           row.action,
           DateTime.fromSQL(row.created_at)
@@ -171,13 +158,19 @@ export class Store {
    */
   addJournalEntries(entries: JournalEntry[]): void {
     this.client.transaction(() => {
-      const stmt = this.client.prepare(
-        `insert into journal_entries (id, object_id, election_id, jurisdiction, object_type, action, created_at)
-        values (?, ?, ?, ?, ?, ?, ?)`
+      const insertJournalEntryStatement = this.client.prepare(
+        `
+        insert into journal_entries (id, object_id, election_id, jurisdiction, object_type, action, created_at)
+        values (?, ?, ?, ?, ?, ?, ?)
+        on conflict do nothing
+        `
+      );
+      const deleteObjectStatement = this.client.prepare(
+        `update objects set deleted_at = current_timestamp where id = ?`
       );
 
       for (const entry of entries) {
-        stmt.run(
+        insertJournalEntryStatement.run(
           entry.getId(),
           entry.getObjectId(),
           entry.getElectionId() ?? null,
@@ -186,6 +179,10 @@ export class Store {
           entry.getAction(),
           entry.getCreatedAt().toSQL()
         );
+
+        if (entry.getAction() === 'delete') {
+          deleteObjectStatement.run(entry.getObjectId());
+        }
       }
     });
   }
@@ -227,15 +224,38 @@ export class Store {
       const payload = object.getPayload().okOrElse(bail);
 
       this.client.run(
-        `insert into objects (id, election_id, jurisdiction, object_type, payload, certificates, signature, server_synced_at)
-        values (?, ?, ?, ?, ?, ?, ?, current_timestamp)`,
+        `insert into objects (
+          id,
+          election_id,
+          jurisdiction,
+          object_type,
+          payload,
+          certificates,
+          signature,
+          server_synced_at,
+          deleted_at
+        )
+        values (
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          current_timestamp,
+          case when exists (
+            select 1 from journal_entries where object_id = ? and action = 'delete'
+          ) then current_timestamp else null end
+        )`,
         object.getId(),
         object.getElectionId() ?? null,
         jurisdiction,
         payload.getObjectType(),
         object.getPayloadRaw(),
         object.getCertificates(),
-        object.getSignature()
+        object.getSignature(),
+        object.getId()
       );
 
       return object.getId();
@@ -247,7 +267,11 @@ export class Store {
    */
   getObjectById(objectId: Uuid): Optional<SignedObject> {
     const row = this.client.one(
-      `select id, election_id as electionId, payload, certificates, signature from objects where id = ?`,
+      `
+      select id, election_id as electionId, payload, certificates, signature
+      from objects
+      where id = ? and deleted_at is null
+      `,
       objectId
     ) as Optional<{
       id: string;
@@ -259,8 +283,8 @@ export class Store {
 
     return row
       ? new SignedObject(
-          unsafeParse(UuidSchema, row.id),
-          row.electionId ? unsafeParse(UuidSchema, row.electionId) : undefined,
+          UuidSchema.parse(row.id),
+          row.electionId ? UuidSchema.parse(row.electionId) : undefined,
           row.payload,
           row.certificates,
           row.signature
@@ -298,12 +322,10 @@ export class Store {
     return rows.map(
       (row) =>
         new JournalEntry(
-          unsafeParse(UuidSchema, row.id),
-          unsafeParse(UuidSchema, row.object_id),
-          row.election_id
-            ? unsafeParse(UuidSchema, row.election_id)
-            : undefined,
-          unsafeParse(JurisdictionCodeSchema, row.jurisdiction),
+          UuidSchema.parse(row.id),
+          UuidSchema.parse(row.object_id),
+          row.election_id ? UuidSchema.parse(row.election_id) : undefined,
+          JurisdictionCodeSchema.parse(row.jurisdiction),
           row.object_type,
           action,
           DateTime.fromSQL(row.created_at)
@@ -328,8 +350,8 @@ export class Store {
     return rows.map(
       (row) =>
         new SignedObject(
-          unsafeParse(UuidSchema, row.id),
-          row.electionId ? unsafeParse(UuidSchema, row.electionId) : undefined,
+          UuidSchema.parse(row.id),
+          row.electionId ? UuidSchema.parse(row.electionId) : undefined,
           row.payload,
           row.certificates,
           row.signature
@@ -417,12 +439,38 @@ export class Store {
     );
   }
 
+  forEachCastBallot({
+    commonAccessCardId,
+    electionObjectId,
+  }: {
+    commonAccessCardId: string;
+    electionObjectId: Uuid;
+  }): IteratorPlus<{
+    object: SignedObject;
+    castBallot: CastBallot;
+  }> {
+    return this.forEachObjectOfType(CastBallotObjectType).filterMap(
+      (object) => {
+        const castBallotPayload = object
+          .getPayloadAsObjectType(CastBallotObjectType)
+          .unsafeUnwrap();
+        const castBallot = castBallotPayload.getData();
+        if (
+          castBallot.getCommonAccessCardId() === commonAccessCardId &&
+          castBallot.getElectionObjectId() === electionObjectId
+        ) {
+          return { object, castBallot };
+        }
+      }
+    );
+  }
+
   forEachObjectOfType(objectType: string): IteratorPlus<SignedObject> {
     // FIXME: this should be using `this.client.each`, but there seems to be a race condition
     // that results in errors with "This database connection is busy executing a query"
     const rows = this.client.all(
       `select id, election_id as electionId, payload, certificates, signature from objects
-        where json_extract(payload, '$.objectType') = ?`,
+        where json_extract(payload, '$.objectType') = ? and deleted_at is null`,
       objectType
     ) as Array<{
       id: string;
@@ -434,8 +482,8 @@ export class Store {
     return iter(rows).map(
       (row) =>
         new SignedObject(
-          unsafeParse(UuidSchema, row.id),
-          row.electionId ? unsafeParse(UuidSchema, row.electionId) : undefined,
+          UuidSchema.parse(row.id),
+          row.electionId ? UuidSchema.parse(row.electionId) : undefined,
           row.payload,
           row.certificates,
           row.signature
@@ -448,8 +496,6 @@ export class Store {
       `select distinct jurisdiction from objects`
     ) as Array<{ jurisdiction: string }>;
 
-    return rows.map((row) =>
-      unsafeParse(JurisdictionCodeSchema, row.jurisdiction)
-    );
+    return rows.map((row) => JurisdictionCodeSchema.parse(row.jurisdiction));
   }
 }
