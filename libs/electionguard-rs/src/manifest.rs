@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use types_rs::election as vx_election;
+use types_rs::election::{self as vx_election};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Manifest {
@@ -35,11 +35,35 @@ impl From<vx_election::Election> for Manifest {
                 .contests
                 .clone()
                 .into_iter()
-                .filter_map(|contest| match contest {
-                    vx_election::Contest::Candidate(contest) => Some(contest.candidates),
-                    vx_election::Contest::YesNo(_) => None,
+                .flat_map(|contest| match contest {
+                    vx_election::Contest::Candidate(contest) => contest
+                        .candidates
+                        .into_iter()
+                        .map(Candidate::from)
+                        .collect(),
+                    vx_election::Contest::YesNo(contest) => vec![
+                        match contest.yes_option {
+                            Some(yes_option) => Candidate {
+                                object_id: ObjectId::from(yes_option.id),
+                                name: yes_option.label,
+                                is_write_in: false,
+                                party_id: None,
+                                image_url: None,
+                            },
+                            None => unimplemented!("yes_option is required"),
+                        },
+                        match contest.no_option {
+                            Some(no_option) => Candidate {
+                                object_id: ObjectId::from(no_option.id),
+                                name: no_option.label,
+                                is_write_in: false,
+                                party_id: None,
+                                image_url: None,
+                            },
+                            None => unimplemented!("no_option is required"),
+                        },
+                    ],
                 })
-                .flat_map(|candidates| candidates.into_iter().map(Into::into))
                 .collect(),
             contests: value
                 .contests
@@ -84,6 +108,12 @@ impl From<vx_election::ContestId> for ObjectId {
 impl From<vx_election::CandidateId> for ObjectId {
     fn from(candidate_id: vx_election::CandidateId) -> Self {
         Self(format!("cand-{candidate_id}"))
+    }
+}
+
+impl From<vx_election::OptionId> for ObjectId {
+    fn from(option_id: vx_election::OptionId) -> Self {
+        Self(format!("option-{option_id}"))
     }
 }
 
@@ -145,7 +175,7 @@ impl From<types_rs::election::Party> for Party {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Candidate {
     pub object_id: ObjectId,
     pub name: String,
@@ -169,7 +199,7 @@ impl From<vx_election::Candidate> for Candidate {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Contest {
     pub object_id: ObjectId,
     pub sequence_order: u32,
@@ -210,12 +240,33 @@ impl From<vx_election::Contest> for Contest {
                 ballot_title: Some(contest.title),
                 ballot_subtitle: None,
             },
-            vx_election::Contest::YesNo(_) => unimplemented!(),
+            vx_election::Contest::YesNo(contest) => Contest {
+                object_id: contest.id.clone().into(),
+                sequence_order: 0,
+                electoral_district_id: contest.district_id.into(),
+                vote_variation: VoteVariation::OneOfM,
+                votes_allowed: 1,
+                number_elected: 1,
+                name: ObjectId::from(contest.id).0,
+                ballot_selections: vec![
+                    contest.yes_option.expect("yes_option is required").into(),
+                    contest.no_option.expect("no_option is required").into(),
+                ]
+                .into_iter()
+                .enumerate()
+                .map(|(i, candidate)| BallotSelection {
+                    sequence_order: i as u32 + 1,
+                    ..candidate
+                })
+                .collect(),
+                ballot_title: Some(contest.title),
+                ballot_subtitle: None,
+            },
         }
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct BallotSelection {
     pub object_id: ObjectId,
@@ -234,7 +285,18 @@ impl From<vx_election::Candidate> for BallotSelection {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+impl From<vx_election::YesNoOption> for BallotSelection {
+    fn from(value: vx_election::YesNoOption) -> Self {
+        let candidate_id: ObjectId = value.id.into();
+        BallotSelection {
+            object_id: candidate_id.clone(),
+            sequence_order: 0,
+            candidate_id,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub enum VoteVariation {
     #[serde(rename = "one_of_m")]
     OneOfM,
