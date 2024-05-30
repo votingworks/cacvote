@@ -110,40 +110,85 @@ pub fn convert_vx_cvr_to_eg_plaintext_ballot(
             bail!("Missing selections in CVR contest");
         };
 
-        let election::Contest::Candidate(contest) = contest else {
-            bail!("Unsupported contest type: {contest:?}");
-        };
+        match contest {
+            election::Contest::Candidate(contest) => {
+                for selection in cvr_contest_selection {
+                    let Some(selection_id) = selection.contest_selection_id.clone() else {
+                        bail!("Missing selection ID in CVR contest selection (contest ID: {contest_id})")
+                    };
+                    let Some(candidate_index) = contest
+                        .candidates
+                        .iter()
+                        .position(|c| c.id.to_string() == selection_id)
+                    else {
+                        bail!("Selection ID not found in election: {selection_id}");
+                    };
+                    let Some(eg_ballot_selection) =
+                        eg_contest.ballot_selections.get(candidate_index)
+                    else {
+                        bail!("Selection not found in manifest: {selection_id}");
+                    };
 
-        for selection in cvr_contest_selection {
-            let Some(selection_id) = selection.contest_selection_id.clone() else {
-                bail!("Missing selection ID in CVR contest selection (contest ID: {contest_id})")
-            };
-            let Some(candidate_index) = contest
-                .candidates
-                .iter()
-                .position(|c| c.id.to_string() == selection_id)
-            else {
-                bail!("Selection ID not found in election: {selection_id}");
-            };
-            let Some(eg_ballot_selection) = eg_contest.ballot_selections.get(candidate_index)
-            else {
-                bail!("Selection not found in manifest: {selection_id}");
-            };
+                    let Some(selection_position) = selection
+                        .selection_position
+                        .iter()
+                        .find(|p| matches!(p.is_allocable, Some(AllocationStatus::Yes)))
+                    else {
+                        bail!("Selection position not allocable: {selection_id}");
+                    };
 
-            let Some(selection_position) = selection
-                .selection_position
-                .iter()
-                .find(|p| matches!(p.is_allocable, Some(AllocationStatus::Yes)))
-            else {
-                bail!("Selection position not allocable: {selection_id}");
-            };
+                    let vote = selection_position.number_votes as u32;
+                    selections.push(Selection {
+                        selection_id: eg_ballot_selection.object_id.clone(),
+                        sequence_order: candidate_index as u32 + 1,
+                        vote,
+                    });
+                }
+            }
+            election::Contest::YesNo(contest) => {
+                let yes_option = match contest.yes_option {
+                    Some(ref yes_option) => yes_option,
+                    None => bail!("Missing yes option in YesNo contest"),
+                };
 
-            let vote = selection_position.number_votes as u32;
-            selections.push(Selection {
-                selection_id: eg_ballot_selection.object_id.clone(),
-                sequence_order: candidate_index as u32 + 1,
-                vote,
-            });
+                let no_option = match contest.no_option {
+                    Some(ref no_option) => no_option,
+                    None => bail!("Missing no option in YesNo contest"),
+                };
+
+                for selection in cvr_contest_selection {
+                    let Some(selection_id) = selection.contest_selection_id.clone() else {
+                        bail!("Missing selection ID in CVR contest selection (contest ID: {contest_id})")
+                    };
+                    let selection_index = if selection_id == yes_option.id.to_string() {
+                        0
+                    } else if selection_id == no_option.id.to_string() {
+                        1
+                    } else {
+                        bail!("Selection ID not found in election: {selection_id}");
+                    };
+                    let Some(eg_ballot_selection) =
+                        eg_contest.ballot_selections.get(selection_index)
+                    else {
+                        bail!("Selection not found in manifest: {selection_id}");
+                    };
+
+                    let Some(selection_position) = selection
+                        .selection_position
+                        .iter()
+                        .find(|p| matches!(p.is_allocable, Some(AllocationStatus::Yes)))
+                    else {
+                        bail!("Selection position not allocable: {selection_id}");
+                    };
+
+                    let vote = selection_position.number_votes as u32;
+                    selections.push(Selection {
+                        selection_id: eg_ballot_selection.object_id.clone(),
+                        sequence_order: selection_index as u32 + 1,
+                        vote,
+                    });
+                }
+            }
         }
 
         contests.push(Contest {
