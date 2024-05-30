@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use base64_serde::base64_serde_type;
 use color_eyre::eyre::bail;
+use serde::Serialize;
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
 use types_rs::cacvote::{
@@ -335,6 +336,15 @@ pub(crate) async fn get_machine_id_by_identifier(
     .map(|record| record.id))
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ScannedMailingLabelCode {
+    #[serde(with = "Base64Standard")]
+    original_payload: Vec<u8>,
+    signed_buffer: SignedBuffer,
+    ballot_verification_payload: BallotVerificationPayload,
+}
+
 pub(crate) async fn create_scanned_mailing_label_code(
     conn: &mut sqlx::PgConnection,
     ballot_verification_payload: &[u8],
@@ -380,4 +390,36 @@ pub(crate) async fn create_scanned_mailing_label_code(
     txn.commit().await?;
 
     Ok(record.id)
+}
+
+pub(crate) async fn get_scanned_mailing_label_codes(
+    conn: &mut sqlx::PgConnection,
+    election_id: Uuid,
+) -> color_eyre::Result<Vec<ScannedMailingLabelCode>> {
+    let records = sqlx::query!(
+        r#"
+        SELECT original_payload
+        FROM scanned_mailing_label_codes
+        WHERE election_id = $1
+        "#,
+        election_id,
+    )
+    .fetch_all(conn)
+    .await?;
+
+    records
+        .into_iter()
+        .map(|record| {
+            let original_payload = record.original_payload;
+            let signed_buffer: SignedBuffer = tlv::from_slice(&original_payload)?;
+            let ballot_verification_payload: BallotVerificationPayload =
+                tlv::from_slice(signed_buffer.buffer())?;
+
+            Ok(ScannedMailingLabelCode {
+                original_payload,
+                signed_buffer,
+                ballot_verification_payload,
+            })
+        })
+        .collect::<color_eyre::Result<Vec<_>>>()
 }

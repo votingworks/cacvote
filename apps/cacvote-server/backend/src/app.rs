@@ -13,12 +13,13 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use base64_serde::base64_serde_type;
 use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote::{self, JournalEntry, JurisdictionCode, SignedObject};
+use types_rs::cacvote;
 use uuid::Uuid;
 
 use crate::{
@@ -26,6 +27,8 @@ use crate::{
     config::{Config, MAX_REQUEST_SIZE},
     db,
 };
+
+base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 
 /// Prepares the application to be run within an HTTP server.
 ///
@@ -46,6 +49,10 @@ pub async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
         .route(
             "/api/elections/:election_id/cast-ballots",
             get(list_cast_ballots_by_election),
+        )
+        .route(
+            "/api/elections/:election_id/scanned-mailing-label-codes",
+            get(list_scanned_mailing_labels_by_election),
         )
         .route(
             "/api/elections/:election_id/cast-ballots/:cast_ballot_id",
@@ -87,7 +94,7 @@ async fn get_status() -> impl IntoResponse {
 
 async fn create_object(
     State(pool): State<PgPool>,
-    object: Json<SignedObject>,
+    object: Json<cacvote::SignedObject>,
 ) -> Result<impl IntoResponse, Error> {
     let mut conn = pool.acquire().await?;
     let object_id = db::create_object(&mut conn, &object).await?;
@@ -100,13 +107,13 @@ struct GetJournalEntriesQuery {
     since_journal_entry_id: Option<Uuid>,
 
     #[serde(rename = "jurisdiction")]
-    jurisdiction_code: Option<JurisdictionCode>,
+    jurisdiction_code: Option<cacvote::JurisdictionCode>,
 }
 
 async fn get_journal_entries(
     State(pool): State<PgPool>,
     Query(query): Query<GetJournalEntriesQuery>,
-) -> Result<Json<Vec<JournalEntry>>, Error> {
+) -> Result<Json<Vec<cacvote::JournalEntry>>, Error> {
     let mut conn = pool.acquire().await?;
 
     Ok(db::get_journal_entries(
@@ -121,7 +128,7 @@ async fn get_journal_entries(
 async fn get_object_by_id(
     State(pool): State<PgPool>,
     Path(object_id): Path<Uuid>,
-) -> Result<Json<SignedObject>, Error> {
+) -> Result<Json<cacvote::SignedObject>, Error> {
     let mut conn = pool.acquire().await?;
 
     match db::get_object_by_id(&mut conn, object_id).await? {
@@ -173,10 +180,21 @@ async fn list_cast_ballots_by_election(
     ))
 }
 
+async fn list_scanned_mailing_labels_by_election(
+    State(pool): State<PgPool>,
+    Path(election_id): Path<Uuid>,
+) -> Result<Json<Vec<db::ScannedMailingLabelCode>>, Error> {
+    let mut conn = pool.acquire().await?;
+
+    Ok(Json(
+        db::get_scanned_mailing_label_codes(&mut conn, election_id).await?,
+    ))
+}
+
 async fn get_cast_ballot_by_id(
     State(pool): State<PgPool>,
     Path((election_id, cast_ballot_id)): Path<(Uuid, Uuid)>,
-) -> Result<Json<SignedObject>, Error> {
+) -> Result<Json<cacvote::SignedObject>, Error> {
     let mut conn = pool.acquire().await?;
 
     match db::get_object_by_id(&mut conn, cast_ballot_id).await? {
@@ -193,7 +211,7 @@ async fn get_cast_ballot_by_id(
 async fn get_encrypted_tally_by_election(
     State(pool): State<PgPool>,
     Path(election_id): Path<Uuid>,
-) -> Result<Json<SignedObject>, Error> {
+) -> Result<Json<cacvote::SignedObject>, Error> {
     let mut conn = pool.acquire().await?;
 
     match db::get_object_by_election_id_and_type(
@@ -211,7 +229,7 @@ async fn get_encrypted_tally_by_election(
 async fn get_decrypted_tally_by_election(
     State(pool): State<PgPool>,
     Path(election_id): Path<Uuid>,
-) -> Result<Json<SignedObject>, Error> {
+) -> Result<Json<cacvote::SignedObject>, Error> {
     let mut conn = pool.acquire().await?;
 
     match db::get_object_by_election_id_and_type(
@@ -229,7 +247,7 @@ async fn get_decrypted_tally_by_election(
 async fn list_shuffled_ballots_by_election(
     State(pool): State<PgPool>,
     Path(election_id): Path<Uuid>,
-) -> Result<Json<SignedObject>, Error> {
+) -> Result<Json<cacvote::SignedObject>, Error> {
     let mut conn = pool.acquire().await?;
 
     match db::get_object_by_election_id_and_type(

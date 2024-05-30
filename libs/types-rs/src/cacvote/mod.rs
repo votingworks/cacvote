@@ -953,7 +953,8 @@ pub struct MixEncryptedBallotsRequest {
 }
 
 /// A payload for verifying a ballot. This payload is encoded as a TLV structure.
-#[derive(Debug, Clone, PartialEq, Encode, Decode)]
+#[derive(Debug, Clone, PartialEq, Encode, Decode, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BallotVerificationPayload {
     /// The machine ID of the voting machine.
     #[tlv(tag = 0x02)]
@@ -969,6 +970,7 @@ pub struct BallotVerificationPayload {
 
     /// The SHA-256 hash of the encrypted ballot signature.
     #[tlv(tag = 0x05)]
+    #[serde(with = "Base64Standard")]
     encrypted_ballot_signature_hash: [u8; 32],
 }
 
@@ -1010,14 +1012,16 @@ impl BallotVerificationPayload {
 }
 
 /// A buffer that has been signed.
-#[derive(Debug, Clone, PartialEq, Encode, Decode)]
+#[derive(Debug, Clone, PartialEq, Encode, Decode, Serialize)]
 pub struct SignedBuffer {
     /// The buffer that was signed.
     #[tlv(tag = 0x06)]
+    #[serde(with = "Base64Standard")]
     buffer: Vec<u8>,
 
     /// The signature of the buffer.
     #[tlv(tag = 0x07)]
+    #[serde(with = "Base64Standard")]
     signature: Vec<u8>,
 }
 
