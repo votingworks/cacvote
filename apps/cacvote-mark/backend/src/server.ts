@@ -120,6 +120,7 @@ export async function start({
         before: DateTime.now().minus({
           minutes: USABILITY_TEST_EXPIRATION_MINUTES,
         }),
+        expire: 'castBallotOnly',
       });
     }, 1000);
   } else {

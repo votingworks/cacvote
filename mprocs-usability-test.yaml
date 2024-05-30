@@ -3,7 +3,7 @@ procs:
     cwd: 'apps/cacvote-mark/frontend'
     shell: |
       export USABILITY_TEST_ELECTION_PATH=${USABILITY_TEST_ELECTION_PATH:-$HOME/Desktop/election.json}
-      rm -rf ../backend/dev-workspace
+      # rm -rf ../backend/dev-workspace
       pnpm tsc --build && pnpm start
 
   kiosk-browser:

@@ -82,7 +82,7 @@ test('create object', async () => {
   );
 });
 
-test('auto expire completed voting sessions', async () => {
+test('auto expire completed voting sessions (ballot only)', async () => {
   const electionObject = await createVerifiedObject(
     Payload.Election(
       new Election(
@@ -140,6 +140,7 @@ test('auto expire completed voting sessions', async () => {
   // this should be a no-op
   client.autoExpireCompletedVotingSessions({
     before: DateTime.now().minus({ days: 1 }),
+    expire: 'castBallotOnly',
   });
 
   expect(await client.getObjectById(registrationRequestObjectId)).not.toEqual(
@@ -150,16 +151,99 @@ test('auto expire completed voting sessions', async () => {
     ok(undefined)
   );
 
-  // this should actually expire the voting session
+  // this should actually expire the cast ballot
   client.autoExpireCompletedVotingSessions({
     before: DateTime.now().plus({ minutes: 1 }),
+    expire: 'castBallotOnly',
   });
 
+  expect(await client.getObjectById(castBallotObjectId)).toEqual(ok(undefined));
+  expect(await client.getObjectById(registrationRequestObjectId)).not.toEqual(
+    ok(undefined)
+  );
+  expect(await client.getObjectById(registrationId)).not.toEqual(ok(undefined));
+});
+
+test('auto expire completed voting sessions (ballot and registration)', async () => {
+  const electionObject = await createVerifiedObject(
+    Payload.Election(
+      new Election(
+        JURISDICTION_CODE,
+        electionFamousNames2021Fixtures.electionDefinition,
+        '123 Main St.\nAnytown, USA',
+        Buffer.from('public metadata blob')
+      )
+    )
+  );
+
+  const client = new UsabilityTestClient({ logger: fakeLogger() });
+  (await client.createObject(electionObject)).unsafeUnwrap();
+
+  const registrationRequestObject = await createVerifiedObject(
+    Payload.RegistrationRequest(
+      new RegistrationRequest(
+        '0123456789',
+        jurisdictionCode,
+        'Ford',
+        'Prefect',
+        DateTime.now()
+      )
+    ),
+    { electionId: electionObject.getId() }
+  );
+  const registrationRequestObjectId = registrationRequestObject.getId();
+
+  (await client.createObject(registrationRequestObject)).unsafeUnwrap();
+
+  const journalEntries = (await client.getJournalEntries()).unsafeUnwrap();
+  const registrationId = assertDefined(
+    iter(journalEntries)
+      .filter((e) => e.getObjectType() === RegistrationObjectType)
+      .last()
+  ).getObjectId();
+
+  const castBallotObject = await createVerifiedObject(
+    Payload.CastBallot(
+      new CastBallot(
+        '0123456789',
+        JURISDICTION_CODE,
+        registrationRequestObjectId,
+        registrationId,
+        electionObject.getId(),
+        Buffer.from('ballot data')
+      )
+    ),
+    { electionId: electionObject.getId() }
+  );
+  const castBallotObjectId = castBallotObject.getId();
+
+  (await client.createObject(castBallotObject)).unsafeUnwrap();
+
+  // this should be a no-op
+  client.autoExpireCompletedVotingSessions({
+    before: DateTime.now().minus({ days: 1 }),
+    expire: 'castBallotAndRegistration',
+  });
+
+  expect(await client.getObjectById(registrationRequestObjectId)).not.toEqual(
+    ok(undefined)
+  );
+  expect(await client.getObjectById(registrationId)).not.toEqual(ok(undefined));
+  expect(await client.getObjectById(castBallotObjectId)).not.toEqual(
+    ok(undefined)
+  );
+
+  // this should actually expire the cast ballot
+  client.autoExpireCompletedVotingSessions({
+    before: DateTime.now().plus({ minutes: 1 }),
+    expire: 'castBallotAndRegistration',
+  });
+
+  expect(await client.getObjectById(castBallotObjectId)).toEqual(ok(undefined));
   expect(await client.getObjectById(registrationRequestObjectId)).toEqual(
     ok(undefined)
   );
   expect(await client.getObjectById(registrationId)).toEqual(ok(undefined));
-  expect(await client.getObjectById(castBallotObjectId)).toEqual(ok(undefined));
 });
 
 const egtest = ELECTIONGUARD_CLASSPATH ? test : test.skip;
