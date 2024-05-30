@@ -5,6 +5,7 @@ import * as dotenvExpand from 'dotenv-expand';
 import fs from 'fs';
 import { join } from 'path';
 import { z } from 'zod';
+import { AutomaticExpirationTypeSchema } from './cacvote-server/usability_test_client';
 
 // https://github.com/bkeepers/dotenv#what-other-env-files-can-i-use
 const dotEnvPath = '.env';
@@ -75,6 +76,14 @@ export const USABILITY_TEST_EXPIRATION_MINUTES =
   safeParseInt(process.env.USABILITY_TEST_EXPIRATION_MINUTES, {
     min: 1,
   }).ok() ?? 2;
+
+/**
+ * Which type of automatic expiration should we use for the usability test?
+ */
+export const USABILITY_TEST_AUTOMATIC_EXPIRATION_TYPE =
+  AutomaticExpirationTypeSchema.optional().parse(
+    process.env.USABILITY_TEST_EXPIRATION_TYPE
+  ) ?? 'castBallotOnly';
 
 /**
  * What is the name of the mailing label printer?

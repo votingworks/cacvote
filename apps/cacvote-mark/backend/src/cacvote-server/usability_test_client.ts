@@ -16,6 +16,7 @@ import {
 import { ElectionDefinition } from '@votingworks/types';
 import { DateTime } from 'luxon';
 import { LogEventId, Logger } from '@votingworks/logging';
+import { z } from 'zod';
 import { ClientApi, ClientResult } from './client';
 import { JURISDICTION_CODE, createVerifiedObject } from './mock_object';
 import {
@@ -30,6 +31,15 @@ import {
   SignedObject,
   Uuid,
 } from './types';
+
+export const AutomaticExpirationTypeSchema = z.enum([
+  'castBallotOnly',
+  'castBallotAndRegistration',
+]);
+
+export type AutomaticExpirationType = z.infer<
+  typeof AutomaticExpirationTypeSchema
+>;
 
 /**
  * Provides a mock client API for usability testing, specifically:
@@ -217,7 +227,13 @@ export class UsabilityTestClient implements ClientApi {
     }
   }
 
-  autoExpireCompletedVotingSessions({ before }: { before: DateTime }): void {
+  autoExpireCompletedVotingSessions({
+    before,
+    expire,
+  }: {
+    before: DateTime;
+    expire: AutomaticExpirationType;
+  }): void {
     const castBallotJournalEntries = iter(this.journalEntries).filter(
       (entry) =>
         entry.getObjectType() === CastBallotObjectType &&
@@ -240,8 +256,11 @@ export class UsabilityTestClient implements ClientApi {
         .unsafeUnwrap();
       const castBallotData = castBallotPayload.getData();
       this.deleteObject(castBallotObject.getId());
-      this.deleteObject(castBallotData.getRegistrationObjectId());
-      this.deleteObject(castBallotData.getRegistrationRequestObjectId());
+
+      if (expire === 'castBallotAndRegistration') {
+        this.deleteObject(castBallotData.getRegistrationObjectId());
+        this.deleteObject(castBallotData.getRegistrationRequestObjectId());
+      }
     }
   }
 

@@ -1,13 +1,15 @@
 procs:
   cacvote-mark:
     cwd: 'apps/cacvote-mark/frontend'
+    stop: SIGINT
     shell: |
       export USABILITY_TEST_ELECTION_PATH=${USABILITY_TEST_ELECTION_PATH:-$HOME/Desktop/election.json}
-      rm -rf ../backend/dev-workspace
+      # rm -rf ../backend/dev-workspace
       pnpm tsc --build && pnpm start
 
   kiosk-browser:
     cwd: '../kiosk-browser'
+    stop: SIGKILL
     shell: |
       echo "Waiting for CACVote Mark to start…"
       while ! nc -z localhost 3000; do sleep 1; done
