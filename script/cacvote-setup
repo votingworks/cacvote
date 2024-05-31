@@ -344,7 +344,7 @@ setup-electionguard() {
   local EG_CLASSPATH="${EG_DIR}/build/libs/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar"
 
   if [ ! -d "${EG_DIR}" ]; then
-    git clone --depth 10 https://github.com/JohnLCaron/egk-ec-mixnet "${EG_DIR}"
+    git clone --depth 10 https://github.com/votingworks/egk-ec-mixnet "${EG_DIR}"
   fi
 
   if [ ! -f "${EG_CLASSPATH}" ]; then
