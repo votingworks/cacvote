@@ -69,7 +69,7 @@ async fn main() -> color_eyre::Result<()> {
     let encrypted_tally = tally::accumulate(
         &opts.electionguard_classpath,
         &election.electionguard_election_metadata_blob,
-        once(cast_ballot.electionguard_encrypted_ballot.as_bytes()),
+        once(cast_ballot.electionguard_encrypted_ballot.as_slice()),
     )?;
 
     let pool = PgPoolOptions::new()

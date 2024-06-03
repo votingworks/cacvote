@@ -516,7 +516,7 @@ async fn generate_encrypted_election_tally(
         &election.electionguard_election_metadata_blob,
         cast_ballots
             .iter()
-            .map(|cast_ballot| cast_ballot.electionguard_encrypted_ballot.as_bytes()),
+            .map(|cast_ballot| cast_ballot.electionguard_encrypted_ballot.as_slice()),
     ) {
         Ok(encrypted_tally) => encrypted_tally,
         Err(e) => {
@@ -842,7 +842,7 @@ async fn mix_encrypted_ballots(
         &election.electionguard_election_metadata_blob,
         cast_ballots
             .iter()
-            .map(|cast_ballot| cast_ballot.electionguard_encrypted_ballot.as_bytes()),
+            .map(|cast_ballot| cast_ballot.electionguard_encrypted_ballot.as_slice()),
         phases,
     ) {
         Ok(shuffled_ballots) => shuffled_ballots,

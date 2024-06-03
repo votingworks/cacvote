@@ -569,7 +569,9 @@ pub struct CastBallot {
     pub registration_request_object_id: Uuid,
     pub registration_object_id: Uuid,
     pub election_object_id: Uuid,
-    pub electionguard_encrypted_ballot: String,
+
+    #[serde(with = "Base64Standard")]
+    pub electionguard_encrypted_ballot: Vec<u8>,
 }
 
 impl CastBallot {
