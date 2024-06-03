@@ -317,6 +317,29 @@ setup-thermal-printer() {
   )
 }
 
+setup-electionguard() {
+  echo "🗳️ ElectionGuard"
+
+  local EG_DIR="${DIR}/../../egk-ec-mixnet"
+  local EG_CLASSPATH="${EG_DIR}/build/libs/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar"
+
+  if [ ! -d "${EG_DIR}" ]; then
+    git clone https://github.com/JohnLCaron/egk-ec-mixnet "${EG_DIR}"
+  fi
+
+  if [ ! -f "${EG_CLASSPATH}" ]; then
+    (
+      cd "${EG_DIR}"
+      ./gradlew uberJar
+    )
+  fi
+
+  if [ ! -f "${EG_CLASSPATH}" ]; then
+    echo -e "\e[1;31merror:\e[0;31m failed to build ElectionGuard mixnet uberJar\e[0m" >&2
+    exit 1
+  fi
+}
+
 setup-prereqs
 setup-node
 setup-rust
@@ -325,5 +348,6 @@ setup-postgresql
 setup-kiosk-browser
 setup-label-printer
 setup-thermal-printer
+setup-electionguard
 
 echo -e "\e[32m🎉 Success! Please restart your shell.\e[0m"
