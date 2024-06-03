@@ -16,10 +16,18 @@
   management
 - `apps/cacvote-server`: the CACVote server providing sync services for the apps
 
+## Configuration
+
+Configuration is done via environment variables. The following are required:
+
+- `EG_CLASSPATH`: the path to the `egk-ec-mixnet` uberJar. It should be in a
+  `egk-ec-mixnet` directory in this repo's parent directory, e.g.
+  `$HOME/egk-ec-mixnet/build/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar`
+
 ## Development
 
 The easiest way to run the services in development is with `mprocs` at the
-repository root.
+repository root. Be sure to include the `EG_CLASSPATH` environment variable!
 
 > Tip: stop and restart the services in `mprocs` with `x` and `r` respectively.
 
