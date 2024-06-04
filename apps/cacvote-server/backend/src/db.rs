@@ -263,7 +263,7 @@ pub async fn get_object_by_id(
     Ok(object)
 }
 
-pub(crate) async fn get_election_ids(
+pub async fn get_election_ids(
     connection: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<Vec<Uuid>> {
     let object = sqlx::query!(
@@ -280,7 +280,7 @@ pub(crate) async fn get_election_ids(
     Ok(object.into_iter().map(|object| object.id).collect())
 }
 
-pub(crate) async fn get_cast_ballot_ids_by_election(
+pub async fn get_cast_ballot_ids_by_election(
     connection: &mut sqlx::PgConnection,
     election_id: Uuid,
 ) -> color_eyre::Result<Vec<Uuid>> {
@@ -300,7 +300,7 @@ pub(crate) async fn get_cast_ballot_ids_by_election(
     Ok(records.into_iter().map(|record| record.id).collect())
 }
 
-pub(crate) async fn get_object_by_election_id_and_type(
+pub async fn get_object_by_election_id_and_type(
     conn: &mut sqlx::PgConnection,
     election_id: Uuid,
     object_type: &str,
@@ -321,14 +321,33 @@ pub(crate) async fn get_object_by_election_id_and_type(
 }
 
 #[derive(Debug)]
-pub(crate) struct Machine {
-    id: Uuid,
-    machine_identifier: String,
-    certificates: Vec<u8>,
-    created_at: time::OffsetDateTime,
+pub struct Machine {
+    pub id: Uuid,
+    pub machine_identifier: String,
+    pub certificates: Vec<u8>,
+    pub created_at: time::OffsetDateTime,
 }
 
-pub(crate) async fn get_machine_by_identifier(
+pub async fn create_machine(
+    conn: &mut sqlx::PgConnection,
+    machine_identifier: &str,
+    certificates: &[u8],
+) -> color_eyre::Result<Machine> {
+    Ok(sqlx::query_as!(
+        Machine,
+        r#"
+        INSERT INTO machines (machine_identifier, certificates)
+        VALUES ($1, $2)
+        RETURNING id, machine_identifier, certificates, created_at
+        "#,
+        machine_identifier,
+        certificates
+    )
+    .fetch_one(conn)
+    .await?)
+}
+
+pub async fn get_machine_by_identifier(
     conn: &mut sqlx::PgConnection,
     identifier: &str,
 ) -> color_eyre::Result<Option<Machine>> {
@@ -351,14 +370,14 @@ pub(crate) async fn get_machine_by_identifier(
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ScannedMailingLabelCode {
+pub struct ScannedMailingLabelCode {
     #[serde(with = "Base64Standard")]
     original_payload: Vec<u8>,
     signed_buffer: SignedBuffer,
     ballot_verification_payload: BallotVerificationPayload,
 }
 
-pub(crate) async fn create_scanned_mailing_label_code(
+pub async fn create_scanned_mailing_label_code(
     conn: &mut sqlx::PgConnection,
     ballot_verification_payload: &[u8],
 ) -> color_eyre::Result<Uuid> {
@@ -414,7 +433,7 @@ pub(crate) async fn create_scanned_mailing_label_code(
     Ok(record.id)
 }
 
-pub(crate) async fn get_scanned_mailing_label_codes(
+pub async fn get_scanned_mailing_label_codes(
     conn: &mut sqlx::PgConnection,
     election_id: Uuid,
 ) -> color_eyre::Result<Vec<ScannedMailingLabelCode>> {
@@ -448,7 +467,7 @@ pub(crate) async fn get_scanned_mailing_label_codes(
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-pub(crate) enum SearchResult {
+pub enum SearchResult {
     #[serde(rename_all = "camelCase")]
     CastBallot {
         #[serde(flatten)]
@@ -473,7 +492,7 @@ pub(crate) enum SearchResult {
     },
 }
 
-pub(crate) async fn search(
+pub async fn search(
     conn: &mut sqlx::PgConnection,
     common_access_card_id: &str,
 ) -> color_eyre::Result<Vec<SearchResult>> {

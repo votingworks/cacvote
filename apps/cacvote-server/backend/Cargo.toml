@@ -24,6 +24,10 @@ path = "bin/get-journal-entries.rs"
 name = "get-object-by-id"
 path = "bin/get-object-by-id.rs"
 
+[[bin]]
+name = "enroll-voter-terminal-machine"
+path = "bin/enroll-voter-terminal-machine.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

@@ -11,13 +11,13 @@ pub const MAX_REQUEST_SIZE: usize = TEN_MB;
 pub struct Config {
     /// URL of the PostgreSQL database, e.g. `postgres://user:pass@host:port/dbname`.
     #[arg(long, env = "DATABASE_URL")]
-    pub(crate) database_url: String,
+    pub database_url: String,
 
     /// Port to listen on.
     #[arg(long, env = "PORT")]
-    pub(crate) port: u16,
+    pub port: u16,
 
     /// Log level.
     #[arg(long, env = "LOG_LEVEL", default_value = "info")]
-    pub(crate) log_level: tracing::Level,
+    pub log_level: tracing::Level,
 }
