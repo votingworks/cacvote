@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO machines (machine_identifier, certificates)\n        VALUES ($1, $2)\n        RETURNING id, machine_identifier, certificates, created_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "machine_identifier",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "85a0049a9c196fc5d801c0778b6f70a32679c2da65406c6c4bc6576809801080"
+}

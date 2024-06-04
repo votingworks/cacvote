@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            election_id,\n            (SELECT\n                convert_from(\n                    decode(convert_from(e.payload, 'UTF8')::jsonb ->> 'electionDefinition', 'base64'),\n                    'UTF8'\n                )::jsonb ->> 'title'\n            FROM objects AS e WHERE e.id = scanned_mailing_label_codes.election_id) AS election,\n            common_access_card_id,\n            (SELECT machine_identifier FROM machines WHERE id = machine_id) AS \"machine_id!: String\",\n            encrypted_ballot_signature_hash,\n            created_at\n        FROM scanned_mailing_label_codes\n        WHERE common_access_card_id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "election",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "common_access_card_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "machine_id!: String",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "encrypted_ballot_signature_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      false,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "51ce875264795a1a6d3c7679fd4754a642e91a0ba7c1f8e4d91dc5eceec9e21e"
+}

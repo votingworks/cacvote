@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id,\n            machine_identifier,\n            certificates,\n            created_at\n        FROM machines\n        WHERE machine_identifier = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "machine_identifier",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a6055473bcf2033510f48dc7a5d4bc7f504f174cdf0930adee30be97f7a34891"
+}

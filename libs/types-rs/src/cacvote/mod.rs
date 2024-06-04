@@ -1051,6 +1051,17 @@ impl SignedBuffer {
         let decoded: D = tlv::from_slice(&self.buffer)?;
         Ok(decoded)
     }
+
+    #[cfg(feature = "openssl")]
+    pub fn verify(
+        &self,
+        public_key: &openssl::pkey::PKeyRef<openssl::pkey::Public>,
+    ) -> Result<bool, openssl::error::ErrorStack> {
+        let mut verifier =
+            openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), public_key)?;
+        verifier.update(&self.buffer)?;
+        verifier.verify(&self.signature)
+    }
 }
 
 #[cfg(test)]

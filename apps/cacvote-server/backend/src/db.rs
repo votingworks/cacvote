@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use base64_serde::base64_serde_type;
 use color_eyre::eyre::bail;
+use openssl::x509;
 use serde::Serialize;
 use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
@@ -262,7 +263,7 @@ pub async fn get_object_by_id(
     Ok(object)
 }
 
-pub(crate) async fn get_election_ids(
+pub async fn get_election_ids(
     connection: &mut sqlx::PgConnection,
 ) -> color_eyre::Result<Vec<Uuid>> {
     let object = sqlx::query!(
@@ -279,7 +280,7 @@ pub(crate) async fn get_election_ids(
     Ok(object.into_iter().map(|object| object.id).collect())
 }
 
-pub(crate) async fn get_cast_ballot_ids_by_election(
+pub async fn get_cast_ballot_ids_by_election(
     connection: &mut sqlx::PgConnection,
     election_id: Uuid,
 ) -> color_eyre::Result<Vec<Uuid>> {
@@ -299,7 +300,7 @@ pub(crate) async fn get_cast_ballot_ids_by_election(
     Ok(records.into_iter().map(|record| record.id).collect())
 }
 
-pub(crate) async fn get_object_by_election_id_and_type(
+pub async fn get_object_by_election_id_and_type(
     conn: &mut sqlx::PgConnection,
     election_id: Uuid,
     object_type: &str,
@@ -319,33 +320,64 @@ pub(crate) async fn get_object_by_election_id_and_type(
     .await?)
 }
 
-pub(crate) async fn get_machine_id_by_identifier(
+#[derive(Debug)]
+pub struct Machine {
+    pub id: Uuid,
+    pub machine_identifier: String,
+    pub certificates: Vec<u8>,
+    pub created_at: time::OffsetDateTime,
+}
+
+pub async fn create_machine(
+    conn: &mut sqlx::PgConnection,
+    machine_identifier: &str,
+    certificates: &[u8],
+) -> color_eyre::Result<Machine> {
+    Ok(sqlx::query_as!(
+        Machine,
+        r#"
+        INSERT INTO machines (machine_identifier, certificates)
+        VALUES ($1, $2)
+        RETURNING id, machine_identifier, certificates, created_at
+        "#,
+        machine_identifier,
+        certificates
+    )
+    .fetch_one(conn)
+    .await?)
+}
+
+pub async fn get_machine_by_identifier(
     conn: &mut sqlx::PgConnection,
     identifier: &str,
-) -> color_eyre::Result<Option<Uuid>> {
-    Ok(sqlx::query!(
+) -> color_eyre::Result<Option<Machine>> {
+    Ok(sqlx::query_as!(
+        Machine,
         r#"
-        SELECT id
+        SELECT
+            id,
+            machine_identifier,
+            certificates,
+            created_at
         FROM machines
         WHERE machine_identifier = $1
         "#,
         identifier,
     )
     .fetch_optional(conn)
-    .await?
-    .map(|record| record.id))
+    .await?)
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ScannedMailingLabelCode {
+pub struct ScannedMailingLabelCode {
     #[serde(with = "Base64Standard")]
     original_payload: Vec<u8>,
     signed_buffer: SignedBuffer,
     ballot_verification_payload: BallotVerificationPayload,
 }
 
-pub(crate) async fn create_scanned_mailing_label_code(
+pub async fn create_scanned_mailing_label_code(
     conn: &mut sqlx::PgConnection,
     ballot_verification_payload: &[u8],
 ) -> color_eyre::Result<Uuid> {
@@ -353,18 +385,27 @@ pub(crate) async fn create_scanned_mailing_label_code(
     let original_payload = ballot_verification_payload;
     let signed_buffer: SignedBuffer = tlv::from_slice(original_payload)?;
 
-    // TODO: do something with `signed_buffer.signature()`?
     let ballot_verification_payload: BallotVerificationPayload =
         tlv::from_slice(signed_buffer.buffer())?;
 
-    let Some(machine_id) =
-        get_machine_id_by_identifier(&mut txn, ballot_verification_payload.machine_id()).await?
+    let Some(machine) =
+        get_machine_by_identifier(&mut txn, ballot_verification_payload.machine_id()).await?
     else {
         bail!(
             "Machine with identifier {} not found",
             ballot_verification_payload.machine_id()
         );
     };
+
+    let certificates = x509::X509::stack_from_pem(&machine.certificates)?;
+    let Some(public_key) = certificates.first() else {
+        bail!("No public key found in machine certificates")
+    };
+    let public_key = public_key.public_key()?;
+
+    if !signed_buffer.verify(&public_key)? {
+        bail!("Unable to verify signature")
+    }
 
     let record = sqlx::query!(
         r#"
@@ -379,7 +420,7 @@ pub(crate) async fn create_scanned_mailing_label_code(
         RETURNING id
         "#,
         ballot_verification_payload.election_object_id(),
-        machine_id,
+        machine.id,
         ballot_verification_payload.common_access_card_id(),
         ballot_verification_payload.encrypted_ballot_signature_hash(),
         original_payload,
@@ -392,7 +433,7 @@ pub(crate) async fn create_scanned_mailing_label_code(
     Ok(record.id)
 }
 
-pub(crate) async fn get_scanned_mailing_label_codes(
+pub async fn get_scanned_mailing_label_codes(
     conn: &mut sqlx::PgConnection,
     election_id: Uuid,
 ) -> color_eyre::Result<Vec<ScannedMailingLabelCode>> {
@@ -426,7 +467,7 @@ pub(crate) async fn get_scanned_mailing_label_codes(
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-pub(crate) enum SearchResult {
+pub enum SearchResult {
     #[serde(rename_all = "camelCase")]
     CastBallot {
         #[serde(flatten)]
@@ -451,7 +492,7 @@ pub(crate) enum SearchResult {
     },
 }
 
-pub(crate) async fn search(
+pub async fn search(
     conn: &mut sqlx::PgConnection,
     common_access_card_id: &str,
 ) -> color_eyre::Result<Vec<SearchResult>> {

@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id,\n            election_id,\n            (SELECT\n                convert_from(\n                    decode(convert_from(e.payload, 'UTF8')::jsonb ->> 'electionDefinition', 'base64'),\n                    'UTF8'\n                )::jsonb ->> 'title'\n            FROM objects AS e WHERE e.id = objects.election_id) AS election,\n            payload,\n            certificates,\n            signature,\n            created_at\n        FROM objects\n        WHERE object_type = $1\n          AND convert_from(payload, 'UTF8')::jsonb ->> 'commonAccessCardId' = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "election_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "election",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "payload",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "certificates",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "signature",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3dabd7276c74d09d859e94db12ba11f32aea8d816f60c0b6ae83b2b5a151c564"
+}
