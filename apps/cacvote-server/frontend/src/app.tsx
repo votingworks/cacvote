@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ColorMode, ScreenType, SizeMode } from '@votingworks/types';
 import { AppBase, ErrorBoundary, H1, P, Prose } from '@votingworks/ui';
+import { BrowserRouter } from 'react-router-dom';
 import { createQueryClient } from './api';
 
 import { AppRoot } from './app_root';
@@ -29,7 +30,9 @@ export function App({ queryClient = createQueryClient() }: Props): JSX.Element {
         }
       >
         <QueryClientProvider client={queryClient}>
-          <AppRoot />
+          <BrowserRouter>
+            <AppRoot />
+          </BrowserRouter>
         </QueryClientProvider>
       </ErrorBoundary>
     </AppBase>
