@@ -70,6 +70,7 @@ pub async fn setup(pool: PgPool) -> color_eyre::Result<Router> {
             "/api/elections/:election_id/shuffled-ballots",
             get(list_shuffled_ballots_by_election),
         )
+        .route("/api/search", post(search))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
         .with_state(pool))
@@ -260,6 +261,23 @@ async fn list_shuffled_ballots_by_election(
         Some(object) => Ok(Json(object)),
         None => Err(Error::NotFound),
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SearchQuery {
+    common_access_card_id: String,
+}
+
+async fn search(
+    State(pool): State<PgPool>,
+    query: Query<SearchQuery>,
+) -> Result<Json<Vec<db::SearchResult>>, Error> {
+    let mut conn = pool.acquire().await?;
+
+    Ok(Json(
+        db::search(&mut conn, &query.common_access_card_id).await?,
+    ))
 }
 
 #[derive(Debug, thiserror::Error)]
