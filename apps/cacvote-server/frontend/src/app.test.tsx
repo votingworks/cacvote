@@ -4,6 +4,6 @@ import { App } from './app';
 
 test('App renders', () => {
   renderWithThemes(<App />);
-  const element = screen.getByText('Scan Mailing Label');
+  const element = screen.getByText('Scan Mail Label');
   expect(element).toBeInTheDocument();
 });
