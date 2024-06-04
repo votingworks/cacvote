@@ -31,14 +31,14 @@ export function ScanScreen(): JSX.Element {
         {postScannedCodeMutation.data?.isOk() ? (
           <React.Fragment>
             <Text success>
-              <Icons.Done /> Mailing label scan success!
+              <Icons.Done /> Mail label scan success!
             </Text>
             <Button onPress={reset}>Scan again</Button>
           </React.Fragment>
         ) : postScannedCodeMutation.data?.isErr() ? (
           <React.Fragment>
             <Text error>
-              <Icons.Warning /> Could not scan mailing label:
+              <Icons.Warning /> Could not scan mail label:
               <br />
               {postScannedCodeMutation.data?.err()}
             </Text>
@@ -46,7 +46,7 @@ export function ScanScreen(): JSX.Element {
           </React.Fragment>
         ) : (
           <React.Fragment>
-            <H3>Scan Mailing Label</H3>
+            <H3>Scan Mail Label</H3>
             {!postScannedCodeMutation.isLoading && !scanError && (
               <QrCodeScanner
                 width="100%"
@@ -58,8 +58,8 @@ export function ScanScreen(): JSX.Element {
             {scanError?.[0] === 'no-camera' && (
               <React.Fragment>
                 <Text error>
-                  <Icons.Warning /> Failed to scan mailing label. Does this
-                  device have a camera?
+                  <Icons.Warning /> Failed to scan mail label. Does this device
+                  have a camera?
                   <br />
                   {JSON.stringify(scanError[1])}
                 </Text>
@@ -69,7 +69,7 @@ export function ScanScreen(): JSX.Element {
             {scanError?.[0] === 'decode-error' && (
               <React.Fragment>
                 <Text error>
-                  <Icons.Warning /> Failed to scan mailing label. Is the QR code
+                  <Icons.Warning /> Failed to scan mail label. Is the QR code
                   damaged or obscured?
                 </Text>
                 <Button onPress={reset}>Try again</Button>
