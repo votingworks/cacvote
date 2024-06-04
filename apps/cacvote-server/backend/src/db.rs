@@ -423,3 +423,130 @@ pub(crate) async fn get_scanned_mailing_label_codes(
         })
         .collect::<color_eyre::Result<Vec<_>>>()
 }
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub(crate) enum SearchResult {
+    #[serde(rename_all = "camelCase")]
+    CastBallot {
+        #[serde(flatten)]
+        cast_ballot: cacvote::CastBallot,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        election: Option<String>,
+
+        #[serde(with = "time::serde::iso8601")]
+        created_at: time::OffsetDateTime,
+    },
+    #[serde(rename_all = "camelCase")]
+    ScannedMailingLabelCode {
+        #[serde(flatten)]
+        ballot_verification: BallotVerificationPayload,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        election: Option<String>,
+
+        #[serde(with = "time::serde::iso8601")]
+        created_at: time::OffsetDateTime,
+    },
+}
+
+pub(crate) async fn search(
+    conn: &mut sqlx::PgConnection,
+    common_access_card_id: &str,
+) -> color_eyre::Result<Vec<SearchResult>> {
+    let records = sqlx::query!(
+        r#"
+        SELECT
+            id,
+            election_id,
+            (SELECT
+                convert_from(
+                    decode(convert_from(e.payload, 'UTF8')::jsonb ->> 'electionDefinition', 'base64'),
+                    'UTF8'
+                )::jsonb ->> 'title'
+            FROM objects AS e WHERE e.id = objects.election_id) AS election,
+            payload,
+            certificates,
+            signature,
+            created_at
+        FROM objects
+        WHERE object_type = $1
+          AND convert_from(payload, 'UTF8')::jsonb ->> 'commonAccessCardId' = $2
+        "#,
+        cacvote::Payload::cast_ballot_object_type(),
+        common_access_card_id,
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let cast_ballot_results: Vec<SearchResult> = records
+        .into_iter()
+        .map(|record| {
+            let cast_ballot = cacvote::SignedObject {
+                id: record.id,
+                election_id: record.election_id,
+                payload: record.payload,
+                certificates: record.certificates,
+                signature: record.signature,
+            };
+
+            match cast_ballot.try_to_inner()? {
+                cacvote::Payload::CastBallot(cast_ballot) => Ok(SearchResult::CastBallot {
+                    cast_ballot,
+                    election: record.election,
+                    created_at: record.created_at,
+                }),
+                _ => bail!("Unexpected payload type"),
+            }
+        })
+        .collect::<color_eyre::Result<_>>()?;
+
+    let records = sqlx::query!(
+        r#"
+        SELECT
+            election_id,
+            (SELECT
+                convert_from(
+                    decode(convert_from(e.payload, 'UTF8')::jsonb ->> 'electionDefinition', 'base64'),
+                    'UTF8'
+                )::jsonb ->> 'title'
+            FROM objects AS e WHERE e.id = scanned_mailing_label_codes.election_id) AS election,
+            common_access_card_id,
+            (SELECT machine_identifier FROM machines WHERE id = machine_id) AS "machine_id!: String",
+            encrypted_ballot_signature_hash,
+            created_at
+        FROM scanned_mailing_label_codes
+        WHERE common_access_card_id = $1
+        "#,
+        common_access_card_id,
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let scanned_mailing_label_results: Vec<SearchResult> = records
+        .into_iter()
+        .map(|record| {
+            let Ok(encrypted_ballot_signature_hash) =
+                <[u8; 32]>::try_from(record.encrypted_ballot_signature_hash)
+            else {
+                bail!("Invalid encrypted ballot signature hash")
+            };
+            Ok(SearchResult::ScannedMailingLabelCode {
+                ballot_verification: BallotVerificationPayload::new(
+                    record.machine_id,
+                    record.common_access_card_id,
+                    record.election_id,
+                    encrypted_ballot_signature_hash,
+                ),
+                election: record.election,
+                created_at: record.created_at,
+            })
+        })
+        .collect::<color_eyre::Result<_>>()?;
+
+    Ok(cast_ballot_results
+        .into_iter()
+        .chain(scanned_mailing_label_results)
+        .collect())
+}

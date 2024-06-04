@@ -9,6 +9,9 @@ export function ActionsScreen(): JSX.Element {
       <Main>
         <ButtonList>
           <Button onPress={() => history.push('/scan')}>Scan Mail Label</Button>
+          <Button onPress={() => history.push('/search')}>
+            Search by CAC ID
+          </Button>
         </ButtonList>
       </Main>
     </Screen>
