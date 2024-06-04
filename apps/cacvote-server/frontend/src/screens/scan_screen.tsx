@@ -1,32 +1,82 @@
-import { H3, Main, P, Screen } from '@votingworks/ui';
+import { Button, H3, Icons, Main, P, Screen, Text } from '@votingworks/ui';
 import { Buffer } from 'buffer';
+import React, { useState } from 'react';
 import { postScannedCode } from '../api';
-import { QrCodeScanner } from '../components/qr_code_scanner';
-
-interface Props {
-  onPostSuccess(): void;
-}
+import { ErrorType, QrCodeScanner } from '../components/qr_code_scanner';
 
 /**
  * Presents the user with a screen to scan a QR code.
  */
-export function ScanScreen({ onPostSuccess }: Props): JSX.Element {
+export function ScanScreen(): JSX.Element {
+  const [scanError, setScanError] = useState<[ErrorType, unknown]>();
   const postScannedCodeMutation = postScannedCode.useMutation();
 
-  async function onCode(code: string) {
+  function onCode(code: string) {
+    if (!postScannedCodeMutation.isIdle) {
+      return;
+    }
+
     const data = Buffer.from(code, 'base64');
-    await postScannedCodeMutation.mutateAsync(data);
-    onPostSuccess();
+    postScannedCodeMutation.mutate(data);
+  }
+
+  function reset() {
+    setScanError(undefined);
+    postScannedCodeMutation.reset();
   }
 
   return (
     <Screen>
-      <Main centerChild>
-        <H3>Scan Mailing Label</H3>
-        {!postScannedCodeMutation.isLoading && (
-          <QrCodeScanner width="100%" onCode={onCode} />
+      <Main centerChild padded>
+        {postScannedCodeMutation.data?.isOk() ? (
+          <React.Fragment>
+            <Text success>
+              <Icons.Done /> Mailing label scan success!
+            </Text>
+            <Button onPress={reset}>Scan again</Button>
+          </React.Fragment>
+        ) : postScannedCodeMutation.data?.isErr() ? (
+          <React.Fragment>
+            <Text error>
+              <Icons.Warning /> Could not scan mailing label:
+              <br />
+              {postScannedCodeMutation.data?.err()}
+            </Text>
+            <Button onPress={reset}>Try again</Button>
+          </React.Fragment>
+        ) : (
+          <React.Fragment>
+            <H3>Scan Mailing Label</H3>
+            {!postScannedCodeMutation.isLoading && !scanError && (
+              <QrCodeScanner
+                width="100%"
+                onCode={onCode}
+                onError={(type, newError) => setScanError([type, newError])}
+              />
+            )}
+            {postScannedCodeMutation.isLoading && <P>Sending…</P>}
+            {scanError?.[0] === 'no-camera' && (
+              <React.Fragment>
+                <Text error>
+                  <Icons.Warning /> Failed to scan mailing label. Does this
+                  device have a camera?
+                  <br />
+                  {JSON.stringify(scanError[1])}
+                </Text>
+                <Button onPress={reset}>Try again</Button>
+              </React.Fragment>
+            )}
+            {scanError?.[0] === 'decode-error' && (
+              <React.Fragment>
+                <Text error>
+                  <Icons.Warning /> Failed to scan mailing label. Is the QR code
+                  damaged or obscured?
+                </Text>
+                <Button onPress={reset}>Try again</Button>
+              </React.Fragment>
+            )}
+          </React.Fragment>
         )}
-        {postScannedCodeMutation.isLoading && <P>Sending…</P>}
       </Main>
     </Screen>
   );
