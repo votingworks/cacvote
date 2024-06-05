@@ -1,0 +1,52 @@
+procs:
+  instructions:
+    shell: |
+      echo "CACVote Server is a bulletin board and also offers mail label scanning."
+      echo ""
+      echo "\e[1mTips:\e[0m"
+      echo "- Run the 'expose-server' process below to expose the server on the internet"
+      echo "  so that you can access it from your phone or another computer."
+      echo "- Run the 'enroll-dev-machine' process below to set up the database to allow"
+      echo "  scanning mail labels for the default development CACVote Mark machine."
+      echo "  (Run this if you get the 'Machine with identifier 000 not found' error.)"
+      echo "- Run the 'reset-db' process below to reset the database."
+      echo "- To exit mprocs, type 'q' to quit and then 'y' to confirm."
+      echo ""
+      echo "The application is running at http://localhost:3000/."
+      sleep 30d
+
+  cacvote-server-backend:
+    cwd: 'apps/cacvote-server/backend'
+    shell: 'cargo watch -- cargo run'
+
+  cacvote-server-frontend:
+    cwd: 'apps/cacvote-server/frontend'
+    shell: 'pnpm start'
+
+  expose-server:
+    autostart: false
+    shell: |
+      if ! which ngrok > /dev/null; then
+        echo "ngrok not found"
+        echo "Download it from https://ngrok.com/download"
+        exit 1
+      fi
+
+      ngrok http 3000
+
+  enroll-dev-machine:
+    autostart: false
+    cwd: 'apps/cacvote-server/backend'
+    shell: |
+      cargo run --bin enroll-voter-terminal-machine 000 ../../../libs/auth/certs/dev/vx-mark-cert.pem
+
+  reset-db:
+    cwd: 'apps/cacvote-mark/backend'
+    autostart: false
+    shell: |
+      psql cacvote -c 'DELETE FROM scanned_mailing_label_codes; DELETE FROM machines; DELETE FROM journal_entries; DELETE FROM objects;'
+      psql cacvote_jx -c 'DELETE FROM eg_private_keys; DELETE FROM journal_entries; DELETE FROM objects;'
+      if [ -f dev-workspace/cacvote-mark.db ]; then
+        sqlite3 dev-workspace/cacvote-mark.db 'DELETE FROM journal_entries; DELETE FROM objects;'
+      fi
+      echo "Database reset complete."
