@@ -2,11 +2,11 @@ procs:
   instructions:
     shell: |
       echo "CACVote Mark is where voters can cast their ballots."
-      echo "In usability testing mode it does not sync with the real server."
-      echo ""
-      echo "\e[3mPlease be sure to put an 'election.json' file on your desktop!\e[0m"
       echo ""
       echo "\e[1mTips:\e[0m"
+      echo "- Some steps need to be completed on CACVote JX Terminal,"
+      echo "  which cannot run at the same time as CACVote Mark. To switch,"
+      echo "  exit the current mprocs session and start the other one."
       echo "- Run the 'reset-db' process below to reset the database."
       echo "- To exit mprocs, type 'q' to quit and then 'y' to confirm."
       echo ""
@@ -16,9 +16,14 @@ procs:
   cacvote-mark:
     cwd: 'apps/cacvote-mark/frontend'
     shell: |
-      export USABILITY_TEST_ELECTION_PATH=${USABILITY_TEST_ELECTION_PATH:-$HOME/Desktop/election.json}
       export EG_CLASSPATH=${EG_CLASSPATH:-../../../../egk-ec-mixnet/build/libs/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar}
       pnpm tsc --build && pnpm start
+
+  cacvote-server-backend:
+    cwd: 'apps/cacvote-server/backend'
+    shell: |
+      export EG_CLASSPATH=${EG_CLASSPATH:-../../../../egk-ec-mixnet/build/libs/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar}
+      cargo watch -- cargo run
 
   kiosk-browser:
     cwd: '../kiosk-browser'

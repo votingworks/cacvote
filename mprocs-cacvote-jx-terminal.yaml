@@ -1,31 +1,34 @@
 procs:
   instructions:
     shell: |
-      echo "CACVote Mark is where voters can cast their ballots."
-      echo "In usability testing mode it does not sync with the real server."
-      echo ""
-      echo "\e[3mPlease be sure to put an 'election.json' file on your desktop!\e[0m"
+      echo "CACVote JX Terminal is where jurisdiction admins can manage elections."
       echo ""
       echo "\e[1mTips:\e[0m"
+      echo "- Voting is done on CACVote Mark, not here. However, you must use this"
+      echo "  to set up the election and link a voter to it. CACVote Mark may not be"
+      echo "  run at the same time as CACVote JX Terminal. To switch, exit the current"
+      echo "  mprocs session and start the other one."
       echo "- Run the 'reset-db' process below to reset the database."
       echo "- To exit mprocs, type 'q' to quit and then 'y' to confirm."
       echo ""
-      echo "The application will launch in 'kiosk-browser' when it's ready."
+      echo "The application is running at http://localhost:5000/."
       sleep 30d
 
-  cacvote-mark:
-    cwd: 'apps/cacvote-mark/frontend'
+  cacvote-jx-backend:
+    cwd: 'apps/cacvote-jx-terminal/backend'
     shell: |
-      export USABILITY_TEST_ELECTION_PATH=${USABILITY_TEST_ELECTION_PATH:-$HOME/Desktop/election.json}
       export EG_CLASSPATH=${EG_CLASSPATH:-../../../../egk-ec-mixnet/build/libs/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar}
-      pnpm tsc --build && pnpm start
+      cargo watch -- cargo run --bin cacvote-jx-terminal-backend
 
-  kiosk-browser:
-    cwd: '../kiosk-browser'
+  cacvote-jx-frontend:
+    cwd: 'apps/cacvote-jx-terminal/frontend'
+    shell: 'pnpm start'
+
+  cacvote-server-backend:
+    cwd: 'apps/cacvote-server/backend'
     shell: |
-      echo "Waiting for CACVote Mark to start…"
-      while ! nc -z localhost 3000; do sleep 1; done
-      kiosk-browser http://localhost:3000/
+      export EG_CLASSPATH=${EG_CLASSPATH:-../../../../egk-ec-mixnet/build/libs/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar}
+      cargo watch -- cargo run
 
   reset-db:
     cwd: 'apps/cacvote-mark/backend'
