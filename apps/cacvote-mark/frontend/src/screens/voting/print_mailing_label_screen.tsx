@@ -81,11 +81,13 @@ export function PrintMailingLabelScreenStatic(): JSX.Element {
 }
 
 export interface PrintMailingLabelScreenProps {
+  printMailLabelJobId: Uuid;
   castBallotObjectId: Uuid;
   onPrintCompleted: () => void;
 }
 
 export function PrintMailingLabelScreen({
+  printMailLabelJobId,
   castBallotObjectId,
   onPrintCompleted,
 }: PrintMailingLabelScreenProps): JSX.Element {
@@ -97,12 +99,20 @@ export function PrintMailingLabelScreen({
       onPrintCompleted();
     }, 5000);
 
-    printMailingLabelMutationMutate({ castBallotObjectId });
+    printMailingLabelMutationMutate({
+      printMailLabelJobId,
+      castBallotObjectId,
+    });
 
     return () => {
       clearTimeout(printerTimeout);
     };
-  }, [castBallotObjectId, onPrintCompleted, printMailingLabelMutationMutate]);
+  }, [
+    castBallotObjectId,
+    onPrintCompleted,
+    printMailLabelJobId,
+    printMailingLabelMutationMutate,
+  ]);
 
   return <PrintMailingLabelScreenStatic />;
 }

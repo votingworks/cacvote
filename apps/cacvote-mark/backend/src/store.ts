@@ -498,4 +498,42 @@ export class Store {
 
     return rows.map((row) => JurisdictionCodeSchema.parse(row.jurisdiction));
   }
+
+  /**
+   * Adds a print mail label job to the store. This doesn't actually print the
+   * mail label, it just records that the job was added.
+   *
+   * @returns `true` if the print mail label job was added, `false` if it
+   * already exists
+   */
+  addPrintMailLabelJob({
+    printMailLabelJobId,
+    castBallotObjectId,
+    electionObjectId,
+  }: {
+    printMailLabelJobId: Uuid;
+    castBallotObjectId: Uuid;
+    electionObjectId: Uuid;
+  }): boolean {
+    return this.client.transaction(() => {
+      const hasPrintMailLabelJob = this.client.one(
+        `select 1 from mail_label_print_jobs where id = ?`,
+        printMailLabelJobId
+      );
+
+      if (hasPrintMailLabelJob) {
+        return false;
+      }
+
+      this.client.run(
+        `insert into mail_label_print_jobs (id, cast_ballot_object_id, election_id)
+        values (?, ?, ?)`,
+        printMailLabelJobId,
+        castBallotObjectId,
+        electionObjectId
+      );
+
+      return true;
+    });
+  }
 }
