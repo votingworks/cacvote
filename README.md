@@ -5,9 +5,10 @@
 1. Set up a Debian 11 machine (Debian 12 or Ubuntu may work).
 2. Clone this repo, `cd` to it.
 3. Run the setup script: `script/cacvote-setup`.
-4. Install monorepo dependencies:
+4. Install monorepo dependencies & build the Rust code:
    - `pnpm install`
    - `cargo build`
+   - `pnpm -r build:rust-addon`
 
 ## Structure
 
@@ -72,8 +73,25 @@ repository root:
 > Tip: stop and restart the services in `mprocs` with `x` and `r` respectively.
 
 - CACVote Mark (Voter Terminal): Run with `mprocs -c mprocs-cacvote-mark.yaml`
+  - In order to authenticate, you'll need either a real or test Common Access
+    Card (CAC), or a mock card. To create a mock card, insert a Java card and
+    run the following command:
+    ```sh
+    $ CERT_COMMON_NAME=LAST.FIRST.MIDDLE.0123456789 ./libs/auth/scripts/cac/configure-dev-simulated-cac-card
+    ```
+    Be sure that you've plugged in the card reader and that you've forwarded the
+    reader to the VM if applicable. This mock card will have a PIN of `77777777`
+    (8 sevens).
 - CACVote Jurisdiction (Jurisdiction Terminal): Run with
   `mprocs -c mprocs-cacvote-jx-terminal.yaml`
+  - In order to authenticate, you'll need a VotingWorks system administrator
+    card with the right jurisdiction field. To create a card for use in
+    development, run the following command:
+    ```sh
+    $ ./libs/auth/scripts/program-dev-system-administrator-java-card
+    ```
+    Be sure that you've plugged in the card reader and that you've forwarded the
+    reader to the VM if applicable.
 - CACVote Server: Run with `mprocs -c mprocs-cacvote-server.yaml`
 - Usability Test (CACVote Mark only): Run with
   `mprocs -c mprocs-usability-test.yaml`
@@ -81,6 +99,21 @@ repository root:
 Note that each of the `mprocs` configurations have processes that do not start
 immediately, but can be started manually to perform certain functions such as
 resetting the database.
+
+### Printing
+
+Ensure you've plugged in the printers and that they're powered on. If you don't
+you'll get errors when attempting to print.
+
+To print with PDF, run this:
+
+```sh
+$ sudo apt-get -y install cups-pdf
+$ echo REACT_APP_BALLOT_PRINTER=PDF >> apps/cacvote-mark/frontend/.env.local
+$ echo MAILING_LABEL_PRINTER=PDF >> apps/cacvote-mark/backend/.env.local
+```
+
+When printing, the PDFs will be saved to `~/PDF`.
 
 ## Release
 

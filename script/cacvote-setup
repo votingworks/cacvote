@@ -156,6 +156,12 @@ setup-global-devtools() {
   else
     echo -e "\e[1m[skip]\e[0m pnpm@${PNPM_VERSION} is already installed"
   fi
+
+  if ! which sqlite3 >/dev/null 2>&1; then
+    sudo apt-get install -y sqlite3
+  else
+    echo -e "\e[1m[skip]\e[0m sqlite3 is already installed"
+  fi
 }
 
 setup-postgresql() {
@@ -269,6 +275,7 @@ setup-kiosk-browser() {
 
   (
     cd "${KIOSK_BROWSER_DIR}"
+    git checkout e42a060 # right before printing support was removed
     make install
     make build
     sudo dpkg -i dist/kiosk-browser_1.0.0_*.deb
