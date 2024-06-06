@@ -290,6 +290,11 @@ setup-kiosk-browser() {
 setup-label-printer() {
   echo "🖨️ Label Printer Driver"
 
+  if lpstat -p | grep -q "SP420"; then
+    echo -e "\e[1m[skip]\e[0m SP420 is already set up"
+    return
+  fi
+
   local URL="https://www.idprt.com/prt_v2/files/down_file/id/131/fid/432.html"
   local DIR="/tmp/cacvote-install-label-printer-driver"
   local ZIPFILE="${DIR}/idprt_tspl_printer_linux_driver_v1.4.2.zip"
@@ -308,6 +313,11 @@ setup-label-printer() {
 
 setup-thermal-printer() {
   echo "🖨️ Brother printer Drivers"
+
+  if lpstat -p | grep -q "PJ-822"; then
+    echo -e "\e[1m[skip]\e[0m PJ-822 is already set up"
+    return
+  fi
 
   local DIR="/tmp/cacvote-install-thermal-printer-driver"
 
@@ -336,7 +346,7 @@ setup-electionguard() {
   local EG_CLASSPATH="${EG_DIR}/build/libs/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar"
 
   if [ ! -d "${EG_DIR}" ]; then
-    git clone https://github.com/JohnLCaron/egk-ec-mixnet "${EG_DIR}"
+    git clone --depth 10 https://github.com/JohnLCaron/egk-ec-mixnet "${EG_DIR}"
   fi
 
   if [ ! -f "${EG_CLASSPATH}" ]; then
@@ -352,6 +362,13 @@ setup-electionguard() {
   fi
 }
 
+do-initial-build() {
+  echo "🏗️ Initial Build"
+  pnpm install
+  cargo build
+  pnpm -r build:rust-addon
+}
+
 setup-prereqs
 setup-node
 setup-rust
@@ -362,5 +379,6 @@ setup-kiosk-browser
 setup-label-printer
 setup-thermal-printer
 setup-electionguard
+do-initial-build
 
 echo -e "\e[32m🎉 Success! Please restart your shell.\e[0m"

@@ -3,12 +3,21 @@
 ## Setup
 
 1. Set up a Debian 11 machine (Debian 12 or Ubuntu may work).
-2. Clone this repo, `cd` to it.
-3. Run the setup script: `script/cacvote-setup`.
-4. Install monorepo dependencies & build the Rust code:
-   - `pnpm install`
-   - `cargo build`
-   - `pnpm -r build:rust-addon`
+2. Allow your user to run as root:
+
+```
+$ su
+root# echo "your-username ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/your-username
+```
+
+Be sure to replace `your-username` with your actual username. Then open a new
+Terminal window and run `sudo ls` to ensure that you can run commands as root
+without a password. Note that this is not recommended for production systems.
+
+3. Open a Terminal and install git: `sudo apt-get install -y git`.
+4. Clone this repo, `cd` to it:
+   `git clone https://github.com/votingworks/cacvote.git && cd cacvote`.
+5. Run the setup script: `script/cacvote-setup`. This will take a while.
 
 ## Structure
 
