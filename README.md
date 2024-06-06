@@ -1,4 +1,4 @@
-# CACVote
+# CACvote
 
 ## Setup
 
@@ -21,10 +21,10 @@ without a password. Note that this is not recommended for production systems.
 
 ## Structure
 
-- `apps/cacvote-mark`: the CACVote Mark voter-facing application
-- `apps/cacvote-jx`: the CACVote Jurisdiction application for election
+- `apps/cacvote-mark`: the CACvote Mark voter-facing application
+- `apps/cacvote-jx`: the CACvote Jurisdiction application for election
   management
-- `apps/cacvote-server`: the CACVote server providing sync services for the apps
+- `apps/cacvote-server`: the CACvote server providing sync services for the apps
 
 ## Configuration
 
@@ -37,7 +37,7 @@ should automatically be provided for you if you use `mprocs`:
 
 ### Scanning Mail Label QR Codes
 
-In order to scan mail label QR codes, the Voter Terminal machines (CACVote Mark)
+In order to scan mail label QR codes, the Voter Terminal machines (CACvote Mark)
 will need to be enrolled. In the `cacvote-server` directory, run the following
 command:
 
@@ -63,7 +63,7 @@ $ cargo run --bin enroll-voter-terminal-machine some-vx-voter-terminal-432 path/
 ✅ Machine enrolled! ID=08209a41-b0e1-405e-ae65-2becff7eb848
 ```
 
-When running the CACVote Server locally, you'll need a way to expose the server
+When running the CACvote Server locally, you'll need a way to expose the server
 to the internet so that your mobile device can connect to it. One way to do this
 is with `ngrok` (requires signup). Once you've got `ngrok` installed you can run
 the `expose-server` process when using `mprocs` with the
@@ -81,7 +81,7 @@ repository root:
 
 > Tip: stop and restart the services in `mprocs` with `x` and `r` respectively.
 
-- CACVote Mark (Voter Terminal): Run with `mprocs -c mprocs-cacvote-mark.yaml`
+- CACvote Mark (Voter Terminal): Run with `mprocs -c mprocs-cacvote-mark.yaml`
   - In order to authenticate, you'll need either a real or test Common Access
     Card (CAC), or a mock card. To create a mock card, insert a Java card and
     run the following command:
@@ -91,7 +91,7 @@ repository root:
     Be sure that you've plugged in the card reader and that you've forwarded the
     reader to the VM if applicable. This mock card will have a PIN of `77777777`
     (8 sevens).
-- CACVote Jurisdiction (Jurisdiction Terminal): Run with
+- CACvote Jurisdiction (Jurisdiction Terminal): Run with
   `mprocs -c mprocs-cacvote-jx-terminal.yaml`
   - In order to authenticate, you'll need a VotingWorks system administrator
     card with the right jurisdiction field. To create a card for use in
@@ -101,8 +101,8 @@ repository root:
     ```
     Be sure that you've plugged in the card reader and that you've forwarded the
     reader to the VM if applicable.
-- CACVote Server: Run with `mprocs -c mprocs-cacvote-server.yaml`
-- Usability Test (CACVote Mark only): Run with
+- CACvote Server: Run with `mprocs -c mprocs-cacvote-server.yaml`
+- Usability Test (CACvote Mark only): Run with
   `mprocs -c mprocs-usability-test.yaml`
 
 Note that each of the `mprocs` configurations have processes that do not start

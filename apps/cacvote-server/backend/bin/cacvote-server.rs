@@ -1,9 +1,9 @@
-//! `cacvote-server` is the application server for the CACVote voting system. It
+//! `cacvote-server` is the application server for the CACvote voting system. It
 //! provides coordination among various types of clients, of which there could
 //! be many of each type. There is expected to be a single `cacvote-server`
 //! instance.
 //!
-//! CACVote Server uses Postgres as its database server and SQLx to connect to it.
+//! CACvote Server uses Postgres as its database server and SQLx to connect to it.
 //! See the README at the repository root for more information on setup.
 
 #![warn(

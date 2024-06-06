@@ -273,7 +273,7 @@ async function createAndStoreCardVxCert(commonName: string): Promise<void> {
 }
 
 /**
- * Create a mock Common Access Card for use with CACVote.
+ * Create a mock Common Access Card for use with CACvote.
  */
 export async function main(): Promise<void> {
   try {

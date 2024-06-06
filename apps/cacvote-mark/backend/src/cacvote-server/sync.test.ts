@@ -208,7 +208,7 @@ test('sync / createObject success / no objects', async () => {
     expect.anything(),
     'system',
     expect.objectContaining({
-      message: 'No objects to push to CACVote Server',
+      message: 'No objects to push to CACvote Server',
       disposition: 'success',
     })
   );
@@ -249,7 +249,7 @@ test('sync / createObject success / with objects', async () => {
     expect.anything(),
     'system',
     expect.objectContaining({
-      message: 'Pushing 1 objects to CACVote Server',
+      message: 'Pushing 1 objects to CACvote Server',
     })
   );
 

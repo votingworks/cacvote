@@ -1,6 +1,6 @@
-//! Logging for CACVote JX.
+//! Logging for CACvote JX.
 //!
-//! CACVote JX uses the `tracing` library for logging. After calling [`setup`],
+//! CACvote JX uses the `tracing` library for logging. After calling [`setup`],
 //! you'll be able to call [`tracing::info!`], [`tracing::span!`], and others to
 //! print log messages to `stdout` in a flexible and configurable way.
 //!

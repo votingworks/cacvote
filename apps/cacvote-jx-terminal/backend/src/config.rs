@@ -13,7 +13,7 @@ pub(crate) const SYNC_INTERVAL: Duration = Duration::from_secs(5);
 #[derive(Debug, Clone, Parser)]
 #[command(author, version, about)]
 pub(crate) struct Config {
-    /// URL of the CACVote server, e.g. `https://cacvote.example.com/`.
+    /// URL of the CACvote server, e.g. `https://cacvote.example.com/`.
     #[arg(long, env = "CACVOTE_URL")]
     pub(crate) cacvote_url: reqwest::Url,
 

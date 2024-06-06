@@ -1,11 +1,11 @@
 procs:
   instructions:
     shell: |
-      echo "CACVote Mark is where voters can cast their ballots."
+      echo "CACvote Mark is where voters can cast their ballots."
       echo ""
       echo "\e[1mTips:\e[0m"
-      echo "- Some steps need to be completed on CACVote JX Terminal,"
-      echo "  which cannot run at the same time as CACVote Mark. To switch,"
+      echo "- Some steps need to be completed on CACvote JX Terminal,"
+      echo "  which cannot run at the same time as CACvote Mark. To switch,"
       echo "  exit the current mprocs session and start the other one."
       echo "- Run the 'reset-db' process below to reset the database."
       echo "- To exit mprocs, type 'q' to quit and then 'y' to confirm."
@@ -28,7 +28,7 @@ procs:
   kiosk-browser:
     cwd: '../kiosk-browser'
     shell: |
-      echo "Waiting for CACVote Mark to start…"
+      echo "Waiting for CACvote Mark to start…"
       while ! nc -z localhost 3000; do sleep 1; done
       kiosk-browser http://localhost:3000/
 
