@@ -123,8 +123,6 @@ setup-rust() {
       exit 1
     fi
   fi
-
-  rustup target add wasm32-unknown-unknown
 }
 
 setup-java() {
