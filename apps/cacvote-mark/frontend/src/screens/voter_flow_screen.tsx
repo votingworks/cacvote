@@ -5,8 +5,9 @@ import {
   VotesDict,
   getContests,
 } from '@votingworks/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Uuid, VoterStatus } from '@votingworks/cacvote-mark-backend';
+import { v4 as uuid } from 'uuid';
 import { getElectionConfiguration, getVoterStatus } from '../api';
 import * as Registration from './registration';
 import * as Voting from './voting';
@@ -64,6 +65,7 @@ interface PromptToRemoveCommonAccessCardState {
 
 interface PrintMailingLabelState {
   type: 'print_mailing_label';
+  printMailLabelJobId: Uuid;
   castBallotObjectId: Uuid;
 }
 
@@ -110,6 +112,7 @@ function RegisteredStateScreen({
   const [voterFlowState, setVoterFlowState] = useState<VoterFlowState>({
     type: 'init',
   });
+  const printMailLabelJobId = useMemo(() => uuid() as Uuid, []);
 
   useEffect(() => {
     if (
@@ -121,11 +124,12 @@ function RegisteredStateScreen({
         assert(prev?.type === 'prompt_to_remove_common_access_card');
         return {
           type: 'print_mailing_label',
+          printMailLabelJobId,
           castBallotObjectId: prev.castBallotObjectId,
         };
       });
     }
-  }, [voterFlowState, voterStatus]);
+  }, [printMailLabelJobId, voterFlowState, voterStatus]);
 
   if (voterStatus && !electionConfiguration) {
     return null;
@@ -349,6 +353,7 @@ function RegisteredStateScreen({
       assert(prev?.type === 'attach_mailing_label');
       return {
         type: 'print_mailing_label',
+        printMailLabelJobId: uuid() as Uuid,
         castBallotObjectId: prev.castBallotObjectId,
       };
     });
@@ -482,6 +487,7 @@ function RegisteredStateScreen({
     case 'print_mailing_label':
       return (
         <Voting.PrintMailingLabelScreen
+          printMailLabelJobId={voterFlowState.printMailLabelJobId}
           castBallotObjectId={voterFlowState.castBallotObjectId}
           onPrintCompleted={onMailingLabelPrintCompleted}
         />

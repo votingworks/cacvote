@@ -343,7 +343,10 @@ function buildApi({
       });
     },
 
-    async printMailingLabel(input: { castBallotObjectId: Uuid }) {
+    async printMailingLabel(input: {
+      printMailLabelJobId: Uuid;
+      castBallotObjectId: Uuid;
+    }) {
       return asyncResultBlock(async (bail) => {
         const castBallotObject = store.getObjectById(input.castBallotObjectId);
 
@@ -366,6 +369,17 @@ function buildApi({
           return err(
             new Error(`Election not found: ${castBallot.getElectionObjectId()}`)
           );
+        }
+
+        const addedPrintMailLabelJob = store.addPrintMailLabelJob({
+          printMailLabelJobId: input.printMailLabelJobId,
+          castBallotObjectId: input.castBallotObjectId,
+          electionObjectId: electionObject.getId(),
+        });
+
+        if (!addedPrintMailLabelJob) {
+          // the print job with the specified ID has already been processed
+          return ok();
         }
 
         const electionPayload = electionObject

@@ -58,3 +58,16 @@ create table journal_entries (
   -- when the action was taken
   created_at timestamptz not null default current_timestamp
 );
+
+create table mail_label_print_jobs (
+  id uuid primary key,
+
+  -- the ID of the cast ballot this label is associated with
+  cast_ballot_object_id uuid not null,
+
+  -- the ID of the election object this object is associated with
+  election_id uuid not null,
+
+  -- when the action was taken
+  created_at timestamptz not null default current_timestamp
+);

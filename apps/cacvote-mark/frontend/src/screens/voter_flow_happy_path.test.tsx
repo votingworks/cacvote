@@ -26,6 +26,10 @@ jest.mock('../random', () => ({
   randomInt: jest.fn(),
 }));
 
+jest.mock('uuid', () => ({
+  v4: () => '00000000-0000-0000-0000-000000000000',
+}));
+
 const useBallotPrinterMock = useBallotPrinter as jest.Mock<
   ReturnType<typeof useBallotPrinter>,
   Parameters<typeof useBallotPrinter>
@@ -168,7 +172,10 @@ test('voter flow happy path', async () => {
   });
 
   apiClient.printMailingLabel
-    .expectCallWith({ castBallotObjectId: uuid })
+    .expectCallWith({
+      printMailLabelJobId: uuid,
+      castBallotObjectId: uuid,
+    })
     .resolves(ok());
 
   // Remove the common access card
