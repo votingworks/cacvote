@@ -127,6 +127,11 @@ setup-rust() {
   rustup target add wasm32-unknown-unknown
 }
 
+setup-java() {
+  echo "☕ Java"
+  sudo apt install -y openjdk-17-jdk
+}
+
 setup-global-devtools() {
   echo "🛠️ Global Devtools"
 
@@ -155,6 +160,12 @@ setup-global-devtools() {
     sudo npm install --global pnpm@${PNPM_VERSION}
   else
     echo -e "\e[1m[skip]\e[0m pnpm@${PNPM_VERSION} is already installed"
+  fi
+
+  if ! which sqlite3 >/dev/null 2>&1; then
+    sudo apt-get install -y sqlite3
+  else
+    echo -e "\e[1m[skip]\e[0m sqlite3 is already installed"
   fi
 }
 
@@ -269,6 +280,7 @@ setup-kiosk-browser() {
 
   (
     cd "${KIOSK_BROWSER_DIR}"
+    git checkout e42a060 # right before printing support was removed
     make install
     make build
     sudo dpkg -i dist/kiosk-browser_1.0.0_*.deb
@@ -343,6 +355,7 @@ setup-electionguard() {
 setup-prereqs
 setup-node
 setup-rust
+setup-java
 setup-global-devtools
 setup-postgresql
 setup-kiosk-browser
