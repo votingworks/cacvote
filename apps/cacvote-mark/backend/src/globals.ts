@@ -54,7 +54,7 @@ export const CACVOTE_MARK_WORKSPACE =
 export const IS_INTEGRATION_TEST = process.env.IS_INTEGRATION_TEST === 'true';
 
 /**
- * CACVote Server URL.
+ * CACvote Server URL.
  */
 export const CACVOTE_URL = process.env.CACVOTE_URL
   ? new URL(process.env.CACVOTE_URL)
@@ -64,7 +64,7 @@ export const CACVOTE_URL = process.env.CACVOTE_URL
 
 /**
  * What is the path to the election file for the usability test? If this is set,
- * we mock the CACVote Server.
+ * we mock the CACvote Server.
  */
 export const { USABILITY_TEST_ELECTION_PATH } = process.env;
 

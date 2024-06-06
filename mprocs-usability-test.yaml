@@ -1,7 +1,7 @@
 procs:
   instructions:
     shell: |
-      echo "CACVote Mark is where voters can cast their ballots."
+      echo "CACvote Mark is where voters can cast their ballots."
       echo "In usability testing mode it does not sync with the real server."
       echo ""
       echo "\e[3mPlease be sure to put an 'election.json' file on your desktop!\e[0m"
@@ -23,7 +23,7 @@ procs:
   kiosk-browser:
     cwd: '../kiosk-browser'
     shell: |
-      echo "Waiting for CACVote Mark to start…"
+      echo "Waiting for CACvote Mark to start…"
       while ! nc -z localhost 3000; do sleep 1; done
       kiosk-browser http://localhost:3000/
 

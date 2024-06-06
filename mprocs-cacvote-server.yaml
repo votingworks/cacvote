@@ -1,13 +1,13 @@
 procs:
   instructions:
     shell: |
-      echo "CACVote Server is a bulletin board and also offers mail label scanning."
+      echo "CACvote Server is a bulletin board and also offers mail label scanning."
       echo ""
       echo "\e[1mTips:\e[0m"
       echo "- Run the 'expose-server' process below to expose the server on the internet"
       echo "  so that you can access it from your phone or another computer."
       echo "- Run the 'enroll-dev-machine' process below to set up the database to allow"
-      echo "  scanning mail labels for the default development CACVote Mark machine."
+      echo "  scanning mail labels for the default development CACvote Mark machine."
       echo "  (Run this if you get the 'Machine with identifier 000 not found' error.)"
       echo "- Run the 'reset-db' process below to reset the database."
       echo "- To exit mprocs, type 'q' to quit and then 'y' to confirm."

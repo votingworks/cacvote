@@ -112,7 +112,7 @@ export async function start({
     syncPeriodically(client, workspace.store, logger);
 
     void logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: 'Starting mock CACVote Server client',
+      message: 'Starting mock CACvote Server client',
     });
 
     setInterval(() => {
@@ -133,7 +133,7 @@ export async function start({
     /* istanbul ignore next */
     async () => {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `CACVote Mark backend running at http://localhost:${port}/`,
+        message: `CACvote Mark backend running at http://localhost:${port}/`,
         disposition: 'success',
       });
     }

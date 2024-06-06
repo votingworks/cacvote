@@ -9,13 +9,13 @@ async function pullJournalEntries(
   logger: Logger
 ): Promise<void> {
   await logger.log(LogEventId.ApplicationStartup, 'system', {
-    message: 'Pulling journal entries from CACVote Server',
+    message: 'Pulling journal entries from CACvote Server',
   });
 
   const latestJournalEntry = store.getLatestJournalEntry();
 
   await logger.log(LogEventId.ApplicationStartup, 'system', {
-    message: `Checking for journal entries from CACVote Server since ${
+    message: `Checking for journal entries from CACvote Server since ${
       latestJournalEntry?.getId() ?? 'the beginning of time'
     }`,
   });
@@ -26,7 +26,7 @@ async function pullJournalEntries(
 
   if (getEntriesResult.isErr()) {
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: `Failed to get journal entries from CACVote Server: ${
+      message: `Failed to get journal entries from CACvote Server: ${
         getEntriesResult.err().message
       }`,
       disposition: 'failure',
@@ -34,14 +34,14 @@ async function pullJournalEntries(
   } else {
     const newEntries = getEntriesResult.ok();
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: `Got ${newEntries.length} journal entries from CACVote Server`,
+      message: `Got ${newEntries.length} journal entries from CACvote Server`,
       disposition: 'success',
     });
 
     store.addJournalEntries(newEntries);
 
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: 'Successfully pulled journal entries from CACVote Server',
+      message: 'Successfully pulled journal entries from CACvote Server',
       disposition: 'success',
     });
   }
@@ -53,21 +53,21 @@ async function pushObjects(
   logger: Logger
 ): Promise<void> {
   await logger.log(LogEventId.ApplicationStartup, 'system', {
-    message: 'Pushing objects to CACVote Server',
+    message: 'Pushing objects to CACvote Server',
   });
 
   const objects = store.getObjectsToPush();
 
   if (objects.length === 0) {
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: 'No objects to push to CACVote Server',
+      message: 'No objects to push to CACvote Server',
       disposition: 'success',
     });
     return;
   }
 
   await logger.log(LogEventId.ApplicationStartup, 'system', {
-    message: `Pushing ${objects.length} objects to CACVote Server`,
+    message: `Pushing ${objects.length} objects to CACvote Server`,
   });
 
   for (const object of objects) {
@@ -75,7 +75,7 @@ async function pushObjects(
 
     if (pushResult.isErr()) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Failed to push object '${object.getId()}' to CACVote Server: ${
+        message: `Failed to push object '${object.getId()}' to CACvote Server: ${
           pushResult.err().message
         }`,
         disposition: 'failure',
@@ -85,13 +85,13 @@ async function pushObjects(
 
     store.markObjectAsSynced(object.getId());
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: `Pushed object with ID '${object.getId()}' to CACVote Server`,
+      message: `Pushed object with ID '${object.getId()}' to CACvote Server`,
       disposition: 'success',
     });
   }
 
   await logger.log(LogEventId.ApplicationStartup, 'system', {
-    message: 'Finished pushing objects to CACVote Server',
+    message: 'Finished pushing objects to CACvote Server',
   });
 }
 
@@ -101,7 +101,7 @@ async function pullObjects(
   logger: Logger
 ): Promise<void> {
   await logger.log(LogEventId.ApplicationStartup, 'system', {
-    message: 'Pulling objects from CACVote Server',
+    message: 'Pulling objects from CACvote Server',
   });
 
   const journalEntriesForObjectsToFetch =
@@ -114,7 +114,7 @@ async function pullObjects(
 
     if (getObjectResult.isErr()) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Failed to get object with ID '${journalEntry.getObjectId()}' from CACVote Server: ${getObjectResult.err()}`,
+        message: `Failed to get object with ID '${journalEntry.getObjectId()}' from CACvote Server: ${getObjectResult.err()}`,
         disposition: 'failure',
       });
       continue;
@@ -124,7 +124,7 @@ async function pullObjects(
 
     if (!object) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Object with ID '${journalEntry.getObjectId()}' not found on CACVote Server`,
+        message: `Object with ID '${journalEntry.getObjectId()}' not found on CACvote Server`,
         disposition: 'failure',
       });
       continue;
@@ -162,18 +162,18 @@ async function pullObjects(
       message: `Got object with ID '${object.getId()}' and type '${object
         .getPayload()
         .ok()
-        ?.getObjectType()}' from CACVote Server`,
+        ?.getObjectType()}' from CACvote Server`,
       disposition: 'success',
     });
   }
 
   await logger.log(LogEventId.ApplicationStartup, 'system', {
-    message: 'Finished pulling objects from CACVote Server',
+    message: 'Finished pulling objects from CACvote Server',
   });
 }
 
 /**
- * Perform a sync with the CACVote Server now.
+ * Perform a sync with the CACvote Server now.
  */
 export async function sync(
   client: ClientApi,
@@ -185,7 +185,7 @@ export async function sync(
 
     if (checkResult.isErr()) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
-        message: `Failed to check status of CACVote Server: ${
+        message: `Failed to check status of CACvote Server: ${
           checkResult.err().message
         }`,
         disposition: 'failure',
@@ -198,7 +198,7 @@ export async function sync(
     await pullObjects(client, store, logger);
   } catch (err) {
     await logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: `Failed to sync with CACVote Server: ${extractErrorMessage(
+      message: `Failed to sync with CACvote Server: ${extractErrorMessage(
         err
       )}`,
       disposition: 'failure',
@@ -209,7 +209,7 @@ export async function sync(
 const SYNC_INTERVAL = 1000 * 5;
 
 /**
- * Synchronizes with the CACVote Server periodically. Returns a function to stop
+ * Synchronizes with the CACvote Server periodically. Returns a function to stop
  * syncing.
  */
 export function syncPeriodically(

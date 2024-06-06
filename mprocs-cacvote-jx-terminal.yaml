@@ -1,12 +1,12 @@
 procs:
   instructions:
     shell: |
-      echo "CACVote JX Terminal is where jurisdiction admins can manage elections."
+      echo "CACvote JX Terminal is where jurisdiction admins can manage elections."
       echo ""
       echo "\e[1mTips:\e[0m"
-      echo "- Voting is done on CACVote Mark, not here. However, you must use this"
-      echo "  to set up the election and link a voter to it. CACVote Mark may not be"
-      echo "  run at the same time as CACVote JX Terminal. To switch, exit the current"
+      echo "- Voting is done on CACvote Mark, not here. However, you must use this"
+      echo "  to set up the election and link a voter to it. CACvote Mark may not be"
+      echo "  run at the same time as CACvote JX Terminal. To switch, exit the current"
       echo "  mprocs session and start the other one."
       echo "- Run the 'reset-db' process below to reset the database."
       echo "- To exit mprocs, type 'q' to quit and then 'y' to confirm."

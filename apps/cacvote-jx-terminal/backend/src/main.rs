@@ -1,4 +1,4 @@
-//! CACVote JX manages elections, voters, and ballots for a jurisdiction.
+//! CACvote JX manages elections, voters, and ballots for a jurisdiction.
 
 #![warn(
     clippy::all,

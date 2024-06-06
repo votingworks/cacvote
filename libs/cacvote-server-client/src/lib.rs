@@ -19,7 +19,7 @@ pub enum Error {
     Uuid(#[from] uuid::Error),
 }
 
-/// A client for the CACVote server.
+/// A client for the CACvote server.
 #[derive(Debug)]
 pub struct Client {
     base_url: Url,

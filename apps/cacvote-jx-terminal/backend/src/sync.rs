@@ -1,4 +1,4 @@
-//! CACVote Server synchronization utilities.
+//! CACvote Server synchronization utilities.
 
 use cacvote_server_client::Client;
 use tokio::time::sleep;
@@ -9,7 +9,7 @@ use crate::{
     db,
 };
 
-/// Spawns an async loop that synchronizes with the CACVote Server on a fixed
+/// Spawns an async loop that synchronizes with the CACvote Server on a fixed
 /// schedule.
 pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
     let mut connection = pool
@@ -23,10 +23,10 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
         loop {
             match sync(&mut connection, &client, &config.jurisdiction_code).await {
                 Ok(_) => {
-                    tracing::info!("Successfully synced with CACVote Server");
+                    tracing::info!("Successfully synced with CACvote Server");
                 }
                 Err(e) => {
-                    tracing::error!("Failed to sync with CACVote Server: {e}");
+                    tracing::error!("Failed to sync with CACvote Server: {e}");
                 }
             }
             sleep(SYNC_INTERVAL).await;
@@ -34,7 +34,7 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
     });
 }
 
-#[tracing::instrument(skip(executor, client), name = "Sync with CACVote Server")]
+#[tracing::instrument(skip(executor, client), name = "Sync with CACvote Server")]
 pub(crate) async fn sync(
     executor: &mut sqlx::PgConnection,
     client: &Client,
@@ -95,7 +95,7 @@ async fn pull_objects(
             }
             None => {
                 tracing::warn!(
-                    "Object with id {} not found on CACVote Server",
+                    "Object with id {} not found on CACvote Server",
                     journal_entry.object_id
                 );
             }
