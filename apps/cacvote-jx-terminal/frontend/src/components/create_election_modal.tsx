@@ -93,7 +93,9 @@ export function CreateElectionModal({
                 reader.readAsText(file);
               }}
             >
-              Import Election
+              {electionDefinition
+                ? electionDefinition.election.title
+                : 'Choose Election'}
             </FileInputButton>
           </Label>
         </React.Fragment>
