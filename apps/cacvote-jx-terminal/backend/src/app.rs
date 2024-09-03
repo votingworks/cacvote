@@ -55,9 +55,11 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
     };
 
     let (broadcast_tx, _) = broadcast::channel(1);
+    let jurisdiction_code = config
+        .jurisdiction_code()
+        .expect("missing or invalid jurisdiction code");
 
     tokio::spawn({
-        let jurisdiction_code = config.jurisdiction_code.clone();
         let pool = pool.clone();
         let smartcard = smartcard.clone();
         let broadcast_tx = broadcast_tx.clone();

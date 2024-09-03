@@ -17,11 +17,14 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
         .await
         .expect("failed to acquire database connection");
 
+    let jurisdiction_code = config.jurisdiction_code().expect(
+        "missing or invalid jurisdiction code in CA certificate; check that the CA certificate is valid and contains a jurisdiction code",
+    );
     let client = Client::new(config.cacvote_url);
 
     tokio::spawn(async move {
         loop {
-            match sync(&mut connection, &client, &config.jurisdiction_code).await {
+            match sync(&mut connection, &client, &jurisdiction_code).await {
                 Ok(_) => {
                     tracing::info!("Successfully synced with CACvote Server");
                 }
@@ -57,7 +60,7 @@ async fn pull_journal_entries(
     let latest_journal_entry_id = db::get_latest_journal_entry(executor)
         .await?
         .map(|entry| entry.id);
-    tracing::debug!("fetching journal entries since {latest_journal_entry_id:?}");
+    tracing::debug!("fetching journal entries since {latest_journal_entry_id:?} in jurisdiction {jurisdiction_code}");
     let new_entries = client
         .get_journal_entries(latest_journal_entry_id.as_ref(), Some(jurisdiction_code))
         .await?;
@@ -133,7 +136,7 @@ mod tests {
             port: addr.port(),
             public_dir: None,
             log_level: Level::DEBUG,
-            jurisdiction_code: JurisdictionCode::try_from(JURISDICTION_CODE).unwrap(),
+            ca_cert: PathBuf::from("/not/real/path"),
             eg_classpath: PathBuf::from("/not/real/path"),
         };
 
