@@ -62,6 +62,7 @@ async fn main() -> color_eyre::Result<()> {
     dotenvy::dotenv()?;
     let config = config::Config::parse();
     log::setup(&config)?;
+    tracing::info!("Starting CACvote JX with config: {config:#?}");
     let pool = db::setup(&config).await?;
     sync::sync_periodically(&pool, config.clone()).await;
     let smartcard_watcher = Watcher::watch();
