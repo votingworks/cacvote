@@ -5,7 +5,6 @@ use std::{
 
 use openssl::x509::X509;
 use pcsc::Card;
-use types_rs::cacvote::JurisdictionCode;
 use uuid::Uuid;
 
 use crate::{
@@ -14,9 +13,9 @@ use crate::{
         PUT_DATA_CERT_INFO_TAG, PUT_DATA_CERT_INFO_UNCOMPRESSED, PUT_DATA_CERT_TAG,
         PUT_DATA_DATA_TAG, PUT_DATA_ERROR_DETECTION_CODE_TAG,
     },
-    card_details::{extract_field_value, CardDetails, CardDetailsWithAuthInfo},
+    card_details::{extract_field_value, CardDetails, CardDetailsWithAuthInfo, PinInfo},
     card_reader::{CardReaderError, CertObject, OPEN_FIPS_201_AID},
-    certs::{VX_CUSTOM_CERT_FIELD_COMPONENT, VX_CUSTOM_CERT_FIELD_JURISDICTION},
+    certs::VX_CUSTOM_CERT_FIELD_COMPONENT,
     hex_debug::hex_debug,
     tlv::Tlv,
     CardCommand, CommandApdu,
@@ -103,30 +102,6 @@ impl VxCard {
         self.verify_card_private_key(CARD_VX_CERT, &card_vx_cert_public_key, None)?;
 
         let card_details: CardDetails = card_vx_admin_cert.clone().try_into()?;
-        let Some(vx_admin_cert_authority_cert_jurisdiction) = extract_field_value(
-            &vx_admin_cert_authority_cert,
-            VX_CUSTOM_CERT_FIELD_JURISDICTION,
-        )?
-        else {
-            return Err(CardReaderError::CertificateValidation(
-                "vx_admin_cert_authority_cert did not have a jurisdiction".to_owned(),
-            ));
-        };
-
-        let Ok(vx_admin_cert_authority_cert_jurisdiction) =
-            JurisdictionCode::try_from(vx_admin_cert_authority_cert_jurisdiction.as_str())
-        else {
-            return Err(CardReaderError::CertificateValidation(
-                "vx_admin_cert_authority_cert_jurisdiction was not a valid JurisdictionCode"
-                    .to_owned(),
-            ));
-        };
-
-        if card_details.jurisdiction_code() != vx_admin_cert_authority_cert_jurisdiction {
-            return Err(CardReaderError::CertificateValidation(
-                "card_details.jurisdiction_code() did not match vx_admin_cert_authority_cert_jurisdiction".to_owned(),
-            ));
-        }
 
         // If the card doesn't have a PIN:
         // Verify that the card has a private key that corresponds to the public key in the card
@@ -145,10 +120,12 @@ impl VxCard {
             )?;
         }
 
-        let num_incorrect_pin_attempts = if card_does_not_have_pin {
-            None
+        let pin_info = if card_does_not_have_pin {
+            PinInfo::NoPin
         } else {
-            Some(self.get_num_incorrect_pin_attempts()?)
+            PinInfo::HasPin {
+                num_incorrect_pin_attempts: self.get_num_incorrect_pin_attempts()?,
+            }
         };
 
         Ok(CardDetailsWithAuthInfo::new(
@@ -156,7 +133,7 @@ impl VxCard {
             card_vx_cert,
             card_vx_admin_cert,
             vx_admin_cert_authority_cert,
-            num_incorrect_pin_attempts,
+            pin_info,
         ))
     }
 

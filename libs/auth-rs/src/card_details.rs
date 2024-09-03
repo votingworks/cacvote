@@ -38,6 +38,12 @@ impl CardDetails {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum PinInfo {
+    NoPin,
+    HasPin { num_incorrect_pin_attempts: u8 },
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct CardDetailsWithAuthInfo {
     pub card_details: CardDetails,
 
@@ -51,8 +57,8 @@ pub struct CardDetailsWithAuthInfo {
     /// the card.
     pub vx_admin_cert_authority_cert: X509,
 
-    /// The number of incorrect PIN attempts, if the card has a PIN.
-    pub num_incorrect_pin_attempts: Option<u8>,
+    /// Information about the card's PIN.
+    pub pin_info: PinInfo,
 }
 
 impl CardDetailsWithAuthInfo {
@@ -61,14 +67,14 @@ impl CardDetailsWithAuthInfo {
         card_vx_cert: X509,
         card_vx_admin_cert: X509,
         vx_admin_cert_authority_cert: X509,
-        num_incorrect_pin_attempts: Option<u8>,
+        pin_info: PinInfo,
     ) -> Self {
         Self {
             card_details,
             card_vx_cert,
             card_vx_admin_cert,
             vx_admin_cert_authority_cert,
-            num_incorrect_pin_attempts,
+            pin_info,
         }
     }
 }
