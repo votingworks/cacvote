@@ -278,7 +278,10 @@ export class JavaCard implements Card {
       await fs.readFile(vxAdminCertAuthorityCertPath)
     );
     assert(vxAdminCertAuthorityCertDetails.component === 'admin');
-    assert(user.jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction);
+    assert(
+      user.jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction,
+      `User jurisdiction ${user.jurisdiction} does not match cert authority jurisdiction ${vxAdminCertAuthorityCertDetails.jurisdiction}`
+    );
     let cardDetails: CardDetails;
     switch (user.role) {
       case 'system_administrator': {

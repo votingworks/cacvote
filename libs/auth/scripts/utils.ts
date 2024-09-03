@@ -1,6 +1,20 @@
+import { Buffer } from 'buffer';
 import { sleep } from '@votingworks/basics';
+import { SystemAdministratorUser } from '@votingworks/types';
+import { generatePin, hyphenatePin } from '@votingworks/utils';
 
+import { ResponseApduError } from '../src/apdu';
 import { CardStatusReady, StatefulCard } from '../src/card';
+import { openssl } from '../src/cryptography';
+import { JavaCard } from '../src/java_card';
+
+/**
+ * Generates an ECC private key and returns the private key contents in a buffer. The key is not
+ * stored in a TPM.
+ */
+export async function generatePrivateKey(): Promise<Buffer> {
+  return await openssl(['ecparam', '-genkey', '-name', 'prime256v1', '-noout']);
+}
 
 /**
  * Waits for a card to have a ready status
@@ -20,4 +34,42 @@ export async function waitForReadyCardStatus<T>(
     throw new Error(`Card status not "ready" after ${waitTimeSeconds} seconds`);
   }
   return cardStatus;
+}
+
+/**
+ * Programs a vendor or system administrator Java Card
+ */
+export async function programJavaCard({
+  card,
+  isProduction,
+  user,
+}: {
+  card: JavaCard;
+  isProduction: boolean;
+  user: SystemAdministratorUser;
+}): Promise<void> {
+  const initialJavaCardConfigurationScriptReminder = `
+${
+  isProduction
+    ? 'Have you run this card through the configure-java-card script yet?'
+    : 'Have you run this card through the configure-dev-java-card script yet?'
+}
+If not, that's likely the cause of this error.
+Run that and then retry.
+`;
+
+  await waitForReadyCardStatus(card);
+
+  const pin = isProduction ? generatePin() : '000000';
+  try {
+    await card.program({ user, pin });
+  } catch (error) {
+    if (error instanceof ResponseApduError) {
+      throw new Error(
+        `${error.message}\n${initialJavaCardConfigurationScriptReminder}`
+      );
+    }
+    throw error;
+  }
+  console.log(`✅ Done! Card PIN is ${hyphenatePin(pin)}.`);
 }
