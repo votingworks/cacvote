@@ -11,6 +11,7 @@ pub(crate) type DynSmartcard = Arc<dyn SmartcardTrait + Send + Sync>;
 
 #[cfg_attr(test, mockall::automock)]
 pub(crate) trait SmartcardTrait {
+    #[allow(dead_code)]
     fn get_status(&self) -> SmartcardStatus;
     fn get_card_details(&self) -> Option<CardDetailsWithAuthInfo>;
 
@@ -21,7 +22,7 @@ pub(crate) trait SmartcardTrait {
 #[derive(Debug)]
 pub(crate) struct Signed {
     pub(crate) data: Vec<u8>,
-    pub(crate) cert_stack: Vec<X509>,
+    pub(crate) cert: X509,
 }
 
 /// Provides access to the current smartcard.
@@ -172,13 +173,10 @@ impl SmartcardTrait for Smartcard {
             }
         };
         let card = inner.card.as_ref().ok_or("no card")?;
-        let (data, public_key) = card
+        let (data, cert) = card
             .sign(CARD_VX_ADMIN_CERT, data, pin)
             .map_err(|e| format!("error signing: {e}"))?;
 
-        Ok(Signed {
-            data,
-            cert_stack: vec![public_key],
-        })
+        Ok(Signed { data, cert })
     }
 }

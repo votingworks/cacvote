@@ -12,17 +12,9 @@ path = "src/lib.rs"
 name = "cacvote-server"
 path = "bin/cacvote-server.rs"
 
-# [[bin]]
-# name = "create-object"
-# path = "bin/create-object.rs"
-
 [[bin]]
-name = "get-journal-entries"
-path = "bin/get-journal-entries.rs"
-
-# [[bin]]
-# name = "get-object-by-id"
-# path = "bin/get-object-by-id.rs"
+name = "cacvote-client"
+path = "bin/cacvote-client.rs"
 
 [[bin]]
 name = "enroll-voter-terminal-machine"

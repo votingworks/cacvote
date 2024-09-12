@@ -1,4 +1,4 @@
-use std::{fmt::Debug, io::Write, process::Command};
+use std::{fmt::Debug, io::Write, path::PathBuf, process::Command};
 
 use openssl::{
     hash::MessageDigest,
@@ -96,5 +96,51 @@ impl Signer for TpmSigner {
         }
 
         Ok(output.stdout)
+    }
+}
+
+/// A description of a signer.
+#[derive(Debug, Clone)]
+pub enum Description {
+    /// The path of a private key file.
+    File(PathBuf),
+
+    /// The handle of a TPM key.
+    Tpm(u32),
+}
+
+impl std::str::FromStr for Description {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.strip_prefix("tpm:") {
+            Some(handle) => match handle.strip_prefix("0x") {
+                Some(handle) => {
+                    let handle = u32::from_str_radix(handle, 16).map_err(|e| e.to_string())?;
+                    Ok(Self::Tpm(handle))
+                }
+                None => {
+                    let handle = handle.parse::<u32>().map_err(|e| e.to_string())?;
+                    Ok(Self::Tpm(handle))
+                }
+            },
+            None => Ok(Self::File(PathBuf::from(s))),
+        }
+    }
+}
+
+impl TryFrom<Description> for AnySigner {
+    type Error = color_eyre::Report;
+
+    fn try_from(value: Description) -> Result<Self, Self::Error> {
+        match value {
+            Description::File(path) => {
+                let pem = std::fs::read(path)?;
+                Ok(Box::new(PrivateKeySigner::new(PKey::private_key_from_pem(
+                    &pem,
+                )?)))
+            }
+            Description::Tpm(handle) => Ok(Box::new(TpmSigner::new(handle))),
+        }
     }
 }

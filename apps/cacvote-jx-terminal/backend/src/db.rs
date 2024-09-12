@@ -45,7 +45,7 @@ pub(crate) async fn get_elections(
             id,
             election_id,
             payload,
-            certificates,
+            certificate,
             signature
         FROM objects
         WHERE object_type = 'Election'
@@ -102,7 +102,7 @@ pub async fn get_pending_registration_requests(
             rr.id,
             rr.election_id,
             rr.payload,
-            rr.certificates,
+            rr.certificate,
             rr.signature,
             rr.created_at
         FROM
@@ -132,7 +132,7 @@ pub async fn get_pending_registration_requests(
             id: record.id,
             election_id: record.election_id,
             payload: record.payload,
-            certificates: record.certificates,
+            certificate: record.certificate,
             signature: record.signature,
         };
 
@@ -163,17 +163,17 @@ pub async fn get_registrations(
         SELECT
             r.id AS registration_id,
             r.payload AS registration_payload,
-            r.certificates AS registration_certificates,
+            r.certificate AS registration_certificate,
             r.signature AS registration_signature,
             e.id AS election_id,
             e.election_id AS election_election_id,
             e.payload AS election_payload,
-            e.certificates AS election_certificates,
+            e.certificate AS election_certificate,
             e.signature AS election_signature,
             rr.id AS registration_request_id,
             rr.election_id AS registration_request_election_id,
             rr.payload AS registration_request_payload,
-            rr.certificates AS registration_request_certificates,
+            rr.certificate AS registration_request_certificate,
             rr.signature AS registration_request_signature,
             r.created_at AS created_at,
             r.server_synced_at IS NOT NULL AS "is_synced!: bool"
@@ -201,21 +201,21 @@ pub async fn get_registrations(
             id: record.registration_id,
             election_id: Some(record.election_id),
             payload: record.registration_payload,
-            certificates: record.registration_certificates,
+            certificate: record.registration_certificate,
             signature: record.registration_signature,
         };
         let election_object = cacvote::SignedObject {
             id: record.election_id,
             election_id: record.election_election_id,
             payload: record.election_payload,
-            certificates: record.election_certificates,
+            certificate: record.election_certificate,
             signature: record.election_signature,
         };
         let registration_request_object = cacvote::SignedObject {
             id: record.registration_request_id,
             election_id: record.registration_request_election_id,
             payload: record.registration_request_payload,
-            certificates: record.registration_request_certificates,
+            certificate: record.registration_request_certificate,
             signature: record.registration_request_signature,
         };
 
@@ -272,7 +272,7 @@ pub async fn get_object(
             id,
             election_id,
             payload,
-            certificates,
+            certificate,
             signature
         FROM objects
         WHERE id = $1
@@ -398,7 +398,7 @@ pub async fn add_object_from_server(
     object: &cacvote::SignedObject,
 ) -> color_eyre::Result<Uuid> {
     if !object.verify()? {
-        bail!("Unable to verify signature/certificates")
+        bail!("Unable to verify signature/certificate")
     }
 
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
@@ -409,7 +409,7 @@ pub async fn add_object_from_server(
 
     sqlx::query!(
         r#"
-        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificates, signature, server_synced_at)
+        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificate, signature, server_synced_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, now())
         "#,
         &object.id,
@@ -417,7 +417,7 @@ pub async fn add_object_from_server(
         jurisdiction_code.as_str(),
         object_type,
         &object.payload,
-        &object.certificates,
+        &object.certificate,
         &object.signature
     )
     .execute(connection)
@@ -434,7 +434,7 @@ pub async fn add_object(
     object: &cacvote::SignedObject,
 ) -> color_eyre::Result<Uuid> {
     if !object.verify()? {
-        bail!("Unable to verify signature/certificates")
+        bail!("Unable to verify signature/certificate")
     }
 
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
@@ -445,7 +445,7 @@ pub async fn add_object(
 
     sqlx::query!(
         r#"
-        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificates, signature)
+        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificate, signature)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
         &object.id,
@@ -453,7 +453,7 @@ pub async fn add_object(
         jurisdiction_code.as_str(),
         object_type,
         &object.payload,
-        &object.certificates,
+        &object.certificate,
         &object.signature
     )
     .execute(connection)
@@ -524,7 +524,7 @@ pub(crate) async fn get_unsynced_objects(
             id,
             election_id,
             payload,
-            certificates,
+            certificate,
             signature
         FROM objects
         WHERE server_synced_at IS NULL
@@ -587,17 +587,17 @@ pub(crate) async fn get_cast_ballots(
             cb.id AS cast_ballot_id,
             cb.election_id as cast_ballot_election_id,
             cb.payload AS cast_ballot_payload,
-            cb.certificates AS cast_ballot_certificates,
+            cb.certificate AS cast_ballot_certificate,
             cb.signature AS cast_ballot_signature,
             rr.id AS registration_request_id,
             rr.election_id AS registration_request_election_id,
             rr.payload AS registration_request_payload,
-            rr.certificates AS registration_request_certificates,
+            rr.certificate AS registration_request_certificate,
             rr.signature AS registration_request_signature,
             r.id AS registration_id,
             r.election_id AS registration_election_id,
             r.payload AS registration_payload,
-            r.certificates AS registration_certificates,
+            r.certificate AS registration_certificate,
             r.signature AS registration_signature,
             cb.created_at AS created_at
         FROM objects AS cb
@@ -628,21 +628,21 @@ pub(crate) async fn get_cast_ballots(
             id: record.cast_ballot_id,
             election_id: record.cast_ballot_election_id,
             payload: record.cast_ballot_payload,
-            certificates: record.cast_ballot_certificates,
+            certificate: record.cast_ballot_certificate,
             signature: record.cast_ballot_signature,
         };
         let registration_object = cacvote::SignedObject {
             id: record.registration_id,
             election_id: record.registration_election_id,
             payload: record.registration_payload,
-            certificates: record.registration_certificates,
+            certificate: record.registration_certificate,
             signature: record.registration_signature,
         };
         let registration_request_object = cacvote::SignedObject {
             id: record.registration_request_id,
             election_id: record.registration_request_election_id,
             payload: record.registration_request_payload,
-            certificates: record.registration_request_certificates,
+            certificate: record.registration_request_certificate,
             signature: record.registration_request_signature,
         };
 
@@ -687,7 +687,7 @@ pub(crate) async fn get_cast_ballots_for_election(
             cb.id AS cast_ballot_id,
             cb.election_id as cast_ballot_election_id,
             cb.payload AS cast_ballot_payload,
-            cb.certificates AS cast_ballot_certificates,
+            cb.certificate AS cast_ballot_certificate,
             cb.signature AS cast_ballot_signature
         FROM objects AS cb
         WHERE cb.object_type = $1
@@ -707,7 +707,7 @@ pub(crate) async fn get_cast_ballots_for_election(
             id: record.cast_ballot_id,
             election_id: record.cast_ballot_election_id,
             payload: record.cast_ballot_payload,
-            certificates: record.cast_ballot_certificates,
+            certificate: record.cast_ballot_certificate,
             signature: record.cast_ballot_signature,
         };
 
@@ -729,7 +729,7 @@ pub(crate) async fn get_shuffled_encrypted_cast_ballots(
             b.id AS shuffled_encrypted_cast_ballots_id,
             b.election_id AS shuffled_encrypted_cast_ballots_election_id,
             b.payload AS shuffled_encrypted_cast_ballots_payload,
-            b.certificates AS shuffled_encrypted_cast_ballots_certificates,
+            b.certificate AS shuffled_encrypted_cast_ballots_certificate,
             b.signature AS shuffled_encrypted_cast_ballots_signature,
             b.created_at AS shuffled_encrypted_cast_ballots_created_at,
             b.server_synced_at AS shuffled_encrypted_cast_ballots_server_synced_at
@@ -751,7 +751,7 @@ pub(crate) async fn get_shuffled_encrypted_cast_ballots(
         id: record.shuffled_encrypted_cast_ballots_id,
         election_id: record.shuffled_encrypted_cast_ballots_election_id,
         payload: record.shuffled_encrypted_cast_ballots_payload,
-        certificates: record.shuffled_encrypted_cast_ballots_certificates,
+        certificate: record.shuffled_encrypted_cast_ballots_certificate,
         signature: record.shuffled_encrypted_cast_ballots_signature,
     };
 
@@ -823,10 +823,10 @@ mod tests {
         let private_key_pem =
             include_bytes!("../../../../libs/auth/certs/dev/vx-admin-private-key.pem");
         let private_key = PKey::private_key_from_pem(private_key_pem)?;
-        let certificates =
+        let certificate =
             include_bytes!("../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem")
                 .to_vec();
-        let x509 = X509::from_pem(&certificates)?;
+        let x509 = X509::from_pem(&certificate)?;
         let public_key = x509.public_key()?;
         Ok((x509, public_key, private_key))
     }
@@ -839,7 +839,7 @@ mod tests {
 
     #[sqlx::test(migrations = "db/migrations")]
     async fn test_pending_registration_requests(pool: sqlx::PgPool) -> color_eyre::Result<()> {
-        let (certificates, _, private_key) = load_keypair()?;
+        let (certificate, _, private_key) = load_keypair()?;
         let election_definition = load_election_definition()?;
         let connection = &mut pool.acquire().await?;
         let jurisdiction_code = JurisdictionCode::try_from("st.test-jurisdiction").unwrap();
@@ -852,7 +852,7 @@ mod tests {
         });
         let election_object = cacvote::SignedObject::from_payload(
             &election_payload,
-            vec![certificates.clone()],
+            certificate.clone(),
             &private_key,
         )?;
 
@@ -874,7 +874,7 @@ mod tests {
             });
         let registration_request_object = cacvote::SignedObject::from_payload(
             &registration_request_payload,
-            vec![certificates.clone()],
+            certificate.clone(),
             &private_key,
         )?;
 
@@ -905,7 +905,7 @@ mod tests {
         });
         let registration_object = cacvote::SignedObject::from_payload(
             &registration_payload,
-            vec![certificates.clone()],
+            certificate.clone(),
             &private_key,
         )?;
 

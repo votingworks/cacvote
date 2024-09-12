@@ -21,8 +21,8 @@ create table objects (
   -- raw object data, must be JSON with fields `object_type` and `data`
   payload bytea not null,
 
-  -- certificates used to sign `payload` to get `signature`
-  certificates bytea not null,
+  -- certificate used to sign `payload` to get `signature`
+  certificate bytea not null,
 
   -- signature of `data` using `certificates`
   signature bytea not null,

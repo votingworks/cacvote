@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use auth_rs::{card_details::extract_field_value, certs::VX_CUSTOM_CERT_FIELD_JURISDICTION};
 use axum::{
     async_trait,
@@ -50,7 +48,7 @@ impl Session {
         let jurisdiction_code =
             match extract_field_value(&certificate, VX_CUSTOM_CERT_FIELD_JURISDICTION) {
                 Ok(Some(s)) => cacvote::JurisdictionCode::try_from(s.clone())
-                    .or_else(|_| Err(Error::InvalidJurisdictionCode(s.to_owned())))?,
+                    .map_err(|_| Error::InvalidJurisdictionCode(s.to_owned()))?,
                 Ok(None) | Err(_) => {
                     return Err(Error::FieldNotFound(
                         VX_CUSTOM_CERT_FIELD_JURISDICTION.to_owned(),

@@ -43,7 +43,7 @@ pub async fn create_object(
     object: &SignedObject,
 ) -> color_eyre::Result<Uuid> {
     if !object.verify()? {
-        bail!("Unable to verify signature/certificates")
+        bail!("Unable to verify signature/certificate")
     }
 
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
@@ -61,7 +61,7 @@ pub async fn create_object(
 
     match sqlx::query!(
         r#"
-        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificates, signature)
+        INSERT INTO objects (id, election_id, jurisdiction, object_type, payload, certificate, signature)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
         &object.id,
@@ -69,7 +69,7 @@ pub async fn create_object(
         jurisdiction_code.as_str(),
         object_type,
         &object.payload,
-        &object.certificates,
+        &object.certificate,
         &object.signature
     )
     .execute(&mut *txn)
@@ -239,7 +239,7 @@ pub async fn get_object_by_id(
     let object = sqlx::query_as!(
         cacvote::SignedObject,
         r#"
-        SELECT id, election_id, payload, certificates, signature
+        SELECT id, election_id, payload, certificate, signature
         FROM objects
         WHERE id = $1
         "#,
@@ -308,7 +308,7 @@ pub async fn get_object_by_election_id_and_type(
     Ok(sqlx::query_as!(
         cacvote::SignedObject,
         r#"
-            SELECT id, election_id, payload, certificates, signature
+            SELECT id, election_id, payload, certificate, signature
             FROM objects
             WHERE election_id = $1
               AND object_type = $2
@@ -324,24 +324,24 @@ pub async fn get_object_by_election_id_and_type(
 pub struct Machine {
     pub id: Uuid,
     pub machine_identifier: String,
-    pub certificates: Vec<u8>,
+    pub certificate: Vec<u8>,
     pub created_at: time::OffsetDateTime,
 }
 
 pub async fn create_machine(
     conn: &mut sqlx::PgConnection,
     machine_identifier: &str,
-    certificates: &[u8],
+    certificate: &[u8],
 ) -> color_eyre::Result<Machine> {
     Ok(sqlx::query_as!(
         Machine,
         r#"
-        INSERT INTO machines (machine_identifier, certificates)
+        INSERT INTO machines (machine_identifier, certificate)
         VALUES ($1, $2)
-        RETURNING id, machine_identifier, certificates, created_at
+        RETURNING id, machine_identifier, certificate, created_at
         "#,
         machine_identifier,
-        certificates
+        certificate
     )
     .fetch_one(conn)
     .await?)
@@ -357,7 +357,7 @@ pub async fn get_machine_by_identifier(
         SELECT
             id,
             machine_identifier,
-            certificates,
+            certificate,
             created_at
         FROM machines
         WHERE machine_identifier = $1
@@ -397,11 +397,8 @@ pub async fn create_scanned_mailing_label_code(
         );
     };
 
-    let certificates = x509::X509::stack_from_pem(&machine.certificates)?;
-    let Some(public_key) = certificates.first() else {
-        bail!("No public key found in machine certificates")
-    };
-    let public_key = public_key.public_key()?;
+    let certificate = x509::X509::from_pem(&machine.certificate)?;
+    let public_key = certificate.public_key()?;
 
     if !signed_buffer.verify(&public_key)? {
         bail!("Unable to verify signature")
@@ -508,7 +505,7 @@ pub async fn search(
                 )::jsonb ->> 'title'
             FROM objects AS e WHERE e.id = objects.election_id) AS election,
             payload,
-            certificates,
+            certificate,
             signature,
             created_at
         FROM objects
@@ -528,7 +525,7 @@ pub async fn search(
                 id: record.id,
                 election_id: record.election_id,
                 payload: record.payload,
-                certificates: record.certificates,
+                certificate: record.certificate,
                 signature: record.signature,
             };
 

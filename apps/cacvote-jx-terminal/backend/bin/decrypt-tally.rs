@@ -8,7 +8,7 @@ use types_rs::cacvote::Payload;
 use url::Url;
 use uuid::Uuid;
 
-use cacvote_server_client::Client;
+use cacvote_server_client::{signer, Client};
 
 #[derive(Debug, Parser)]
 struct Opts {
@@ -26,6 +26,24 @@ struct Opts {
 
     #[clap(long, env = "EG_CLASSPATH")]
     electionguard_classpath: PathBuf,
+
+    #[clap(long, env = "SIGNING_CERT")]
+    signing_cert: PathBuf,
+
+    #[clap(long, env = "SIGNER")]
+    signer: signer::Description,
+}
+
+impl Opts {
+    fn signing_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        let pem = std::fs::read(&self.signing_cert)?;
+        let signing_cert = openssl::x509::X509::from_pem(&pem)?;
+        Ok(signing_cert)
+    }
+
+    fn signer(&self) -> color_eyre::Result<signer::AnySigner> {
+        self.signer.clone().try_into()
+    }
 }
 
 #[tokio::main]
@@ -33,7 +51,11 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let opts = Opts::parse();
-    let client = Client::new(opts.cacvote_server_url.clone());
+    let mut client = Client::new(
+        opts.cacvote_server_url.clone(),
+        opts.signing_cert()?,
+        opts.signer()?,
+    );
 
     let cast_ballot_object = match client.get_object_by_id(opts.object_id).await? {
         Some(object) => object,

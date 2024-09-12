@@ -60,12 +60,12 @@ mod tests {
         let private_key_pem =
             include_bytes!("../../../../libs/auth/certs/dev/vx-admin-private-key.pem");
         let private_key = PKey::private_key_from_pem(private_key_pem)?;
-        let certificates =
+        let certificate =
             include_bytes!("../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem")
                 .to_vec();
-        let x509 = X509::from_pem(&certificates)?;
+        let x509 = X509::from_pem(&certificate)?;
         let public_key = x509.public_key()?;
-        Ok((certificates, public_key, private_key))
+        Ok((certificate, public_key, private_key))
     }
 
     fn sign_and_verify(
@@ -102,7 +102,7 @@ mod tests {
             jurisdiction_code: JurisdictionCode::try_from("st.dev-jurisdiction").unwrap(),
         });
         let payload = serde_json::to_vec(&payload)?;
-        let (certificates, public_key, private_key) = load_keypair()?;
+        let (certificate, public_key, private_key) = load_keypair()?;
         let signature = sign_and_verify(&payload, &private_key, &public_key)?;
 
         // create the object
@@ -111,7 +111,7 @@ mod tests {
                 id: Uuid::new_v4(),
                 election_id: None,
                 payload,
-                certificates: certificates.clone(),
+                certificate: certificate.clone(),
                 signature: signature.clone(),
             })
             .await?;
@@ -162,7 +162,7 @@ mod tests {
             Payload::RegistrationRequest(registration_request) => registration_request,
             other => panic!("expected RegistrationRequest, got: {other:?}"),
         };
-        assert_eq!(signed_object.certificates, certificates);
+        assert_eq!(signed_object.certificate, certificate);
         assert_eq!(signed_object.signature, signature);
         assert_eq!(
             round_trip_registration_request.common_access_card_id,
@@ -198,8 +198,8 @@ mod tests {
                 id: Uuid::new_v4(),
                 payload,
                 election_id: None,
-                // invalid certificates and signature
-                certificates: vec![],
+                // invalid certificate and signature
+                certificate: vec![],
                 signature: vec![],
             })
             .await

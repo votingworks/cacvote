@@ -1,10 +1,13 @@
 use std::fmt;
+use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::ops::Deref;
+use std::str::from_utf8;
 use std::str::FromStr;
 
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use time::OffsetDateTime;
 use tlv_derive::{Decode, Encode};
 use uuid::Uuid;
@@ -87,7 +90,7 @@ impl sqlx::Type<sqlx::Postgres> for JurisdictionCode {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignedObject {
     pub id: Uuid,
@@ -100,20 +103,89 @@ pub struct SignedObject {
     #[serde(with = "Base64Standard")]
     pub payload: Vec<u8>,
 
-    /// A stack of PEM-encoded X.509 certificates.
+    /// A PEM-encoded X.509 certificate.
     #[serde(with = "Base64Standard")]
-    pub certificates: Vec<u8>,
+    pub certificate: Vec<u8>,
 
     /// The signature of the payload.
     #[serde(with = "Base64Standard")]
     pub signature: Vec<u8>,
 }
 
+#[cfg(feature = "openssl")]
+enum DebuggableCertificate {
+    Valid(openssl::x509::X509),
+    Invalid(String),
+}
+
+#[cfg(feature = "openssl")]
+impl Debug for DebuggableCertificate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DebuggableCertificate::Valid(certificate) => {
+                if f.alternate() {
+                    write!(f, "{certificate:#?}")
+                } else {
+                    write!(f, "{certificate:?}")
+                }
+            }
+            DebuggableCertificate::Invalid(e) => {
+                write!(f, "[invalid certificate: {e}]")
+            }
+        }
+    }
+}
+
+struct DebuggableSignature<'a>(&'a [u8]);
+
+impl Debug for DebuggableSignature<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:x?}", self.0)
+    }
+}
+
+struct DebuggablePayload<'a>(&'a [u8]);
+
+impl Debug for DebuggablePayload<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Ok(string) = from_utf8(self.0) else {
+            return write!(f, "{:?}", self.0);
+        };
+        let Ok(payload) = serde_json::from_str::<Value>(string) else {
+            return write!(f, "{string:?}");
+        };
+        if f.alternate() {
+            write!(f, "{payload:#?}")
+        } else {
+            write!(f, "{payload:?}")
+        }
+    }
+}
+
+impl Debug for SignedObject {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[cfg(feature = "openssl")]
+        let certificate = match openssl::x509::X509::from_pem(&self.certificate) {
+            Ok(certificate) => DebuggableCertificate::Valid(certificate),
+            Err(e) => DebuggableCertificate::Invalid(e.to_string()),
+        };
+        #[cfg(not(feature = "openssl"))]
+        let certificate = &self.certificate;
+        f.debug_struct("SignedObject")
+            .field("id", &self.id)
+            .field("election_id", &self.election_id)
+            .field("payload", &DebuggablePayload(&self.payload))
+            .field("certificate", &certificate)
+            .field("signature", &DebuggableSignature(&self.signature))
+            .finish()
+    }
+}
+
 impl SignedObject {
     #[cfg(feature = "openssl")]
     pub fn from_payload(
         payload: &Payload,
-        certificates: Vec<openssl::x509::X509>,
+        certificate: openssl::x509::X509,
         private_key: &openssl::pkey::PKeyRef<openssl::pkey::Private>,
     ) -> color_eyre::Result<Self> {
         let election_id = payload.election_id();
@@ -123,17 +195,11 @@ impl SignedObject {
         signer.update(&payload)?;
         let signature = signer.sign_to_vec()?;
 
-        let certificates = certificates
-            .iter()
-            .map(|cert| cert.to_pem())
-            .collect::<Result<Vec<_>, _>>()?
-            .concat();
-
         Ok(Self {
             id: Uuid::new_v4(),
             election_id,
             payload,
-            certificates,
+            certificate: certificate.to_pem()?,
             signature,
         })
     }
@@ -144,7 +210,7 @@ impl SignedObject {
 
     #[cfg(feature = "openssl")]
     pub fn to_x509(&self) -> Result<openssl::x509::X509, openssl::error::ErrorStack> {
-        openssl::x509::X509::from_pem(&self.certificates)
+        openssl::x509::X509::from_pem(&self.certificate)
     }
 
     #[cfg(feature = "openssl")]
@@ -165,7 +231,7 @@ impl SignedObject {
 
         #[cfg(feature = "openssl")]
         {
-            jurisdiction_code.or_else(|| self.jurisdiction_code_from_certificates())
+            jurisdiction_code.or_else(|| self.jurisdiction_code_from_certificate())
         }
 
         #[cfg(not(feature = "openssl"))]
@@ -176,7 +242,7 @@ impl SignedObject {
 
     #[cfg(feature = "openssl")]
     #[must_use]
-    pub fn jurisdiction_code_from_certificates(&self) -> Option<JurisdictionCode> {
+    pub fn jurisdiction_code_from_certificate(&self) -> Option<JurisdictionCode> {
         /// Format: {state-2-letter-abbreviation}.{county-or-town} (e.g. ms.warren or ca.los-angeles)
         const VX_CUSTOM_CERT_FIELD_JURISDICTION: &str = "1.3.6.1.4.1.59817.2";
 

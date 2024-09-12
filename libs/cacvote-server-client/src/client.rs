@@ -38,10 +38,12 @@ impl Client {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
     /// # use cacvote_server_client::Client;
+    /// # let signing_cert = todo!();
+    /// # let signer = todo!();
     /// let base_url = "http://localhost:8000".parse().unwrap();
-    /// let client = Client::new(base_url);
+    /// let client = Client::new(base_url, signing_cert, signer);
     /// ```
     pub const fn new(base_url: reqwest::Url, signing_cert: X509, signer: AnySigner) -> Self {
         Self {
@@ -128,7 +130,7 @@ impl Client {
     /// ```
     /// # use cacvote_server_client::Client;
     /// # async {
-    /// # let client = Client::localhost();
+    /// # let client = Client::localhost(todo!(), todo!());
     /// let object_id = client
     ///     .get_object_by_id("00000000-0000-0000-0000-000000000000".parse().unwrap())
     ///     .await
@@ -169,7 +171,7 @@ impl Client {
     /// # use cacvote_server_client::Client;
     /// # use types_rs::cacvote::JurisdictionCode;
     /// # async {
-    /// # let client = Client::localhost();
+    /// # let client = Client::localhost(todo!(), todo!());
     /// // get all journal entries ever
     /// let entries = client.get_journal_entries(None, None).await.unwrap();
     ///
