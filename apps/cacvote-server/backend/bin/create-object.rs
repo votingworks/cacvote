@@ -1,4 +1,5 @@
 use cacvote_server::client::Client;
+use cacvote_server_client::{KeypairSigner, TpmSigner};
 use openssl::{
     hash::MessageDigest,
     pkey::{PKey, Private, Public},
@@ -62,7 +63,10 @@ async fn main() -> color_eyre::Result<()> {
         signature,
     };
 
-    let client = Client::localhost();
+    let client = Client::localhost(
+        public_key.clone(),
+        Box::new(KeypairSigner::new(public_key, private_key)),
+    );
     let object_id = client.create_object(signed_object).await?;
     println!("object_id: {object_id:?}");
 

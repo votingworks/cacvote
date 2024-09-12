@@ -30,6 +30,7 @@ async fn main() -> color_eyre::Result<()> {
         database_url: options.database_url,
         port: 0, // unused in this context
         log_level: options.log_level,
+        ca_cert: "unused".to_string(), // unused in this context
     };
     log::setup(&config)?;
     let pool = db::setup(&config).await?;

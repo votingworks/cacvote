@@ -18,7 +18,6 @@
     clippy::needless_borrow,
     clippy::match_wildcard_for_single_variants,
     clippy::if_let_mutex,
-    clippy::mismatched_target_os,
     clippy::await_holding_lock,
     clippy::match_on_vec_items,
     clippy::imprecise_flops,
@@ -58,5 +57,5 @@ async fn main() -> color_eyre::Result<()> {
     log::setup(&config)?;
     let pool = db::setup(&config).await?;
 
-    app::run(app::setup(pool).await?, &config).await
+    app::run(app::setup(pool, config.load_ca_cert()?).await, &config).await
 }

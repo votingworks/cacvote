@@ -3,9 +3,9 @@ name = "cacvote-jx-terminal-backend"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "decrypt-tally"
-path = "bin/decrypt-tally.rs"
+# [[bin]]
+# name = "decrypt-tally"
+# path = "bin/decrypt-tally.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

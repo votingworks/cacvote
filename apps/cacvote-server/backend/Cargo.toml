@@ -12,17 +12,17 @@ path = "src/lib.rs"
 name = "cacvote-server"
 path = "bin/cacvote-server.rs"
 
-[[bin]]
-name = "create-object"
-path = "bin/create-object.rs"
+# [[bin]]
+# name = "create-object"
+# path = "bin/create-object.rs"
 
 [[bin]]
 name = "get-journal-entries"
 path = "bin/get-journal-entries.rs"
 
-[[bin]]
-name = "get-object-by-id"
-path = "bin/get-object-by-id.rs"
+# [[bin]]
+# name = "get-object-by-id"
+# path = "bin/get-object-by-id.rs"
 
 [[bin]]
 name = "enroll-voter-terminal-machine"
@@ -33,6 +33,7 @@ path = "bin/enroll-voter-terminal-machine.rs"
 [dependencies]
 auth-rs = { workspace = true }
 axum = { workspace = true }
+axum-extra = { workspace = true }
 base64 = { workspace = true }
 base64-serde = { workspace = true }
 cacvote-server-client = { workspace = true }

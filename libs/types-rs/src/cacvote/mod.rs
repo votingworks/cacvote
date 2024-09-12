@@ -143,17 +143,13 @@ impl SignedObject {
     }
 
     #[cfg(feature = "openssl")]
-    pub fn to_x509(&self) -> Result<Vec<openssl::x509::X509>, openssl::error::ErrorStack> {
-        openssl::x509::X509::stack_from_pem(&self.certificates)
+    pub fn to_x509(&self) -> Result<openssl::x509::X509, openssl::error::ErrorStack> {
+        openssl::x509::X509::from_pem(&self.certificates)
     }
 
     #[cfg(feature = "openssl")]
     pub fn verify(&self) -> Result<bool, openssl::error::ErrorStack> {
-        let public_key = match self.to_x509()?.first() {
-            Some(x509) => x509.public_key()?,
-            None => return Ok(false),
-        };
-
+        let public_key = self.to_x509()?.public_key()?;
         let mut verifier =
             openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), &public_key)?;
         verifier.update(&self.payload)?;
@@ -186,7 +182,6 @@ impl SignedObject {
 
         self.to_x509()
             .ok()?
-            .first()?
             .subject_name()
             .entries()
             .find(|entry| entry.object().to_string() == VX_CUSTOM_CERT_FIELD_JURISDICTION)?

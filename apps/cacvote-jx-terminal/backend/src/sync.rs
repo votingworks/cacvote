@@ -1,6 +1,6 @@
 //! CACvote Server synchronization utilities.
 
-use cacvote_server_client::Client;
+use cacvote_server_client::{Client, TpmSigner};
 use tokio::time::sleep;
 use types_rs::cacvote::JurisdictionCode;
 
@@ -20,11 +20,16 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
     let jurisdiction_code = config.jurisdiction_code().expect(
         "missing or invalid jurisdiction code in CA certificate; check that the CA certificate is valid and contains a jurisdiction code",
     );
-    let client = Client::new(config.cacvote_url);
+    let signer = Box::new(TpmSigner::new(0x81000001));
+    let mut client = Client::new(
+        config.cacvote_url.clone(),
+        config.ca_cert().expect("invalid CA certificate"),
+        signer,
+    );
 
     tokio::spawn(async move {
         loop {
-            match sync(&mut connection, &client, &jurisdiction_code).await {
+            match sync(&mut connection, &mut client, &jurisdiction_code).await {
                 Ok(_) => {
                     tracing::info!("Successfully synced with CACvote Server");
                 }
@@ -40,7 +45,7 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
 #[tracing::instrument(skip(executor, client), name = "Sync with CACvote Server")]
 pub(crate) async fn sync(
     executor: &mut sqlx::PgConnection,
-    client: &Client,
+    client: &mut Client,
     jurisdiction_code: &JurisdictionCode,
 ) -> color_eyre::eyre::Result<()> {
     client.check_status().await?;
@@ -54,7 +59,7 @@ pub(crate) async fn sync(
 
 async fn pull_journal_entries(
     executor: &mut sqlx::PgConnection,
-    client: &Client,
+    client: &mut Client,
     jurisdiction_code: &JurisdictionCode,
 ) -> color_eyre::eyre::Result<()> {
     let latest_journal_entry_id = db::get_latest_journal_entry(executor)
@@ -75,7 +80,7 @@ async fn pull_journal_entries(
 
 async fn push_objects(
     executor: &mut sqlx::PgConnection,
-    client: &Client,
+    client: &mut Client,
 ) -> color_eyre::eyre::Result<()> {
     let objects = db::get_unsynced_objects(executor).await?;
     for object in objects {
@@ -88,7 +93,7 @@ async fn push_objects(
 
 async fn pull_objects(
     executor: &mut sqlx::PgConnection,
-    client: &Client,
+    client: &mut Client,
 ) -> color_eyre::eyre::Result<()> {
     let journal_entries = db::get_journal_entries_for_objects_to_pull(executor).await?;
     for journal_entry in journal_entries {
@@ -110,8 +115,10 @@ async fn pull_objects(
 
 #[cfg(test)]
 mod tests {
-    use std::{net::TcpListener, path::PathBuf, sync::Arc};
+    use std::{path::PathBuf, sync::Arc};
 
+    use cacvote_server_client::PrivateKeySigner;
+    use openssl::{pkey::PKey, x509::X509};
     use reqwest::Url;
     use tracing::Level;
     use types_rs::cacvote::SmartcardStatus;
@@ -125,8 +132,11 @@ mod tests {
 
     const JURISDICTION_CODE: &str = "st.test-jurisdiction";
 
-    fn setup(pool: sqlx::PgPool, smartcard_status: DynSmartcard) -> color_eyre::Result<Client> {
-        let listener = TcpListener::bind("0.0.0.0:0")?;
+    async fn setup(
+        pool: sqlx::PgPool,
+        smartcard_status: DynSmartcard,
+    ) -> color_eyre::Result<Client> {
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:0").await?;
         let addr = listener.local_addr()?;
         let cacvote_url: Url = format!("http://{addr}").parse()?;
         let config = Config {
@@ -142,14 +152,19 @@ mod tests {
 
         tokio::spawn(async move {
             let app = app::setup(pool, config, smartcard_status);
-            axum::Server::from_tcp(listener)
-                .unwrap()
-                .serve(app.into_make_service())
-                .await
-                .unwrap();
+            axum::serve(listener, app).await.unwrap();
         });
 
-        Ok(Client::new(cacvote_url))
+        let cert = X509::from_pem(include_bytes!(
+            "../../../../libs/auth/certs/dev/vx-cert-authority-cert.pem"
+        ))
+        .unwrap();
+        let private_key = PKey::private_key_from_pem(include_bytes!(
+            "../../../../libs/auth/certs/dev/vx-private-key.pem"
+        ))
+        .unwrap();
+        let signer = PrivateKeySigner::new(cert.public_key()?, private_key);
+        Ok(Client::new(cacvote_url, cert, Box::new(signer)))
     }
 
     #[sqlx::test(migrations = "db/migrations")]
@@ -161,12 +176,12 @@ mod tests {
             .expect_get_status()
             .returning(|| SmartcardStatus::Card);
 
-        let client = setup(pool, Arc::new(smartcard_status))?;
+        let mut client = setup(pool, Arc::new(smartcard_status)).await?;
 
         // TODO: actually test `sync`
         let _ = sync(
             &mut connection,
-            &client,
+            &mut client,
             &JurisdictionCode::try_from(JURISDICTION_CODE).unwrap(),
         )
         .await;

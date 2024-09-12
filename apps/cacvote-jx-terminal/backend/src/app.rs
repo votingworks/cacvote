@@ -132,9 +132,8 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
 pub(crate) async fn run(app: Router, config: &Config) -> color_eyre::Result<()> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port);
     tracing::info!("Server listening at http://{addr}/");
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
     Ok(())
 }
 
