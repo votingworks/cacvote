@@ -12,6 +12,7 @@ export * from './inserted_smart_card_auth';
 export * from './integration_test_utils';
 export * from './java_card';
 export * from './jurisdictions';
+export * from './keys';
 export * from './live_check';
 export * from './mock_file_card';
 export * from './test_utils';

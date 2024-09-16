@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import {
   Optional,
   Result,
@@ -8,7 +9,14 @@ import {
 import { safeParseJson } from '@votingworks/types';
 import fetch, { Headers, Request } from 'cross-fetch';
 import { ZodError, z } from 'zod';
+import { cryptography, FileKey, TpmKey } from '@votingworks/auth';
+import { DateTime } from 'luxon';
+import { Readable } from 'stream';
+import { LogEventId, Logger } from '@votingworks/logging';
 import {
+  CreateSessionRequest,
+  CreateSessionRequestPayload,
+  CreateSessionResponseSchema,
   JournalEntry,
   JournalEntrySchema,
   SignedObject,
@@ -58,13 +66,29 @@ export interface ClientApi {
 }
 
 export class Client implements ClientApi {
-  constructor(private readonly baseUrl: URL) {}
+  private bearerToken?: string;
+
+  constructor(
+    private readonly logger: Logger,
+    private readonly baseUrl: URL,
+    private readonly signingCert: Buffer,
+    private readonly signingPrivateKey: FileKey | TpmKey
+  ) {}
 
   /**
    * Create a new client to connect to the server running on localhost.
    */
-  static localhost(): Client {
-    return new Client(new URL('http://localhost:8000'));
+  static localhost(
+    logger: Logger,
+    signingCert: Buffer,
+    signingPrivateKey: FileKey | TpmKey
+  ): Client {
+    return new Client(
+      logger,
+      new URL('http://localhost:8000'),
+      signingCert,
+      signingPrivateKey
+    );
   }
 
   /**
@@ -75,6 +99,10 @@ export class Client implements ClientApi {
       const response = (await this.get('/api/status')).okOrElse(bail);
 
       if (!response.ok) {
+        void this.logger.log(LogEventId.UnknownError, 'system', {
+          message: `checkStatus failed: server responded with status ${response.status}`,
+          disposition: 'failure',
+        });
         bail({ type: 'network', message: response.statusText });
       }
     });
@@ -86,10 +114,16 @@ export class Client implements ClientApi {
   async createObject(signedObject: SignedObject): Promise<ClientResult<Uuid>> {
     return asyncResultBlock(async (bail) => {
       const response = (
-        await this.post('/api/objects', JSON.stringify(signedObject, null, 2))
+        await this.withAuthentication(() =>
+          this.post('/api/objects', JSON.stringify(signedObject, null, 2))
+        )
       ).okOrElse(bail);
 
       if (!response.ok) {
+        void this.logger.log(LogEventId.UnknownError, 'system', {
+          message: `createObject failed: server responded with status ${response.status}`,
+          disposition: 'failure',
+        });
         bail({ type: 'network', message: response.statusText });
       }
 
@@ -111,7 +145,9 @@ export class Client implements ClientApi {
     uuid: Uuid
   ): Promise<ClientResult<Optional<SignedObject>>> {
     return asyncResultBlock(async (bail) => {
-      const response = (await this.get(`/api/objects/${uuid}`)).okOrElse(bail);
+      const response = (
+        await this.withAuthentication(() => this.get(`/api/objects/${uuid}`))
+      ).okOrElse(bail);
 
       if (response.status === 404) {
         // not found
@@ -119,6 +155,10 @@ export class Client implements ClientApi {
       }
 
       if (!response.ok) {
+        void this.logger.log(LogEventId.UnknownError, 'system', {
+          message: `getObjectById failed: server responded with status ${response.status}`,
+          disposition: 'failure',
+        });
         bail({ type: 'network', message: response.statusText });
       }
 
@@ -152,10 +192,19 @@ export class Client implements ClientApi {
   async getJournalEntries(since?: Uuid): Promise<ClientResult<JournalEntry[]>> {
     return asyncResultBlock(async (bail) => {
       const response = (
-        await this.get(`/api/journal-entries${since ? `?since=${since}` : ''}`)
+        await this.withAuthentication(
+          async () =>
+            await this.get(
+              `/api/journal-entries${since ? `?since=${since}` : ''}`
+            )
+        )
       ).okOrElse(bail);
 
       if (!response.ok) {
+        void this.logger.log(LogEventId.UnknownError, 'system', {
+          message: `getJournalEntries failed: server responded with status ${response.status}`,
+          disposition: 'failure',
+        });
         bail({ type: 'network', message: response.statusText });
       }
 
@@ -172,9 +221,97 @@ export class Client implements ClientApi {
     });
   }
 
+  private async withAuthentication(
+    fn: () => Promise<ClientResult<Response>>
+  ): Promise<ClientResult<Response>> {
+    return asyncResultBlock(async (bail) => {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        if (!this.bearerToken) {
+          void this.logger.log(LogEventId.UnknownError, 'system', {
+            message: 'withAuthentication: no bearer token, authenticating',
+          });
+          (await this.authenticate()).okOrElse(bail);
+        }
+
+        const result = await fn();
+
+        if (result.isErr()) {
+          return result;
+        }
+
+        const response = result.ok();
+        if (response.status === 401) {
+          this.bearerToken = undefined;
+          continue;
+        }
+
+        return ok(response);
+      }
+    });
+  }
+
+  private async authenticate(): Promise<ClientResult<void>> {
+    return asyncResultBlock(async (bail) => {
+      const payload = new CreateSessionRequestPayload(DateTime.now());
+      const payloadJson = JSON.stringify(payload);
+      const createSessionRequest = new CreateSessionRequest(
+        this.signingCert,
+        payload,
+        await cryptography.signMessage({
+          message: Readable.from([Buffer.from(payloadJson)]),
+          signingPrivateKey: this.signingPrivateKey,
+        })
+      );
+      void this.logger.log(LogEventId.AuthLogin, 'system', {
+        message: 'Authenticating with CACvote Server',
+      });
+      const response = (
+        await this.post('/api/sessions', JSON.stringify(createSessionRequest))
+      ).okOrElse(bail);
+
+      if (!response.ok) {
+        void this.logger.log(LogEventId.AuthLogin, 'system', {
+          message: `authenticate failed: server responded with status ${response.status}`,
+          disposition: 'failure',
+        });
+        bail({ type: 'network', message: response.statusText });
+      }
+
+      const createSessionResponse = safeParseJson(
+        await response.text(),
+        CreateSessionResponseSchema
+      ).okOrElse<ZodError>((error) =>
+        bail({
+          type: 'schema',
+          error,
+          message: error.message,
+        })
+      );
+
+      void this.logger.log(LogEventId.AuthLogin, 'system', {
+        message: `authenticate succeeded: server responded with new bearer token`,
+        disposition: 'failure',
+      });
+      this.bearerToken = createSessionResponse.getBearerToken();
+    });
+  }
+
   private async get(path: string): Promise<ClientResult<Response>> {
     try {
-      return ok(await fetch(new URL(path, this.baseUrl)));
+      const headers = new Headers();
+
+      const authorizationHeader = this.getAuthorizationHeader();
+      if (authorizationHeader) {
+        headers.set('Authorization', authorizationHeader);
+      }
+
+      const request = new Request(new URL(path, this.baseUrl), {
+        method: 'GET',
+        headers,
+      });
+
+      return ok(await fetch(request));
     } catch (error) {
       return err({ type: 'network', message: (error as Error).message });
     }
@@ -184,11 +321,18 @@ export class Client implements ClientApi {
     path: string,
     body: BodyInit
   ): Promise<ClientResult<Response>> {
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+    });
+
+    const authorizationHeader = this.getAuthorizationHeader();
+    if (authorizationHeader) {
+      headers.set('Authorization', authorizationHeader);
+    }
+
     const request = new Request(new URL(path, this.baseUrl), {
       method: 'POST',
-      headers: new Headers({
-        'Content-Type': 'application/json',
-      }),
+      headers,
       body,
     });
 
@@ -197,5 +341,9 @@ export class Client implements ClientApi {
     } catch (error) {
       return err({ type: 'network', message: (error as Error).message });
     }
+  }
+
+  private getAuthorizationHeader(): Optional<string> {
+    return this.bearerToken ? `Bearer ${this.bearerToken}` : undefined;
   }
 }

@@ -111,6 +111,7 @@ async fn create_session(
     State(AppState {
         ca_cert, sessions, ..
     }): State<AppState>,
+    // json: Json<Value>,
     Json(CreateSessionRequest {
         certificate,
         payload,
@@ -136,7 +137,7 @@ async fn create_session(
         tracing::error!("Failed to create verifier: {e}");
         Error::BadRequest(format!("Failed to create verifier: {e}"))
     })?;
-    verifier.update(&payload).map_err(|e| {
+    verifier.update(payload.as_bytes()).map_err(|e| {
         tracing::error!("Failed to update verifier: {e}");
         Error::Other(e.into())
     })?;
@@ -153,7 +154,7 @@ async fn create_session(
     }
 
     // verify payload timestamp within N seconds of current time
-    let payload: CreateSessionRequestPayload = serde_json::from_slice(&payload).map_err(|e| {
+    let payload: CreateSessionRequestPayload = serde_json::from_str(&payload).map_err(|e| {
         tracing::error!("Failed to parse payload: {e}");
         Error::BadRequest(format!("Failed to parse payload: {e}"))
     })?;

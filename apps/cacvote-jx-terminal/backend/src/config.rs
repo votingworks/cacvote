@@ -3,6 +3,7 @@
 use std::{path::PathBuf, time::Duration};
 
 use auth_rs::{card_details::extract_field_value, certs::VX_CUSTOM_CERT_FIELD_JURISDICTION};
+use cacvote_server_client::signer;
 use clap::Parser;
 use color_eyre::eyre::{bail, Context};
 use openssl::x509::X509;
@@ -35,6 +36,10 @@ pub(crate) struct Config {
     /// Certificate authority PEM file.
     #[arg(long, env = "CA_CERT")]
     pub(crate) ca_cert: PathBuf,
+
+    /// Signer to use for signing server request payloads.
+    #[arg(long, env = "SIGNER")]
+    pub(crate) signer: signer::Description,
 
     /// Directory to serve static files from.
     #[arg(long, env = "PUBLIC_DIR")]

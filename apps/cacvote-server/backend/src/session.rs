@@ -24,7 +24,7 @@ pub(crate) struct Session {
     certificate: X509,
 
     /// The jurisdiction code of the client's signing certificate.
-    jurisdiction_code: cacvote::JurisdictionCode,
+    jurisdiction_code: Option<cacvote::JurisdictionCode>,
 
     /// The session token. This is meant to be opaque to the client.
     token: Uuid,
@@ -47,9 +47,12 @@ impl Session {
         let expiration = time::OffsetDateTime::now_utc() + SESSION_DURATION;
         let jurisdiction_code =
             match extract_field_value(&certificate, VX_CUSTOM_CERT_FIELD_JURISDICTION) {
-                Ok(Some(s)) => cacvote::JurisdictionCode::try_from(s.clone())
-                    .map_err(|_| Error::InvalidJurisdictionCode(s.to_owned()))?,
-                Ok(None) | Err(_) => {
+                Ok(None) => None,
+                Ok(Some(s)) => Some(
+                    cacvote::JurisdictionCode::try_from(s.clone())
+                        .map_err(|_| Error::InvalidJurisdictionCode(s.to_owned()))?,
+                ),
+                Err(_) => {
                     return Err(Error::FieldNotFound(
                         VX_CUSTOM_CERT_FIELD_JURISDICTION.to_owned(),
                     ))
@@ -65,8 +68,8 @@ impl Session {
     }
 
     /// Returns the jurisdiction code of the session.
-    pub(crate) fn jurisdiction_code(&self) -> &cacvote::JurisdictionCode {
-        &self.jurisdiction_code
+    pub(crate) fn jurisdiction_code(&self) -> Option<&cacvote::JurisdictionCode> {
+        self.jurisdiction_code.as_ref()
     }
 
     /// Returns whether the session has expired.
@@ -144,10 +147,13 @@ impl FromRequestParts<AppState> for Session {
 
         // Look for a valid session with the given token
         if let Some(session) = sessions.validate(token) {
-            tracing::debug!("Authorized session: {:?}", session.jurisdiction_code());
+            tracing::debug!(
+                "Authorized session (jurisdiction_code={:?})",
+                session.jurisdiction_code()
+            );
             Ok(session)
         } else {
-            tracing::warn!("Unauthorized session: {token}");
+            tracing::warn!("Unauthorized session (bearer token={token})");
             Err(StatusCode::UNAUTHORIZED)
         }
     }

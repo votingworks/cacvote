@@ -117,7 +117,7 @@ async fn pull_objects(
 mod tests {
     use std::{path::PathBuf, sync::Arc};
 
-    use cacvote_server_client::PrivateKeySigner;
+    use cacvote_server_client::{signer, PrivateKeySigner};
     use openssl::{pkey::PKey, x509::X509};
     use reqwest::Url;
     use tracing::Level;
@@ -147,6 +147,7 @@ mod tests {
             public_dir: None,
             log_level: Level::DEBUG,
             ca_cert: PathBuf::from("/not/real/path"),
+            signer: signer::Description::File(PathBuf::from("/not/real/path")),
             eg_classpath: PathBuf::from("/not/real/path"),
         };
 
@@ -163,7 +164,7 @@ mod tests {
             "../../../../libs/auth/certs/dev/vx-private-key.pem"
         ))
         .unwrap();
-        let signer = PrivateKeySigner::new(cert.public_key()?, private_key);
+        let signer = PrivateKeySigner::new(private_key);
         Ok(Client::new(cacvote_url, cert, Box::new(signer)))
     }
 

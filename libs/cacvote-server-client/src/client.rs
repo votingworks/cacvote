@@ -75,20 +75,20 @@ impl Client {
     /// Authenticate with the server. Creates a new session and stores the
     /// bearer token for future requests.
     pub async fn authenticate(&mut self) -> Result<()> {
-        let certificates = self
+        let certificate = self
             .signing_cert
             .to_pem()
             .map_err(|e| Error::Signature(format!("failed to serialize signing cert: {e}")))?;
         let payload = CreateSessionRequestPayload {
             timestamp: time::OffsetDateTime::now_utc(),
         };
-        let payload = serde_json::to_vec(&payload)?;
+        let payload = serde_json::to_string(&payload)?;
         let signature = self
             .signer
-            .sign(&payload)
+            .sign(payload.as_bytes())
             .map_err(|e| Error::Signature(format!("failed to sign payload: {e}")))?;
         let request = CreateSessionRequest {
-            certificate: certificates,
+            certificate,
             payload,
             signature,
         };
@@ -270,6 +270,7 @@ impl Client {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateSessionRequest {
     /// A PEM-encoded X.509 certificate. Contains the client TPM's public key
     /// certificate as signed by the CA given in the cacvote-server
@@ -279,8 +280,7 @@ pub struct CreateSessionRequest {
 
     /// The payload of the request. Must be JSON decodable as
     /// [`CreateSessionRequestPayload`][CreateSessionRequestPayload].
-    #[serde(with = "Base64Standard")]
-    pub payload: Vec<u8>,
+    pub payload: String,
 
     /// The signature of the payload as signed by the client's TPM.
     #[serde(with = "Base64Standard")]
@@ -288,12 +288,14 @@ pub struct CreateSessionRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateSessionRequestPayload {
     #[serde(with = "time::serde::iso8601")]
     pub timestamp: time::OffsetDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateSessionResponse {
     pub bearer_token: String,
 }

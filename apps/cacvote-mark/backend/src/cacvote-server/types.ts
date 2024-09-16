@@ -598,7 +598,7 @@ export class SignedObject {
     // eslint-disable-next-line vx/gts-use-optionals
     private readonly electionId: Optional<Uuid>,
     private readonly payload: Buffer,
-    private readonly certificates: Buffer,
+    private readonly certificate: Buffer,
     private readonly signature: Buffer
   ) {}
 
@@ -655,8 +655,8 @@ export class SignedObject {
     );
   }
 
-  getCertificates(): Buffer {
-    return this.certificates;
+  getCertificate(): Buffer {
+    return this.certificate;
   }
 
   getSignature(): Buffer {
@@ -671,7 +671,7 @@ export class SignedObject {
       return ok(parsePayloadResult.ok().getData().getJurisdictionCode());
     }
 
-    const fields = await certs.getCertSubjectFields(this.certificates);
+    const fields = await certs.getCertSubjectFields(this.certificate);
     return ok(
       JurisdictionCodeSchema.parse(
         fields.get(certs.VX_CUSTOM_CERT_FIELD.JURISDICTION)
@@ -680,7 +680,7 @@ export class SignedObject {
   }
 
   /**
-   * Verify the signature on the payload against the embedded certificates.
+   * Verify the signature on the payload against the embedded certificate.
    *
    * @returns `ok(true)` if the signature is valid, `ok(false)` if the signature
    * is invalid, or `err(Error)` if there was an error verifying the signature.
@@ -688,7 +688,7 @@ export class SignedObject {
   async verify(): Promise<Result<boolean, Error>> {
     try {
       const publicKey = await cryptography.extractPublicKeyFromCert(
-        this.certificates
+        this.certificate
       );
       await cryptography.verifySignature({
         message: this.payload,
@@ -706,7 +706,7 @@ export class SignedObject {
       id: this.id.toString(),
       electionId: this.electionId?.toString(),
       payload: this.payload.toString('base64'),
-      certificates: this.certificates.toString('base64'),
+      certificate: this.certificate.toString('base64'),
       signature: this.signature.toString('base64'),
     };
   }
@@ -717,7 +717,7 @@ export const SignedObjectSchema: z.ZodSchema<SignedObject> = z
     id: UuidSchema,
     electionId: UuidSchema.optional(),
     payload: z.string(),
-    certificates: z.string(),
+    certificate: z.string(),
     signature: z.string(),
   })
   .transform(
@@ -726,7 +726,129 @@ export const SignedObjectSchema: z.ZodSchema<SignedObject> = z
         o.id,
         o.electionId,
         Buffer.from(o.payload, 'base64'),
-        Buffer.from(o.certificates, 'base64'),
+        Buffer.from(o.certificate, 'base64'),
         Buffer.from(o.signature, 'base64')
       )
   ) as unknown as z.ZodSchema<SignedObject>;
+
+export class CreateSessionRequestPayload {
+  constructor(private readonly timestamp: DateTime) {}
+
+  getTimestamp(): DateTime {
+    return this.timestamp;
+  }
+
+  toJSON(): CreateSessionRequestPayloadStruct {
+    return {
+      timestamp: this.timestamp.toISO(),
+    };
+  }
+}
+
+export interface CreateSessionRequestPayloadStruct {
+  timestamp: string;
+}
+
+export const CreateSessionRequestPayloadSchema = z
+  .object({
+    timestamp: z.string(),
+  })
+  .transform(
+    (o) => new CreateSessionRequestPayload(DateTime.fromISO(o.timestamp))
+  ) as unknown as z.ZodSchema<CreateSessionRequestPayload>;
+
+export class CreateSessionRequest {
+  constructor(
+    private readonly certificate: Buffer,
+    private readonly payload: CreateSessionRequestPayload,
+    private readonly signature: Buffer
+  ) {}
+
+  /**
+   * A PEM-encoded X.509 certificate. Contains the client TPM's public key
+   * certificate as signed by the CA given in the cacvote-server configuration.
+   */
+  getCertificate(): Buffer {
+    return this.certificate;
+  }
+
+  /**
+   * The payload of the request. Must be JSON decodable as
+   * {@link CreateSessionRequestPayload}.
+   */
+  getPayload(): Result<CreateSessionRequestPayload, ZodError | SyntaxError> {
+    return safeParseJson(
+      this.payload.toString(),
+      CreateSessionRequestPayloadSchema
+    );
+  }
+
+  /**
+   * The signature of the payload as signed by the client's TPM.
+   */
+  getSignature(): Buffer {
+    return this.signature;
+  }
+
+  toJSON(): CreateSessionRequestStruct {
+    return {
+      certificate: this.certificate.toString('base64'),
+      payload: JSON.stringify(this.payload),
+      signature: this.signature.toString('base64'),
+    };
+  }
+}
+
+export interface CreateSessionRequestStruct {
+  certificate: string;
+  payload: string;
+  signature: string;
+}
+
+export const CreateSessionRequestStructSchema = z.object({
+  certificate: z.string(),
+  payload: z.string(),
+  signature: z.string(),
+});
+
+export const CreateSessionRequestSchema =
+  CreateSessionRequestStructSchema.transform(
+    propertyTransform(Base64BufferSchema, 'certificate')
+  )
+    .transform(propertyTransform(Base64BufferSchema, 'payload'))
+    .transform(propertyTransform(Base64BufferSchema, 'signature'))
+    .transform(
+      (o) =>
+        new CreateSessionRequest(
+          o.certificate,
+          CreateSessionRequestPayloadSchema.parse(o.payload),
+          o.signature
+        )
+    );
+
+export class CreateSessionResponse {
+  constructor(private readonly bearerToken: string) {}
+
+  getBearerToken(): string {
+    return this.bearerToken;
+  }
+
+  toJSON(): CreateSessionResponseStruct {
+    return {
+      bearerToken: this.bearerToken,
+    };
+  }
+}
+
+export interface CreateSessionResponseStruct {
+  bearerToken: string;
+}
+
+export const CreateSessionResponseStructSchema = z.object({
+  bearerToken: z.string(),
+});
+
+export const CreateSessionResponseSchema =
+  CreateSessionResponseStructSchema.transform(
+    (o) => new CreateSessionResponse(o.bearerToken)
+  ) as unknown as z.ZodSchema<CreateSessionResponse>;
