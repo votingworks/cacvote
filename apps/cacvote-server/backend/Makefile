@@ -11,7 +11,7 @@ build:
 dist: build
 	@echo "📦 Packaging application…"
 	@rm -rf dist && mkdir dist
-	@cp ../../target/release/cacvote-server dist/cacvote-server
+	@cp ../../../target/release/cacvote-server dist/cacvote-server
 	@echo "- \e[34;4mdist/cacvote-server\e[0m: application binary"
 
 run:
