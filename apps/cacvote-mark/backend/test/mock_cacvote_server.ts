@@ -1,11 +1,14 @@
-import { deferred } from '@votingworks/basics';
+import { getMachineCertPathAndPrivateKey } from '@votingworks/auth';
+import { deferred, Optional } from '@votingworks/basics';
+import { fakeLogger } from '@votingworks/logging';
 import app, { Application, Request, Response } from 'express';
+import { readFile } from 'fs/promises';
 import {
+  createServer,
   IncomingMessage,
   RequestListener,
   Server,
   ServerResponse,
-  createServer,
 } from 'http';
 import { AddressInfo } from 'net';
 import { Client } from '../src/cacvote-server/client';
@@ -34,7 +37,9 @@ export async function mockCacvoteServer<
   await listening.promise;
   const address = server.address() as AddressInfo;
   const url = new URL(`http://127.0.0.1:${address.port}`);
-  const client = new Client(url);
+  const logger = fakeLogger();
+  const { certPath, privateKey } = getMachineCertPathAndPrivateKey();
+  const client = new Client(logger, url, await readFile(certPath), privateKey);
   return {
     inner: server,
     client,
@@ -49,6 +54,10 @@ export async function mockCacvoteServer<
 export class MockCacvoteAppBuilder {
   private journalEntries: JournalEntry[] = [];
   private readonly objects = new Map<Uuid, SignedObject>();
+  private onSessionCreateCallback: (
+    req: Request,
+    res: Response
+  ) => Optional<string> = () => undefined;
   private onGetJournalEntriesCallback: (res: Response) => void = () =>
     undefined;
   private onStatusCheckCallback: (res: Response) => void = () => undefined;
@@ -56,6 +65,11 @@ export class MockCacvoteAppBuilder {
     undefined;
   private onGetObjectByIdCallback: (req: Request, res: Response) => void = () =>
     undefined;
+
+  onSessionCreate(cb: (req: Request, res: Response) => Optional<string>): this {
+    this.onSessionCreateCallback = cb;
+    return this;
+  }
 
   withJournalEntries(journalEntries: JournalEntry[]): this {
     this.journalEntries = journalEntries;
@@ -98,6 +112,20 @@ export class MockCacvoteAppBuilder {
       }
 
       res.status(200).send('{}');
+    });
+
+    server.post('/api/sessions', (req, res) => {
+      const bearerToken = this.onSessionCreateCallback(req, res);
+
+      if (res.headersSent) {
+        return;
+      }
+
+      if (bearerToken) {
+        res.status(201).json({ bearerToken });
+      } else {
+        res.status(401).end();
+      }
     });
 
     server.get('/api/journal-entries', (_req, res) => {

@@ -257,7 +257,7 @@ export class Client implements ClientApi {
       const payloadJson = JSON.stringify(payload);
       const createSessionRequest = new CreateSessionRequest(
         this.signingCert,
-        payload,
+        JSON.stringify(payload),
         await cryptography.signMessage({
           message: Readable.from([Buffer.from(payloadJson)]),
           signingPrivateKey: this.signingPrivateKey,

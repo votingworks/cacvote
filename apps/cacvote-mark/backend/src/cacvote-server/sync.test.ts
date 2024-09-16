@@ -7,6 +7,7 @@ import {
   mockCacvoteServer,
 } from '../../test/mock_cacvote_server';
 import { Store } from '../store';
+import { createVerifiedObject } from './mock_object';
 import { sync, syncPeriodically } from './sync';
 import {
   JournalEntry,
@@ -18,12 +19,12 @@ import {
   Uuid,
   UuidSchema,
 } from './types';
-import { createVerifiedObject } from './mock_object';
 
 test('syncPeriodically', async () => {
   const getJournalEntriesDeferred = deferred<void>();
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .onGetJournalEntries(() => {
         getJournalEntriesDeferred.resolve();
       })
@@ -50,6 +51,7 @@ test('syncPeriodically loops', async () => {
   const done = deferred<void>();
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .onGetJournalEntries(() => {
         requestCount += 1;
         if (requestCount >= 4) {
@@ -77,6 +79,7 @@ test('syncPeriodically loops', async () => {
 test('sync / checkStatus failure', async () => {
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .onStatusCheck((res) => {
         res.status(500).end('Internal Server Error');
       })
@@ -105,6 +108,7 @@ test('sync / getJournalEntries failure', async () => {
   const getJournalEntriesDeferred = deferred<void>();
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .onGetJournalEntries((res) => {
         res.status(500).end('Internal Server Error');
         getJournalEntriesDeferred.resolve();
@@ -132,7 +136,10 @@ test('sync / getJournalEntries failure', async () => {
 
 test('sync / getJournalEntries success / no entries', async () => {
   const server = await mockCacvoteServer(
-    new MockCacvoteAppBuilder().withJournalEntries([]).build()
+    new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
+      .withJournalEntries([])
+      .build()
   );
 
   const store = Store.memoryStore();
@@ -169,7 +176,10 @@ test('sync / getJournalEntries success / with entries', async () => {
   );
 
   const server = await mockCacvoteServer(
-    new MockCacvoteAppBuilder().withJournalEntries([journalEntry]).build()
+    new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
+      .withJournalEntries([journalEntry])
+      .build()
   );
 
   const store = Store.memoryStore();
@@ -194,7 +204,9 @@ test('sync / getJournalEntries success / with entries', async () => {
 });
 
 test('sync / createObject success / no objects', async () => {
-  const server = await mockCacvoteServer(new MockCacvoteAppBuilder().build());
+  const server = await mockCacvoteServer(
+    new MockCacvoteAppBuilder().onSessionCreate(() => 'session-id').build()
+  );
 
   const store = Store.memoryStore();
   const logger = fakeLogger();
@@ -229,6 +241,7 @@ test('sync / createObject success / with objects', async () => {
 
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .onPostObject((_req, res) => {
         res.status(201).send(object.getId());
       })
@@ -270,6 +283,7 @@ test('sync / createObject failure', async () => {
 
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .onPostObject((_req, res) => {
         res.status(500).end('Internal Server Error');
       })
@@ -323,6 +337,7 @@ test('sync / fetches RegistrationRequest objects', async () => {
 
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .withJournalEntries([journalEntry])
       .onGetObjectById((req, res) => {
         const requestObjectId = UuidSchema.parse(req.params['id']);
@@ -389,6 +404,7 @@ test('sync / delete after initial sync', async () => {
     });
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .onGetJournalEntries(onGetJournalEntries)
       .withJournalEntries([createJournalEntry])
       .onGetObjectById((req, res) => {
@@ -456,6 +472,7 @@ test('sync / delete before initial sync', async () => {
 
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .onGetJournalEntries((res) => {
         res.json([createJournalEntry, deleteJournalEntry]);
       })
@@ -494,6 +511,7 @@ test('sync / fetch ignores unknown object types', async () => {
   );
 
   const app = new MockCacvoteAppBuilder()
+    .onSessionCreate(() => 'session-id')
     .withJournalEntries([journalEntry])
     .build();
   const server = await mockCacvoteServer(app);
@@ -525,6 +543,7 @@ test('sync / fetch failing to get object', async () => {
 
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .withJournalEntries([journalEntry])
       .onGetObjectById((_req, res) => {
         res.status(500).end('Internal Server Error');
@@ -567,7 +586,10 @@ test('sync / fetch object but object does not exist', async () => {
   );
 
   const server = await mockCacvoteServer(
-    new MockCacvoteAppBuilder().withJournalEntries([journalEntry]).build()
+    new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
+      .withJournalEntries([journalEntry])
+      .build()
   );
 
   const store = Store.memoryStore();
@@ -615,6 +637,7 @@ test('sync / fetch object but cannot add to store', async () => {
 
   const server = await mockCacvoteServer(
     new MockCacvoteAppBuilder()
+      .onSessionCreate(() => 'session-id')
       .withJournalEntries([journalEntry])
       .withObject(object)
       .build()

@@ -760,7 +760,7 @@ export const CreateSessionRequestPayloadSchema = z
 export class CreateSessionRequest {
   constructor(
     private readonly certificate: Buffer,
-    private readonly payload: CreateSessionRequestPayload,
+    private readonly payload: string,
     private readonly signature: Buffer
   ) {}
 
@@ -777,10 +777,7 @@ export class CreateSessionRequest {
    * {@link CreateSessionRequestPayload}.
    */
   getPayload(): Result<CreateSessionRequestPayload, ZodError | SyntaxError> {
-    return safeParseJson(
-      this.payload.toString(),
-      CreateSessionRequestPayloadSchema
-    );
+    return safeParseJson(this.payload, CreateSessionRequestPayloadSchema);
   }
 
   /**
@@ -793,7 +790,7 @@ export class CreateSessionRequest {
   toJSON(): CreateSessionRequestStruct {
     return {
       certificate: this.certificate.toString('base64'),
-      payload: JSON.stringify(this.payload),
+      payload: this.payload,
       signature: this.signature.toString('base64'),
     };
   }
@@ -815,16 +812,10 @@ export const CreateSessionRequestSchema =
   CreateSessionRequestStructSchema.transform(
     propertyTransform(Base64BufferSchema, 'certificate')
   )
-    .transform(propertyTransform(Base64BufferSchema, 'payload'))
     .transform(propertyTransform(Base64BufferSchema, 'signature'))
     .transform(
-      (o) =>
-        new CreateSessionRequest(
-          o.certificate,
-          CreateSessionRequestPayloadSchema.parse(o.payload),
-          o.signature
-        )
-    );
+      (o) => new CreateSessionRequest(o.certificate, o.payload, o.signature)
+    ) as unknown as z.ZodSchema<CreateSessionRequest>;
 
 export class CreateSessionResponse {
   constructor(private readonly bearerToken: string) {}
