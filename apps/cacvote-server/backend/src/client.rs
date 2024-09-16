@@ -2,8 +2,6 @@ pub use cacvote_server_client::{Client, Error, Result};
 
 #[cfg(test)]
 mod tests {
-    use std::net::TcpListener;
-
     use openssl::{
         hash::MessageDigest,
         pkey::{PKey, Private, Public},
@@ -18,20 +16,43 @@ mod tests {
     use super::*;
     use crate::app;
 
-    fn setup(pool: sqlx::PgPool) -> color_eyre::Result<Client> {
-        let listener = TcpListener::bind("0.0.0.0:0")?;
+    struct TestSigner {
+        private_key: PKey<Private>,
+    }
+
+    impl cacvote_server_client::Signer for TestSigner {
+        fn sign(&self, payload: &[u8]) -> Result<Vec<u8>> {
+            let mut signer = Signer::new(MessageDigest::sha256(), &self.private_key)
+                .map_err(|e| Error::Signature(e.to_string()))?;
+            signer
+                .update(payload)
+                .map_err(|e| Error::Signature(e.to_string()))?;
+            signer
+                .sign_to_vec()
+                .map_err(|e| Error::Signature(e.to_string()))
+        }
+    }
+
+    async fn setup(pool: sqlx::PgPool, ca_cert: openssl::x509::X509) -> color_eyre::Result<Client> {
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:0").await?;
         let addr = listener.local_addr()?;
 
         tokio::spawn(async move {
-            let app = app::setup(pool).await.unwrap();
-            axum::Server::from_tcp(listener)
-                .unwrap()
-                .serve(app.into_make_service())
-                .await
-                .unwrap();
+            let app = app::setup(pool, ca_cert).await;
+            axum::serve(listener, app).await.unwrap();
         });
 
-        Ok(Client::new(format!("http://{addr}").parse()?))
+        Ok(Client::new(
+            format!("http://{addr}").parse()?,
+            X509::from_pem(include_bytes!(
+                "../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem"
+            ))?,
+            Box::new(TestSigner {
+                private_key: PKey::private_key_from_pem(include_bytes!(
+                    "../../../../libs/auth/certs/dev/vx-admin-private-key.pem"
+                ))?,
+            }),
+        ))
     }
 
     fn load_keypair() -> color_eyre::Result<(Vec<u8>, PKey<Public>, PKey<Private>)> {
@@ -39,12 +60,12 @@ mod tests {
         let private_key_pem =
             include_bytes!("../../../../libs/auth/certs/dev/vx-admin-private-key.pem");
         let private_key = PKey::private_key_from_pem(private_key_pem)?;
-        let certificates =
+        let certificate =
             include_bytes!("../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem")
                 .to_vec();
-        let x509 = X509::from_pem(&certificates)?;
+        let x509 = X509::from_pem(&certificate)?;
         let public_key = x509.public_key()?;
-        Ok((certificates, public_key, private_key))
+        Ok((certificate, public_key, private_key))
     }
 
     fn sign_and_verify(
@@ -64,7 +85,12 @@ mod tests {
 
     #[sqlx::test(migrations = "db/migrations")]
     async fn test_client(pool: sqlx::PgPool) -> color_eyre::Result<()> {
-        let client = setup(pool)?;
+        let ca_cert = openssl::x509::X509::from_pem(include_bytes!(
+            "../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem"
+        ))?;
+        let mut client = setup(pool, ca_cert).await?;
+
+        client.authenticate().await?;
 
         let entries = client.get_journal_entries(None, None).await?;
         assert_eq!(entries, vec![]);
@@ -76,7 +102,7 @@ mod tests {
             jurisdiction_code: JurisdictionCode::try_from("st.dev-jurisdiction").unwrap(),
         });
         let payload = serde_json::to_vec(&payload)?;
-        let (certificates, public_key, private_key) = load_keypair()?;
+        let (certificate, public_key, private_key) = load_keypair()?;
         let signature = sign_and_verify(&payload, &private_key, &public_key)?;
 
         // create the object
@@ -85,7 +111,7 @@ mod tests {
                 id: Uuid::new_v4(),
                 election_id: None,
                 payload,
-                certificates: certificates.clone(),
+                certificate: certificate.clone(),
                 signature: signature.clone(),
             })
             .await?;
@@ -136,7 +162,7 @@ mod tests {
             Payload::RegistrationRequest(registration_request) => registration_request,
             other => panic!("expected RegistrationRequest, got: {other:?}"),
         };
-        assert_eq!(signed_object.certificates, certificates);
+        assert_eq!(signed_object.certificate, certificate);
         assert_eq!(signed_object.signature, signature);
         assert_eq!(
             round_trip_registration_request.common_access_card_id,
@@ -154,7 +180,10 @@ mod tests {
 
     #[sqlx::test(migrations = "db/migrations")]
     async fn test_invalid_certificate(pool: sqlx::PgPool) -> color_eyre::Result<()> {
-        let client = setup(pool)?;
+        let ca_cert = openssl::x509::X509::from_pem(include_bytes!(
+            "../../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem"
+        ))?;
+        let mut client = setup(pool, ca_cert).await?;
 
         let payload = Payload::RegistrationRequest(RegistrationRequest {
             common_access_card_id: "1234567890".to_owned(),
@@ -169,8 +198,8 @@ mod tests {
                 id: Uuid::new_v4(),
                 payload,
                 election_id: None,
-                // invalid certificates and signature
-                certificates: vec![],
+                // invalid certificate and signature
+                certificate: vec![],
                 signature: vec![],
             })
             .await

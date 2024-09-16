@@ -132,9 +132,8 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
 pub(crate) async fn run(app: Router, config: &Config) -> color_eyre::Result<()> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port);
     tracing::info!("Server listening at http://{addr}/");
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
     Ok(())
 }
 
@@ -274,18 +273,13 @@ async fn create_election(
             );
         }
     };
-    let certificates: Vec<u8> = match signed
-        .cert_stack
-        .iter()
-        .map(|cert| cert.to_pem())
-        .collect::<Result<Vec<_>, _>>()
-    {
-        Ok(certificates) => certificates.concat(),
+    let certificate = match signed.cert.to_pem() {
+        Ok(certificate) => certificate,
         Err(e) => {
-            tracing::error!("error converting certificates to PEM: {e}");
+            tracing::error!("error converting certificate to PEM: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "error converting certificates to PEM" })),
+                Json(json!({ "error": "error converting certificate to PEM" })),
             );
         }
     };
@@ -294,7 +288,7 @@ async fn create_election(
         // elections don't "belong" to an election, they are an election
         election_id: None,
         payload: serialized_payload,
-        certificates,
+        certificate,
         signature: signed.data,
     };
 
@@ -405,18 +399,13 @@ async fn create_registration(
             );
         }
     };
-    let certificates: Vec<u8> = match signed
-        .cert_stack
-        .iter()
-        .map(|cert| cert.to_pem())
-        .collect::<Result<Vec<_>, _>>()
-    {
-        Ok(certificates) => certificates.concat(),
+    let certificate = match signed.cert.to_pem() {
+        Ok(certificate) => certificate,
         Err(e) => {
-            tracing::error!("error converting certificates to PEM: {e}");
+            tracing::error!("error converting certificate to PEM: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "error converting certificates to PEM" })),
+                Json(json!({ "error": "error converting certificate to PEM" })),
             );
         }
     };
@@ -424,7 +413,7 @@ async fn create_registration(
         id: Uuid::new_v4(),
         election_id: Some(election_id),
         payload: serialized_payload,
-        certificates,
+        certificate,
         signature: signed.data,
     };
 
@@ -558,18 +547,13 @@ async fn generate_encrypted_election_tally(
         }
     };
 
-    let certificates: Vec<u8> = match signed
-        .cert_stack
-        .iter()
-        .map(|cert| cert.to_pem())
-        .collect::<Result<Vec<_>, _>>()
-    {
-        Ok(certificates) => certificates.concat(),
+    let certificate: Vec<u8> = match signed.cert.to_pem() {
+        Ok(certificate) => certificate,
         Err(e) => {
-            tracing::error!("error converting certificates to PEM: {e}");
+            tracing::error!("error converting certificate to PEM: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "error converting certificates to PEM" })),
+                Json(json!({ "error": "error converting certificate to PEM" })),
             );
         }
     };
@@ -578,7 +562,7 @@ async fn generate_encrypted_election_tally(
         id: Uuid::new_v4(),
         election_id: Some(election_id),
         payload: serialized_payload,
-        certificates,
+        certificate,
         signature: signed.data,
     };
 
@@ -738,18 +722,13 @@ async fn decrypt_encrypted_election_tally(
         }
     };
 
-    let certificates: Vec<u8> = match signed
-        .cert_stack
-        .iter()
-        .map(|cert| cert.to_pem())
-        .collect::<Result<Vec<_>, _>>()
-    {
-        Ok(certificates) => certificates.concat(),
+    let certificate = match signed.cert.to_pem() {
+        Ok(certificate) => certificate,
         Err(e) => {
-            tracing::error!("error converting certificates to PEM: {e}");
+            tracing::error!("error converting certificate to PEM: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "error converting certificates to PEM" })),
+                Json(json!({ "error": "error converting certificate to PEM" })),
             );
         }
     };
@@ -758,7 +737,7 @@ async fn decrypt_encrypted_election_tally(
         id: Uuid::new_v4(),
         election_id: Some(election_id),
         payload: serialized_payload,
-        certificates,
+        certificate,
         signature: signed.data,
     };
 
@@ -886,18 +865,13 @@ async fn mix_encrypted_ballots(
         }
     };
 
-    let certificates: Vec<u8> = match signed
-        .cert_stack
-        .iter()
-        .map(|cert| cert.to_pem())
-        .collect::<Result<Vec<_>, _>>()
-    {
-        Ok(certificates) => certificates.concat(),
+    let certificate = match signed.cert.to_pem() {
+        Ok(certificate) => certificate,
         Err(e) => {
-            tracing::error!("error converting certificates to PEM: {e}");
+            tracing::error!("error converting certificate to PEM: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "error converting certificates to PEM" })),
+                Json(json!({ "error": "error converting certificate to PEM" })),
             );
         }
     };
@@ -906,7 +880,7 @@ async fn mix_encrypted_ballots(
         id: Uuid::new_v4(),
         election_id: Some(election_id),
         payload: serialized_payload,
-        certificates,
+        certificate,
         signature: signed.data,
     };
 

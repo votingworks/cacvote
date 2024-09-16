@@ -3,8 +3,10 @@
 use std::{path::PathBuf, time::Duration};
 
 use auth_rs::{card_details::extract_field_value, certs::VX_CUSTOM_CERT_FIELD_JURISDICTION};
+use cacvote_server_client::signer;
 use clap::Parser;
 use color_eyre::eyre::{bail, Context};
+use openssl::x509::X509;
 use types_rs::cacvote::JurisdictionCode;
 
 const TEN_MB: usize = 10 * 1024 * 1024;
@@ -35,6 +37,10 @@ pub(crate) struct Config {
     #[arg(long, env = "CA_CERT")]
     pub(crate) ca_cert: PathBuf,
 
+    /// Signer to use for signing server request payloads.
+    #[arg(long, env = "SIGNER")]
+    pub(crate) signer: signer::Description,
+
     /// Directory to serve static files from.
     #[arg(long, env = "PUBLIC_DIR")]
     pub(crate) public_dir: Option<PathBuf>,
@@ -49,13 +55,16 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    /// Returns the jurisdiction code from the CA certificate.
-    pub(crate) fn jurisdiction_code(&self) -> color_eyre::Result<JurisdictionCode> {
-        let ca_cert = openssl::x509::X509::from_pem(
+    pub(crate) fn ca_cert(&self) -> color_eyre::Result<X509> {
+        openssl::x509::X509::from_pem(
             &std::fs::read(&self.ca_cert).context("CA_CERT cannot be read")?,
         )
-        .context("CA_CERT is not a valid certificate")?;
-        let raw_jurisdiction_code = match extract_field_value(&ca_cert, VX_CUSTOM_CERT_FIELD_JURISDICTION)
+        .context("CA_CERT is not a valid certificate")
+    }
+
+    /// Returns the jurisdiction code from the CA certificate.
+    pub(crate) fn jurisdiction_code(&self) -> color_eyre::Result<JurisdictionCode> {
+        let raw_jurisdiction_code = match extract_field_value(&self.ca_cert()?, VX_CUSTOM_CERT_FIELD_JURISDICTION)
                 .context("Unable to extract jurisdiction code from CA_CERT")? {
                     Some(value) => value,
                     None => bail!("CA_CERT does not contain a jurisdiction code in the custom field VX_CUSTOM_CERT_FIELD_JURISDICTION"),

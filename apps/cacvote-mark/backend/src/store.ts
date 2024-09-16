@@ -198,14 +198,14 @@ export class Store {
       const payload = object.getPayload().okOrElse(bail);
 
       this.client.run(
-        `insert into objects (id, election_id, jurisdiction, object_type, payload, certificates, signature)
+        `insert into objects (id, election_id, jurisdiction, object_type, payload, certificate, signature)
         values (?, ?, ?, ?, ?, ?, ?)`,
         object.getId(),
         object.getElectionId() ?? null,
         jurisdiction,
         payload.getObjectType(),
         object.getPayloadRaw(),
-        object.getCertificates(),
+        object.getCertificate(),
         object.getSignature()
       );
 
@@ -230,7 +230,7 @@ export class Store {
           jurisdiction,
           object_type,
           payload,
-          certificates,
+          certificate,
           signature,
           server_synced_at,
           deleted_at
@@ -253,7 +253,7 @@ export class Store {
         jurisdiction,
         payload.getObjectType(),
         object.getPayloadRaw(),
-        object.getCertificates(),
+        object.getCertificate(),
         object.getSignature(),
         object.getId()
       );
@@ -268,7 +268,7 @@ export class Store {
   getObjectById(objectId: Uuid): Optional<SignedObject> {
     const row = this.client.one(
       `
-      select id, election_id as electionId, payload, certificates, signature
+      select id, election_id as electionId, payload, certificate, signature
       from objects
       where id = ? and deleted_at is null
       `,
@@ -277,7 +277,7 @@ export class Store {
       id: string;
       electionId: string | null;
       payload: Buffer;
-      certificates: Buffer;
+      certificate: Buffer;
       signature: Buffer;
     }>;
 
@@ -286,7 +286,7 @@ export class Store {
           UuidSchema.parse(row.id),
           row.electionId ? UuidSchema.parse(row.electionId) : undefined,
           row.payload,
-          row.certificates,
+          row.certificate,
           row.signature
         )
       : undefined;
@@ -338,12 +338,12 @@ export class Store {
    */
   getObjectsToPush(): SignedObject[] {
     const rows = this.client.all(
-      `select id, election_id as electionId, payload, certificates, signature from objects where server_synced_at is null`
+      `select id, election_id as electionId, payload, certificate, signature from objects where server_synced_at is null`
     ) as Array<{
       id: string;
       electionId: string | null;
       payload: Buffer;
-      certificates: Buffer;
+      certificate: Buffer;
       signature: Buffer;
     }>;
 
@@ -353,7 +353,7 @@ export class Store {
           UuidSchema.parse(row.id),
           row.electionId ? UuidSchema.parse(row.electionId) : undefined,
           row.payload,
-          row.certificates,
+          row.certificate,
           row.signature
         )
     );
@@ -469,14 +469,14 @@ export class Store {
     // FIXME: this should be using `this.client.each`, but there seems to be a race condition
     // that results in errors with "This database connection is busy executing a query"
     const rows = this.client.all(
-      `select id, election_id as electionId, payload, certificates, signature from objects
+      `select id, election_id as electionId, payload, certificate, signature from objects
         where json_extract(payload, '$.objectType') = ? and deleted_at is null`,
       objectType
     ) as Array<{
       id: string;
       electionId: string | null;
       payload: Buffer;
-      certificates: Buffer;
+      certificate: Buffer;
       signature: Buffer;
     }>;
     return iter(rows).map(
@@ -485,7 +485,7 @@ export class Store {
           UuidSchema.parse(row.id),
           row.electionId ? UuidSchema.parse(row.electionId) : undefined,
           row.payload,
-          row.certificates,
+          row.certificate,
           row.signature
         )
     );

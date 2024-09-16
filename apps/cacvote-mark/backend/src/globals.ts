@@ -5,6 +5,8 @@ import * as dotenvExpand from 'dotenv-expand';
 import fs from 'fs';
 import { join } from 'path';
 import { z } from 'zod';
+import { typedAs } from '@votingworks/basics';
+import { FileKey, TpmKey } from '@votingworks/auth';
 import { AutomaticExpirationTypeSchema } from './cacvote-server/usability_test_client';
 
 // https://github.com/bkeepers/dotenv#what-other-env-files-can-i-use
@@ -60,6 +62,22 @@ export const CACVOTE_URL = process.env.CACVOTE_URL
   ? new URL(process.env.CACVOTE_URL)
   : NODE_ENV === 'development' || typeof jest !== 'undefined'
   ? new URL('http://localhost:8000')
+  : undefined;
+
+/**
+ * Signing certificate for communicating with the CACvote Server.
+ */
+export const CA_CERT = process.env.CA_CERT
+  ? fs.readFileSync(process.env.CA_CERT)
+  : undefined;
+
+/**
+ * Signer corresponding to the signing certificate.
+ */
+export const SIGNER = process.env.SIGNER?.match(/^tpm(:.+)?$/)
+  ? typedAs<TpmKey>({ source: 'tpm' })
+  : process.env.SIGNER
+  ? typedAs<FileKey>({ source: 'file', path: process.env.SIGNER })
   : undefined;
 
 /**

@@ -8,7 +8,9 @@ import { buildApp } from './app';
 import { Client } from './cacvote-server/client';
 import { syncPeriodically } from './cacvote-server/sync';
 import {
+  CA_CERT,
   CACVOTE_URL,
+  SIGNER,
   USABILITY_TEST_ELECTION_PATH,
   USABILITY_TEST_EXPIRATION_MINUTES,
 } from './globals';
@@ -78,12 +80,20 @@ function getDefaultAuth(): Auth {
   };
 }
 
-function getCacvoteServerClient(): Client {
+function getCacvoteServerClient(logger: Logger): Client {
   if (!CACVOTE_URL) {
     throw new Error('CACVOTE_URL not set');
   }
 
-  return new Client(CACVOTE_URL);
+  if (!CA_CERT) {
+    throw new Error('CA_CERT not set');
+  }
+
+  if (!SIGNER) {
+    throw new Error('SIGNER not set');
+  }
+
+  return new Client(logger, CACVOTE_URL, CA_CERT, SIGNER);
 }
 
 /**
@@ -124,7 +134,7 @@ export async function start({
       });
     }, 1000);
   } else {
-    const client = getCacvoteServerClient();
+    const client = getCacvoteServerClient(logger);
     syncPeriodically(client, workspace.store, logger);
   }
 

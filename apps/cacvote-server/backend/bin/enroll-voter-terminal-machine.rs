@@ -30,17 +30,18 @@ async fn main() -> color_eyre::Result<()> {
         database_url: options.database_url,
         port: 0, // unused in this context
         log_level: options.log_level,
+        ca_cert: "unused".to_string(), // unused in this context
     };
     log::setup(&config)?;
     let pool = db::setup(&config).await?;
     let mut conn = pool.acquire().await?;
 
-    let certificates = fs::read(options.public_key_path)?;
+    let certificate = fs::read(options.public_key_path)?;
 
     // verify that the data is a valid stack of X509 certificates
-    openssl::x509::X509::stack_from_pem(&certificates)?;
+    openssl::x509::X509::from_pem(&certificate)?;
 
-    let machine = db::create_machine(&mut conn, &options.machine_identifier, &certificates).await?;
+    let machine = db::create_machine(&mut conn, &options.machine_identifier, &certificate).await?;
     println!("✅ Machine enrolled! ID={id}", id = machine.id);
 
     Ok(())
