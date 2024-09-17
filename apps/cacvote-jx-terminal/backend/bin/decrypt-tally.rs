@@ -42,7 +42,7 @@ impl Opts {
     }
 
     fn signer(&self) -> color_eyre::Result<signer::AnySigner> {
-        self.signer.clone().try_into()
+        signer::AnySigner::try_from(&self.signer)
     }
 }
 
