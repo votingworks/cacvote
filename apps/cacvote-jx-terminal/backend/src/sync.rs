@@ -1,6 +1,6 @@
 //! CACvote Server synchronization utilities.
 
-use cacvote_server_client::{Client, TpmSigner};
+use cacvote_server_client::{AnySigner, Client};
 use tokio::time::sleep;
 use types_rs::cacvote::JurisdictionCode;
 
@@ -20,7 +20,7 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
     let jurisdiction_code = config.jurisdiction_code().expect(
         "missing or invalid jurisdiction code in CA certificate; check that the CA certificate is valid and contains a jurisdiction code",
     );
-    let signer = Box::new(TpmSigner::new(0x81000001));
+    let signer = AnySigner::try_from(&config.signer).expect("invalid signer");
     let mut client = Client::new(
         config.cacvote_url.clone(),
         config.ca_cert().expect("invalid CA certificate"),
