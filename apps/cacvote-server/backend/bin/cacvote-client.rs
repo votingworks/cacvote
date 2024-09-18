@@ -60,7 +60,7 @@ impl GlobalOpts {
     }
 
     fn signer(&self) -> color_eyre::Result<AnySigner> {
-        self.signer.clone().try_into()
+        AnySigner::try_from(&self.signer)
     }
 
     fn client(&self) -> color_eyre::Result<Client> {
