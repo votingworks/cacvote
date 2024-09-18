@@ -129,10 +129,10 @@ impl std::str::FromStr for Description {
     }
 }
 
-impl TryFrom<Description> for AnySigner {
+impl TryFrom<&Description> for AnySigner {
     type Error = color_eyre::Report;
 
-    fn try_from(value: Description) -> Result<Self, Self::Error> {
+    fn try_from(value: &Description) -> Result<Self, Self::Error> {
         match value {
             Description::File(path) => {
                 let pem = std::fs::read(path)?;
@@ -140,7 +140,7 @@ impl TryFrom<Description> for AnySigner {
                     &pem,
                 )?)))
             }
-            Description::Tpm(handle) => Ok(Box::new(TpmSigner::new(handle))),
+            Description::Tpm(handle) => Ok(Box::new(TpmSigner::new(*handle))),
         }
     }
 }
