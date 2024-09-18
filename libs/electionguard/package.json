@@ -30,6 +30,9 @@
     "jest-watch-typeahead": "^2.2.2",
     "ts-jest": "29.1.1"
   },
+  "files": [
+    "@votingworks/*"
+  ],
   "scripts": {
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release --dts napi.d.ts",
