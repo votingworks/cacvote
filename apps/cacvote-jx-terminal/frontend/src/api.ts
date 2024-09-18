@@ -218,3 +218,21 @@ export const shuffleEncryptedBallots = {
     );
   },
 } as const;
+
+export const authenticate = {
+  useMutation() {
+    return useMutation(async (pin: string) => {
+      const response = await fetch('/api/authenticate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pin }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to authenticate: ${response.statusText}`);
+      }
+    });
+  },
+} as const;

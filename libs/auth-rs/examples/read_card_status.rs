@@ -1,9 +1,12 @@
+use std::process;
+
 use tracing::Level;
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-use auth_rs::{CardReader, Event, Watcher};
+use auth_rs::{async_card::AsyncCard, vx_card::VxCard, Event, Watcher};
 
-fn main() -> color_eyre::Result<()> {
+#[tokio::main]
+async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let stdout_log = tracing_subscriber::fmt::layer().pretty();
@@ -23,38 +26,30 @@ fn main() -> color_eyre::Result<()> {
         .with(stdout_log)
         .init();
 
-    let ctx = pcsc::Context::establish(pcsc::Scope::User).unwrap();
+    let ctx = pcsc::Context::establish(pcsc::Scope::User)?;
     let mut watcher = Watcher::watch();
-    let mut card_reader: Option<CardReader> = None;
+    let mut card: Option<VxCard> = None;
 
     println!("Insert a card to read its status…");
 
-    for event in watcher.events() {
-        match event {
-            Ok(Event::CardInserted { reader_name }) => {
-                card_reader = Some(CardReader::new(ctx.clone(), reader_name));
-                break;
-            }
-            Err(error) => {
-                eprintln!("Error: {}", error);
+    while let Some(event) = watcher.recv().await {
+        match event? {
+            Event::CardInserted { reader_name } => {
+                card = Some(VxCard::new(AsyncCard::connect(&ctx, &reader_name)?));
                 break;
             }
             _ => {}
         }
     }
 
-    if let Some(card_reader) = card_reader {
-        watcher.stop();
-        let card = card_reader.get_card()?;
-        match card.read_card_details() {
-            Ok(card_details) => {
-                println!("{card_details:#?}");
-            }
-            Err(error) => {
-                eprintln!("Error: {error}");
-            }
-        }
+    if let Some(card) = card {
+        watcher.stop().await;
+        let card_details = card.read_card_details().await?;
+        println!("Card details: {card_details:#?}");
+        card.disconnect().await?;
     }
 
-    Ok(())
+    // FIXME: why does tokio not exit on its own?
+    // Try something from https://tokio.rs/tokio/topics/shutdown#waiting-for-things-to-finish-shutting-down
+    process::exit(0);
 }

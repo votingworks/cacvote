@@ -5,9 +5,7 @@
 
 use std::convert::Infallible;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::time::Duration;
 
-use auth_rs::card_details::CardDetailsWithAuthInfo;
 use axum::extract::Path;
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::Sse;
@@ -26,20 +24,19 @@ use types_rs::cacvote;
 use uuid::Uuid;
 
 use crate::config::{Config, MAX_REQUEST_SIZE};
-use crate::{db, smartcard};
-use tokio::sync::broadcast;
+use crate::db;
+use crate::session_manager::SessionManager;
 
 #[derive(Clone)]
 struct AppState {
     config: Config,
     pool: PgPool,
-    smartcard: smartcard::DynSmartcard,
-    broadcast_tx: broadcast::Sender<cacvote::SessionData>,
+    session_manager: SessionManager,
 }
 
 /// Prepares the application with all the routes. Run the application with
 /// `app::run(…)` once you have it.
-pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmartcard) -> Router {
+pub(crate) fn setup(pool: PgPool, config: Config) -> Router {
     let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
 
     let router = match &config.public_dir {
@@ -54,55 +51,15 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
         }
     };
 
-    let (broadcast_tx, _) = broadcast::channel(1);
     let jurisdiction_code = config
         .jurisdiction_code()
         .expect("missing or invalid jurisdiction code");
-
-    tokio::spawn({
-        let pool = pool.clone();
-        let smartcard = smartcard.clone();
-        let broadcast_tx = broadcast_tx.clone();
-        async move {
-            loop {
-                let mut connection = pool.acquire().await.unwrap();
-
-                let session_data = match smartcard.get_card_details() {
-                    Some(CardDetailsWithAuthInfo { card_details, .. })
-                        if card_details.jurisdiction_code() == jurisdiction_code =>
-                    {
-                        let elections = db::get_elections(&mut connection).await.unwrap();
-                        let pending_registration_requests =
-                            db::get_pending_registration_requests(&mut connection)
-                                .await
-                                .unwrap();
-                        let registrations = db::get_registrations(&mut connection).await.unwrap();
-                        let cast_ballots = db::get_cast_ballots(&mut connection).await.unwrap();
-                        cacvote::SessionData::Authenticated {
-                            jurisdiction_code: jurisdiction_code.clone(),
-                            elections,
-                            pending_registration_requests,
-                            registrations,
-                            cast_ballots,
-                        }
-                    }
-                    Some(_) => cacvote::SessionData::Unauthenticated {
-                        has_smartcard: true,
-                    },
-                    None => cacvote::SessionData::Unauthenticated {
-                        has_smartcard: false,
-                    },
-                };
-
-                let _ = broadcast_tx.send(session_data);
-                tokio::time::sleep(Duration::from_millis(100)).await;
-            }
-        }
-    });
+    let session_manager = SessionManager::new(jurisdiction_code, pool.clone());
 
     router
         .route("/api/status", get(get_status))
         .route("/api/status-stream", get(get_status_stream))
+        .route("/api/authenticate", post(authenticate))
         .route("/api/elections", get(get_elections))
         .route("/api/elections", post(create_election))
         .route("/api/registrations", post(create_registration))
@@ -123,8 +80,7 @@ pub(crate) fn setup(pool: PgPool, config: Config, smartcard: smartcard::DynSmart
         .with_state(AppState {
             config,
             pool,
-            smartcard,
-            broadcast_tx,
+            session_manager,
         })
 }
 
@@ -141,30 +97,33 @@ async fn get_status() -> impl IntoResponse {
     StatusCode::OK
 }
 
-fn distinct_until_changed<S: Stream>(stream: S) -> impl Stream<Item = S::Item>
-where
-    S::Item: Clone + PartialEq,
-{
-    let mut last = None;
-    stream.filter(move |item| {
-        let changed = last.as_ref() != Some(item);
-        last = Some(item.clone());
-        changed
-    })
-}
-
 async fn get_status_stream(
-    State(AppState { broadcast_tx, .. }): State<AppState>,
+    State(AppState {
+        session_manager, ..
+    }): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let broadcast_rx = broadcast_tx.subscribe();
-
-    let stream = distinct_until_changed(
-        tokio_stream::wrappers::BroadcastStream::new(broadcast_rx).filter_map(Result::ok),
-    )
-    .map(|data| Event::default().json_data(data).unwrap())
-    .map(Ok);
+    let stream = tokio_stream::wrappers::WatchStream::new(session_manager.subscribe())
+        .map(|data| Ok(Event::default().json_data(&data).unwrap()));
 
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+#[derive(serde::Deserialize)]
+struct AuthenticateRequest {
+    pin: String,
+}
+
+async fn authenticate(
+    State(AppState {
+        session_manager, ..
+    }): State<AppState>,
+    Json(AuthenticateRequest { pin }): Json<AuthenticateRequest>,
+) -> impl IntoResponse {
+    if let Err(e) = session_manager.authenticate(&pin).await {
+        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": e })));
+    }
+
+    (StatusCode::OK, Json(json!({})))
 }
 
 async fn get_elections(State(AppState { pool, .. }): State<AppState>) -> impl IntoResponse {
@@ -194,21 +153,16 @@ async fn get_elections(State(AppState { pool, .. }): State<AppState>) -> impl In
 }
 
 async fn create_election(
-    State(AppState {
-        config,
-        pool,
-        smartcard,
-        ..
-    }): State<AppState>,
+    State(AppState { config, pool, .. }): State<AppState>,
     Json(election): Json<cacvote::CreateElectionRequest>,
 ) -> impl IntoResponse {
-    let jurisdiction_code = match smartcard.get_card_details() {
-        Some(card_details) => card_details.card_details.jurisdiction_code(),
-        None => {
-            tracing::error!("no card details found");
+    let jurisdiction_code = match config.jurisdiction_code() {
+        Ok(jurisdiction_code) => jurisdiction_code,
+        Err(e) => {
+            tracing::error!("invalid configuration jurisdiction code: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "no card details found" })),
+                Json(json!({ "error": "invalid configuration jurisdiction code" })),
             );
         }
     };
@@ -263,7 +217,7 @@ async fn create_election(
         }
     };
 
-    let signed = match smartcard.sign(&serialized_payload, None) {
+    let (signature, signing_cert) = match config.sign(&serialized_payload) {
         Ok(signed) => signed,
         Err(e) => {
             tracing::error!("error signing payload: {e}");
@@ -273,7 +227,7 @@ async fn create_election(
             );
         }
     };
-    let certificate = match signed.cert.to_pem() {
+    let certificate = match signing_cert.to_pem() {
         Ok(certificate) => certificate,
         Err(e) => {
             tracing::error!("error converting certificate to PEM: {e}");
@@ -289,7 +243,7 @@ async fn create_election(
         election_id: None,
         payload: serialized_payload,
         certificate,
-        signature: signed.data,
+        signature,
     };
 
     if let Err(e) = db::add_object(&mut transaction, &signed_object).await {
@@ -326,9 +280,7 @@ async fn create_election(
 }
 
 async fn create_registration(
-    State(AppState {
-        pool, smartcard, ..
-    }): State<AppState>,
+    State(AppState { config, pool, .. }): State<AppState>,
     Json(cacvote::CreateRegistrationRequest {
         registration_request_id,
         election_id,
@@ -336,13 +288,13 @@ async fn create_registration(
         precinct_id,
     }): Json<cacvote::CreateRegistrationRequest>,
 ) -> impl IntoResponse {
-    let jurisdiction_code = match smartcard.get_card_details() {
-        Some(card_details) => card_details.card_details.jurisdiction_code(),
-        None => {
-            tracing::error!("no card details found");
+    let jurisdiction_code = match config.jurisdiction_code() {
+        Ok(jurisdiction_code) => jurisdiction_code,
+        Err(e) => {
+            tracing::error!("invalid configuration jurisdiction code: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "no card details found" })),
+                Json(json!({ "error": "invalid configuration jurisdiction code" })),
             );
         }
     };
@@ -389,7 +341,7 @@ async fn create_registration(
         }
     };
 
-    let signed = match smartcard.sign(&serialized_payload, None) {
+    let (signature, signing_cert) = match config.sign(&serialized_payload) {
         Ok(signed) => signed,
         Err(e) => {
             tracing::error!("error signing payload: {e}");
@@ -399,7 +351,7 @@ async fn create_registration(
             );
         }
     };
-    let certificate = match signed.cert.to_pem() {
+    let certificate = match signing_cert.to_pem() {
         Ok(certificate) => certificate,
         Err(e) => {
             tracing::error!("error converting certificate to PEM: {e}");
@@ -414,7 +366,7 @@ async fn create_registration(
         election_id: Some(election_id),
         payload: serialized_payload,
         certificate,
-        signature: signed.data,
+        signature,
     };
 
     if let Err(e) = db::add_object(&mut connection, &signed_object).await {
@@ -429,12 +381,7 @@ async fn create_registration(
 }
 
 async fn generate_encrypted_election_tally(
-    State(AppState {
-        pool,
-        config,
-        smartcard,
-        ..
-    }): State<AppState>,
+    State(AppState { pool, config, .. }): State<AppState>,
     Path(election_id): Path<Uuid>,
 ) -> impl IntoResponse {
     let mut transaction = match pool.begin().await {
@@ -536,7 +483,7 @@ async fn generate_encrypted_election_tally(
         }
     };
 
-    let signed = match smartcard.sign(&serialized_payload, None) {
+    let (signature, signing_cert) = match config.sign(&serialized_payload) {
         Ok(signed) => signed,
         Err(e) => {
             tracing::error!("error signing payload: {e}");
@@ -547,7 +494,7 @@ async fn generate_encrypted_election_tally(
         }
     };
 
-    let certificate: Vec<u8> = match signed.cert.to_pem() {
+    let certificate: Vec<u8> = match signing_cert.to_pem() {
         Ok(certificate) => certificate,
         Err(e) => {
             tracing::error!("error converting certificate to PEM: {e}");
@@ -563,7 +510,7 @@ async fn generate_encrypted_election_tally(
         election_id: Some(election_id),
         payload: serialized_payload,
         certificate,
-        signature: signed.data,
+        signature,
     };
 
     if let Err(e) = db::add_object(&mut transaction, &signed_object).await {
@@ -586,12 +533,7 @@ async fn generate_encrypted_election_tally(
 }
 
 async fn decrypt_encrypted_election_tally(
-    State(AppState {
-        pool,
-        config,
-        smartcard,
-        ..
-    }): State<AppState>,
+    State(AppState { pool, config, .. }): State<AppState>,
     Path(election_id): Path<Uuid>,
 ) -> impl IntoResponse {
     let mut transaction = match pool.begin().await {
@@ -711,7 +653,7 @@ async fn decrypt_encrypted_election_tally(
         }
     };
 
-    let signed = match smartcard.sign(&serialized_payload, None) {
+    let (signature, signing_cert) = match config.sign(&serialized_payload) {
         Ok(signed) => signed,
         Err(e) => {
             tracing::error!("error signing payload: {e}");
@@ -722,7 +664,7 @@ async fn decrypt_encrypted_election_tally(
         }
     };
 
-    let certificate = match signed.cert.to_pem() {
+    let certificate = match signing_cert.to_pem() {
         Ok(certificate) => certificate,
         Err(e) => {
             tracing::error!("error converting certificate to PEM: {e}");
@@ -738,7 +680,7 @@ async fn decrypt_encrypted_election_tally(
         election_id: Some(election_id),
         payload: serialized_payload,
         certificate,
-        signature: signed.data,
+        signature,
     };
 
     if let Err(e) = db::add_object(&mut transaction, &signed_object).await {
@@ -761,12 +703,7 @@ async fn decrypt_encrypted_election_tally(
 }
 
 async fn mix_encrypted_ballots(
-    State(AppState {
-        pool,
-        config,
-        smartcard,
-        ..
-    }): State<AppState>,
+    State(AppState { pool, config, .. }): State<AppState>,
     Path(election_id): Path<Uuid>,
     Json(cacvote::MixEncryptedBallotsRequest { phases }): Json<cacvote::MixEncryptedBallotsRequest>,
 ) -> impl IntoResponse {
@@ -854,7 +791,7 @@ async fn mix_encrypted_ballots(
         }
     };
 
-    let signed = match smartcard.sign(&serialized_payload, None) {
+    let (signature, signing_cert) = match config.sign(&serialized_payload) {
         Ok(signed) => signed,
         Err(e) => {
             tracing::error!("error signing payload: {e}");
@@ -865,7 +802,7 @@ async fn mix_encrypted_ballots(
         }
     };
 
-    let certificate = match signed.cert.to_pem() {
+    let certificate = match signing_cert.to_pem() {
         Ok(certificate) => certificate,
         Err(e) => {
             tracing::error!("error converting certificate to PEM: {e}");
@@ -881,7 +818,7 @@ async fn mix_encrypted_ballots(
         election_id: Some(election_id),
         payload: serialized_payload,
         certificate,
-        signature: signed.data,
+        signature,
     };
 
     if let Err(e) = db::add_object(&mut transaction, &signed_object).await {
