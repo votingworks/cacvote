@@ -1,13 +1,14 @@
 use std::{
+    fmt::Debug,
     io::{sink, Write},
     time::SystemTime,
 };
 
 use openssl::x509::X509;
-use pcsc::Card;
 use uuid::Uuid;
 
 use crate::{
+    async_card::AsyncCard,
     card_command::{
         GENERAL_AUTHENTICATE_DYNAMIC_TEMPLATE_TAG, GENERAL_AUTHENTICATE_RESPONSE_TAG,
         PUT_DATA_CERT_INFO_TAG, PUT_DATA_CERT_INFO_UNCOMPRESSED, PUT_DATA_CERT_TAG,
@@ -34,21 +35,29 @@ pub const VX_ADMIN_CERT_AUTHORITY_CERT: CertObject = CertObject::new(0xf2);
 /// cards, we use a default PIN.
 pub const DEFAULT_PIN: &str = "000000";
 
+/// Provides an async interface to JavaCards programmed with the VotingWorks
+/// applet. Intended to be used with Tokio.
 pub struct VxCard {
-    card: Card,
+    card: AsyncCard,
+}
+
+impl Debug for VxCard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VxCard").finish()
+    }
 }
 
 impl VxCard {
-    pub fn new(card: Card) -> Self {
+    pub const fn new(card: AsyncCard) -> Self {
         Self { card }
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn read_card_details(&self) -> Result<CardDetailsWithAuthInfo, CardReaderError> {
-        self.select_applet()?;
+    pub async fn read_card_details(&self) -> Result<CardDetailsWithAuthInfo, CardReaderError> {
+        self.select_applet().await?;
 
         // Verify that the card VotingWorks cert was signed by VotingWorks
-        let card_vx_cert = self.retrieve_cert(CARD_VX_CERT.object_id())?;
+        let card_vx_cert = self.retrieve_cert(CARD_VX_CERT.object_id()).await?;
         let vx_cert_authority_cert = openssl::x509::X509::from_pem(include_bytes!(
             "../../../libs/auth/certs/dev/vx-cert-authority-cert.pem"
         ))?;
@@ -61,9 +70,10 @@ impl VxCard {
         }
 
         // Verify that the card VxAdmin cert was signed by VxAdmin
-        let card_vx_admin_cert = self.retrieve_cert(CARD_VX_ADMIN_CERT.object_id())?;
-        let vx_admin_cert_authority_cert =
-            self.retrieve_cert(VX_ADMIN_CERT_AUTHORITY_CERT.object_id())?;
+        let card_vx_admin_cert = self.retrieve_cert(CARD_VX_ADMIN_CERT.object_id()).await?;
+        let vx_admin_cert_authority_cert = self
+            .retrieve_cert(VX_ADMIN_CERT_AUTHORITY_CERT.object_id())
+            .await?;
 
         let vx_admin_cert_authority_cert_public_key = vx_admin_cert_authority_cert.public_key()?;
         if !card_vx_admin_cert.verify(&vx_admin_cert_authority_cert_public_key)? {
@@ -99,7 +109,8 @@ impl VxCard {
         // Verify that the card has a private key that corresponds to the public key in the card
         // VotingWorks cert
         let card_vx_cert_public_key = card_vx_cert.public_key()?;
-        self.verify_card_private_key(CARD_VX_CERT, &card_vx_cert_public_key, None)?;
+        self.verify_card_private_key(CARD_VX_CERT, &card_vx_cert_public_key, None)
+            .await?;
 
         let card_details: CardDetails = card_vx_admin_cert.clone().try_into()?;
 
@@ -117,14 +128,15 @@ impl VxCard {
                 CARD_VX_ADMIN_CERT,
                 &card_vx_admin_cert.public_key()?,
                 Some(DEFAULT_PIN),
-            )?;
+            )
+            .await?;
         }
 
         let pin_info = if card_does_not_have_pin {
             PinInfo::NoPin
         } else {
             PinInfo::HasPin {
-                num_incorrect_pin_attempts: self.get_num_incorrect_pin_attempts()?,
+                num_incorrect_pin_attempts: self.get_num_incorrect_pin_attempts().await?,
             }
         };
 
@@ -137,9 +149,9 @@ impl VxCard {
         ))
     }
 
-    fn get_num_incorrect_pin_attempts(&self) -> Result<u8, CardReaderError> {
+    async fn get_num_incorrect_pin_attempts(&self) -> Result<u8, CardReaderError> {
         let command = CardCommand::get_num_incorrect_pin_attempts();
-        match self.transmit(command) {
+        match self.transmit(command).await {
             Ok(_) => Ok(0),
             // 63 cx: The counter has reached the value 'cx' (0x00..0x0f)
             Err(CardReaderError::ApduResponse { sw1: 0x63, sw2 }) if sw2 & 0xc0 == 0xc0 => {
@@ -150,43 +162,45 @@ impl VxCard {
     }
 
     #[tracing::instrument(level = "debug", skip(self, pin))]
-    pub fn check_pin(&self, pin: &str) -> Result<(), CardReaderError> {
-        self.select_applet()?;
-        let card_vx_admin_cert = self.retrieve_cert(CARD_VX_ADMIN_CERT.object_id())?;
+    pub async fn check_pin(&self, pin: &str) -> Result<(), CardReaderError> {
+        self.select_applet().await?;
+        let card_vx_admin_cert = self.retrieve_cert(CARD_VX_ADMIN_CERT.object_id()).await?;
 
         self.verify_card_private_key(
             CARD_VX_ADMIN_CERT,
             &card_vx_admin_cert.public_key()?,
             Some(pin),
-        )?;
+        )
+        .await?;
 
         Ok(())
     }
 
-    fn check_pin_internal(&self, pin: &str) -> Result<(), CardReaderError> {
+    async fn check_pin_internal(&self, pin: &str) -> Result<(), CardReaderError> {
         let command = CardCommand::verify_pin(pin);
-        self.transmit(command)?;
+        self.transmit(command).await?;
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", skip(self, data, pin))]
-    pub fn sign(
+    pub async fn sign(
         &self,
         signing_cert: CertObject,
         data: &[u8],
         pin: Option<&str>,
     ) -> Result<(Vec<u8>, X509), CardReaderError> {
-        self.select_applet()?;
-        let cert = self.retrieve_cert(signing_cert.object_id())?;
+        self.select_applet().await?;
+        let cert = self.retrieve_cert(signing_cert.object_id()).await?;
         let public_key = cert.public_key()?;
         Ok((
-            self.sign_with_keys(signing_cert, &public_key, data, pin)?,
+            self.sign_with_keys(signing_cert, &public_key, data, pin)
+                .await?,
             cert,
         ))
     }
 
     #[tracing::instrument(level = "debug", skip(self, public_key, pin))]
-    fn verify_card_private_key(
+    async fn verify_card_private_key(
         &self,
         signing_cert: CertObject,
         public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
@@ -202,24 +216,25 @@ impl VxCard {
             uuid = Uuid::new_v4()
         );
         let challenge = challenge_string.as_bytes();
-        self.sign_with_keys(signing_cert, public_key, challenge, pin)?;
+        self.sign_with_keys(signing_cert, public_key, challenge, pin)
+            .await?;
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", skip(self, public_key, data, pin))]
-    fn sign_with_keys(
+    async fn sign_with_keys(
         &self,
         signing_cert: CertObject,
         public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
         data: &[u8],
         pin: Option<&str>,
     ) -> Result<Vec<u8>, CardReaderError> {
-        self.check_pin_internal(pin.unwrap_or(DEFAULT_PIN))?;
+        self.check_pin_internal(pin.unwrap_or(DEFAULT_PIN)).await?;
 
         let data_hash = openssl::sha::sha256(data);
         let command =
             CardCommand::verify_card_private_key(signing_cert.private_key_id, &data_hash)?;
-        let response = self.transmit(command)?;
+        let response = self.transmit(command).await?;
         let response_tlv = Tlv::parse(GENERAL_AUTHENTICATE_DYNAMIC_TEMPLATE_TAG, &response)?;
         let general_authenticate_tlv =
             Tlv::parse(GENERAL_AUTHENTICATE_RESPONSE_TAG, response_tlv.value())?;
@@ -238,22 +253,23 @@ impl VxCard {
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    fn select_applet(&self) -> Result<(), CardReaderError> {
-        self.transmit(CardCommand::select(OPEN_FIPS_201_AID))?;
+    async fn select_applet(&self) -> Result<(), CardReaderError> {
+        self.transmit(CardCommand::select(OPEN_FIPS_201_AID))
+            .await?;
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", skip(self), fields(card_command = hex_debug(&card_command)))]
-    fn transmit(&self, card_command: CardCommand) -> Result<Vec<u8>, CardReaderError> {
+    async fn transmit(&self, card_command: CardCommand) -> Result<Vec<u8>, CardReaderError> {
         let mut data: Vec<u8> = vec![];
         let mut more_data = false;
         let mut more_data_length = 0u8;
 
         for apdu in card_command.to_command_apdus() {
             if apdu.is_chained() {
-                self.transmit_helper(apdu, sink())?;
+                self.transmit_helper(apdu, sink()).await?;
             } else {
-                match self.transmit_helper(apdu, &mut data)? {
+                match self.transmit_helper(apdu, &mut data).await? {
                     TransmitResponse::Done => {
                         more_data = false;
                     }
@@ -269,7 +285,10 @@ impl VxCard {
         }
 
         while more_data {
-            match self.transmit_helper(CommandApdu::get_response(more_data_length), &mut data)? {
+            match self
+                .transmit_helper(CommandApdu::get_response(more_data_length), &mut data)
+                .await?
+            {
                 TransmitResponse::Done => {
                     more_data = false;
                 }
@@ -286,28 +305,30 @@ impl VxCard {
     }
 
     #[tracing::instrument(level = "debug", skip(self, buffer), fields(apdu = hex_debug(&apdu)))]
-    fn transmit_helper(
+    async fn transmit_helper(
         &self,
         apdu: CommandApdu,
         mut buffer: impl Write,
     ) -> Result<TransmitResponse, CardReaderError> {
-        let mut receive_buffer = [0; 1024];
         tracing::debug!("sending (APDU): {:02x?}", apdu);
         let send_buffer = apdu.to_bytes();
         tracing::debug!("sending (bytes): {:02x?}", send_buffer);
-        let response_apdu = self.card.transmit(&send_buffer, &mut receive_buffer)?;
+        let response_apdu = self.card.transmit(send_buffer).await?;
         tracing::debug!("received: {:02x?}", response_apdu);
 
-        let (data, result) = TransmitResponse::parse(response_apdu)?;
+        let (data, result) = TransmitResponse::parse(&response_apdu)?;
         buffer.write_all(data)?;
         Ok(result)
     }
 
     #[tracing::instrument(level = "debug", skip(self, cert_object_id))]
-    fn retrieve_cert(&self, cert_object_id: impl Into<Vec<u8>>) -> Result<X509, CardReaderError> {
+    async fn retrieve_cert(
+        &self,
+        cert_object_id: impl Into<Vec<u8>>,
+    ) -> Result<X509, CardReaderError> {
         let cert_object_id = cert_object_id.into();
         tracing::debug!("retrieving cert with object ID: {cert_object_id:02x?}");
-        let data = self.get_data(cert_object_id)?;
+        let data = self.get_data(cert_object_id).await?;
         let (remainder, cert_tlv) = Tlv::parse_partial(PUT_DATA_CERT_TAG, &data)?;
         let (remainder, cert_info_tlv) = Tlv::parse_partial(PUT_DATA_CERT_INFO_TAG, &remainder)?;
 
@@ -327,23 +348,31 @@ impl VxCard {
         Ok(X509::from_der(cert_in_der_format)?)
     }
 
-    fn get_data(&self, cert_object_id: impl Into<Vec<u8>>) -> Result<Vec<u8>, CardReaderError> {
+    async fn get_data(
+        &self,
+        cert_object_id: impl Into<Vec<u8>>,
+    ) -> Result<Vec<u8>, CardReaderError> {
         let command = CardCommand::get_data(cert_object_id)?;
-        let response = self.transmit(command)?;
+        let response = self.transmit(command).await?;
         let tlv = Tlv::parse(PUT_DATA_DATA_TAG, &response)?;
         Ok(tlv.value().to_vec())
+    }
+
+    pub async fn disconnect(self) -> Result<(), CardReaderError> {
+        self.card.disconnect().await?;
+        Ok(())
     }
 }
 
 #[derive(Debug)]
-enum TransmitResponse {
+pub enum TransmitResponse {
     Done,
     HasMoreData(u8),
     Other { sw1: u8, sw2: u8 },
 }
 
 impl TransmitResponse {
-    fn parse(data: &[u8]) -> Result<(&[u8], Self), CardReaderError> {
+    pub fn parse(data: &[u8]) -> Result<(&[u8], Self), CardReaderError> {
         match data {
             [data @ .., 0x61, length] => Ok((data, Self::HasMoreData(*length))),
             [data @ .., 0x90, 0x00] => Ok((data, Self::Done)),

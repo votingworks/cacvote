@@ -1,6 +1,6 @@
 //! CACvote Server synchronization utilities.
 
-use cacvote_server_client::{AnySigner, Client};
+use cacvote_server_client::Client;
 use tokio::time::sleep;
 use types_rs::cacvote::JurisdictionCode;
 
@@ -20,11 +20,10 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
     let jurisdiction_code = config.jurisdiction_code().expect(
         "missing or invalid jurisdiction code in CA certificate; check that the CA certificate is valid and contains a jurisdiction code",
     );
-    let signer = AnySigner::try_from(&config.signer).expect("invalid signer");
     let mut client = Client::new(
         config.cacvote_url.clone(),
         config.ca_cert().expect("invalid CA certificate"),
-        signer,
+        config.signer().expect("invalid signer"),
     );
 
     tokio::spawn(async move {
@@ -115,27 +114,20 @@ async fn pull_objects(
 
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, sync::Arc};
+    use std::path::PathBuf;
 
     use cacvote_server_client::{signer, PrivateKeySigner};
     use openssl::{pkey::PKey, x509::X509};
     use reqwest::Url;
     use tracing::Level;
-    use types_rs::cacvote::SmartcardStatus;
 
-    use crate::{
-        app,
-        smartcard::{DynSmartcard, MockSmartcardTrait},
-    };
+    use crate::app;
 
     use super::*;
 
     const JURISDICTION_CODE: &str = "st.test-jurisdiction";
 
-    async fn setup(
-        pool: sqlx::PgPool,
-        smartcard_status: DynSmartcard,
-    ) -> color_eyre::Result<Client> {
+    async fn setup(pool: sqlx::PgPool) -> color_eyre::Result<Client> {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:0").await?;
         let addr = listener.local_addr()?;
         let cacvote_url: Url = format!("http://{addr}").parse()?;
@@ -152,7 +144,7 @@ mod tests {
         };
 
         tokio::spawn(async move {
-            let app = app::setup(pool, config, smartcard_status);
+            let app = app::setup(pool, config);
             axum::serve(listener, app).await.unwrap();
         });
 
@@ -172,12 +164,7 @@ mod tests {
     async fn test_sync(pool: sqlx::PgPool) -> color_eyre::Result<()> {
         let mut connection = pool.acquire().await?;
 
-        let mut smartcard_status = MockSmartcardTrait::new();
-        smartcard_status
-            .expect_get_status()
-            .returning(|| SmartcardStatus::Card);
-
-        let mut client = setup(pool, Arc::new(smartcard_status)).await?;
+        let mut client = setup(pool).await?;
 
         // TODO: actually test `sync`
         let _ = sync(

@@ -830,9 +830,13 @@ pub struct ShuffledEncryptedCastBallotsPresenter {
     pub synced_at: Option<OffsetDateTime>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum SessionData {
+    #[serde(rename_all = "camelCase")]
+    Unauthenticated { has_smartcard: bool },
+    #[serde(rename_all = "camelCase")]
+    Authenticating { auth_error: Option<String> },
     #[serde(rename_all = "camelCase")]
     Authenticated {
         jurisdiction_code: JurisdictionCode,
@@ -841,8 +845,52 @@ pub enum SessionData {
         registrations: Vec<RegistrationPresenter>,
         cast_ballots: Vec<CastBallotPresenter>,
     },
-    #[serde(rename_all = "camelCase")]
-    Unauthenticated { has_smartcard: bool },
+}
+
+impl PartialEq for SessionData {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::Unauthenticated {
+                    has_smartcard: has_smartcard1,
+                },
+                Self::Unauthenticated {
+                    has_smartcard: has_smartcard2,
+                },
+            ) => has_smartcard1 == has_smartcard2,
+            (
+                Self::Authenticating {
+                    auth_error: auth_error1,
+                },
+                Self::Authenticating {
+                    auth_error: auth_error2,
+                },
+            ) => auth_error1 == auth_error2,
+            (
+                Self::Authenticated {
+                    jurisdiction_code: jurisdiction_code1,
+                    elections: elections1,
+                    pending_registration_requests: pending_registration_requests1,
+                    registrations: registrations1,
+                    cast_ballots: cast_ballots1,
+                },
+                Self::Authenticated {
+                    jurisdiction_code: jurisdiction_code2,
+                    elections: elections2,
+                    pending_registration_requests: pending_registration_requests2,
+                    registrations: registrations2,
+                    cast_ballots: cast_ballots2,
+                },
+            ) => {
+                jurisdiction_code1 == jurisdiction_code2
+                    && elections1 == elections2
+                    && pending_registration_requests1 == pending_registration_requests2
+                    && registrations1 == registrations2
+                    && cast_ballots1 == cast_ballots2
+            }
+            _ => false,
+        }
+    }
 }
 
 impl Default for SessionData {

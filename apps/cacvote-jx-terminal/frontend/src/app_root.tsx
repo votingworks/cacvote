@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
 import { Route, Switch, useHistory } from 'react-router-dom';
 import * as api from './api';
+import { PinPadModal } from './components/pin_pad_modal';
 import { ElectionScreen } from './screens/election_screen';
 import { ElectionsScreen } from './screens/elections_screen';
 import { InsertCardScreen } from './screens/insert_card_screen';
 import { VotersScreen } from './screens/voters_screen';
 import { TallyScreen } from './screens/tally_screen';
-import { UnauthenticatedSessionData } from './cacvote-server/session_data';
+import {
+  AuthenticatingSessionData,
+  UnauthenticatedSessionData,
+} from './cacvote-server/session_data';
 
 export function AppRoot(): JSX.Element {
   const history = useHistory();
@@ -14,16 +18,29 @@ export function AppRoot(): JSX.Element {
   // this is just here for the side effects
   api.sessionData.useRootQuery();
 
+  const authenticateMutation = api.authenticate.useMutation();
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
   const isUnauthenticated =
     sessionData && sessionData instanceof UnauthenticatedSessionData;
+  const isAuthenticating =
+    sessionData && sessionData instanceof AuthenticatingSessionData;
 
   useEffect(() => {
     if (isUnauthenticated) {
       history.replace('/');
     }
   }, [isUnauthenticated, history]);
+
+  if (isAuthenticating && !authenticateMutation.isLoading) {
+    return (
+      <PinPadModal
+        onEnter={(pin) => {
+          authenticateMutation.mutate(pin);
+        }}
+      />
+    );
+  }
 
   return (
     <Switch>

@@ -41,9 +41,6 @@
 #![cfg_attr(test, allow(clippy::float_cmp))]
 #![cfg_attr(not(test), warn(clippy::print_stdout, clippy::dbg_macro))]
 
-use std::sync::Arc;
-
-use auth_rs::Watcher;
 use clap::Parser;
 
 mod app;
@@ -51,10 +48,8 @@ mod cac;
 mod config;
 mod db;
 mod log;
-mod smartcard;
+mod session_manager;
 mod sync;
-
-use crate::smartcard::Smartcard;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -65,8 +60,5 @@ async fn main() -> color_eyre::Result<()> {
     tracing::info!("Starting CACvote JX with config: {config:#?}");
     let pool = db::setup(&config).await?;
     sync::sync_periodically(&pool, config.clone()).await;
-    let smartcard_watcher = Watcher::watch();
-    let smartcard = Smartcard::new(smartcard_watcher.readers_with_cards());
-    let smartcard = Arc::new(smartcard) as smartcard::DynSmartcard;
-    app::run(app::setup(pool, config.clone(), smartcard), &config).await
+    app::run(app::setup(pool, config.clone()), &config).await
 }

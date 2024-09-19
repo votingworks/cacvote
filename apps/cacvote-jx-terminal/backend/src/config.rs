@@ -3,7 +3,7 @@
 use std::{path::PathBuf, time::Duration};
 
 use auth_rs::{card_details::extract_field_value, certs::VX_CUSTOM_CERT_FIELD_JURISDICTION};
-use cacvote_server_client::signer;
+use cacvote_server_client::{signer, AnySigner};
 use clap::Parser;
 use color_eyre::eyre::{bail, Context};
 use openssl::x509::X509;
@@ -74,5 +74,16 @@ impl Config {
             Ok(jurisdiction_code) => Ok(jurisdiction_code),
             Err(_) => bail!("Invalid jurisdiction code: {raw_jurisdiction_code}"),
         }
+    }
+
+    pub(crate) fn signer(&self) -> color_eyre::Result<AnySigner> {
+        Ok(AnySigner::try_from(&self.signer)?)
+    }
+
+    pub(crate) fn sign(&self, payload: &[u8]) -> color_eyre::Result<(Vec<u8>, X509)> {
+        let signer = self.signer()?;
+        let signature = signer.sign(payload)?;
+        let cert = self.ca_cert()?;
+        Ok((signature, cert))
     }
 }

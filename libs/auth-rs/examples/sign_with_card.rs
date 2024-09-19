@@ -1,10 +1,12 @@
-use std::{io::Write, path::PathBuf};
+use std::{io::Write, path::PathBuf, process};
 
 use clap::Parser;
 use tracing::Level;
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-use auth_rs::{vx_card::CARD_VX_ADMIN_CERT, CardReader, Event, Watcher};
+use auth_rs::{
+    async_card::AsyncCard, vx_card::VxCard, vx_card::CARD_VX_ADMIN_CERT, Event, Watcher,
+};
 
 #[derive(clap::Parser)]
 struct SignWithCardArgs {
@@ -14,7 +16,8 @@ struct SignWithCardArgs {
     path: PathBuf,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[tokio::main]
+async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let args = SignWithCardArgs::parse();
@@ -36,45 +39,43 @@ fn main() -> color_eyre::Result<()> {
         .with(stdout_log)
         .init();
 
-    let ctx = pcsc::Context::establish(pcsc::Scope::User).unwrap();
+    let ctx = pcsc::Context::establish(pcsc::Scope::User)?;
     let mut watcher = Watcher::watch();
-    let mut card_reader: Option<CardReader> = None;
+    let mut card: Option<VxCard> = None;
 
     println!("Insert a card to sign…");
 
-    for event in watcher.events() {
-        match event {
-            Ok(Event::CardInserted { reader_name }) => {
-                card_reader = Some(CardReader::new(ctx.clone(), reader_name));
-                break;
-            }
-            Err(error) => {
-                eprintln!("Error: {}", error);
+    while let Some(event) = watcher.recv().await {
+        match event? {
+            Event::CardInserted { reader_name } => {
+                card = Some(VxCard::new(AsyncCard::connect(&ctx, &reader_name)?));
                 break;
             }
             _ => {}
         }
     }
 
-    if let Some(card_reader) = card_reader {
-        watcher.stop();
-        let card = card_reader.get_card()?;
+    if let Some(card) = card {
+        watcher.stop().await;
         let pin = if args.no_pin {
             None
         } else {
             print!("Enter the PIN to sign the data: ");
             std::io::stdout().flush()?;
             let mut pin = String::new();
-            std::io::stdin().read_line(&mut pin).unwrap();
+            std::io::stdin().read_line(&mut pin)?;
             let pin = pin.trim();
             Some(pin.to_owned())
         };
 
-        match card.sign(
-            CARD_VX_ADMIN_CERT,
-            &std::fs::read(args.path)?,
-            pin.as_deref(),
-        ) {
+        match card
+            .sign(
+                CARD_VX_ADMIN_CERT,
+                &std::fs::read(args.path)?,
+                pin.as_deref(),
+            )
+            .await
+        {
             Ok((signature, _)) => {
                 println!("{signature:02x?}");
             }
@@ -84,5 +85,7 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
-    Ok(())
+    // FIXME: why does tokio not exit on its own?
+    // Try something from https://tokio.rs/tokio/topics/shutdown#waiting-for-things-to-finish-shutting-down
+    process::exit(0);
 }

@@ -827,6 +827,72 @@ export const CastBallotPresenterSchema: z.ZodSchema<CastBallotPresenter> =
       )
   ) as unknown as z.ZodSchema<CastBallotPresenter>;
 
+export interface UnauthenticatedSessionDataStruct {
+  type: 'unauthenticated';
+  hasSmartcard: boolean;
+}
+
+export const UnauthenticatedSessionDataStructSchema: z.ZodSchema<UnauthenticatedSessionDataStruct> =
+  z.object({
+    type: z.literal('unauthenticated'),
+    hasSmartcard: z.boolean(),
+  });
+
+export class UnauthenticatedSessionData {
+  constructor(private readonly hasSmartcard: boolean) {}
+
+  getHasSmartcard(): boolean {
+    return this.hasSmartcard;
+  }
+
+  toJSON(): UnauthenticatedSessionDataStruct {
+    return {
+      type: 'unauthenticated',
+      hasSmartcard: this.hasSmartcard,
+    };
+  }
+}
+
+export const UnauthenticatedSessionDataSchema: z.ZodSchema<UnauthenticatedSessionData> =
+  UnauthenticatedSessionDataStructSchema.transform(
+    (struct) => new UnauthenticatedSessionData(struct.hasSmartcard)
+  ) as unknown as z.ZodSchema<UnauthenticatedSessionData>;
+
+export interface AuthenticatingSessionDataStruct {
+  type: 'authenticating';
+  authorizationError?: string;
+}
+
+export const AuthenticatingSessionDataStructSchema: z.ZodSchema<AuthenticatingSessionDataStruct> =
+  z.object({
+    type: z.literal('authenticating'),
+    authorizationError: z.string().optional(),
+  });
+
+export class AuthenticatingSessionData {
+  constructor(private readonly authorizationError?: string) {}
+
+  get type(): 'authenticating' {
+    return 'authenticating';
+  }
+
+  getAuthorizationError(): Optional<string> {
+    return this.authorizationError;
+  }
+
+  toJSON(): AuthenticatingSessionDataStruct {
+    return {
+      type: 'authenticating',
+      authorizationError: this.authorizationError,
+    };
+  }
+}
+
+export const AuthenticatingSessionDataSchema: z.ZodSchema<AuthenticatingSessionData> =
+  AuthenticatingSessionDataStructSchema.transform(
+    (struct) => new AuthenticatingSessionData(struct.authorizationError)
+  ) as unknown as z.ZodSchema<AuthenticatingSessionData>;
+
 export interface AuthenticatedSessionDataStruct {
   type: 'authenticated';
   jurisdictionCode: JurisdictionCode;
@@ -903,40 +969,13 @@ export const AuthenticatedSessionDataSchema: z.ZodSchema<AuthenticatedSessionDat
       )
   ) as unknown as z.ZodSchema<AuthenticatedSessionData>;
 
-export interface UnauthenticatedSessionDataStruct {
-  type: 'unauthenticated';
-  hasSmartcard: boolean;
-}
-
-export const UnauthenticatedSessionDataStructSchema: z.ZodSchema<UnauthenticatedSessionDataStruct> =
-  z.object({
-    type: z.literal('unauthenticated'),
-    hasSmartcard: z.boolean(),
-  });
-
-export class UnauthenticatedSessionData {
-  constructor(private readonly hasSmartcard: boolean) {}
-
-  getHasSmartcard(): boolean {
-    return this.hasSmartcard;
-  }
-
-  toJSON(): UnauthenticatedSessionDataStruct {
-    return {
-      type: 'unauthenticated',
-      hasSmartcard: this.hasSmartcard,
-    };
-  }
-}
-
-export const UnauthenticatedSessionDataSchema: z.ZodSchema<UnauthenticatedSessionData> =
-  UnauthenticatedSessionDataStructSchema.transform(
-    (struct) => new UnauthenticatedSessionData(struct.hasSmartcard)
-  ) as unknown as z.ZodSchema<UnauthenticatedSessionData>;
-
-export type SessionData = UnauthenticatedSessionData | AuthenticatedSessionData;
+export type SessionData =
+  | UnauthenticatedSessionData
+  | AuthenticatingSessionData
+  | AuthenticatedSessionData;
 
 export const SessionDataSchema: z.ZodSchema<SessionData> = z.union([
   UnauthenticatedSessionDataSchema,
+  AuthenticatingSessionDataSchema,
   AuthenticatedSessionDataSchema,
 ]);
