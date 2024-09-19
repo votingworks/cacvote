@@ -39,7 +39,6 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 types-rs = { workspace = true, features = ["backend"] }
 url = { workspace = true }
 uuid = { workspace = true }
-pin-project-lite = "0.2.14"
 
 [dev-dependencies]
 mockall = { workspace = true }

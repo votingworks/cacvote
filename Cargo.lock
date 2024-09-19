@@ -393,7 +393,6 @@ dependencies = [
  "mockall",
  "openssl",
  "pcsc",
- "pin-project-lite",
  "pretty_assertions",
  "proptest",
  "regex",
