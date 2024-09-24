@@ -46,6 +46,8 @@ impl SessionManager {
         tokio::spawn({
             let session_data_tx = session_data_tx.clone();
             let session_ops_tx = session_ops_tx.clone();
+            let mut db_interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
+            let mut last_session_data = None;
 
             async move {
                 // spawn the context within the task
@@ -53,9 +55,27 @@ impl SessionManager {
                 let mut watcher = auth_rs::Watcher::watch();
                 let mut vx_card: Option<VxCard> = None;
 
+                let refresh_authenticated_session = || async {
+                    let mut connection = pool.acquire().await.unwrap();
+
+                    let elections = db::get_elections(&mut connection).await.unwrap();
+                    let pending_registration_requests =
+                        db::get_pending_registration_requests(&mut connection)
+                            .await
+                            .unwrap();
+                    let registrations = db::get_registrations(&mut connection).await.unwrap();
+                    let cast_ballots = db::get_cast_ballots(&mut connection).await.unwrap();
+                    cacvote::SessionData::Authenticated {
+                        jurisdiction_code: jurisdiction_code.clone(),
+                        elections,
+                        pending_registration_requests,
+                        registrations,
+                        cast_ballots,
+                    }
+                };
+
                 loop {
-                    // Select either a smartcard event or a session operation,
-                    // whichever has data first.
+                    // Select whichever of the following futures completes first.
                     tokio::select! {
                         // Handle smartcard events
                         event = watcher.recv() => {
@@ -126,22 +146,9 @@ impl SessionManager {
                             tracing::debug!("received session_op={session_op:?}");
                             match session_op {
                                 Some(SessionOperation::SetAuthenticated) => {
-                                    let mut connection = pool.acquire().await.unwrap();
-
-                                    let elections = db::get_elections(&mut connection).await.unwrap();
-                                    let pending_registration_requests =
-                                        db::get_pending_registration_requests(&mut connection)
-                                            .await
-                                            .unwrap();
-                                    let registrations = db::get_registrations(&mut connection).await.unwrap();
-                                    let cast_ballots = db::get_cast_ballots(&mut connection).await.unwrap();
-                                    session_data_tx.send_replace(cacvote::SessionData::Authenticated {
-                                        jurisdiction_code: jurisdiction_code.clone(),
-                                        elections,
-                                        pending_registration_requests,
-                                        registrations,
-                                        cast_ballots,
-                                    });
+                                    let new_session_data = refresh_authenticated_session().await;
+                                    last_session_data = Some(new_session_data.clone());
+                                    session_data_tx.send_replace(new_session_data);
                                 }
                                 Some(SessionOperation::CheckPin { pin, respond }) => {
                                     if let Some(ref mut vx_card) = vx_card {
@@ -161,6 +168,28 @@ impl SessionManager {
                                 }
                                 None => {
                                     tracing::debug!("session_ops channel closed?!");
+                                }
+                            }
+                        }
+
+                        // check the database periodically for changes
+                        _ = db_interval.tick() => {
+                            match last_session_data {
+                                Some(ref mut last_session_data) => {
+                                    if !matches!(last_session_data, cacvote::SessionData::Authenticated { .. }) {
+                                        continue;
+                                    }
+
+                                    let new_session_data = refresh_authenticated_session().await;
+
+                                    if new_session_data != *last_session_data {
+                                        tracing::debug!("session data changed, updating session data");
+                                        last_session_data.clone_from(&new_session_data);
+                                        session_data_tx.send_replace(new_session_data);
+                                    }
+                                }
+                                _ => {
+                                    // do nothing
                                 }
                             }
                         }
