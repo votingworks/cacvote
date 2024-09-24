@@ -1,5 +1,20 @@
 # CACvote
 
+## Production TODOs
+
+This is a prototype and there are a variety of things that need to be done to
+make it production-ready. Here are some of the most important:
+
+1. **Validation of production CACs**: Real CACs use a different certificate
+   authority than the one we're using for development. We need to validate
+   against the DoD's PKI infrastructure.
+2. **Security audit**: We have done work to secure the system, in particular
+   with the use of Java cards for authentication and validation of client
+   certificates stored in the TPM for requests to `cacvote-server`. However, we
+   have not performed a full security audit.
+3. **Scale testing**: We have not tested the system at scale. We need to ensure
+   that it can handle the load of a real election across multiple jurisdictions.
+
 ## Setup
 
 1. Set up a Debian 11 machine (Debian 12 or Ubuntu may work).

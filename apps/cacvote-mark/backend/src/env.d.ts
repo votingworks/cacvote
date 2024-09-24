@@ -12,7 +12,8 @@ declare namespace NodeJS {
     readonly VX_SCREEN_ORIENTATION?: 'portrait' | 'landscape';
     readonly CACVOTE_MARK_WORKSPACE?: string;
     readonly CACVOTE_URL?: string;
-    readonly CA_CERT?: string;
+    readonly CAC_CA_CERTS?: string;
+    readonly MACHINE_CA_CERT?: string;
     readonly SIGNER?: string;
     readonly MAILING_LABEL_PRINTER?: string;
   }

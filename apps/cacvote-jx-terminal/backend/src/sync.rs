@@ -1,6 +1,7 @@
 //! CACvote Server synchronization utilities.
 
 use cacvote_server_client::Client;
+use openssl::x509;
 use tokio::time::sleep;
 use types_rs::cacvote::JurisdictionCode;
 
@@ -22,36 +23,53 @@ pub(crate) async fn sync_periodically(pool: &sqlx::PgPool, config: Config) {
     );
     let mut client = Client::new(
         config.cacvote_url.clone(),
-        config.ca_cert().expect("invalid CA certificate"),
+        config.machine_ca_cert().expect("invalid MACHINE_CA_CERT"),
         config.signer().expect("invalid signer"),
     );
 
-    tokio::spawn(async move {
-        loop {
-            match sync(&mut connection, &mut client, &jurisdiction_code).await {
-                Ok(_) => {
-                    tracing::info!("Successfully synced with CACvote Server");
+    tokio::spawn({
+        let cac_ca_store = config.cac_ca_store().expect("invalid CAC_CA_CERTS");
+        let machine_ca_cert = config.machine_ca_cert().expect("invalid MACHINE_CA_CERT");
+        async move {
+            loop {
+                match sync(
+                    &mut connection,
+                    &mut client,
+                    &jurisdiction_code,
+                    &machine_ca_cert,
+                    &cac_ca_store,
+                )
+                .await
+                {
+                    Ok(_) => {
+                        tracing::info!("Successfully synced with CACvote Server");
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to sync with CACvote Server: {e}");
+                    }
                 }
-                Err(e) => {
-                    tracing::error!("Failed to sync with CACvote Server: {e}");
-                }
+                sleep(SYNC_INTERVAL).await;
             }
-            sleep(SYNC_INTERVAL).await;
         }
     });
 }
 
-#[tracing::instrument(skip(executor, client), name = "Sync with CACvote Server")]
+#[tracing::instrument(
+    skip(executor, client, cac_ca_store),
+    name = "Sync with CACvote Server"
+)]
 pub(crate) async fn sync(
     executor: &mut sqlx::PgConnection,
     client: &mut Client,
     jurisdiction_code: &JurisdictionCode,
+    machine_ca_cert: &x509::X509,
+    cac_ca_store: &x509::store::X509Store,
 ) -> color_eyre::eyre::Result<()> {
     client.check_status().await?;
 
     push_objects(executor, client).await?;
     pull_journal_entries(executor, client, jurisdiction_code).await?;
-    pull_objects(executor, client).await?;
+    pull_objects(executor, client, machine_ca_cert, cac_ca_store).await?;
 
     Ok(())
 }
@@ -93,11 +111,21 @@ async fn push_objects(
 async fn pull_objects(
     executor: &mut sqlx::PgConnection,
     client: &mut Client,
+    machine_ca_cert: &x509::X509,
+    cac_ca_store: &x509::store::X509Store,
 ) -> color_eyre::eyre::Result<()> {
     let journal_entries = db::get_journal_entries_for_objects_to_pull(executor).await?;
     for journal_entry in journal_entries {
         match client.get_object_by_id(journal_entry.object_id).await? {
             Some(object) => {
+                if !object.verify(machine_ca_cert, cac_ca_store)? {
+                    tracing::warn!(
+                        "Object with id {} failed verification",
+                        journal_entry.object_id
+                    );
+                    continue;
+                }
+
                 db::add_object_from_server(executor, &object).await?;
             }
             None => {
@@ -138,7 +166,8 @@ mod tests {
             port: addr.port(),
             public_dir: None,
             log_level: Level::DEBUG,
-            ca_cert: PathBuf::from("/not/real/path"),
+            machine_ca_cert: PathBuf::from("/not/real/path"),
+            cac_ca_certs: vec![PathBuf::from("/not/real/path")],
             signer: signer::Description::File(PathBuf::from("/not/real/path")),
             eg_classpath: PathBuf::from("/not/real/path"),
         };
@@ -171,6 +200,10 @@ mod tests {
             &mut connection,
             &mut client,
             &JurisdictionCode::try_from(JURISDICTION_CODE).unwrap(),
+            &X509::from_pem(include_bytes!(
+                "../../../../libs/auth/certs/dev/vx-cert-authority-cert.pem"
+            ))?,
+            &x509::store::X509StoreBuilder::new()?.build(),
         )
         .await;
 

@@ -42,10 +42,6 @@ pub async fn create_object(
     connection: &mut sqlx::PgConnection,
     object: &SignedObject,
 ) -> color_eyre::Result<Uuid> {
-    if !object.verify()? {
-        bail!("Unable to verify signature/certificate")
-    }
-
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
         tracing::error!(
             "no jurisdiction found in object: {:?} (try_to_inner={:?})",

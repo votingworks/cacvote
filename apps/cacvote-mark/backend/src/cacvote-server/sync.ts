@@ -1,7 +1,13 @@
-import { deferred, extractErrorMessage, sleep } from '@votingworks/basics';
+import {
+  assert,
+  deferred,
+  extractErrorMessage,
+  sleep,
+} from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
 import { ClientApi } from './client';
 import { Store } from '../store';
+import { CAC_CA_CERTS, MACHINE_CA_CERT } from '../globals';
 
 async function pullJournalEntries(
   client: ClientApi,
@@ -130,7 +136,9 @@ async function pullObjects(
       continue;
     }
 
-    const verifyResult = await object.verify();
+    assert(MACHINE_CA_CERT, 'MACHINE_CA_CERT not set');
+    assert(CAC_CA_CERTS, 'CAC_CA_CERTS not set');
+    const verifyResult = await object.verify(MACHINE_CA_CERT, CAC_CA_CERTS);
 
     if (verifyResult.isErr()) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {

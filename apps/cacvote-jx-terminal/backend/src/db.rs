@@ -392,15 +392,13 @@ pub async fn get_tallies_for_election(
     ))
 }
 
+/// Adds an object to the database from the CACvote server. The object should
+/// already have had its certificate and signature verified.
 #[tracing::instrument(skip(connection, object))]
 pub async fn add_object_from_server(
     connection: &mut sqlx::PgConnection,
     object: &cacvote::SignedObject,
 ) -> color_eyre::Result<Uuid> {
-    if !object.verify()? {
-        bail!("Unable to verify signature/certificate")
-    }
-
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
         bail!("No jurisdiction found");
     };
@@ -428,15 +426,13 @@ pub async fn add_object_from_server(
     Ok(object.id)
 }
 
+/// Adds an object to the database. The object should already have had its
+/// certificate and signature verified.
 #[tracing::instrument(skip(connection, object))]
 pub async fn add_object(
     connection: &mut sqlx::PgConnection,
     object: &cacvote::SignedObject,
 ) -> color_eyre::Result<Uuid> {
-    if !object.verify()? {
-        bail!("Unable to verify signature/certificate")
-    }
-
     let Some(jurisdiction_code) = object.jurisdiction_code() else {
         bail!("No jurisdiction found");
     };

@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use cacvote_server::{config::Config, db, log};
 use clap::Parser;
@@ -30,7 +30,8 @@ async fn main() -> color_eyre::Result<()> {
         database_url: options.database_url,
         port: 0, // unused in this context
         log_level: options.log_level,
-        ca_cert: "unused".to_string(), // unused in this context
+        cac_ca_certs: vec![],                     // unused in this context
+        machine_ca_cert: PathBuf::from("unused"), // unused in this context
     };
     log::setup(&config)?;
     let pool = db::setup(&config).await?;

@@ -8,7 +8,7 @@ import { buildApp } from './app';
 import { Client } from './cacvote-server/client';
 import { syncPeriodically } from './cacvote-server/sync';
 import {
-  CA_CERT,
+  MACHINE_CA_CERT,
   CACVOTE_URL,
   SIGNER,
   USABILITY_TEST_ELECTION_PATH,
@@ -85,15 +85,15 @@ function getCacvoteServerClient(logger: Logger): Client {
     throw new Error('CACVOTE_URL not set');
   }
 
-  if (!CA_CERT) {
-    throw new Error('CA_CERT not set');
+  if (!MACHINE_CA_CERT) {
+    throw new Error('MACHINE_CA_CERT not set');
   }
 
   if (!SIGNER) {
     throw new Error('SIGNER not set');
   }
 
-  return new Client(logger, CACVOTE_URL, CA_CERT, SIGNER);
+  return new Client(logger, CACVOTE_URL, MACHINE_CA_CERT, SIGNER);
 }
 
 /**

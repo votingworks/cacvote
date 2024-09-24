@@ -214,12 +214,46 @@ impl SignedObject {
     }
 
     #[cfg(feature = "openssl")]
-    pub fn verify(&self) -> Result<bool, openssl::error::ErrorStack> {
+    pub fn verify(
+        &self,
+        machine_ca_cert: &openssl::x509::X509,
+        cac_ca_store: &openssl::x509::store::X509Store,
+    ) -> Result<bool, openssl::error::ErrorStack> {
         let public_key = self.to_x509()?.public_key()?;
         let mut verifier =
             openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), &public_key)?;
+
+        // verify that the payload is signed by the certificate
         verifier.update(&self.payload)?;
-        verifier.verify(&self.signature)
+
+        if !verifier.verify(&self.signature)? {
+            // signature verification failed, no need to continue
+            return Ok(false);
+        }
+
+        // verify that the certificate is signed by the expected CA
+        let payload = match self.try_to_inner() {
+            Ok(payload) => payload,
+            Err(_) => {
+                return Ok(false);
+            }
+        };
+
+        match payload {
+            // signed by the CAC, check the CAC CA store
+            Payload::RegistrationRequest(_) | Payload::CastBallot(_) => {
+                verify_cert(cac_ca_store, &self.to_x509()?)
+            }
+
+            // signed by the machine TPM, check the machine CA cert
+            Payload::Registration(_)
+            | Payload::Election(_)
+            | Payload::EncryptedElectionTally(_)
+            | Payload::DecryptedElectionTally(_)
+            | Payload::ShuffledEncryptedCastBallots(_) => {
+                verify_cert_single_ca(machine_ca_cert, &self.to_x509()?)
+            }
+        }
     }
 
     #[must_use]
@@ -458,6 +492,28 @@ impl sqlx::Type<sqlx::Postgres> for JournalEntryAction {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
         sqlx::postgres::PgTypeInfo::with_name("varchar")
     }
+}
+
+#[cfg(feature = "openssl")]
+pub fn verify_cert(
+    ca_store: &openssl::x509::store::X509Store,
+    certificate: &openssl::x509::X509,
+) -> Result<bool, openssl::error::ErrorStack> {
+    let mut context = openssl::x509::X509StoreContext::new()?;
+    let intermediates = openssl::stack::Stack::new()?;
+    context.init(ca_store, certificate, &intermediates, |ctx| {
+        ctx.verify_cert()
+    })
+}
+
+#[cfg(feature = "openssl")]
+pub fn verify_cert_single_ca(
+    ca_cert: &openssl::x509::X509,
+    certificate: &openssl::x509::X509,
+) -> Result<bool, openssl::error::ErrorStack> {
+    let mut builder = openssl::x509::store::X509StoreBuilder::new()?;
+    builder.add_cert(ca_cert.clone())?;
+    verify_cert(&builder.build(), certificate)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]

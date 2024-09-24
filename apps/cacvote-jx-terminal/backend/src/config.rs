@@ -1,6 +1,9 @@
 //! Application configuration.
 
-use std::{path::PathBuf, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use auth_rs::{card_details::extract_field_value, certs::VX_CUSTOM_CERT_FIELD_JURISDICTION};
 use cacvote_server_client::{signer, AnySigner};
@@ -33,9 +36,15 @@ pub(crate) struct Config {
     #[arg(long, env = "PORT")]
     pub(crate) port: u16,
 
-    /// Certificate authority PEM file.
-    #[arg(long, env = "CA_CERT")]
-    pub(crate) ca_cert: PathBuf,
+    /// Certificate authority certificate files, used to validate the client
+    /// certificates from a CAC.
+    #[arg(long, env = "CAC_CA_CERTS", value_delimiter = ',')]
+    pub cac_ca_certs: Vec<PathBuf>,
+
+    /// Certificate authority certificate file, used to validate the client
+    /// certificates from a TPM.
+    #[arg(long, env = "MACHINE_CA_CERT")]
+    pub machine_ca_cert: PathBuf,
 
     /// Signer to use for signing server request payloads.
     #[arg(long, env = "SIGNER")]
@@ -55,19 +64,26 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn ca_cert(&self) -> color_eyre::Result<X509> {
-        openssl::x509::X509::from_pem(
-            &std::fs::read(&self.ca_cert).context("CA_CERT cannot be read")?,
-        )
-        .context("CA_CERT is not a valid certificate")
+    pub(crate) fn cac_ca_store(&self) -> color_eyre::Result<openssl::x509::store::X509Store> {
+        let mut builder = openssl::x509::store::X509StoreBuilder::new()?;
+
+        for ca_cert in &self.cac_ca_certs {
+            builder.add_cert(load_cert(ca_cert)?)?;
+        }
+
+        Ok(builder.build())
     }
 
-    /// Returns the jurisdiction code from the CA certificate.
+    pub(crate) fn machine_ca_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        load_cert(&self.machine_ca_cert)
+    }
+
+    /// Returns the jurisdiction code from the MACHINE_CA_CERT certificate.
     pub(crate) fn jurisdiction_code(&self) -> color_eyre::Result<JurisdictionCode> {
-        let raw_jurisdiction_code = match extract_field_value(&self.ca_cert()?, VX_CUSTOM_CERT_FIELD_JURISDICTION)
-                .context("Unable to extract jurisdiction code from CA_CERT")? {
+        let raw_jurisdiction_code = match extract_field_value(&self.machine_ca_cert()?, VX_CUSTOM_CERT_FIELD_JURISDICTION)
+                .context("Unable to extract jurisdiction code from MACHINE_CA_CERT")? {
                     Some(value) => value,
-                    None => bail!("CA_CERT does not contain a jurisdiction code in the custom field VX_CUSTOM_CERT_FIELD_JURISDICTION"),
+                    None => bail!("MACHINE_CA_CERT does not contain a jurisdiction code in the custom field VX_CUSTOM_CERT_FIELD_JURISDICTION"),
                 };
 
         match JurisdictionCode::try_from(raw_jurisdiction_code.clone()) {
@@ -77,13 +93,22 @@ impl Config {
     }
 
     pub(crate) fn signer(&self) -> color_eyre::Result<AnySigner> {
-        Ok(AnySigner::try_from(&self.signer)?)
+        AnySigner::try_from(&self.signer)
     }
 
     pub(crate) fn sign(&self, payload: &[u8]) -> color_eyre::Result<(Vec<u8>, X509)> {
         let signer = self.signer()?;
         let signature = signer.sign(payload)?;
-        let cert = self.ca_cert()?;
+        let cert = self.machine_ca_cert()?;
         Ok((signature, cert))
     }
+}
+
+fn load_cert<P>(path: P) -> color_eyre::Result<openssl::x509::X509>
+where
+    P: AsRef<Path>,
+{
+    let ca_cert = std::fs::read(path)?;
+    Ok(openssl::x509::X509::from_pem(&ca_cert)
+        .or_else(|_| openssl::x509::X509::from_der(&ca_cert))?)
 }
