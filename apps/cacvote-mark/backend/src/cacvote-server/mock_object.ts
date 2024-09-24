@@ -3,6 +3,7 @@ import { Buffer } from 'buffer';
 import { Readable } from 'stream';
 import { join } from 'path';
 import { readFile } from 'fs/promises';
+import { assert } from '@votingworks/basics';
 import {
   ElectionObjectType,
   JurisdictionCodeSchema,
@@ -10,6 +11,7 @@ import {
   SignedObject,
   Uuid,
 } from './types';
+import { CAC_ROOT_CA_CERTS, MACHINE_CERT } from '../globals';
 
 export const JURISDICTION_CODE = JurisdictionCodeSchema.parse(
   'st.test-jurisdiction'
@@ -54,6 +56,8 @@ export async function createVerifiedObject(
     await getSigningKeyCertificateAuthority(),
     signature
   );
-  (await object.verify()).unsafeUnwrap();
+  assert(MACHINE_CERT, 'MACHINE_CERT is not set');
+  assert(CAC_ROOT_CA_CERTS, 'CAC_ROOT_CA_CERTS is not set');
+  (await object.verify(MACHINE_CERT, CAC_ROOT_CA_CERTS)).unsafeUnwrap();
   return object;
 }

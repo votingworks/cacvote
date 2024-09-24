@@ -16,10 +16,10 @@ import {
 import { ElectionDefinition } from '@votingworks/types';
 import { DateTime } from 'luxon';
 import { LogEventId, Logger } from '@votingworks/logging';
-import { z } from 'zod';
 import { ClientApi, ClientResult } from './client';
 import { JURISDICTION_CODE, createVerifiedObject } from './mock_object';
 import {
+  AutomaticExpirationType,
   CastBallotObjectType,
   Election,
   ElectionObjectType,
@@ -31,15 +31,6 @@ import {
   SignedObject,
   Uuid,
 } from './types';
-
-export const AutomaticExpirationTypeSchema = z.enum([
-  'castBallotOnly',
-  'castBallotAndRegistration',
-]);
-
-export type AutomaticExpirationType = z.infer<
-  typeof AutomaticExpirationTypeSchema
->;
 
 /**
  * Provides a mock client API for usability testing, specifically:

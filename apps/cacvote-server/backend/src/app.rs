@@ -20,14 +20,14 @@ use base64_serde::base64_serde_type;
 use cacvote_server_client::{
     CreateSessionRequest, CreateSessionRequestPayload, CreateSessionResponse,
 };
-use openssl::{hash::MessageDigest, sign::Verifier, x509::X509};
+use openssl::{hash::MessageDigest, sign::Verifier, x509};
 use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
 use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote;
+use types_rs::cacvote::{self, verify_cert_single_ca};
 use uuid::Uuid;
 
 use crate::{
@@ -44,7 +44,11 @@ base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 ///
 /// Requires a [`PgPool`] from [`db::setup`]. Run the application with [`run`]
 /// with the result of this function.
-pub async fn setup(pool: PgPool, ca_cert: openssl::x509::X509) -> Router {
+pub async fn setup(
+    pool: PgPool,
+    vx_root_ca_cert: x509::X509,
+    cac_root_ca_store: x509::store::X509Store,
+) -> Router {
     let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
     Router::new()
         .route("/api/status", get(get_status))
@@ -86,7 +90,8 @@ pub async fn setup(pool: PgPool, ca_cert: openssl::x509::X509) -> Router {
         .layer(TraceLayer::new_for_http())
         .with_state(AppState {
             pool,
-            ca_cert,
+            vx_root_ca_cert,
+            cac_root_ca_store: Arc::new(cac_root_ca_store),
             sessions: Arc::new(Mutex::new(SessionManager::new())),
         })
 }
@@ -109,9 +114,10 @@ async fn get_status() -> impl IntoResponse {
 
 async fn create_session(
     State(AppState {
-        ca_cert, sessions, ..
+        vx_root_ca_cert,
+        sessions,
+        ..
     }): State<AppState>,
-    // json: Json<Value>,
     Json(CreateSessionRequest {
         certificate,
         payload,
@@ -119,7 +125,7 @@ async fn create_session(
     }): Json<CreateSessionRequest>,
 ) -> Result<impl IntoResponse, Error> {
     // verify "signed TPM public key" signed by config CA cert
-    let certificate = X509::from_pem(&certificate).map_err(|e| {
+    let certificate = x509::X509::from_pem(&certificate).map_err(|e| {
         tracing::error!("Failed to parse certificate: {e}");
         Error::BadRequest(format!("Failed to parse certificate: {e}"))
     })?;
@@ -127,10 +133,10 @@ async fn create_session(
         tracing::error!("Failed to extract public key from certificate: {e}");
         Error::Other(e.into())
     })?;
-    ca_cert.verify(&public_key).map_err(|e| {
-        tracing::error!("Failed to verify certificate: {e}");
-        Error::BadRequest(format!("Failed to verify certificate: {e}"))
-    })?;
+    if !verify_cert_single_ca(&vx_root_ca_cert, &certificate).unwrap_or(false) {
+        tracing::error!("Failed to verify certificate");
+        return Err(Error::BadRequest("Failed to verify certificate".to_owned()));
+    }
 
     // verify "signature" signed by "signed TPM public key"
     let mut verifier = Verifier::new(MessageDigest::sha256(), &public_key).map_err(|e| {
@@ -182,9 +188,29 @@ async fn create_session(
 
 async fn create_object(
     _session: Session,
-    State(AppState { pool, .. }): State<AppState>,
+    State(AppState {
+        vx_root_ca_cert,
+        cac_root_ca_store,
+        pool,
+        ..
+    }): State<AppState>,
     object: Json<cacvote::SignedObject>,
 ) -> Result<impl IntoResponse, Error> {
+    match object.verify(&vx_root_ca_cert, &cac_root_ca_store) {
+        Ok(true) => (),
+        Ok(false) => {
+            tracing::error!("Signature verification failed");
+            return Err(Error::BadRequest(
+                "Signature verification failed".to_owned(),
+            ));
+        }
+        Err(e) => {
+            tracing::error!("Error verifying object signature: {e}");
+            return Err(Error::BadRequest(format!(
+                "Error verifying object signature: {e}"
+            )));
+        }
+    }
     let mut conn = pool.acquire().await?;
     let object_id = db::create_object(&mut conn, &object).await?;
     Ok((StatusCode::CREATED, object_id.to_string()))

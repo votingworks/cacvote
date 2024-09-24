@@ -71,7 +71,7 @@ export class Client implements ClientApi {
   constructor(
     private readonly logger: Logger,
     private readonly baseUrl: URL,
-    private readonly signingCert: Buffer,
+    private readonly machineCaCert: Buffer,
     private readonly signingPrivateKey: FileKey | TpmKey
   ) {}
 
@@ -80,13 +80,13 @@ export class Client implements ClientApi {
    */
   static localhost(
     logger: Logger,
-    signingCert: Buffer,
+    machineCaCert: Buffer,
     signingPrivateKey: FileKey | TpmKey
   ): Client {
     return new Client(
       logger,
       new URL('http://localhost:8000'),
-      signingCert,
+      machineCaCert,
       signingPrivateKey
     );
   }
@@ -256,7 +256,7 @@ export class Client implements ClientApi {
       const payload = new CreateSessionRequestPayload(DateTime.now());
       const payloadJson = JSON.stringify(payload);
       const createSessionRequest = new CreateSessionRequest(
-        this.signingCert,
+        this.machineCaCert,
         JSON.stringify(payload),
         await cryptography.signMessage({
           message: Readable.from([Buffer.from(payloadJson)]),

@@ -4,6 +4,7 @@ import {
   Optional,
   Result,
   err,
+  iter,
   ok,
   throwIllegalValue,
   wrapException,
@@ -680,12 +681,17 @@ export class SignedObject {
   }
 
   /**
-   * Verify the signature on the payload against the embedded certificate.
+   * Verify the signature on the payload against the embedded certificate, and
+   * verify the embedded certificate against the given CA certificates.
    *
-   * @returns `ok(true)` if the signature is valid, `ok(false)` if the signature
-   * is invalid, or `err(Error)` if there was an error verifying the signature.
+   * @returns `ok(true)` if the signature and certificate are valid, `ok(false)`
+   * if either is invalid, or `err(Error)` if there was an error verifying the
+   * signature.
    */
-  async verify(): Promise<Result<boolean, Error>> {
+  async verify(
+    machineCaCert: Buffer,
+    cacCaCerts: Buffer[]
+  ): Promise<Result<boolean, Error>> {
     try {
       const publicKey = await cryptography.extractPublicKeyFromCert(
         this.certificate
@@ -695,7 +701,49 @@ export class SignedObject {
         messageSignature: this.signature,
         publicKey,
       });
-      return ok(true);
+
+      const getPayloadResult = this.getPayload();
+
+      if (getPayloadResult.isErr()) {
+        return err(getPayloadResult.err());
+      }
+
+      const payload = getPayloadResult.ok();
+
+      switch (payload.getObjectType()) {
+        // signed by the CAC, check the CAC CA store
+        case RegistrationObjectType:
+        case CastBallotObjectType: {
+          return ok(
+            await iter(cacCaCerts)
+              .async()
+              .some(async (cacCaCert) => {
+                try {
+                  await cryptography.verifyFirstCertWasSignedBySecondCert(
+                    this.getCertificate(),
+                    cacCaCert
+                  );
+                  return true;
+                } catch {
+                  return false;
+                }
+              })
+          );
+        }
+
+        // signed by the machine TPM, check the machine CA cert
+        default: {
+          try {
+            await cryptography.verifyFirstCertWasSignedBySecondCert(
+              this.getCertificate(),
+              machineCaCert
+            );
+            return ok(true);
+          } catch {
+            return ok(false);
+          }
+        }
+      }
     } catch (e) {
       return wrapException(e);
     }
@@ -843,3 +891,12 @@ export const CreateSessionResponseSchema =
   CreateSessionResponseStructSchema.transform(
     (o) => new CreateSessionResponse(o.bearerToken)
   ) as unknown as z.ZodSchema<CreateSessionResponse>;
+
+export const AutomaticExpirationTypeSchema = z.enum([
+  'castBallotOnly',
+  'castBallotAndRegistration',
+]);
+
+export type AutomaticExpirationType = z.infer<
+  typeof AutomaticExpirationTypeSchema
+>;
