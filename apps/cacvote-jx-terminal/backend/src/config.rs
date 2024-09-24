@@ -38,13 +38,13 @@ pub(crate) struct Config {
 
     /// Certificate authority certificate files, used to validate the client
     /// certificates from a CAC.
-    #[arg(long, env = "CAC_CA_CERTS", value_delimiter = ',')]
-    pub cac_ca_certs: Vec<PathBuf>,
+    #[arg(long, env = "CAC_ROOT_CA_CERTS", value_delimiter = ',')]
+    pub cac_root_ca_certs: Vec<PathBuf>,
 
-    /// Certificate authority certificate file, used to validate the client
-    /// certificates from a TPM.
-    #[arg(long, env = "MACHINE_CA_CERT")]
-    pub machine_ca_cert: PathBuf,
+    /// Certificate associated with this machine's unique private key. Issued by
+    /// the VX CA.
+    #[arg(long, env = "MACHINE_CERT")]
+    pub machine_cert: PathBuf,
 
     /// Signer to use for signing server request payloads.
     #[arg(long, env = "SIGNER")]
@@ -64,26 +64,26 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn cac_ca_store(&self) -> color_eyre::Result<openssl::x509::store::X509Store> {
+    pub(crate) fn cac_root_ca_store(&self) -> color_eyre::Result<openssl::x509::store::X509Store> {
         let mut builder = openssl::x509::store::X509StoreBuilder::new()?;
 
-        for ca_cert in &self.cac_ca_certs {
+        for ca_cert in &self.cac_root_ca_certs {
             builder.add_cert(load_cert(ca_cert)?)?;
         }
 
         Ok(builder.build())
     }
 
-    pub(crate) fn machine_ca_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
-        load_cert(&self.machine_ca_cert)
+    pub(crate) fn machine_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        load_cert(&self.machine_cert)
     }
 
-    /// Returns the jurisdiction code from the MACHINE_CA_CERT certificate.
+    /// Returns the jurisdiction code from the MACHINE_CERT certificate.
     pub(crate) fn jurisdiction_code(&self) -> color_eyre::Result<JurisdictionCode> {
-        let raw_jurisdiction_code = match extract_field_value(&self.machine_ca_cert()?, VX_CUSTOM_CERT_FIELD_JURISDICTION)
-                .context("Unable to extract jurisdiction code from MACHINE_CA_CERT")? {
+        let raw_jurisdiction_code = match extract_field_value(&self.machine_cert()?, VX_CUSTOM_CERT_FIELD_JURISDICTION)
+                .context("Unable to extract jurisdiction code from MACHINE_CERT")? {
                     Some(value) => value,
-                    None => bail!("MACHINE_CA_CERT does not contain a jurisdiction code in the custom field VX_CUSTOM_CERT_FIELD_JURISDICTION"),
+                    None => bail!("MACHINE_CERT does not contain a jurisdiction code in the custom field VX_CUSTOM_CERT_FIELD_JURISDICTION"),
                 };
 
         match JurisdictionCode::try_from(raw_jurisdiction_code.clone()) {
@@ -99,7 +99,7 @@ impl Config {
     pub(crate) fn sign(&self, payload: &[u8]) -> color_eyre::Result<(Vec<u8>, X509)> {
         let signer = self.signer()?;
         let signature = signer.sign(payload)?;
-        let cert = self.machine_ca_cert()?;
+        let cert = self.machine_cert()?;
         Ok((signature, cert))
     }
 }

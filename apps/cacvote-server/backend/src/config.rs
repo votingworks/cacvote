@@ -26,29 +26,28 @@ pub struct Config {
 
     /// Certificate authority certificate files, used to validate the client
     /// certificates containing a CAC's public key.
-    #[arg(long, env = "CAC_CA_CERTS", value_delimiter = ',')]
-    pub cac_ca_certs: Vec<PathBuf>,
+    #[arg(long, env = "CAC_ROOT_CA_CERTS", value_delimiter = ',')]
+    pub cac_root_ca_certs: Vec<PathBuf>,
 
-    /// Certificate authority certificate files, used to validate the client
-    /// certificates containing a machine's TPM's public key.
-    #[arg(long, env = "MACHINE_CA_CERT")]
-    pub machine_ca_cert: PathBuf,
+    /// Certificate authority used to sign the machine certificates.
+    #[arg(long, env = "ROOT_CA_CERT")]
+    pub vx_root_ca_cert: PathBuf,
 }
 
 impl Config {
-    pub fn cac_ca_store(&self) -> color_eyre::Result<openssl::x509::store::X509Store> {
-        dbg!(&self.cac_ca_certs);
+    pub fn cac_root_ca_store(&self) -> color_eyre::Result<openssl::x509::store::X509Store> {
+        dbg!(&self.cac_root_ca_certs);
         let mut builder = openssl::x509::store::X509StoreBuilder::new()?;
 
-        for ca_cert in &self.cac_ca_certs {
+        for ca_cert in &self.cac_root_ca_certs {
             builder.add_cert(load_cert(ca_cert)?)?;
         }
 
         Ok(builder.build())
     }
 
-    pub fn machine_ca_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
-        load_cert(&self.machine_ca_cert)
+    pub fn vx_root_ca_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        load_cert(&self.vx_root_ca_cert)
     }
 }
 

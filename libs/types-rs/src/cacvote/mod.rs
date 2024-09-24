@@ -216,8 +216,8 @@ impl SignedObject {
     #[cfg(feature = "openssl")]
     pub fn verify(
         &self,
-        machine_ca_cert: &openssl::x509::X509,
-        cac_ca_store: &openssl::x509::store::X509Store,
+        vx_root_ca_cert: &openssl::x509::X509,
+        cac_root_ca_store: &openssl::x509::store::X509Store,
     ) -> Result<bool, openssl::error::ErrorStack> {
         let public_key = self.to_x509()?.public_key()?;
         let mut verifier =
@@ -242,16 +242,16 @@ impl SignedObject {
         match payload {
             // signed by the CAC, check the CAC CA store
             Payload::RegistrationRequest(_) | Payload::CastBallot(_) => {
-                verify_cert(cac_ca_store, &self.to_x509()?)
+                verify_cert(cac_root_ca_store, &self.to_x509()?)
             }
 
-            // signed by the machine TPM, check the machine CA cert
+            // signed by the machine TPM, check the VX root CA cert
             Payload::Registration(_)
             | Payload::Election(_)
             | Payload::EncryptedElectionTally(_)
             | Payload::DecryptedElectionTally(_)
             | Payload::ShuffledEncryptedCastBallots(_) => {
-                verify_cert_single_ca(machine_ca_cert, &self.to_x509()?)
+                verify_cert_single_ca(vx_root_ca_cert, &self.to_x509()?)
             }
         }
     }

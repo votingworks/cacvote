@@ -58,7 +58,7 @@ async fn main() -> color_eyre::Result<()> {
     let pool = db::setup(&config).await?;
 
     app::run(
-        app::setup(pool, config.machine_ca_cert()?, config.cac_ca_store()?).await,
+        app::setup(pool, config.vx_root_ca_cert()?, config.cac_root_ca_store()?).await,
         &config,
     )
     .await

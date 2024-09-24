@@ -46,8 +46,8 @@ base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 /// with the result of this function.
 pub async fn setup(
     pool: PgPool,
-    machine_ca_cert: x509::X509,
-    cac_ca_store: x509::store::X509Store,
+    vx_root_ca_cert: x509::X509,
+    cac_root_ca_store: x509::store::X509Store,
 ) -> Router {
     let _entered = tracing::span!(Level::DEBUG, "Setting up application").entered();
     Router::new()
@@ -90,8 +90,8 @@ pub async fn setup(
         .layer(TraceLayer::new_for_http())
         .with_state(AppState {
             pool,
-            machine_ca_cert,
-            cac_ca_store: Arc::new(cac_ca_store),
+            vx_root_ca_cert,
+            cac_root_ca_store: Arc::new(cac_root_ca_store),
             sessions: Arc::new(Mutex::new(SessionManager::new())),
         })
 }
@@ -114,7 +114,7 @@ async fn get_status() -> impl IntoResponse {
 
 async fn create_session(
     State(AppState {
-        machine_ca_cert,
+        vx_root_ca_cert,
         sessions,
         ..
     }): State<AppState>,
@@ -133,7 +133,7 @@ async fn create_session(
         tracing::error!("Failed to extract public key from certificate: {e}");
         Error::Other(e.into())
     })?;
-    if !verify_cert_single_ca(&machine_ca_cert, &certificate).unwrap_or(false) {
+    if !verify_cert_single_ca(&vx_root_ca_cert, &certificate).unwrap_or(false) {
         tracing::error!("Failed to verify certificate");
         return Err(Error::BadRequest("Failed to verify certificate".to_owned()));
     }
@@ -189,14 +189,14 @@ async fn create_session(
 async fn create_object(
     _session: Session,
     State(AppState {
-        machine_ca_cert,
-        cac_ca_store,
+        vx_root_ca_cert,
+        cac_root_ca_store,
         pool,
         ..
     }): State<AppState>,
     object: Json<cacvote::SignedObject>,
 ) -> Result<impl IntoResponse, Error> {
-    match object.verify(&machine_ca_cert, &cac_ca_store) {
+    match object.verify(&vx_root_ca_cert, &cac_root_ca_store) {
         Ok(true) => (),
         Ok(false) => {
             tracing::error!("Signature verification failed");

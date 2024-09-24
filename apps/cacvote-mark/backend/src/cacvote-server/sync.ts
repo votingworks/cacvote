@@ -7,7 +7,7 @@ import {
 import { LogEventId, Logger } from '@votingworks/logging';
 import { ClientApi } from './client';
 import { Store } from '../store';
-import { CAC_CA_CERTS, MACHINE_CA_CERT } from '../globals';
+import { CAC_ROOT_CA_CERTS, MACHINE_CERT } from '../globals';
 
 async function pullJournalEntries(
   client: ClientApi,
@@ -136,9 +136,9 @@ async function pullObjects(
       continue;
     }
 
-    assert(MACHINE_CA_CERT, 'MACHINE_CA_CERT not set');
-    assert(CAC_CA_CERTS, 'CAC_CA_CERTS not set');
-    const verifyResult = await object.verify(MACHINE_CA_CERT, CAC_CA_CERTS);
+    assert(MACHINE_CERT, 'MACHINE_CERT not set');
+    assert(CAC_ROOT_CA_CERTS, 'CAC_ROOT_CA_CERTS not set');
+    const verifyResult = await object.verify(MACHINE_CERT, CAC_ROOT_CA_CERTS);
 
     if (verifyResult.isErr()) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {

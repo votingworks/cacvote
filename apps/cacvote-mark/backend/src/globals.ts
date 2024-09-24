@@ -67,15 +67,17 @@ export const CACVOTE_URL = process.env.CACVOTE_URL
 /**
  * Signing certificates for Common Access Card (CAC) authentication.
  */
-export const CAC_CA_CERTS = process.env.CAC_CA_CERTS
-  ? process.env.CAC_CA_CERTS.split(',').map((path) => fs.readFileSync(path))
+export const CAC_ROOT_CA_CERTS = process.env.CAC_ROOT_CA_CERTS
+  ? process.env.CAC_ROOT_CA_CERTS.split(',').map((path) =>
+      fs.readFileSync(path)
+    )
   : undefined;
 
 /**
  * Signing certificate for communicating with the CACvote Server.
  */
-export const MACHINE_CA_CERT = process.env.MACHINE_CA_CERT
-  ? fs.readFileSync(process.env.MACHINE_CA_CERT)
+export const MACHINE_CERT = process.env.MACHINE_CERT
+  ? fs.readFileSync(process.env.MACHINE_CERT)
   : undefined;
 
 /**
