@@ -89,7 +89,11 @@ export function CreateElectionModal({
                 onPress={async () => {
                   assert(window.kiosk);
                   const { canceled, filePaths } =
-                    await window.kiosk.showOpenDialog();
+                    await window.kiosk.showOpenDialog({
+                      filters: [
+                        { name: 'Election Definitions', extensions: ['json'] },
+                      ],
+                    });
 
                   if (canceled || filePaths.length === 0) {
                     return;
