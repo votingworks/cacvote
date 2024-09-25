@@ -27,7 +27,7 @@ use sqlx::PgPool;
 use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use types_rs::cacvote::{self, verify_cert_single_ca};
+use types_rs::cacvote::{self, verify_cert_single_ca, ScannedMailingLabel};
 use uuid::Uuid;
 
 use crate::{
@@ -57,8 +57,8 @@ pub async fn setup(
         .route("/api/objects/:object_id", get(get_object_by_id))
         .route("/api/journal-entries", get(get_journal_entries))
         .route(
-            "/api/scanned-mailing-label-code",
-            post(scanned_create_mailing_label_code),
+            "/api/scanned-mailing-label",
+            post(scanned_create_mailing_label),
         )
         .route("/api/elections", get(list_elections))
         .route(
@@ -66,7 +66,7 @@ pub async fn setup(
             get(list_cast_ballots_by_election),
         )
         .route(
-            "/api/elections/:election_id/scanned-mailing-label-codes",
+            "/api/elections/:election_id/scanned-mailing-labels",
             get(list_scanned_mailing_labels_by_election),
         )
         .route(
@@ -257,7 +257,7 @@ async fn get_object_by_id(
     }
 }
 
-async fn scanned_create_mailing_label_code(
+async fn scanned_create_mailing_label(
     State(AppState { pool, .. }): State<AppState>,
     scanned_mailing_label_code: Bytes,
 ) -> Result<impl IntoResponse, Error> {
@@ -300,7 +300,7 @@ async fn list_cast_ballots_by_election(
 async fn list_scanned_mailing_labels_by_election(
     State(AppState { pool, .. }): State<AppState>,
     Path(election_id): Path<Uuid>,
-) -> Result<Json<Vec<db::ScannedMailingLabelCode>>, Error> {
+) -> Result<Json<Vec<ScannedMailingLabel>>, Error> {
     let mut conn = pool.acquire().await?;
 
     Ok(Json(

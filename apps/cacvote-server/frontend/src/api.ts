@@ -10,7 +10,7 @@ export const postScannedCode = {
   useMutation() {
     return useMutation(
       async (data: Uint8Array): Promise<Result<{ id: string }, string>> => {
-        const response = await fetch('/api/scanned-mailing-label-code', {
+        const response = await fetch('/api/scanned-mailing-label', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/octet-stream',
@@ -37,7 +37,7 @@ export type SearchByCommonAccessCardIdResponse = SearchResult[];
 
 export type SearchResult =
   | CastBallotSearchResult
-  | ScannedMailingLabelCodeSearchResult;
+  | ScannedMailingLabelSearchResult;
 
 export interface CastBallotSearchResult {
   type: 'castBallot';
@@ -51,8 +51,8 @@ export interface CastBallotSearchResult {
   createdAt: string;
 }
 
-export interface ScannedMailingLabelCodeSearchResult {
-  type: 'scannedMailingLabelCode';
+export interface ScannedMailingLabelSearchResult {
+  type: 'scannedMailingLabel';
   machineId: string;
   commonAccessCardId: string;
   electionObjectId: string;

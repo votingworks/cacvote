@@ -75,6 +75,10 @@ pub(crate) fn setup(pool: PgPool, config: Config) -> Router {
             "/api/elections/:election_id/mixed-ballots",
             post(mix_encrypted_ballots),
         )
+        .route(
+            "/api/elections/:election_id/scanned-mailing-labels",
+            get(list_scanned_mailing_labels_by_election),
+        )
         .layer(DefaultBodyLimit::max(MAX_REQUEST_SIZE))
         .layer(TraceLayer::new_for_http())
         .with_state(AppState {
@@ -838,4 +842,24 @@ async fn mix_encrypted_ballots(
     }
 
     (StatusCode::CREATED, Json(json!({ "id": signed_object.id })))
+}
+
+/// Proxy `list_scanned_mailing_labels_by_election` to the `cacvote-server` host.
+async fn list_scanned_mailing_labels_by_election(
+    State(AppState { config, .. }): State<AppState>,
+    Path(election_id): Path<Uuid>,
+) -> Result<Json<Vec<cacvote::ScannedMailingLabel>>, StatusCode> {
+    let url = config
+        .cacvote_url
+        .join(format!("/api/elections/{election_id}/scanned-mailing-labels").as_str())
+        .expect("invalid URL");
+
+    let response = reqwest::get(url)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .json::<Vec<cacvote::ScannedMailingLabel>>()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(response))
 }

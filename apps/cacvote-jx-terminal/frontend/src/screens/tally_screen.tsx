@@ -51,6 +51,9 @@ export function TallyScreen(): JSX.Element | null {
   const shuffleEncryptedBallotsMutation =
     api.shuffleEncryptedBallots.useMutation();
 
+  const [isDownloadingBallotManifest, setIsDownloadingBallotManifest] =
+    useState(false);
+
   if (!isAuthenticated || !electionId) {
     return null;
   }
@@ -243,6 +246,34 @@ export function TallyScreen(): JSX.Element | null {
             Shuffle Ballots
           </Button>
         )}
+      </P>
+      <H2>Ballot Manifest</H2>
+      <P>
+        Save the manifest of validated paper ballots received for this election.
+        The manifest contains the voter’s Common Access Card number and
+        encrypted ballot signature hash for each ballot cast.
+      </P>
+      <P>
+        <Button
+          icon="Export"
+          disabled={isDownloadingBallotManifest}
+          onPress={async () => {
+            setIsDownloadingBallotManifest(true);
+            try {
+              const ballotManifestData =
+                await api.getScannedMailingLabelsRawByElection(electionId);
+
+              await downloadData(
+                ballotManifestData,
+                `ballot-manifest-${electionId}.json`
+              );
+            } finally {
+              setIsDownloadingBallotManifest(false);
+            }
+          }}
+        >
+          Save Ballot Manifest
+        </Button>
       </P>
     </NavigationScreen>
   );

@@ -79,7 +79,7 @@ export function SearchScreen(): JSX.Element {
                     <TD>
                       {result.type === 'castBallot'
                         ? '🗳️ Cast Ballot'
-                        : result.type === 'scannedMailingLabelCode'
+                        : result.type === 'scannedMailingLabel'
                         ? '📬 Captured Mail Label'
                         : throwIllegalValue(result)}
                     </TD>
