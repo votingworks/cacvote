@@ -39,12 +39,12 @@ pub(crate) struct Config {
     /// Certificate authority certificate files, used to validate the client
     /// certificates from a CAC.
     #[arg(long, env = "CAC_ROOT_CA_CERTS", value_delimiter = ',')]
-    pub cac_root_ca_certs: Vec<PathBuf>,
+    pub(crate) cac_root_ca_certs: Vec<PathBuf>,
 
     /// Certificate associated with this machine's unique private key. Issued by
     /// the VX CA.
     #[arg(long, env = "MACHINE_CERT")]
-    pub machine_cert: PathBuf,
+    pub(crate) machine_cert: PathBuf,
 
     /// Signer to use for signing server request payloads.
     #[arg(long, env = "SIGNER")]
