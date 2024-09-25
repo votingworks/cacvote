@@ -36,7 +36,6 @@ pub struct Config {
 
 impl Config {
     pub fn cac_root_ca_store(&self) -> color_eyre::Result<openssl::x509::store::X509Store> {
-        dbg!(&self.cac_root_ca_certs);
         let mut builder = openssl::x509::store::X509StoreBuilder::new()?;
 
         for ca_cert in &self.cac_root_ca_certs {
