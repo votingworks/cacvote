@@ -57,6 +57,15 @@ interface VxScanCustomCertFields {
   component: 'scan';
 }
 
+interface CacvoteJxTerminalCustomCertFields {
+  component: 'cacvote-jx-terminal';
+  jurisdiction: string;
+}
+
+interface CacvoteMarkCustomCertFields {
+  component: 'cacvote-mark';
+}
+
 interface SystemAdministratorCardCustomCertFields {
   component: 'card';
   jurisdiction: string;
@@ -82,6 +91,8 @@ export type CustomCertFields =
   | VxCentralScanCustomCertFields
   | VxMarkCustomCertFields
   | VxMarkScanCustomCertFields
+  | CacvoteJxTerminalCustomCertFields
+  | CacvoteMarkCustomCertFields
   | VxScanCustomCertFields
   | CardCustomCertFields;
 
@@ -126,6 +137,17 @@ const VxScanCustomCertFieldsSchema: z.ZodSchema<VxScanCustomCertFields> =
     component: z.literal('scan'),
   });
 
+const CacvoteJxTerminalCustomCertFieldsSchema: z.ZodSchema<CacvoteJxTerminalCustomCertFields> =
+  z.object({
+    component: z.literal('cacvote-jx-terminal'),
+    jurisdiction: z.string(),
+  });
+
+const CacvoteMarkCustomCertFieldsSchema: z.ZodSchema<CacvoteMarkCustomCertFields> =
+  z.object({
+    component: z.literal('cacvote-mark'),
+  });
+
 const SystemAdministratorCardCustomCertFieldsSchema: z.ZodSchema<SystemAdministratorCardCustomCertFields> =
   z.object({
     component: z.literal('card'),
@@ -159,6 +181,8 @@ const CustomCertFieldsSchema: z.ZodSchema<CustomCertFields> = z.union([
   VxMarkCustomCertFieldsSchema,
   VxMarkScanCustomCertFieldsSchema,
   VxScanCustomCertFieldsSchema,
+  CacvoteJxTerminalCustomCertFieldsSchema,
+  CacvoteMarkCustomCertFieldsSchema,
   CardCustomCertFieldsSchema,
 ]);
 
@@ -329,8 +353,10 @@ export function constructMachineCertSubject(
   jurisdiction?: string
 ): string {
   assert(
-    (machineType === 'admin' && jurisdiction !== undefined) ||
-      (machineType !== 'admin' && jurisdiction === undefined)
+    (['admin', 'cacvote-jx-terminal'].includes(machineType) &&
+      jurisdiction !== undefined) ||
+      (!['admin', 'cacvote-jx-terminal'].includes(machineType) &&
+        jurisdiction === undefined)
   );
   const entries = [
     ...STANDARD_CERT_FIELDS,

@@ -93,7 +93,7 @@ impl VxCard {
             VX_CUSTOM_CERT_FIELD_COMPONENT,
         )?;
 
-        if !matches!(vx_admin_cert_authority_cert_component, Some(component) if component == "admin")
+        if !matches!(vx_admin_cert_authority_cert_component, Some(component) if component == "admin" || component == "cacvote-jx-terminal")
         {
             return Err(CardReaderError::CertificateValidation(
                 "vx_admin_cert_authority_cert was not a valid VxAdmin cert".to_owned(),

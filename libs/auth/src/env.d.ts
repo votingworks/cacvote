@@ -7,6 +7,8 @@ declare namespace NodeJS {
       | 'central-scan'
       | 'mark'
       | 'mark-scan'
-      | 'scan';
+      | 'scan'
+      | 'cacvote-jx-terminal'
+      | 'cacvote-mark';
   }
 }

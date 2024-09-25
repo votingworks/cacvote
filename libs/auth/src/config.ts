@@ -43,8 +43,8 @@ export function getMachineCertPathAndPrivateKey(): {
 } {
   const machineType = getRequiredEnvVar('VX_MACHINE_TYPE');
   const machineCertFileName =
-    machineType === 'admin'
-      ? 'vx-admin-cert-authority-cert.pem'
+    machineType === 'admin' || machineType === 'cacvote-jx-terminal'
+      ? `vx-${machineType}-cert-authority-cert.pem`
       : `vx-${machineType}-cert.pem`;
   if (shouldUseProdCerts()) {
     const configRoot = getRequiredEnvVar('VX_CONFIG_ROOT');
@@ -90,7 +90,7 @@ export function constructJavaCardConfig(): JavaCardConfig {
   let cardProgrammingConfig:
     | JavaCardConfig['cardProgrammingConfig']
     | undefined;
-  if (machineType === 'admin') {
+  if (machineType === 'admin' || machineType === 'cacvote-jx-terminal') {
     const { certPath, privateKey } = getMachineCertPathAndPrivateKey();
     cardProgrammingConfig = {
       vxAdminCertAuthorityCertPath: certPath,
