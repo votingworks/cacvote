@@ -6,4 +6,4 @@ BUILD_PATH=apps/cacvote-server/backend
 
 # and instead use the query metadata checked into the repository
 
-export SQLX_OFFLINE=true
+export SQLX_OFFLINE=false
