@@ -30,7 +30,7 @@ procs:
     shell: |
       echo "Waiting for CACvote Mark to start…"
       while ! nc -z localhost 3000; do sleep 1; done
-      kiosk-browser http://localhost:3000/
+      kiosk-browser --allow-devtools http://localhost:3000/
 
   reset-db:
     cwd: 'apps/cacvote-mark/backend'

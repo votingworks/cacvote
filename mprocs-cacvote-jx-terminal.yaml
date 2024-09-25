@@ -11,7 +11,7 @@ procs:
       echo "- Run the 'reset-db' process below to reset the database."
       echo "- To exit mprocs, type 'q' to quit and then 'y' to confirm."
       echo ""
-      echo "The application is running at http://localhost:5000/."
+      echo "The application will launch in 'kiosk-browser' when it's ready."
       sleep 30d
 
   cacvote-jx-backend:
@@ -29,6 +29,16 @@ procs:
     shell: |
       export EG_CLASSPATH=${EG_CLASSPATH:-../../../../egk-ec-mixnet/build/libs/egk-ec-mixnet-2.1-SNAPSHOT-uber.jar}
       cargo watch -- cargo run
+
+  kiosk-browser:
+    cwd: '../kiosk-browser'
+    shell: |
+      echo "Waiting for CACvote JX Terminal to start…"
+      while ! nc -z localhost 5000; do sleep 1; done
+      kiosk-browser \
+        --allow-devtools \
+        -v 'o=http://localhost:*,p=**/*,rw' \
+        http://localhost:5000/
 
   reset-db:
     cwd: 'apps/cacvote-mark/backend'

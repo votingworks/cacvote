@@ -91,10 +91,10 @@ export function TallyScreen(): JSX.Element | null {
     await generateEncryptedElectionTallyMutation.mutateAsync({ electionId });
   }
 
-  function onSaveEncryptedTallyPressed() {
+  async function onSaveEncryptedTallyPressed() {
     const encryptedTally = electionPresenter.getEncryptedTally();
     assert(encryptedTally);
-    downloadData(
+    await downloadData(
       encryptedTally
         .getEncryptedElectionTally()
         .getElectionguardEncryptedTally(),
@@ -106,10 +106,10 @@ export function TallyScreen(): JSX.Element | null {
     decryptEncryptedElectionTallyMutation.mutate({ electionId });
   }
 
-  function onSaveDecryptedTallyPressed() {
+  async function onSaveDecryptedTallyPressed() {
     const decryptedTally = electionPresenter.getDecryptedTally();
     assert(decryptedTally);
-    downloadData(
+    await downloadData(
       decryptedTally
         .getDecryptedElectionTally()
         .getElectionguardDecryptedTally(),
