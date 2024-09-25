@@ -1119,8 +1119,31 @@ pub struct MixEncryptedBallotsRequest {
     pub phases: NonZeroUsize,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScannedMailingLabel {
+    #[serde(with = "Base64Standard")]
+    original_payload: Vec<u8>,
+    signed_buffer: SignedBuffer,
+    ballot_verification_payload: BallotVerificationPayload,
+}
+
+impl ScannedMailingLabel {
+    pub const fn new(
+        original_payload: Vec<u8>,
+        signed_buffer: SignedBuffer,
+        ballot_verification_payload: BallotVerificationPayload,
+    ) -> Self {
+        Self {
+            original_payload,
+            signed_buffer,
+            ballot_verification_payload,
+        }
+    }
+}
+
 /// A payload for verifying a ballot. This payload is encoded as a TLV structure.
-#[derive(Debug, Clone, PartialEq, Encode, Decode, Serialize)]
+#[derive(Debug, Clone, PartialEq, Encode, Decode, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BallotVerificationPayload {
     /// The machine ID of the voting machine.
@@ -1138,12 +1161,12 @@ pub struct BallotVerificationPayload {
     /// The SHA-256 hash of the encrypted ballot signature.
     #[tlv(tag = 0x05)]
     #[serde(with = "Base64Standard")]
-    encrypted_ballot_signature_hash: [u8; 32],
+    encrypted_ballot_signature_hash: Vec<u8>,
 }
 
 impl BallotVerificationPayload {
     /// Creates a new ballot verification payload.
-    pub const fn new(
+    pub fn new(
         machine_id: String,
         common_access_card_id: String,
         election_object_id: Uuid,
@@ -1153,7 +1176,7 @@ impl BallotVerificationPayload {
             machine_id,
             common_access_card_id,
             election_object_id,
-            encrypted_ballot_signature_hash,
+            encrypted_ballot_signature_hash: encrypted_ballot_signature_hash.to_vec(),
         }
     }
 
@@ -1173,13 +1196,13 @@ impl BallotVerificationPayload {
     }
 
     /// Returns the SHA-256 hash of the encrypted ballot signature.
-    pub fn encrypted_ballot_signature_hash(&self) -> &[u8; 32] {
+    pub fn encrypted_ballot_signature_hash(&self) -> &[u8] {
         &self.encrypted_ballot_signature_hash
     }
 }
 
 /// A buffer that has been signed.
-#[derive(Debug, Clone, PartialEq, Encode, Decode, Serialize)]
+#[derive(Debug, Clone, PartialEq, Encode, Decode, Serialize, Deserialize)]
 pub struct SignedBuffer {
     /// The buffer that was signed.
     #[tlv(tag = 0x06)]

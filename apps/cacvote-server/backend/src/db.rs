@@ -17,7 +17,7 @@ use sqlx::{self, postgres::PgPoolOptions, Connection, PgPool};
 use tracing::Level;
 use types_rs::cacvote::{
     self, BallotVerificationPayload, JournalEntry, JournalEntryAction, JurisdictionCode,
-    SignedBuffer, SignedObject,
+    ScannedMailingLabel, SignedBuffer, SignedObject,
 };
 use uuid::Uuid;
 
@@ -364,15 +364,6 @@ pub async fn get_machine_by_identifier(
     .await?)
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ScannedMailingLabelCode {
-    #[serde(with = "Base64Standard")]
-    original_payload: Vec<u8>,
-    signed_buffer: SignedBuffer,
-    ballot_verification_payload: BallotVerificationPayload,
-}
-
 pub async fn create_scanned_mailing_label_code(
     conn: &mut sqlx::PgConnection,
     ballot_verification_payload: &[u8],
@@ -429,7 +420,7 @@ pub async fn create_scanned_mailing_label_code(
 pub async fn get_scanned_mailing_label_codes(
     conn: &mut sqlx::PgConnection,
     election_id: Uuid,
-) -> color_eyre::Result<Vec<ScannedMailingLabelCode>> {
+) -> color_eyre::Result<Vec<ScannedMailingLabel>> {
     let records = sqlx::query!(
         r#"
         SELECT original_payload
@@ -449,11 +440,11 @@ pub async fn get_scanned_mailing_label_codes(
             let ballot_verification_payload: BallotVerificationPayload =
                 tlv::from_slice(signed_buffer.buffer())?;
 
-            Ok(ScannedMailingLabelCode {
+            Ok(ScannedMailingLabel::new(
                 original_payload,
                 signed_buffer,
                 ballot_verification_payload,
-            })
+            ))
         })
         .collect::<color_eyre::Result<Vec<_>>>()
 }
@@ -473,7 +464,7 @@ pub enum SearchResult {
         created_at: time::OffsetDateTime,
     },
     #[serde(rename_all = "camelCase")]
-    ScannedMailingLabelCode {
+    ScannedMailingLabel {
         #[serde(flatten)]
         ballot_verification: BallotVerificationPayload,
 
@@ -566,7 +557,7 @@ pub async fn search(
             else {
                 bail!("Invalid encrypted ballot signature hash")
             };
-            Ok(SearchResult::ScannedMailingLabelCode {
+            Ok(SearchResult::ScannedMailingLabel {
                 ballot_verification: BallotVerificationPayload::new(
                     record.machine_id,
                     record.common_access_card_id,

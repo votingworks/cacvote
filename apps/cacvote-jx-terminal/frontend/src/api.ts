@@ -236,3 +236,23 @@ export const authenticate = {
     });
   },
 } as const;
+
+/**
+ * Gets the raw mailing label data for the given election. We don't parse it
+ * here because we're just going to download it.
+ */
+export async function getScannedMailingLabelsRawByElection(
+  electionId: Uuid
+): Promise<Uint8Array> {
+  const response = await fetch(
+    `/api/elections/${electionId}/scanned-mailing-labels`
+  );
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch scanned mailing labels: ${response.statusText}`
+    );
+  }
+
+  const blob = await response.blob();
+  return new Uint8Array(await blob.arrayBuffer());
+}
