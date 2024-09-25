@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            cb.id AS cast_ballot_id,\n            cb.election_id as cast_ballot_election_id,\n            cb.payload AS cast_ballot_payload,\n            cb.certificates AS cast_ballot_certificates,\n            cb.signature AS cast_ballot_signature,\n            rr.id AS registration_request_id,\n            rr.election_id AS registration_request_election_id,\n            rr.payload AS registration_request_payload,\n            rr.certificates AS registration_request_certificates,\n            rr.signature AS registration_request_signature,\n            r.id AS registration_id,\n            r.election_id AS registration_election_id,\n            r.payload AS registration_payload,\n            r.certificates AS registration_certificates,\n            r.signature AS registration_signature,\n            cb.created_at AS created_at\n        FROM objects AS cb\n        -- join on registration request\n        INNER JOIN objects AS rr\n            ON (convert_from(cb.payload, 'UTF8')::jsonb ->> $1)::uuid = rr.id\n        -- join on registration\n        INNER JOIN objects AS r\n            ON (convert_from(cb.payload, 'UTF8')::jsonb ->> $2)::uuid = r.id\n        WHERE rr.object_type = $3\n          AND cb.object_type = $4\n          AND r.object_type = $5\n        ORDER BY cb.created_at DESC\n        ",
+  "query": "\n        SELECT\n            cb.id AS cast_ballot_id,\n            cb.election_id as cast_ballot_election_id,\n            cb.payload AS cast_ballot_payload,\n            cb.certificate AS cast_ballot_certificate,\n            cb.signature AS cast_ballot_signature,\n            rr.id AS registration_request_id,\n            rr.election_id AS registration_request_election_id,\n            rr.payload AS registration_request_payload,\n            rr.certificate AS registration_request_certificate,\n            rr.signature AS registration_request_signature,\n            r.id AS registration_id,\n            r.election_id AS registration_election_id,\n            r.payload AS registration_payload,\n            r.certificate AS registration_certificate,\n            r.signature AS registration_signature,\n            cb.created_at AS created_at\n        FROM objects AS cb\n        -- join on registration request\n        INNER JOIN objects AS rr\n            ON (convert_from(cb.payload, 'UTF8')::jsonb ->> $1)::uuid = rr.id\n        -- join on registration\n        INNER JOIN objects AS r\n            ON (convert_from(cb.payload, 'UTF8')::jsonb ->> $2)::uuid = r.id\n        WHERE rr.object_type = $3\n          AND cb.object_type = $4\n          AND r.object_type = $5\n        ORDER BY cb.created_at DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "cast_ballot_certificates",
+        "name": "cast_ballot_certificate",
         "type_info": "Bytea"
       },
       {
@@ -45,7 +45,7 @@
       },
       {
         "ordinal": 8,
-        "name": "registration_request_certificates",
+        "name": "registration_request_certificate",
         "type_info": "Bytea"
       },
       {
@@ -70,7 +70,7 @@
       },
       {
         "ordinal": 13,
-        "name": "registration_certificates",
+        "name": "registration_certificate",
         "type_info": "Bytea"
       },
       {
@@ -112,5 +112,5 @@
       false
     ]
   },
-  "hash": "b70f30c0cc40f15a957c9874e9dd1d89c2f06529e3fb385a10da7ea1cdf1367f"
+  "hash": "aa427fae6857d55bc320587ab635fbf980e53aa01f49323cd42c23caacbe3089"
 }

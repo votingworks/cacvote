@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            cb.id AS cast_ballot_id,\n            cb.election_id as cast_ballot_election_id,\n            cb.payload AS cast_ballot_payload,\n            cb.certificates AS cast_ballot_certificates,\n            cb.signature AS cast_ballot_signature\n        FROM objects AS cb\n        WHERE cb.object_type = $1\n          AND (convert_from(cb.payload, 'UTF8')::jsonb ->> $2)::uuid = $3\n        ",
+  "query": "\n        SELECT\n            cb.id AS cast_ballot_id,\n            cb.election_id as cast_ballot_election_id,\n            cb.payload AS cast_ballot_payload,\n            cb.certificate AS cast_ballot_certificate,\n            cb.signature AS cast_ballot_signature\n        FROM objects AS cb\n        WHERE cb.object_type = $1\n          AND (convert_from(cb.payload, 'UTF8')::jsonb ->> $2)::uuid = $3\n        ",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "cast_ballot_certificates",
+        "name": "cast_ballot_certificate",
         "type_info": "Bytea"
       },
       {
@@ -44,5 +44,5 @@
       false
     ]
   },
-  "hash": "825f8bb0091756d0627d400a219340ca12dadb2a8c2377b4d04f0ffb7df9eb52"
+  "hash": "4ad9947b8f24b9646dd93a550bc94241e9198a5708a21677903b3ff12ba1c53a"
 }

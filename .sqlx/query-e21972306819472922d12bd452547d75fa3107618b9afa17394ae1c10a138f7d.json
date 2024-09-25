@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            r.id AS registration_id,\n            r.payload AS registration_payload,\n            r.certificates AS registration_certificates,\n            r.signature AS registration_signature,\n            e.id AS election_id,\n            e.election_id AS election_election_id,\n            e.payload AS election_payload,\n            e.certificates AS election_certificates,\n            e.signature AS election_signature,\n            rr.id AS registration_request_id,\n            rr.election_id AS registration_request_election_id,\n            rr.payload AS registration_request_payload,\n            rr.certificates AS registration_request_certificates,\n            rr.signature AS registration_request_signature,\n            r.created_at AS created_at,\n            r.server_synced_at IS NOT NULL AS \"is_synced!: bool\"\n        FROM objects AS r\n        INNER JOIN objects AS e\n            ON (convert_from(r.payload, 'UTF8')::jsonb ->> $1)::uuid = e.id\n        INNER JOIN objects AS rr\n            ON (convert_from(r.payload, 'UTF8')::jsonb ->> $2)::uuid = rr.id\n        WHERE e.object_type = $3\n          AND r.object_type = $4\n        ORDER BY r.created_at DESC\n        ",
+  "query": "\n        SELECT\n            r.id AS registration_id,\n            r.payload AS registration_payload,\n            r.certificate AS registration_certificate,\n            r.signature AS registration_signature,\n            e.id AS election_id,\n            e.election_id AS election_election_id,\n            e.payload AS election_payload,\n            e.certificate AS election_certificate,\n            e.signature AS election_signature,\n            rr.id AS registration_request_id,\n            rr.election_id AS registration_request_election_id,\n            rr.payload AS registration_request_payload,\n            rr.certificate AS registration_request_certificate,\n            rr.signature AS registration_request_signature,\n            r.created_at AS created_at,\n            r.server_synced_at IS NOT NULL AS \"is_synced!: bool\"\n        FROM objects AS r\n        INNER JOIN objects AS e\n            ON (convert_from(r.payload, 'UTF8')::jsonb ->> $1)::uuid = e.id\n        INNER JOIN objects AS rr\n            ON (convert_from(r.payload, 'UTF8')::jsonb ->> $2)::uuid = rr.id\n        WHERE e.object_type = $3\n          AND r.object_type = $4\n        ORDER BY r.created_at DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -15,7 +15,7 @@
       },
       {
         "ordinal": 2,
-        "name": "registration_certificates",
+        "name": "registration_certificate",
         "type_info": "Bytea"
       },
       {
@@ -40,7 +40,7 @@
       },
       {
         "ordinal": 7,
-        "name": "election_certificates",
+        "name": "election_certificate",
         "type_info": "Bytea"
       },
       {
@@ -65,7 +65,7 @@
       },
       {
         "ordinal": 12,
-        "name": "registration_request_certificates",
+        "name": "registration_request_certificate",
         "type_info": "Bytea"
       },
       {
@@ -111,5 +111,5 @@
       null
     ]
   },
-  "hash": "87dd579ecf06504b0cdd9c36476095e4ad14abe806dc2ec6a2fec9602429b6f7"
+  "hash": "e21972306819472922d12bd452547d75fa3107618b9afa17394ae1c10a138f7d"
 }

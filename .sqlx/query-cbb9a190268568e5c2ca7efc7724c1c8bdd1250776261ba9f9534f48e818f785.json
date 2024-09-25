@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO machines (machine_identifier, certificates)\n        VALUES ($1, $2)\n        RETURNING id, machine_identifier, certificates, created_at\n        ",
+  "query": "\n        SELECT\n            id,\n            machine_identifier,\n            certificate,\n            created_at\n        FROM machines\n        WHERE machine_identifier = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -15,7 +15,7 @@
       },
       {
         "ordinal": 2,
-        "name": "certificates",
+        "name": "certificate",
         "type_info": "Bytea"
       },
       {
@@ -26,8 +26,7 @@
     ],
     "parameters": {
       "Left": [
-        "Varchar",
-        "Bytea"
+        "Text"
       ]
     },
     "nullable": [
@@ -37,5 +36,5 @@
       false
     ]
   },
-  "hash": "85a0049a9c196fc5d801c0778b6f70a32679c2da65406c6c4bc6576809801080"
+  "hash": "cbb9a190268568e5c2ca7efc7724c1c8bdd1250776261ba9f9534f48e818f785"
 }

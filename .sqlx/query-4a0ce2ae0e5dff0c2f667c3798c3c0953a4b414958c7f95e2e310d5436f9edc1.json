@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            b.id AS shuffled_encrypted_cast_ballots_id,\n            b.election_id AS shuffled_encrypted_cast_ballots_election_id,\n            b.payload AS shuffled_encrypted_cast_ballots_payload,\n            b.certificates AS shuffled_encrypted_cast_ballots_certificates,\n            b.signature AS shuffled_encrypted_cast_ballots_signature,\n            b.created_at AS shuffled_encrypted_cast_ballots_created_at,\n            b.server_synced_at AS shuffled_encrypted_cast_ballots_server_synced_at\n        FROM objects AS b\n        WHERE b.object_type = $1\n          AND (convert_from(b.payload, 'UTF8')::jsonb ->> $2)::uuid = $3\n        ",
+  "query": "\n        SELECT\n            b.id AS shuffled_encrypted_cast_ballots_id,\n            b.election_id AS shuffled_encrypted_cast_ballots_election_id,\n            b.payload AS shuffled_encrypted_cast_ballots_payload,\n            b.certificate AS shuffled_encrypted_cast_ballots_certificate,\n            b.signature AS shuffled_encrypted_cast_ballots_signature,\n            b.created_at AS shuffled_encrypted_cast_ballots_created_at,\n            b.server_synced_at AS shuffled_encrypted_cast_ballots_server_synced_at\n        FROM objects AS b\n        WHERE b.object_type = $1\n          AND (convert_from(b.payload, 'UTF8')::jsonb ->> $2)::uuid = $3\n        ",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "shuffled_encrypted_cast_ballots_certificates",
+        "name": "shuffled_encrypted_cast_ballots_certificate",
         "type_info": "Bytea"
       },
       {
@@ -56,5 +56,5 @@
       true
     ]
   },
-  "hash": "5656121b651e564e1535f89bd88be5801760e889aedb8c3e51f96207f727b2eb"
+  "hash": "4a0ce2ae0e5dff0c2f667c3798c3c0953a4b414958c7f95e2e310d5436f9edc1"
 }

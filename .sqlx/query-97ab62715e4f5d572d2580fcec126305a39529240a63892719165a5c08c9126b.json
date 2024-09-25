@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            rr.id,\n            rr.election_id,\n            rr.payload,\n            rr.certificates,\n            rr.signature,\n            rr.created_at\n        FROM\n            objects AS rr\n        WHERE\n            rr.object_type = $1\n          AND\n            NOT EXISTS (\n                SELECT 1\n                FROM objects AS r\n                WHERE r.object_type = $2\n                  AND rr.id = (convert_from(r.payload, 'UTF8')::jsonb ->> $3)::uuid\n            )\n        ORDER BY rr.created_at DESC\n        ",
+  "query": "\n        SELECT\n            rr.id,\n            rr.election_id,\n            rr.payload,\n            rr.certificate,\n            rr.signature,\n            rr.created_at\n        FROM\n            objects AS rr\n        WHERE\n            rr.object_type = $1\n          AND\n            NOT EXISTS (\n                SELECT 1\n                FROM objects AS r\n                WHERE r.object_type = $2\n                  AND rr.id = (convert_from(r.payload, 'UTF8')::jsonb ->> $3)::uuid\n            )\n        ORDER BY rr.created_at DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "certificates",
+        "name": "certificate",
         "type_info": "Bytea"
       },
       {
@@ -50,5 +50,5 @@
       false
     ]
   },
-  "hash": "da0618fdb97abbfe9018dab35f4c867323fc9544c2e5cf03f366ba781bb3faaa"
+  "hash": "97ab62715e4f5d572d2580fcec126305a39529240a63892719165a5c08c9126b"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id,\n            election_id,\n            payload,\n            certificates,\n            signature\n        FROM objects\n        WHERE object_type = 'Election'\n        ORDER BY created_at DESC\n        ",
+  "query": "\n            SELECT id, election_id, payload, certificate, signature\n            FROM objects\n            WHERE election_id = $1\n              AND object_type = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "certificates",
+        "name": "certificate",
         "type_info": "Bytea"
       },
       {
@@ -30,7 +30,10 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
     },
     "nullable": [
       false,
@@ -40,5 +43,5 @@
       false
     ]
   },
-  "hash": "54645459573f3837a93d5c679c8a32ddba897a6f23800bc2cd4fdd5ce6d1e80c"
+  "hash": "788dc1b60b91f82c4e0e05d338bbc8fb98c169c64156f04914709a1ffaf26957"
 }

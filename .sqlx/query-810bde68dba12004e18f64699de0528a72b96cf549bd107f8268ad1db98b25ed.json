@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id,\n            election_id,\n            payload,\n            certificates,\n            signature\n        FROM objects\n        WHERE server_synced_at IS NULL\n        ",
+  "query": "\n        SELECT\n            id,\n            election_id,\n            payload,\n            certificate,\n            signature\n        FROM objects\n        WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "certificates",
+        "name": "certificate",
         "type_info": "Bytea"
       },
       {
@@ -30,7 +30,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Uuid"
+      ]
     },
     "nullable": [
       false,
@@ -40,5 +42,5 @@
       false
     ]
   },
-  "hash": "e1f2345d1c8a510e885f0f26eebdf5ba687bbced4d459c6bb0d3d3c6b1c5bace"
+  "hash": "810bde68dba12004e18f64699de0528a72b96cf549bd107f8268ad1db98b25ed"
 }

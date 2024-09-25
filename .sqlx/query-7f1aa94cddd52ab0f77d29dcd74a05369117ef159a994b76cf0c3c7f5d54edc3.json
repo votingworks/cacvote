@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id,\n            election_id,\n            payload,\n            certificates,\n            signature\n        FROM objects\n        WHERE id = $1\n        ",
+  "query": "\n        SELECT id, election_id, payload, certificate, signature\n        FROM objects\n        WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "certificates",
+        "name": "certificate",
         "type_info": "Bytea"
       },
       {
@@ -42,5 +42,5 @@
       false
     ]
   },
-  "hash": "2146d0a6e396bc26f5333c183c5eb7f6abb517bd5211b58250906e2929ef4ded"
+  "hash": "7f1aa94cddd52ab0f77d29dcd74a05369117ef159a994b76cf0c3c7f5d54edc3"
 }
