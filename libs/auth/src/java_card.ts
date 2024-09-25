@@ -277,7 +277,11 @@ export class JavaCard implements Card {
     const vxAdminCertAuthorityCertDetails = await parseCert(
       await fs.readFile(vxAdminCertAuthorityCertPath)
     );
-    assert(vxAdminCertAuthorityCertDetails.component === 'admin');
+    assert(
+      vxAdminCertAuthorityCertDetails.component === 'admin' ||
+        /* istanbul ignore next */
+        vxAdminCertAuthorityCertDetails.component === 'cacvote-jx-terminal'
+    );
     assert(
       user.jurisdiction === vxAdminCertAuthorityCertDetails.jurisdiction,
       `User jurisdiction ${user.jurisdiction} does not match cert authority jurisdiction ${vxAdminCertAuthorityCertDetails.jurisdiction}`
@@ -439,7 +443,11 @@ export class JavaCard implements Card {
     const vxAdminCertAuthorityCertDetails = await parseCert(
       vxAdminCertAuthorityCert
     );
-    assert(vxAdminCertAuthorityCertDetails.component === 'admin');
+    assert(
+      vxAdminCertAuthorityCertDetails.component === 'admin' ||
+        /* istanbul ignore next */
+        vxAdminCertAuthorityCertDetails.component === 'cacvote-jx-terminal'
+    );
     await verifyFirstCertWasSignedBySecondCert(
       vxAdminCertAuthorityCert,
       this.vxCertAuthorityCertPath

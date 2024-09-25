@@ -6,7 +6,7 @@ import { getRequiredEnvVar } from '../src/env_vars';
 
 const machineType = getRequiredEnvVar('VX_MACHINE_TYPE');
 const jurisdiction =
-  machineType === 'admin'
+  machineType === 'admin' || machineType === 'cacvote-jx-terminal'
     ? getRequiredEnvVar('VX_MACHINE_JURISDICTION')
     : undefined;
 
