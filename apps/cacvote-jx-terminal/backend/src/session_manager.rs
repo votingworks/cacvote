@@ -34,7 +34,12 @@ impl Clone for SessionManager {
 }
 
 impl SessionManager {
-    pub(crate) fn new(jurisdiction_code: cacvote::JurisdictionCode, pool: sqlx::PgPool) -> Self {
+    pub(crate) fn new(
+        vx_cert_authority_cert: openssl::x509::X509,
+        vx_admin_cert_authority_cert: openssl::x509::X509,
+        jurisdiction_code: cacvote::JurisdictionCode,
+        pool: sqlx::PgPool,
+    ) -> Self {
         let (session_data_tx, _) = watch::channel(cacvote::SessionData::Unauthenticated {
             has_smartcard: false,
         });
@@ -46,6 +51,8 @@ impl SessionManager {
         tokio::spawn({
             let session_data_tx = session_data_tx.clone();
             let session_ops_tx = session_ops_tx.clone();
+            let vx_cert_authority_cert = vx_cert_authority_cert.clone();
+            let vx_admin_cert_authority_cert = vx_admin_cert_authority_cert.clone();
             let mut db_interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
             let mut last_session_data = None;
 
@@ -84,7 +91,11 @@ impl SessionManager {
                                 Some(Ok(event)) => match event {
                                     auth_rs::Event::CardInserted { reader_name } => {
                                         let card = match async_card::AsyncCard::connect(&ctx, &reader_name) {
-                                            Ok(async_card) => VxCard::new(async_card),
+                                            Ok(async_card) => VxCard::new(
+                                                vx_cert_authority_cert.clone(),
+                                                vx_admin_cert_authority_cert.clone(),
+                                                async_card
+                                            ),
                                             Err(e) => {
                                                 tracing::error!("error creating async card: {e}");
                                                 continue;

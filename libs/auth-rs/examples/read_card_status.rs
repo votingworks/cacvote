@@ -1,9 +1,43 @@
-use std::process;
+use std::{
+    path::{Path, PathBuf},
+    process,
+};
 
+use clap::Parser;
 use tracing::Level;
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
 use auth_rs::{async_card::AsyncCard, vx_card::VxCard, Event, Watcher};
+
+#[derive(Parser)]
+struct Config {
+    /// VX CA certificate.
+    #[arg(long, env = "VX_CA_CERT")]
+    pub(crate) vx_cert_authority_cert: PathBuf,
+
+    /// VxAdmin CA certificate.
+    #[arg(long, env = "VX_ADMIN_CA_CERT")]
+    pub(crate) vx_admin_cert_authority_cert: PathBuf,
+}
+
+impl Config {
+    pub(crate) fn vx_cert_authority_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        load_cert(&self.vx_cert_authority_cert)
+    }
+
+    pub(crate) fn vx_admin_cert_authority_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        load_cert(&self.vx_admin_cert_authority_cert)
+    }
+}
+
+fn load_cert<P>(path: P) -> color_eyre::Result<openssl::x509::X509>
+where
+    P: AsRef<Path>,
+{
+    let ca_cert = std::fs::read(path)?;
+    Ok(openssl::x509::X509::from_pem(&ca_cert)
+        .or_else(|_| openssl::x509::X509::from_der(&ca_cert))?)
+}
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -26,6 +60,7 @@ async fn main() -> color_eyre::Result<()> {
         .with(stdout_log)
         .init();
 
+    let config = Config::parse();
     let ctx = pcsc::Context::establish(pcsc::Scope::User)?;
     let mut watcher = Watcher::watch();
     let mut card: Option<VxCard> = None;
@@ -35,7 +70,11 @@ async fn main() -> color_eyre::Result<()> {
     while let Some(event) = watcher.recv().await {
         match event? {
             Event::CardInserted { reader_name } => {
-                card = Some(VxCard::new(AsyncCard::connect(&ctx, &reader_name)?));
+                card = Some(VxCard::new(
+                    config.vx_cert_authority_cert()?,
+                    config.vx_admin_cert_authority_cert()?,
+                    AsyncCard::connect(&ctx, &reader_name)?,
+                ));
                 break;
             }
             _ => {}

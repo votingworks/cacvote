@@ -38,6 +38,8 @@ pub const DEFAULT_PIN: &str = "000000";
 /// Provides an async interface to JavaCards programmed with the VotingWorks
 /// applet. Intended to be used with Tokio.
 pub struct VxCard {
+    vx_cert_authority_cert: openssl::x509::X509,
+    vx_admin_cert_authority_cert: openssl::x509::X509,
     card: AsyncCard,
 }
 
@@ -48,8 +50,16 @@ impl Debug for VxCard {
 }
 
 impl VxCard {
-    pub const fn new(card: AsyncCard) -> Self {
-        Self { card }
+    pub const fn new(
+        vx_cert_authority_cert: openssl::x509::X509,
+        vx_admin_cert_authority_cert: openssl::x509::X509,
+        card: AsyncCard,
+    ) -> Self {
+        Self {
+            vx_cert_authority_cert,
+            vx_admin_cert_authority_cert,
+            card,
+        }
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
@@ -58,11 +68,8 @@ impl VxCard {
 
         // Verify that the card VotingWorks cert was signed by VotingWorks
         let card_vx_cert = self.retrieve_cert(CARD_VX_CERT.object_id()).await?;
-        let vx_cert_authority_cert = openssl::x509::X509::from_pem(include_bytes!(
-            "../../../libs/auth/certs/dev/vx-cert-authority-cert.pem"
-        ))?;
 
-        let vx_cert_authority_public_key = vx_cert_authority_cert.public_key()?;
+        let vx_cert_authority_public_key = self.vx_cert_authority_cert.public_key()?;
         if !card_vx_cert.verify(&vx_cert_authority_public_key)? {
             return Err(CardReaderError::CertificateValidation(
                 "card_vx_cert was not signed by vx_cert_authority_cert".to_owned(),
@@ -84,12 +91,8 @@ impl VxCard {
 
         // Verify that the VxAdmin cert authority cert on the card is a valid VxAdmin cert, signed by
         // VotingWorks
-        let vx_admin_cert_authority_cert = openssl::x509::X509::from_pem(include_bytes!(
-            "../../../libs/auth/certs/dev/vx-admin-cert-authority-cert.pem"
-        ))?;
-
         let vx_admin_cert_authority_cert_component = extract_field_value(
-            &vx_admin_cert_authority_cert,
+            &self.vx_admin_cert_authority_cert,
             VX_CUSTOM_CERT_FIELD_COMPONENT,
         )?;
 
@@ -190,11 +193,15 @@ impl VxCard {
         pin: Option<&str>,
     ) -> Result<(Vec<u8>, X509), CardReaderError> {
         self.select_applet().await?;
+
+        if let Some(pin) = pin {
+            self.check_pin_internal(pin).await?;
+        }
+
         let cert = self.retrieve_cert(signing_cert.object_id()).await?;
         let public_key = cert.public_key()?;
         Ok((
-            self.sign_with_keys(signing_cert, &public_key, data, pin)
-                .await?,
+            self.sign_with_keys(signing_cert, &public_key, data).await?,
             cert,
         ))
     }
@@ -206,6 +213,10 @@ impl VxCard {
         public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
         pin: Option<&str>,
     ) -> Result<(), CardReaderError> {
+        if let Some(pin) = pin {
+            self.check_pin_internal(pin).await?;
+        }
+
         // have the private key sign a "challenge"
         let challenge_string = format!(
             "VotingWorks/{seconds_since_epoch}/{uuid}",
@@ -216,21 +227,18 @@ impl VxCard {
             uuid = Uuid::new_v4()
         );
         let challenge = challenge_string.as_bytes();
-        self.sign_with_keys(signing_cert, public_key, challenge, pin)
+        self.sign_with_keys(signing_cert, public_key, challenge)
             .await?;
         Ok(())
     }
 
-    #[tracing::instrument(level = "debug", skip(self, public_key, data, pin))]
+    #[tracing::instrument(level = "debug", skip(self, public_key, data))]
     async fn sign_with_keys(
         &self,
         signing_cert: CertObject,
         public_key: &openssl::pkey::PKey<openssl::pkey::Public>,
         data: &[u8],
-        pin: Option<&str>,
     ) -> Result<Vec<u8>, CardReaderError> {
-        self.check_pin_internal(pin.unwrap_or(DEFAULT_PIN)).await?;
-
         let data_hash = openssl::sha::sha256(data);
         let command =
             CardCommand::verify_card_private_key(signing_cert.private_key_id, &data_hash)?;

@@ -54,7 +54,16 @@ pub(crate) fn setup(pool: PgPool, config: Config) -> Router {
     let jurisdiction_code = config
         .jurisdiction_code()
         .expect("missing or invalid jurisdiction code");
-    let session_manager = SessionManager::new(jurisdiction_code, pool.clone());
+    let session_manager = SessionManager::new(
+        config
+            .vx_cert_authority_cert()
+            .expect("missing or invalid VX CA cert"),
+        config
+            .machine_cert()
+            .expect("missing or invalid VxAdmin CA cert"),
+        jurisdiction_code,
+        pool.clone(),
+    );
 
     router
         .route("/api/status", get(get_status))
@@ -107,7 +116,7 @@ async fn get_status_stream(
     }): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let stream = tokio_stream::wrappers::WatchStream::new(session_manager.subscribe())
-        .map(|data| Ok(Event::default().json_data(&data).unwrap()));
+        .map(|data| Ok(Event::default().json_data(data).unwrap()));
 
     Sse::new(stream).keep_alive(KeepAlive::default())
 }

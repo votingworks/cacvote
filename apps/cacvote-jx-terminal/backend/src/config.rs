@@ -50,6 +50,10 @@ pub(crate) struct Config {
     #[arg(long, env = "SIGNER")]
     pub(crate) signer: signer::Description,
 
+    /// VX CA certificate.
+    #[arg(long, env = "VX_CA_CERT")]
+    pub(crate) vx_cert_authority_cert: PathBuf,
+
     /// Directory to serve static files from.
     #[arg(long, env = "PUBLIC_DIR")]
     pub(crate) public_dir: Option<PathBuf>,
@@ -76,6 +80,10 @@ impl Config {
 
     pub(crate) fn machine_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
         load_cert(&self.machine_cert)
+    }
+
+    pub(crate) fn vx_cert_authority_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        load_cert(&self.vx_cert_authority_cert)
     }
 
     /// Returns the jurisdiction code from the MACHINE_CERT certificate.
