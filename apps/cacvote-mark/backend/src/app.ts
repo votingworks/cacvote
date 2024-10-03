@@ -446,6 +446,10 @@ export function buildApp({
   const app: Application = express();
   const api = buildApi({ auth, workspace });
 
+  app.use('/api/status', (_req, res) => {
+    res.json({ status: 'ok' });
+  });
+
   app.use('/api/watchAuthStatus', (req, res) => {
     res.set({
       'Content-Type': 'text/event-stream',

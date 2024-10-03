@@ -142,6 +142,10 @@ export class UsabilityTestClient implements ClientApi {
     return Promise.resolve(ok(this.journalEntries.slice(sinceIndex + 1)));
   }
 
+  enrollMachine(): Promise<ClientResult<void>> {
+    return Promise.resolve(ok());
+  }
+
   private async autoRegisterPendingRequests(): Promise<void> {
     const getFirstElectionResult = iter(this.objects.values())
       .filterMap((object) => {

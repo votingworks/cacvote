@@ -16,10 +16,6 @@ path = "bin/cacvote-server.rs"
 name = "cacvote-client"
 path = "bin/cacvote-client.rs"
 
-[[bin]]
-name = "enroll-voter-terminal-machine"
-path = "bin/enroll-voter-terminal-machine.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

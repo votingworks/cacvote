@@ -7,7 +7,7 @@ import {
 import { LogEventId, Logger } from '@votingworks/logging';
 import { ClientApi } from './client';
 import { Store } from '../store';
-import { CAC_ROOT_CA_CERTS, MACHINE_CERT } from '../globals';
+import { CAC_ROOT_CA_CERTS, MACHINE_CERT, VX_CA_CERT } from '../globals';
 
 async function pullJournalEntries(
   client: ClientApi,
@@ -136,9 +136,10 @@ async function pullObjects(
       continue;
     }
 
+    assert(VX_CA_CERT, 'VX_CA_CERT not set');
     assert(MACHINE_CERT, 'MACHINE_CERT not set');
     assert(CAC_ROOT_CA_CERTS, 'CAC_ROOT_CA_CERTS not set');
-    const verifyResult = await object.verify(MACHINE_CERT, CAC_ROOT_CA_CERTS);
+    const verifyResult = await object.verify(VX_CA_CERT, CAC_ROOT_CA_CERTS);
 
     if (verifyResult.isErr()) {
       await logger.log(LogEventId.ApplicationStartup, 'system', {
@@ -228,6 +229,15 @@ export function syncPeriodically(
 ): () => Promise<void> {
   const stopped = deferred<void>();
   let stopping = false;
+
+  client.enrollMachine().catch((err) => {
+    void logger.log(LogEventId.ApplicationStartup, 'system', {
+      message: `Failed to enroll machine with CACvote Server: ${extractErrorMessage(
+        err
+      )}`,
+      disposition: 'failure',
+    });
+  });
 
   void (async () => {
     while (!stopping) {

@@ -29,7 +29,7 @@ procs:
     cwd: '../kiosk-browser'
     shell: |
       echo "Waiting for CACvote Mark to start…"
-      while ! nc -z localhost 3000; do sleep 1; done
+      while ! curl --silent --fail localhost:3000/api/status; do sleep 1; done
       kiosk-browser --allow-devtools http://localhost:3000/
 
   reset-db:

@@ -6,9 +6,6 @@ procs:
       echo "\e[1mTips:\e[0m"
       echo "- Run the 'expose-server' process below to expose the server on the internet"
       echo "  so that you can access it from your phone or another computer."
-      echo "- Run the 'enroll-dev-machine' process below to set up the database to allow"
-      echo "  scanning mail labels for the default development CACvote Mark machine."
-      echo "  (Run this if you get the 'Machine with identifier 000 not found' error.)"
       echo "- Run the 'reset-db' process below to reset the database."
       echo "- To exit mprocs, type 'q' to quit and then 'y' to confirm."
       echo ""
@@ -33,12 +30,6 @@ procs:
       fi
 
       ngrok http 3000
-
-  enroll-dev-machine:
-    autostart: false
-    cwd: 'apps/cacvote-server/backend'
-    shell: |
-      cargo run --bin enroll-voter-terminal-machine 000 ../../../libs/auth/certs/dev/vx-mark-cert.pem
 
   reset-db:
     cwd: 'apps/cacvote-mark/backend'

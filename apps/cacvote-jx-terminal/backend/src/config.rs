@@ -9,7 +9,7 @@ use auth_rs::{card_details::extract_field_value, certs::VX_CUSTOM_CERT_FIELD_JUR
 use cacvote_server_client::{signer, AnySigner};
 use clap::Parser;
 use color_eyre::eyre::{bail, Context};
-use openssl::x509::X509;
+use openssl::{hash::MessageDigest, sign::Verifier, x509::X509};
 use types_rs::cacvote::JurisdictionCode;
 
 const TEN_MB: usize = 10 * 1024 * 1024;
@@ -68,6 +68,30 @@ pub(crate) struct Config {
 }
 
 impl Config {
+    pub(crate) fn verify(&self) -> color_eyre::Result<()> {
+        // Verify that the MACHINE_CERT is signed by the VX CA.
+        let machine_cert = self.machine_cert()?;
+        let vx_cert_authority_cert = self.vx_cert_authority_cert()?;
+        let vx_cert_authority_public_key = vx_cert_authority_cert.public_key()?;
+        machine_cert.verify(&vx_cert_authority_public_key)?;
+
+        // Verify that the MACHINE_CERT contains a jurisdiction code.
+        let _ = self.jurisdiction_code()?;
+
+        // Verify that the signer is valid.
+        let message = b"test";
+        let signer = self.signer()?;
+        let signature = signer.sign(message)?;
+        let machine_public_key = machine_cert.public_key()?;
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &machine_public_key)?;
+        verifier.update(message)?;
+        if !verifier.verify(&signature)? {
+            bail!("signature from SIGNER is not verifiable by MACHINE_CERT");
+        }
+
+        Ok(())
+    }
+
     pub(crate) fn cac_root_ca_store(&self) -> color_eyre::Result<openssl::x509::store::X509Store> {
         let mut builder = openssl::x509::store::X509StoreBuilder::new()?;
 

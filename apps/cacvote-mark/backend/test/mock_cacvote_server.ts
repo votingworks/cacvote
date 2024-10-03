@@ -39,7 +39,13 @@ export async function mockCacvoteServer<
   const url = new URL(`http://127.0.0.1:${address.port}`);
   const logger = fakeLogger();
   const { certPath, privateKey } = getMachineCertPathAndPrivateKey();
-  const client = new Client(logger, url, await readFile(certPath), privateKey);
+  const client = new Client(
+    logger,
+    url,
+    'test-machine-id',
+    await readFile(certPath),
+    privateKey
+  );
   return {
     inner: server,
     client,

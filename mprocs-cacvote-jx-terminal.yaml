@@ -34,7 +34,7 @@ procs:
     cwd: '../kiosk-browser'
     shell: |
       echo "Waiting for CACvote JX Terminal to start…"
-      while ! nc -z localhost 5000; do sleep 1; done
+      while ! curl --silent --fail localhost:5000/api/status; do sleep 1; done
       kiosk-browser \
         --allow-devtools \
         -v 'o=http://localhost:*,p=**/*,rw' \
