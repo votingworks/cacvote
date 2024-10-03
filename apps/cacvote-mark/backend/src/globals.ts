@@ -65,6 +65,13 @@ export const CACVOTE_URL = process.env.CACVOTE_URL
   : undefined;
 
 /**
+ * Signing certificate for VotingWorks.
+ */
+export const VX_CA_CERT = process.env.VX_CA_CERT
+  ? fs.readFileSync(process.env.VX_CA_CERT)
+  : undefined;
+
+/**
  * Signing certificates for Common Access Card (CAC) authentication.
  */
 export const CAC_ROOT_CA_CERTS = process.env.CAC_ROOT_CA_CERTS

@@ -56,6 +56,7 @@ async fn main() -> color_eyre::Result<()> {
     let _ = dotenvy::from_filename(".env.local");
     dotenvy::dotenv()?;
     let config = config::Config::parse();
+    config.verify()?;
     log::setup(&config)?;
     tracing::info!("Starting CACvote JX with config: {config:#?}");
     let pool = db::setup(&config).await?;

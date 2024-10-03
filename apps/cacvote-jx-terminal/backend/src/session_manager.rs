@@ -164,6 +164,7 @@ impl SessionManager {
                                 Some(SessionOperation::CheckPin { pin, respond }) => {
                                     if let Some(ref mut vx_card) = vx_card {
                                         let result = vx_card.check_pin(&pin).await;
+                                        tracing::debug!("check_pin result={result:?}");
                                         let _ = respond.send(result);
                                     } else {
                                         let _ = respond.send(Err(CardReaderError::NoCardFound));

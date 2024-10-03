@@ -56,6 +56,7 @@ pub async fn setup(
         .route("/api/objects", post(create_object))
         .route("/api/objects/:object_id", get(get_object_by_id))
         .route("/api/journal-entries", get(get_journal_entries))
+        .route("/api/machines", post(create_machine))
         .route(
             "/api/scanned-mailing-label",
             post(scanned_create_mailing_label),
@@ -255,6 +256,59 @@ async fn get_object_by_id(
         }
         None => Err(Error::NotFound),
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateMachineRequest {
+    machine_identifier: String,
+
+    #[serde(with = "Base64Standard")]
+    certificate: Vec<u8>,
+}
+
+async fn create_machine(
+    State(AppState {
+        vx_root_ca_cert,
+        pool,
+        ..
+    }): State<AppState>,
+    Json(CreateMachineRequest {
+        machine_identifier,
+        certificate: certificate_bytes,
+    }): Json<CreateMachineRequest>,
+) -> Result<impl IntoResponse, Error> {
+    let mut conn = pool.acquire().await?;
+
+    if let Some(existing_machine) =
+        db::get_machine_by_identifier(&mut conn, &machine_identifier).await?
+    {
+        if existing_machine.certificate == certificate_bytes {
+            return Ok((StatusCode::OK, Json(json!({ "id": existing_machine.id }))));
+        } else {
+            tracing::error!("Machine already exists with different certificate");
+            return Err(Error::BadRequest(
+                "Machine already exists with different certificate".to_owned(),
+            ));
+        }
+    }
+
+    let certificate = openssl::x509::X509::from_pem(&certificate_bytes).map_err(|e| {
+        tracing::error!("Failed to parse certificate: {e}");
+        Error::BadRequest(format!("Failed to parse certificate: {e}"))
+    })?;
+
+    if !verify_cert_single_ca(&vx_root_ca_cert, &certificate).unwrap_or(false) {
+        tracing::error!("Failed to verify certificate");
+        return Err(Error::BadRequest("Failed to verify certificate".to_owned()));
+    }
+
+    // TODO: Extract the machine ID from the certificate rather than having it
+    // be provided in the request. This prevents the client from lying about the
+    // machine ID.
+    let machine = db::create_machine(&mut conn, &machine_identifier, &certificate_bytes).await?;
+
+    Ok((StatusCode::CREATED, Json(json!({ "id": machine.id }))))
 }
 
 async fn scanned_create_mailing_label(

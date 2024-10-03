@@ -1,4 +1,8 @@
-use std::{io::Write, path::PathBuf, process};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+    process,
+};
 
 use clap::Parser;
 use tracing::Level;
@@ -14,6 +18,33 @@ struct SignWithCardArgs {
     no_pin: bool,
 
     path: PathBuf,
+
+    /// VX CA certificate.
+    #[arg(long, env = "VX_CA_CERT")]
+    pub(crate) vx_cert_authority_cert: PathBuf,
+
+    /// VxAdmin CA certificate.
+    #[arg(long, env = "VX_ADMIN_CA_CERT")]
+    pub(crate) vx_admin_cert_authority_cert: PathBuf,
+}
+
+impl SignWithCardArgs {
+    pub(crate) fn vx_cert_authority_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        load_cert(&self.vx_cert_authority_cert)
+    }
+
+    pub(crate) fn vx_admin_cert_authority_cert(&self) -> color_eyre::Result<openssl::x509::X509> {
+        load_cert(&self.vx_admin_cert_authority_cert)
+    }
+}
+
+fn load_cert<P>(path: P) -> color_eyre::Result<openssl::x509::X509>
+where
+    P: AsRef<Path>,
+{
+    let ca_cert = std::fs::read(path)?;
+    Ok(openssl::x509::X509::from_pem(&ca_cert)
+        .or_else(|_| openssl::x509::X509::from_der(&ca_cert))?)
 }
 
 #[tokio::main]
@@ -48,7 +79,11 @@ async fn main() -> color_eyre::Result<()> {
     while let Some(event) = watcher.recv().await {
         match event? {
             Event::CardInserted { reader_name } => {
-                card = Some(VxCard::new(AsyncCard::connect(&ctx, &reader_name)?));
+                card = Some(VxCard::new(
+                    args.vx_cert_authority_cert()?,
+                    args.vx_admin_cert_authority_cert()?,
+                    AsyncCard::connect(&ctx, &reader_name)?,
+                ));
                 break;
             }
             _ => {}

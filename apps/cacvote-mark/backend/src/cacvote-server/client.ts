@@ -63,6 +63,12 @@ export interface ClientApi {
    * ```
    */
   getJournalEntries(since?: Uuid): Promise<ClientResult<JournalEntry[]>>;
+
+  /**
+   * Enroll the machine with the server, registering its certificate to
+   * enable the verification of signatures from mail label QR codes.
+   */
+  enrollMachine(): Promise<ClientResult<void>>;
 }
 
 export class Client implements ClientApi {
@@ -71,6 +77,7 @@ export class Client implements ClientApi {
   constructor(
     private readonly logger: Logger,
     private readonly baseUrl: URL,
+    private readonly machineIdentifier: string,
     private readonly machineCaCert: Buffer,
     private readonly signingPrivateKey: FileKey | TpmKey
   ) {}
@@ -80,12 +87,14 @@ export class Client implements ClientApi {
    */
   static localhost(
     logger: Logger,
+    machineIdentifier: string,
     machineCaCert: Buffer,
     signingPrivateKey: FileKey | TpmKey
   ): Client {
     return new Client(
       logger,
       new URL('http://localhost:8000'),
+      machineIdentifier,
       machineCaCert,
       signingPrivateKey
     );
@@ -218,6 +227,41 @@ export class Client implements ClientApi {
             error: parsed.error,
             message: parsed.error.message,
           });
+    });
+  }
+
+  async enrollMachine(): Promise<ClientResult<void>> {
+    interface CreateMachineRequest {
+      machineIdentifier: string;
+
+      /** Base64-encoded PEM-format certificate */
+      certificate: string;
+    }
+
+    return asyncResultBlock(async (bail) => {
+      const request: CreateMachineRequest = {
+        machineIdentifier: this.machineIdentifier,
+        certificate: this.machineCaCert.toString('base64'),
+      };
+
+      const response = (
+        await this.post('/api/machines', JSON.stringify(request))
+      ).okOrElse(bail);
+
+      if (!response.ok) {
+        await this.logger.log(LogEventId.UnknownError, 'system', {
+          message: `enrollMachine failed: server responded with status ${response.status}`,
+          disposition: 'failure',
+        });
+        bail({ type: 'network', message: response.statusText });
+      }
+
+      await this.logger.log(LogEventId.ApplicationStartup, 'system', {
+        message: 'Machine enrolled',
+        disposition: 'success',
+      });
+
+      return ok();
     });
   }
 

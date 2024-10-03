@@ -169,6 +169,7 @@ mod tests {
             public_dir: None,
             log_level: Level::DEBUG,
             machine_cert: PathBuf::from("/not/real/path"),
+            vx_cert_authority_cert: PathBuf::from("/not/real/path"),
             cac_root_ca_certs: vec![PathBuf::from("/not/real/path")],
             signer: signer::Description::File(PathBuf::from("/not/real/path")),
             eg_classpath: PathBuf::from("/not/real/path"),
