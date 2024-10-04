@@ -1,4 +1,9 @@
-use std::{fmt::Debug, io::Write, path::PathBuf, process::Command};
+use std::{
+    fmt::Debug,
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 use openssl::{
     hash::MessageDigest,
@@ -72,6 +77,8 @@ impl Signer for TpmSigner {
             .arg("tpm2")
             .arg("-provider")
             .arg("default")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
             .spawn()
             .map_err(|e| Error::Signature(e.to_string()))?;
 
@@ -83,6 +90,9 @@ impl Signer for TpmSigner {
         stdin
             .write_all(payload)
             .map_err(|e| Error::Signature(e.to_string()))?;
+
+        // close stdin so we can wait for output
+        drop(stdin);
 
         let output = command
             .wait_with_output()
