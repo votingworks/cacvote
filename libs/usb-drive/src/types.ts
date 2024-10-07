@@ -13,4 +13,5 @@ export interface UsbDrive {
   status(): Promise<UsbDriveStatus>;
   eject(loggingUserRole: LoggingUserRole): Promise<void>;
   format(loggingUserRole: LoggingUserRole): Promise<void>;
+  mount(): Promise<void>;
 }

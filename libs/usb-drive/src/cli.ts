@@ -17,6 +17,25 @@ async function watchUsbDrive(usbDrive: UsbDrive): Promise<void> {
   }
 }
 
+async function automountUsbDrive(usbDrive: UsbDrive): Promise<void> {
+  const { stdout } = process;
+
+  for (;;) {
+    const status = await usbDrive.status();
+    await printStatus(usbDrive, stdout);
+
+    if (status.status === 'no_drive') {
+      try {
+        await usbDrive.mount();
+      } catch (error) {
+        stdout.write(`Error mounting: ${error}\n`);
+      }
+    }
+
+    await sleep(1000);
+  }
+}
+
 const USAGE = `Usage: usb-drive status|eject|format|watch\n`;
 
 export async function main(args: string[]): Promise<number> {
@@ -42,6 +61,10 @@ export async function main(args: string[]): Promise<number> {
     }
     case 'watch': {
       await watchUsbDrive(usbDrive);
+      break;
+    }
+    case 'automount': {
+      await automountUsbDrive(usbDrive);
       break;
     }
     case undefined: {

@@ -380,5 +380,31 @@ export function detectUsbDrive(logger: Logger): UsbDrive {
         }
       }
     },
+
+    async mount(): Promise<void> {
+      const deviceInfo = await getUsbDriveDeviceInfo();
+      if (!deviceInfo) {
+        debug('No USB drive detected, skipping mount');
+        return;
+      }
+
+      if (deviceInfo.mountpoint) {
+        debug('USB drive already mounted, skipping mount');
+        return;
+      }
+
+      if (getActionLock('mounting')) {
+        await logMountInit(logger);
+        try {
+          await mount(deviceInfo, logger);
+          debug('USB drive mounted successfully');
+        } catch (error) {
+          debug(`USB drive mounting failed: ${error}`);
+          throw error;
+        } finally {
+          releaseActionLock();
+        }
+      }
+    },
   };
 }
