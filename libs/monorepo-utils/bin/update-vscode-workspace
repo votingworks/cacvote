@@ -2,7 +2,9 @@
 
 // @ts-check
 
-require('esbuild-runner/register');
+require('esbuild-runner').install({
+  type: 'transform',
+});
 
 const { throwIllegalValue } = require('@votingworks/basics');
 const { updateWorkspaceConfig } = require('../src/vscode');
@@ -11,7 +13,7 @@ const { updateWorkspaceConfig } = require('../src/vscode');
 const workspaceFiles = [];
 let check = false;
 
-for (let i = 2; i < process.argv.length; i+=1) {
+for (let i = 2; i < process.argv.length; i += 1) {
   const arg = process.argv[i];
   if (arg === '--check') {
     check = true;
@@ -24,19 +26,25 @@ for (let i = 2; i < process.argv.length; i+=1) {
 }
 
 if (workspaceFiles.length < 1) {
-  console.error('Usage: update-vscode-workspace [--check] <code-workspace-file>');
+  console.error(
+    'Usage: update-vscode-workspace [--check] <code-workspace-file>'
+  );
   process.exit(1);
 }
 
 for (const workspaceFile of workspaceFiles) {
-  const result = updateWorkspaceConfig(workspaceFile, { check })
+  const result = updateWorkspaceConfig(workspaceFile, { check });
 
   if (result.isErr()) {
     const error = result.err();
     switch (error.type) {
       case 'check-failed':
-        console.error(`error: the workspace file ${workspaceFile} is out of date.`);
-        console.error(`Please run \`pnpm -w update-vscode-workspace\` and commit the result.`);
+        console.error(
+          `error: the workspace file ${workspaceFile} is out of date.`
+        );
+        console.error(
+          `Please run \`pnpm -w update-vscode-workspace\` and commit the result.`
+        );
         process.exit(1);
         break;
 
