@@ -52,15 +52,6 @@ export function CreateElectionModal({
 
   useModalKeybindings({ onEnter: onKeyboardEnter, onEscape: onClose });
 
-  const onElectionContentsLoaded = useCallback((electionJson: string) => {
-    setElectionDefinition(
-      safeParseElectionDefinition(electionJson).unsafeUnwrap()
-    );
-  }, []);
-
-  const chooseElectionButtonTitle =
-    electionDefinition?.election.title ?? 'Choose Election';
-
   return (
     <Modal
       title="Create New Election"
@@ -84,47 +75,28 @@ export function CreateElectionModal({
           <Label>
             Election Definition
             <br />
-            {window.kiosk ? (
-              <Button
-                onPress={async () => {
-                  assert(window.kiosk);
-                  const { canceled, filePaths } =
-                    await window.kiosk.showOpenDialog({
-                      filters: [
-                        { name: 'Election Definitions', extensions: ['json'] },
-                      ],
-                    });
-
-                  if (canceled || filePaths.length === 0) {
-                    return;
-                  }
-
-                  const filePath = assertDefined(filePaths[0]);
-                  onElectionContentsLoaded(
-                    await window.kiosk.readFile(filePath, 'utf8')
+            <FileInputButton
+              accept=".json"
+              onChange={(event) => {
+                const input = event.currentTarget;
+                const { files } = input;
+                /* istanbul ignore next */
+                const file = assertDefined(files?.[0]);
+                const reader = new FileReader();
+                reader.onload = () => {
+                  setElectionDefinition(
+                    safeParseElectionDefinition(
+                      reader.result as string
+                    ).unsafeUnwrap()
                   );
-                }}
-              >
-                {chooseElectionButtonTitle}
-              </Button>
-            ) : (
-              <FileInputButton
-                accept=".json"
-                onChange={(event) => {
-                  const input = event.currentTarget;
-                  const { files } = input;
-                  /* istanbul ignore next */
-                  const file = assertDefined(files?.[0]);
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    onElectionContentsLoaded(reader.result as string);
-                  };
-                  reader.readAsText(file);
-                }}
-              >
-                {chooseElectionButtonTitle}
-              </FileInputButton>
-            )}
+                };
+                reader.readAsText(file);
+              }}
+            >
+              {electionDefinition
+                ? electionDefinition.election.title
+                : 'Choose Election'}
+            </FileInputButton>
           </Label>
         </React.Fragment>
       }
