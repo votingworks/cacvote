@@ -250,10 +250,7 @@ async fn get_object_by_id(
     let mut conn = pool.acquire().await?;
 
     match db::get_object_by_id(&mut conn, object_id).await? {
-        Some(object) => {
-            tracing::info!("PAYLOAD: {}", std::str::from_utf8(&object.payload).unwrap());
-            Ok(Json(object))
-        }
+        Some(object) => Ok(Json(object)),
         None => Err(Error::NotFound),
     }
 }
