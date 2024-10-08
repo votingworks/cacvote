@@ -381,6 +381,7 @@ export function detectUsbDrive(logger: Logger): UsbDrive {
       }
     },
 
+    /* istanbul ignore next - only used in CACvote */
     async mount(): Promise<void> {
       const deviceInfo = await getUsbDriveDeviceInfo();
       if (!deviceInfo) {
