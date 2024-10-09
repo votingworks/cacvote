@@ -420,7 +420,7 @@ function buildApi({
 
         execFileSync(
           'lpr',
-          ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4x6in'],
+          ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4.08x6.47in'],
           { input: pdf }
         );
 
