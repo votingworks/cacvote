@@ -230,9 +230,7 @@ export const authenticate = {
         body: JSON.stringify({ pin }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to authenticate: ${response.statusText}`);
-      }
+      return response.ok;
     });
   },
 } as const;

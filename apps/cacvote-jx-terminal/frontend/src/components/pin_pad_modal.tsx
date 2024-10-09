@@ -32,14 +32,14 @@ const EnteredCode = styled.div`
 export interface PinPadModalProps {
   onEnter: (pin: string) => void;
   title?: string;
-  disabled?: boolean;
+  isAuthenticating?: boolean;
   error?: string;
 }
 
 export function PinPadModal({
   onEnter,
   title = 'Enter Your PIN',
-  disabled,
+  isAuthenticating,
   error,
 }: PinPadModalProps): JSX.Element {
   const pinLength = PinLength.exactly(6);
@@ -48,6 +48,7 @@ export function PinPadModal({
   useEffect(() => {
     if (pinEntry.current.length === pinLength.max) {
       onEnter(pinEntry.current);
+      pinEntry.reset();
     }
   }, [onEnter, pinEntry, pinLength.max]);
 
@@ -61,7 +62,7 @@ export function PinPadModal({
           <EnteredCode>{pinEntry.display}</EnteredCode>
           <NumberPadWrapper>
             <NumberPad
-              disabled={disabled}
+              disabled={isAuthenticating}
               onButtonPress={pinEntry.handleDigit}
               onBackspace={pinEntry.handleBackspace}
               onClear={pinEntry.reset}
