@@ -21,6 +21,7 @@ export function AppRoot(): JSX.Element {
   const authenticateMutation = api.authenticate.useMutation();
   const sessionDataQuery = api.sessionData.useQuery();
   const sessionData = sessionDataQuery.data;
+  const authenticationFailed = authenticateMutation.data === false;
   const isUnauthenticated =
     sessionData && sessionData instanceof UnauthenticatedSessionData;
   const isAuthenticating =
@@ -32,9 +33,13 @@ export function AppRoot(): JSX.Element {
     }
   }, [isUnauthenticated, history]);
 
-  if (isAuthenticating && !authenticateMutation.isLoading) {
+  if (isAuthenticating) {
     return (
       <PinPadModal
+        isAuthenticating={authenticateMutation.isLoading}
+        error={
+          authenticationFailed ? 'Could not log in. Invalid PIN?' : undefined
+        }
         onEnter={(pin) => {
           authenticateMutation.mutate(pin);
         }}
