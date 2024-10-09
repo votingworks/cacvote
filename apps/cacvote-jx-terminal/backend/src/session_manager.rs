@@ -130,7 +130,7 @@ impl SessionManager {
                                             }
                                         }
                                     }
-                                    auth_rs::Event::CardRemoved { .. } => {
+                                    auth_rs::Event::CardRemoved { .. } | auth_rs::Event::ReaderRemoved { .. } => {
                                         // clear the card so we don't try to use it
                                         vx_card = None;
                                         session_data_tx.send_replace(cacvote::SessionData::Unauthenticated {
@@ -138,7 +138,7 @@ impl SessionManager {
                                         });
                                     }
                                     auth_rs::Event::ReaderAdded { .. }
-                                    | auth_rs::Event::ReaderRemoved { .. } => {
+                                     => {
                                         // ignore
                                     }
                                 },
