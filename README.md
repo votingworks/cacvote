@@ -52,32 +52,6 @@ should automatically be provided for you if you use `mprocs`:
 
 ### Scanning Mail Label QR Codes
 
-In order to scan mail label QR codes, the Voter Terminal machines (CACvote Mark)
-will need to be enrolled. In the `cacvote-server` directory, run the following
-command:
-
-```sh
-$ cargo run --bin enroll-voter-terminal-machine MACHINE_ID PATH_TO_CERT
-```
-
-For example, when using a development certificate:
-
-```sh
-$ cargo run --bin enroll-voter-terminal-machine 000 ../../../libs/auth/certs/dev/vx-mark-cert.pem
-✅ Machine enrolled! ID=08209a41-b0e1-405e-ae65-2becff7eb848
-```
-
-The easiest way to run the above is when running `mprocs` with the
-`cacvote-server` configuration. Just run the `enroll-dev-machine` process within
-`mprocs`.
-
-Here is the enrollment process when using a production certificate:
-
-```sh
-$ cargo run --bin enroll-voter-terminal-machine some-vx-voter-terminal-432 path/to/tpm-public-cert.pem
-✅ Machine enrolled! ID=08209a41-b0e1-405e-ae65-2becff7eb848
-```
-
 When running the CACvote Server locally, you'll need a way to expose the server
 to the internet so that your mobile device can connect to it. One way to do this
 is with `ngrok` (requires signup). Once you've got `ngrok` installed you can run
