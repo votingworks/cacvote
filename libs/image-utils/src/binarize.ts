@@ -1,4 +1,4 @@
-import { createImageData } from 'canvas';
+import { createImageData, ImageData } from 'canvas';
 import { getImageChannelCount } from './image_data';
 import { otsu } from './otsu';
 
