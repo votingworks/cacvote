@@ -1,6 +1,6 @@
 import { getMachineCertPathAndPrivateKey } from '@votingworks/auth';
 import { deferred, Optional } from '@votingworks/basics';
-import { fakeLogger } from '@votingworks/logging';
+import { mockLogger } from '@votingworks/logging';
 import app, { Application, Request, Response } from 'express';
 import { readFile } from 'fs/promises';
 import {
@@ -37,7 +37,7 @@ export async function mockCacvoteServer<
   await listening.promise;
   const address = server.address() as AddressInfo;
   const url = new URL(`http://127.0.0.1:${address.port}`);
-  const logger = fakeLogger();
+  const logger = mockLogger();
   const { certPath, privateKey } = getMachineCertPathAndPrivateKey();
   const client = new Client(
     logger,

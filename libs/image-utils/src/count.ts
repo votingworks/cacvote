@@ -1,3 +1,4 @@
+import { ImageData } from 'canvas';
 import { Rect } from '@votingworks/types';
 import { PIXEL_BLACK } from './diff';
 import { getImageChannelCount } from './image_data';

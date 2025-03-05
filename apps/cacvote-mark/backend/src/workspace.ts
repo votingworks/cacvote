@@ -41,7 +41,7 @@ export function createWorkspace(root: string): Workspace {
 export async function resolveWorkspace(logger?: Logger): Promise<Workspace> {
   const workspacePath = CACVOTE_MARK_WORKSPACE;
   if (!workspacePath) {
-    await logger?.log(LogEventId.ScanServiceConfigurationMessage, 'system', {
+    await logger?.log(LogEventId.WorkspaceConfigurationMessage, 'system', {
       message:
         'workspace path could not be determined; pass a workspace or run with MARK_WORKSPACE',
       disposition: 'failure',

@@ -1,4 +1,4 @@
-import { fakeLogger } from '@votingworks/logging';
+import { mockLogger } from '@votingworks/logging';
 import { rmSync } from 'fs-extra';
 import { dirSync } from 'tmp';
 import { start } from './server';
@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 test('can start server', async () => {
-  const logger = fakeLogger();
+  const logger = mockLogger();
   const auth = buildMockAuth();
 
   const server = await start({

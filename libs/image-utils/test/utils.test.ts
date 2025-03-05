@@ -13,7 +13,7 @@ import {
 test('describeBinaryImageData & makeBinaryImageData', () => {
   fc.assert(
     fc.property(
-      arbitraryImageData({ channels: 1, pixels: fc.constantFrom(0, 255) }),
+      arbitraryImageData({ pixels: fc.constantFrom(0, 255) }),
       (image) => {
         const description = describeBinaryImageData(image);
         const reconstructed = makeBinaryImageData(description);
@@ -39,7 +39,6 @@ test('describeBinaryImageData & makeBinaryImageData with cropping', () => {
   fc.assert(
     fc.property(
       arbitraryImageData({
-        channels: 1,
         pixels: fc.constantFrom(0, 255),
       }).chain((image) =>
         fc.record({

@@ -34,7 +34,9 @@ const USAGE = `Usage: printer status
 export async function main(args: string[]): Promise<number> {
   const { stdout, stderr } = process;
   const command = args[2];
-  const printer = detectPrinter(new Logger(LogSource.System));
+  const printer = detectPrinter(
+    new Logger(LogSource.System, () => Promise.resolve('system'))
+  );
   switch (command) {
     case 'status': {
       await printStatus(printer, stdout);

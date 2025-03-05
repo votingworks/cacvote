@@ -5,7 +5,7 @@ import {
   electionTwoPartyPrimaryDefinition,
 } from '@votingworks/fixtures';
 import {
-  fakeLogger,
+  mockLogger,
   LogDispositionStandardTypes,
   LogEventId,
   Logger,
@@ -49,7 +49,7 @@ const pin = '123456';
 const wrongPin = '654321';
 
 let mockCard: MockCard;
-let mockLogger: Logger;
+let logger: Logger;
 let mockTime: DateTime;
 
 beforeEach(() => {
@@ -61,7 +61,7 @@ beforeEach(() => {
   mockFeatureFlagger.resetFeatureFlags();
 
   mockCard = buildMockCard();
-  mockLogger = fakeLogger();
+  logger = mockLogger();
 });
 
 afterEach(() => {
@@ -122,7 +122,7 @@ async function logInAsSystemAdministrator(
     sessionExpiresAt: expect.any(Date),
     programmableCard: { status: 'no_card' },
   });
-  mockOf(mockLogger.log).mockClear();
+  mockOf(logger.log).mockClear();
 }
 
 async function logInAsElectionManager(
@@ -152,14 +152,14 @@ async function logInAsElectionManager(
     user: electionManagerUser,
     sessionExpiresAt: expect.any(Date),
   });
-  mockOf(mockLogger.log).mockClear();
+  mockOf(logger.log).mockClear();
 }
 
 test('No card reader', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({ status: 'no_card_reader' });
@@ -227,7 +227,7 @@ test.each<{
     const auth = new DippedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
 
     mockCardStatus({ status: 'no_card' });
@@ -241,11 +241,8 @@ test.each<{
       expectedAuthStatus
     );
     if (expectedLogOnInsertion) {
-      expect(mockLogger.log).toHaveBeenCalledTimes(1);
-      expect(mockLogger.log).toHaveBeenNthCalledWith(
-        1,
-        ...expectedLogOnInsertion
-      );
+      expect(logger.log).toHaveBeenCalledTimes(1);
+      expect(logger.log).toHaveBeenNthCalledWith(1, ...expectedLogOnInsertion);
     }
 
     mockCardStatus({ status: 'no_card' });
@@ -255,8 +252,8 @@ test.each<{
     });
     if (expectedLogOnRemoval) {
       const logIndex = expectedLogOnInsertion ? 2 : 1;
-      expect(mockLogger.log).toHaveBeenCalledTimes(logIndex);
-      expect(mockLogger.log).toHaveBeenNthCalledWith(
+      expect(logger.log).toHaveBeenCalledTimes(logIndex);
+      expect(logger.log).toHaveBeenNthCalledWith(
         logIndex,
         ...expectedLogOnRemoval
       );
@@ -298,7 +295,7 @@ test.each<{
     const auth = new DippedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
     const { user } = cardDetails;
 
@@ -317,8 +314,8 @@ test.each<{
       user,
       wrongPinEnteredAt: expect.any(Date),
     });
-    expect(mockLogger.log).toHaveBeenCalledTimes(1);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(1);
+    expect(logger.log).toHaveBeenNthCalledWith(
       1,
       LogEventId.AuthPinEntry,
       user.role,
@@ -335,8 +332,8 @@ test.each<{
       user,
       sessionExpiresAt: expect.any(Date),
     });
-    expect(mockLogger.log).toHaveBeenCalledTimes(2);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(2);
+    expect(logger.log).toHaveBeenNthCalledWith(
       2,
       LogEventId.AuthPinEntry,
       user.role,
@@ -350,8 +347,8 @@ test.each<{
     expect(await auth.getAuthStatus(defaultMachineState)).toEqual(
       expectedLoggedInAuthStatus
     );
-    expect(mockLogger.log).toHaveBeenCalledTimes(3);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(3);
+    expect(logger.log).toHaveBeenNthCalledWith(
       3,
       LogEventId.AuthLogin,
       user.role,
@@ -366,8 +363,8 @@ test.each<{
       status: 'logged_out',
       reason: 'machine_locked',
     });
-    expect(mockLogger.log).toHaveBeenCalledTimes(4);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(4);
+    expect(logger.log).toHaveBeenNthCalledWith(
       4,
       LogEventId.AuthLogout,
       user.role,
@@ -383,7 +380,7 @@ test('Card lockout', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
   const machineState: DippedSmartCardAuthMachineState = {
     ...defaultMachineState,
@@ -467,7 +464,7 @@ test('Session expiry', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
   const machineState: DippedSmartCardAuthMachineState = {
     ...defaultMachineState,
@@ -496,7 +493,7 @@ test('Updating session expiry', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsElectionManager(auth, defaultMachineState);
@@ -682,14 +679,14 @@ test.each<{
     const auth = new DippedSmartCardAuth({
       card: mockCard,
       config,
-      logger: mockLogger,
+      logger,
     });
 
     mockCardStatus({ status: 'ready', cardDetails });
     expect(await auth.getAuthStatus(machineState)).toEqual(expectedAuthStatus);
     if (expectedLog) {
-      expect(mockLogger.log).toHaveBeenCalledTimes(1);
-      expect(mockLogger.log).toHaveBeenNthCalledWith(1, ...expectedLog);
+      expect(logger.log).toHaveBeenCalledTimes(1);
+      expect(logger.log).toHaveBeenNthCalledWith(1, ...expectedLog);
     }
   }
 );
@@ -772,7 +769,7 @@ test.each<{
     const auth = new DippedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
 
     await logInAsSystemAdministrator(auth);
@@ -789,8 +786,8 @@ test.each<{
     expect(await auth.programCard(machineState, input)).toEqual(
       expectedProgramResult
     );
-    expect(mockLogger.log).toHaveBeenCalledTimes(2);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(2);
+    expect(logger.log).toHaveBeenNthCalledWith(
       1,
       LogEventId.SmartCardProgramInit,
       'system_administrator',
@@ -799,7 +796,7 @@ test.each<{
         programmedUserRole: input.userRole,
       }
     );
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenNthCalledWith(
       2,
       LogEventId.SmartCardProgramComplete,
       'system_administrator',
@@ -824,8 +821,8 @@ test.each<{
 
     mockCard.unprogram.expectCallWith().resolves();
     expect(await auth.unprogramCard(machineState)).toEqual(ok());
-    expect(mockLogger.log).toHaveBeenCalledTimes(4);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(4);
+    expect(logger.log).toHaveBeenNthCalledWith(
       3,
       LogEventId.SmartCardUnprogramInit,
       'system_administrator',
@@ -834,7 +831,7 @@ test.each<{
         programmedUserRole: input.userRole,
       }
     );
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenNthCalledWith(
       4,
       LogEventId.SmartCardUnprogramComplete,
       'system_administrator',
@@ -894,7 +891,7 @@ test.each<{
     const auth = new DippedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
 
     await logInAsSystemAdministrator(auth);
@@ -913,7 +910,7 @@ test('Checking PIN error handling', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({
@@ -934,8 +931,8 @@ test('Checking PIN error handling', async () => {
     user: electionManagerUser,
     error: { error: new Error('Whoa!'), erroredAt: expect.any(Date) },
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(1);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(1);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.AuthPinEntry,
     'election_manager',
@@ -955,8 +952,8 @@ test('Checking PIN error handling', async () => {
     user: electionManagerUser,
     wrongPinEnteredAt: expect.any(Date),
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.AuthPinEntry,
     'election_manager',
@@ -975,8 +972,8 @@ test('Checking PIN error handling', async () => {
     error: { error: new Error('Whoa!'), erroredAt: expect.any(Date) },
     wrongPinEnteredAt: expect.any(Date),
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(3);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(3);
+  expect(logger.log).toHaveBeenNthCalledWith(
     3,
     LogEventId.AuthPinEntry,
     'election_manager',
@@ -1002,7 +999,7 @@ test(
     const auth = new DippedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
 
     mockCardStatus({ status: 'no_card' });
@@ -1021,7 +1018,7 @@ test('Attempting to update session expiry when not logged in', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({ status: 'no_card' });
@@ -1043,7 +1040,7 @@ test('Card programming error handling', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsSystemAdministrator(auth);
@@ -1088,8 +1085,8 @@ test('Card programming error handling', async () => {
   expect(
     await auth.programCard(defaultMachineState, { userRole: 'poll_worker' })
   ).toEqual(err(new Error('Error programming card')));
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.SmartCardProgramInit,
     'system_administrator',
@@ -1098,7 +1095,7 @@ test('Card programming error handling', async () => {
       programmedUserRole: 'poll_worker',
     }
   );
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.SmartCardProgramComplete,
     'system_administrator',
@@ -1114,7 +1111,7 @@ test('Card unprogramming error handling', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsSystemAdministrator(auth);
@@ -1137,8 +1134,8 @@ test('Card unprogramming error handling', async () => {
   expect(await auth.unprogramCard(defaultMachineState)).toEqual(
     err(new Error('Error unprogramming card'))
   );
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.SmartCardUnprogramInit,
     'system_administrator',
@@ -1147,7 +1144,7 @@ test('Card unprogramming error handling', async () => {
       programmedUserRole: 'poll_worker',
     }
   );
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.SmartCardUnprogramComplete,
     'system_administrator',
@@ -1163,7 +1160,7 @@ test('Attempting card programming and unprogramming when logged out', async () =
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({ status: 'no_card' });
@@ -1175,8 +1172,8 @@ test('Attempting card programming and unprogramming when logged out', async () =
   expect(
     await auth.programCard(defaultMachineState, { userRole: 'poll_worker' })
   ).toEqual(err(new Error('Error programming card')));
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.SmartCardProgramInit,
     'system_administrator',
@@ -1185,7 +1182,7 @@ test('Attempting card programming and unprogramming when logged out', async () =
       programmedUserRole: 'poll_worker',
     }
   );
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.SmartCardProgramComplete,
     'system_administrator',
@@ -1199,8 +1196,8 @@ test('Attempting card programming and unprogramming when logged out', async () =
   expect(await auth.unprogramCard(defaultMachineState)).toEqual(
     err(new Error('Error unprogramming card'))
   );
-  expect(mockLogger.log).toHaveBeenCalledTimes(4);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(4);
+  expect(logger.log).toHaveBeenNthCalledWith(
     3,
     LogEventId.SmartCardUnprogramInit,
     'system_administrator',
@@ -1209,7 +1206,7 @@ test('Attempting card programming and unprogramming when logged out', async () =
       programmedUserRole: 'unprogrammed',
     }
   );
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenNthCalledWith(
     4,
     LogEventId.SmartCardUnprogramComplete,
     'system_administrator',
@@ -1225,7 +1222,7 @@ test('Attempting card programming and unprogramming when not a system administra
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsElectionManager(auth);
@@ -1233,8 +1230,8 @@ test('Attempting card programming and unprogramming when not a system administra
   expect(
     await auth.programCard(defaultMachineState, { userRole: 'poll_worker' })
   ).toEqual(err(new Error('Error programming card')));
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.SmartCardProgramInit,
     'system_administrator',
@@ -1243,7 +1240,7 @@ test('Attempting card programming and unprogramming when not a system administra
       programmedUserRole: 'poll_worker',
     }
   );
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.SmartCardProgramComplete,
     'system_administrator',
@@ -1258,8 +1255,8 @@ test('Attempting card programming and unprogramming when not a system administra
   expect(await auth.unprogramCard(defaultMachineState)).toEqual(
     err(new Error('Error unprogramming card'))
   );
-  expect(mockLogger.log).toHaveBeenCalledTimes(4);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(4);
+  expect(logger.log).toHaveBeenNthCalledWith(
     3,
     LogEventId.SmartCardUnprogramInit,
     'system_administrator',
@@ -1268,7 +1265,7 @@ test('Attempting card programming and unprogramming when not a system administra
       programmedUserRole: 'unprogrammed',
     }
   );
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenNthCalledWith(
     4,
     LogEventId.SmartCardUnprogramComplete,
     'system_administrator',
@@ -1288,7 +1285,7 @@ test('SKIP_PIN_ENTRY feature flag', async () => {
   const auth = new DippedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({

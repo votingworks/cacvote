@@ -7,7 +7,7 @@ import {
   electionTwoPartyPrimaryDefinition,
 } from '@votingworks/fixtures';
 import {
-  fakeLogger,
+  mockLogger,
   LogDispositionStandardTypes,
   LogEventId,
   Logger,
@@ -54,7 +54,7 @@ const pin = '123456';
 const wrongPin = '654321';
 
 let mockCard: MockCard;
-let mockLogger: Logger;
+let logger: Logger;
 let mockTime: DateTime;
 
 beforeEach(() => {
@@ -66,7 +66,7 @@ beforeEach(() => {
   mockFeatureFlagger.resetFeatureFlags();
 
   mockCard = buildMockCard();
-  mockLogger = fakeLogger();
+  logger = mockLogger();
 });
 
 afterEach(() => {
@@ -121,7 +121,7 @@ async function logInAsElectionManager(
     user: electionManagerUser,
     sessionExpiresAt: expect.any(Date),
   });
-  mockOf(mockLogger.log).mockClear();
+  mockOf(logger.log).mockClear();
 }
 
 async function logInAsPollWorker(
@@ -140,14 +140,14 @@ async function logInAsPollWorker(
     user: pollWorkerUser,
     sessionExpiresAt: expect.any(Date),
   });
-  mockOf(mockLogger.log).mockClear();
+  mockOf(logger.log).mockClear();
 }
 
 test('No card reader', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({ status: 'no_card_reader' });
@@ -215,7 +215,7 @@ test.each<{
     const auth = new InsertedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
 
     mockCardStatus({ status: 'no_card' });
@@ -229,11 +229,8 @@ test.each<{
       expectedAuthStatus
     );
     if (expectedLogOnInsertion) {
-      expect(mockLogger.log).toHaveBeenCalledTimes(1);
-      expect(mockLogger.log).toHaveBeenNthCalledWith(
-        1,
-        ...expectedLogOnInsertion
-      );
+      expect(logger.log).toHaveBeenCalledTimes(1);
+      expect(logger.log).toHaveBeenNthCalledWith(1, ...expectedLogOnInsertion);
     }
 
     mockCardStatus({ status: 'no_card' });
@@ -243,8 +240,8 @@ test.each<{
     });
     if (expectedLogOnRemoval) {
       const logIndex = expectedLogOnInsertion ? 2 : 1;
-      expect(mockLogger.log).toHaveBeenCalledTimes(logIndex);
-      expect(mockLogger.log).toHaveBeenNthCalledWith(
+      expect(logger.log).toHaveBeenCalledTimes(logIndex);
+      expect(logger.log).toHaveBeenNthCalledWith(
         logIndex,
         ...expectedLogOnRemoval
       );
@@ -288,7 +285,7 @@ test.each<{
     const auth = new InsertedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
     const { user } = cardDetails;
 
@@ -307,8 +304,8 @@ test.each<{
       user,
       wrongPinEnteredAt: expect.any(Date),
     });
-    expect(mockLogger.log).toHaveBeenCalledTimes(1);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(1);
+    expect(logger.log).toHaveBeenNthCalledWith(
       1,
       LogEventId.AuthPinEntry,
       user.role,
@@ -325,8 +322,8 @@ test.each<{
       user,
       sessionExpiresAt: expect.any(Date),
     });
-    expect(mockLogger.log).toHaveBeenCalledTimes(3);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(3);
+    expect(logger.log).toHaveBeenNthCalledWith(
       2,
       LogEventId.AuthPinEntry,
       user.role,
@@ -335,7 +332,7 @@ test.each<{
         message: 'User entered correct PIN.',
       }
     );
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenNthCalledWith(
       3,
       LogEventId.AuthLogin,
       user.role,
@@ -350,8 +347,8 @@ test.each<{
       status: 'logged_out',
       reason: 'no_card',
     });
-    expect(mockLogger.log).toHaveBeenCalledTimes(4);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(4);
+    expect(logger.log).toHaveBeenNthCalledWith(
       4,
       LogEventId.AuthLogout,
       user.role,
@@ -367,7 +364,7 @@ test('Login and logout using card without PIN', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({
@@ -382,8 +379,8 @@ test('Login and logout using card without PIN', async () => {
     user: pollWorkerUser,
     sessionExpiresAt: expect.any(Date),
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(1);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(1);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.AuthLogin,
     'poll_worker',
@@ -398,8 +395,8 @@ test('Login and logout using card without PIN', async () => {
     status: 'logged_out',
     reason: 'no_card',
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.AuthLogout,
     'poll_worker',
@@ -414,7 +411,7 @@ test('Card lockout', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
   const machineState: DippedSmartCardAuthMachineState = {
     ...defaultMachineState,
@@ -498,7 +495,7 @@ test('Session expiry', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
   const machineState: InsertedSmartCardAuthMachineState = {
     ...defaultMachineState,
@@ -529,7 +526,7 @@ test('Updating session expiry', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsElectionManager(auth, defaultMachineState);
@@ -554,7 +551,7 @@ test('Logout through logout method', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsElectionManager(auth, defaultMachineState);
@@ -802,14 +799,14 @@ test.each<{
     const auth = new InsertedSmartCardAuth({
       card: mockCard,
       config,
-      logger: mockLogger,
+      logger,
     });
 
     mockCardStatus({ status: 'ready', cardDetails });
     expect(await auth.getAuthStatus(machineState)).toEqual(expectedAuthStatus);
     if (expectedLog) {
-      expect(mockLogger.log).toHaveBeenCalledTimes(1);
-      expect(mockLogger.log).toHaveBeenNthCalledWith(1, ...expectedLog);
+      expect(logger.log).toHaveBeenCalledTimes(1);
+      expect(logger.log).toHaveBeenNthCalledWith(1, ...expectedLog);
     }
   }
 );
@@ -818,7 +815,7 @@ test('Cardless voter sessions - ending preemptively', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: { ...defaultConfig, allowCardlessVoterSessions: true },
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsPollWorker(auth);
@@ -834,8 +831,8 @@ test('Cardless voter sessions - ending preemptively', async () => {
     sessionExpiresAt: expect.any(Date),
     cardlessVoterUser,
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(1);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(1);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.AuthLogin,
     'cardless_voter',
@@ -852,8 +849,8 @@ test('Cardless voter sessions - ending preemptively', async () => {
     user: pollWorkerUser,
     sessionExpiresAt: expect.any(Date),
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.AuthLogout,
     'cardless_voter',
@@ -868,7 +865,7 @@ test('Cardless voter sessions - end-to-end', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: { ...defaultConfig, allowCardlessVoterSessions: true },
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsPollWorker(auth);
@@ -884,8 +881,8 @@ test('Cardless voter sessions - end-to-end', async () => {
     sessionExpiresAt: expect.any(Date),
     cardlessVoterUser,
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(1);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(1);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.AuthLogin,
     'cardless_voter',
@@ -902,8 +899,8 @@ test('Cardless voter sessions - end-to-end', async () => {
     user: cardlessVoterUser,
     sessionExpiresAt: expect.any(Date),
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.AuthLogout,
     'poll_worker',
@@ -927,8 +924,8 @@ test('Cardless voter sessions - end-to-end', async () => {
     sessionExpiresAt: expect.any(Date),
     cardlessVoterUser,
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(3);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(3);
+  expect(logger.log).toHaveBeenNthCalledWith(
     3,
     LogEventId.AuthLogin,
     'poll_worker',
@@ -945,8 +942,8 @@ test('Cardless voter sessions - end-to-end', async () => {
     user: cardlessVoterUser,
     sessionExpiresAt: expect.any(Date),
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(4);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(4);
+  expect(logger.log).toHaveBeenNthCalledWith(
     4,
     LogEventId.AuthLogout,
     'poll_worker',
@@ -962,8 +959,8 @@ test('Cardless voter sessions - end-to-end', async () => {
     status: 'logged_out',
     reason: 'no_card',
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(5);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(5);
+  expect(logger.log).toHaveBeenNthCalledWith(
     5,
     LogEventId.AuthLogout,
     'cardless_voter',
@@ -978,7 +975,7 @@ test('Reading card data', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCard.readData
@@ -998,7 +995,7 @@ test('Reading card data as string', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCard.readData.expectCallWith().resolves(Buffer.of());
@@ -1014,7 +1011,7 @@ test('Writing card data', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCard.writeData
@@ -1035,7 +1032,7 @@ test('Clearing card data', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCard.clearData.expectCallWith().resolves();
@@ -1046,7 +1043,7 @@ test('Checking PIN error handling', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({
@@ -1067,8 +1064,8 @@ test('Checking PIN error handling', async () => {
     user: electionManagerUser,
     error: true,
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(1);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(1);
+  expect(logger.log).toHaveBeenNthCalledWith(
     1,
     LogEventId.AuthPinEntry,
     'election_manager',
@@ -1088,8 +1085,8 @@ test('Checking PIN error handling', async () => {
     user: electionManagerUser,
     wrongPinEnteredAt: expect.any(Date),
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(2);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(2);
+  expect(logger.log).toHaveBeenNthCalledWith(
     2,
     LogEventId.AuthPinEntry,
     'election_manager',
@@ -1108,8 +1105,8 @@ test('Checking PIN error handling', async () => {
     error: true,
     wrongPinEnteredAt: expect.any(Date),
   });
-  expect(mockLogger.log).toHaveBeenCalledTimes(3);
-  expect(mockLogger.log).toHaveBeenNthCalledWith(
+  expect(logger.log).toHaveBeenCalledTimes(3);
+  expect(logger.log).toHaveBeenNthCalledWith(
     3,
     LogEventId.AuthPinEntry,
     'election_manager',
@@ -1135,7 +1132,7 @@ test(
     const auth = new InsertedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
 
     mockCardStatus({ status: 'no_card' });
@@ -1147,8 +1144,8 @@ test(
       status: 'logged_out',
       reason: 'no_card',
     });
-    expect(mockLogger.log).toHaveBeenCalledTimes(1);
-    expect(mockLogger.log).toHaveBeenNthCalledWith(
+    expect(logger.log).toHaveBeenCalledTimes(1);
+    expect(logger.log).toHaveBeenNthCalledWith(
       1,
       LogEventId.AuthPinEntry,
       'unknown',
@@ -1164,7 +1161,7 @@ test('Attempting to update session expiry when not logged in', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({ status: 'no_card' });
@@ -1186,7 +1183,7 @@ test('Attempting to start a cardless voter session when logged out', async () =>
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: { ...defaultConfig, allowCardlessVoterSessions: true },
-    logger: mockLogger,
+    logger,
   });
 
   mockCardStatus({ status: 'no_card' });
@@ -1209,7 +1206,7 @@ test('Attempting to start a cardless voter session when not a poll worker', asyn
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: { ...defaultConfig, allowCardlessVoterSessions: true },
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsElectionManager(auth);
@@ -1229,7 +1226,7 @@ test('Attempting to start a cardless voter session when not allowed by config', 
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   await logInAsPollWorker(auth);
@@ -1247,7 +1244,7 @@ test('Reading card data error handling', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCard.readData.expectCallWith().throws(new Error('Whoa!'));
@@ -1260,7 +1257,7 @@ test('Reading card data as string error handling', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCard.readData
@@ -1278,7 +1275,7 @@ test('Writing card data error handling', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCard.writeData
@@ -1307,7 +1304,7 @@ test('Clearing card data error handling', async () => {
   const auth = new InsertedSmartCardAuth({
     card: mockCard,
     config: defaultConfig,
-    logger: mockLogger,
+    logger,
   });
 
   mockCard.clearData.expectCallWith().throws(new Error('Whoa!'));
@@ -1353,7 +1350,7 @@ test.each<{
     const auth = new InsertedSmartCardAuth({
       card: mockCard,
       config: defaultConfig,
-      logger: mockLogger,
+      logger,
     });
     const { user } = cardDetails;
 
@@ -1371,7 +1368,7 @@ describe('updateCardlessVoterBallotStyle', () => {
     return new InsertedSmartCardAuth({
       card: mockCard,
       config: { ...defaultConfig, allowCardlessVoterSessions: true },
-      logger: mockLogger,
+      logger,
     });
   }
 
@@ -1404,7 +1401,7 @@ describe('updateCardlessVoterBallotStyle', () => {
       expect.objectContaining({ ballotStyleId: '1_en' })
     );
 
-    mockOf(mockLogger.log).mockClear();
+    mockOf(logger.log).mockClear();
 
     await api.updateCardlessVoterBallotStyle({ ballotStyleId: '1_es-US' });
 
@@ -1414,7 +1411,7 @@ describe('updateCardlessVoterBallotStyle', () => {
       user: { ...initialStatus.user, ballotStyleId: '1_es-US' },
     });
 
-    expect(mockLogger.log).toHaveBeenCalledWith(
+    expect(logger.log).toHaveBeenCalledWith(
       LogEventId.AuthVoterSessionUpdated,
       'cardless_voter',
       {
@@ -1436,12 +1433,12 @@ describe('updateCardlessVoterBallotStyle', () => {
 
     const initialStatus = await api.getAuthStatus(defaultMachineState);
 
-    mockOf(mockLogger.log).mockClear();
+    mockOf(logger.log).mockClear();
     await api.updateCardlessVoterBallotStyle({ ballotStyleId: '1_en' });
 
     const updatedStatus = await api.getAuthStatus(defaultMachineState);
     expect(updatedStatus).toEqual(initialStatus);
 
-    expect(mockLogger.log).not.toHaveBeenCalled();
+    expect(logger.log).not.toHaveBeenCalled();
   });
 });

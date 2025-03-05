@@ -1,5 +1,5 @@
 import { Rect } from '@votingworks/types';
-import { createImageData } from 'canvas';
+import { ImageData, createImageData } from 'canvas';
 import { countPixels, ratio } from './count';
 import { PIXEL_BLACK, PIXEL_WHITE } from './diff';
 

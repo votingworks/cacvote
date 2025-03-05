@@ -1,5 +1,5 @@
 import { Rect } from '@votingworks/types';
-import { createImageData } from 'canvas';
+import { ImageData, createImageData } from 'canvas';
 import fc from 'fast-check';
 import { arbitraryImageData } from '../test/arbitraries';
 import { makeGrayscaleImageData } from '../test/utils';
@@ -93,7 +93,6 @@ test('all black against all black', () => {
   fc.assert(
     fc.property(
       arbitraryImageData({
-        channels: fc.constantFrom(1, 4),
         pixels: fc.constant(PIXEL_BLACK),
       }),
       (imageData) => {
@@ -114,7 +113,6 @@ test('diff against white background', () => {
   fc.assert(
     fc.property(
       arbitraryImageData({
-        channels: fc.constantFrom(1, 4),
         pixels: fc.constantFrom(PIXEL_BLACK, PIXEL_WHITE),
       }),
       (imageData) => {
@@ -137,12 +135,10 @@ test('diff against white background', () => {
 test('comparing part of an image to all of another', () => {
   fc.assert(
     fc.property(
-      fc.constantFrom(1, 4).chain((channels) =>
-        fc.record({
-          base: arbitraryImageData({ channels }),
-          compare: arbitraryImageData({ channels }),
-        })
-      ),
+      fc.record({
+        base: arbitraryImageData(),
+        compare: arbitraryImageData(),
+      }),
       ({ base, compare }) => {
         const bounds: Rect = {
           x: 0,
@@ -181,44 +177,17 @@ test('grayscale compare image to itself', () => {
   );
 });
 
-test('images with different channel counts', () => {
-  const oneChannelImage = fc.sample(
-    arbitraryImageData({ channels: 1, width: 1, height: 1 }),
-    1
-  )[0]!;
-  const fourChannelImage = fc.sample(
-    arbitraryImageData({ channels: 4, width: 1, height: 1 }),
-    1
-  )[0]!;
-
-  expect(() => diff(oneChannelImage, fourChannelImage)).toThrowError(
-    `base and compare must have the same number of channels, got 1 and 4`
-  );
-});
-
 test('images with different dimensions', () => {
   const oneByOneImage = fc.sample(
-    arbitraryImageData({ channels: 1, width: 1, height: 1 }),
+    arbitraryImageData({ width: 1, height: 1 }),
     1
   )[0]!;
   const twoByTwoImage = fc.sample(
-    arbitraryImageData({ channels: 1, width: 2, height: 2 }),
+    arbitraryImageData({ width: 2, height: 2 }),
     1
   )[0]!;
 
   expect(() => diff(oneByOneImage, twoByTwoImage)).toThrowError(
     `baseBounds and compareBounds must have the same size, got 1x1 and 2x2`
-  );
-});
-
-test('image with 3 channels', () => {
-  const image = createImageData(
-    Uint8ClampedArray.of(PIXEL_BLACK, PIXEL_BLACK, PIXEL_BLACK),
-    1,
-    1
-  );
-
-  expect(() => diff(image, image)).toThrowError(
-    `unsupported number of channels: 3`
   );
 });

@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-import { mockKiosk } from '@votingworks/test-utils';
 import { LogEventId } from './log_event_ids';
 import { LogEventType } from './base_types/log_event_types';
 import { CLIENT_SIDE_LOG_SOURCES, LogSource } from './base_types/log_source';
@@ -27,51 +26,6 @@ test('logger logs server logs as expected', async () => {
       reputation: 'callitwhatyouwant',
     })
   );
-});
-
-test('logger logs client logs as expected through kiosk browser with overridden message', async () => {
-  console.log = jest.fn();
-  const kiosk = mockKiosk();
-  const logger = new BaseLogger(LogSource.VxAdminFrontend, kiosk);
-  await logger.log(LogEventId.ElectionConfigured, 'election_manager', {
-    message: 'On my tallest tiptoes',
-    disposition: LogDispositionStandardTypes.NotApplicable,
-    folklore: 'mirrorball',
-  });
-  expect(kiosk.log).toHaveBeenCalledTimes(1);
-  expect(kiosk.log).toHaveBeenCalledWith(
-    JSON.stringify({
-      timeLogInitiated: new Date(2020, 6, 24).getTime().toString(),
-      source: LogSource.VxAdminFrontend,
-      eventId: LogEventId.ElectionConfigured,
-      eventType: LogEventType.UserAction,
-      user: 'election_manager',
-      message: 'On my tallest tiptoes', // overrides the default message
-      disposition: LogDispositionStandardTypes.NotApplicable,
-      folklore: 'mirrorball',
-    })
-  );
-  expect(console.log).not.toHaveBeenCalled();
-});
-
-test('defaults to default message when defined and no disposition', async () => {
-  console.log = jest.fn();
-  const kiosk = mockKiosk();
-  const logger = new BaseLogger(LogSource.VxAdminFrontend, kiosk);
-  await logger.log(LogEventId.ElectionUnconfigured, 'election_manager');
-  expect(kiosk.log).toHaveBeenCalledTimes(1);
-  expect(kiosk.log).toHaveBeenCalledWith(
-    JSON.stringify({
-      timeLogInitiated: new Date(2020, 6, 24).getTime().toString(),
-      source: LogSource.VxAdminFrontend,
-      eventId: LogEventId.ElectionUnconfigured,
-      eventType: LogEventType.UserAction,
-      user: 'election_manager',
-      message: 'Application has been unconfigured from the previous election.',
-      disposition: LogDispositionStandardTypes.NotApplicable,
-    })
-  );
-  expect(console.log).not.toHaveBeenCalled();
 });
 
 test('logs unknown disposition as expected', async () => {

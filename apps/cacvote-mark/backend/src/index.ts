@@ -7,12 +7,14 @@ export type { Api, VoterStatus } from './app';
 export type { AuthStatus } from './types/auth';
 export type { JurisdictionCode, Uuid } from './cacvote-server/types';
 
-const logger = new Logger(LogSource.VxMarkBackend);
+const logger = new Logger(LogSource.VxMarkBackend, () =>
+  Promise.resolve('system')
+);
 
 function resolveWorkspace(): Workspace {
   const workspacePath = CACVOTE_MARK_WORKSPACE;
   if (!workspacePath) {
-    void logger.log(LogEventId.ScanServiceConfigurationMessage, 'system', {
+    void logger.log(LogEventId.WorkspaceConfigurationMessage, 'system', {
       message:
         'workspace path could not be determined; pass a workspace or run with MARK_WORKSPACE',
       disposition: 'failure',
