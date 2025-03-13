@@ -39,6 +39,19 @@ export async function getDevice(): Promise<Optional<WebUSBDevice>> {
   debug('thermal printer found');
 
   try {
+    legacyDevice.open();
+
+    if (legacyDevice.interfaces) {
+      for (const iface of legacyDevice.interfaces) {
+        if (
+          iface.interfaceNumber === INTERFACE_NUMBER &&
+          iface.isKernelDriverActive()
+        ) {
+          iface.detachKernelDriver();
+        }
+      }
+    }
+
     const webDevice = await WebUSBDevice.createInstance(legacyDevice);
     return webDevice;
   } catch (e) {
