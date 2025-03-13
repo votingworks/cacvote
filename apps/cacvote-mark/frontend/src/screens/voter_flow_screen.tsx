@@ -35,6 +35,13 @@ interface PrintBallotState {
   serialNumber: number;
 }
 
+interface PrintBallotErrorState {
+  type: 'print_ballot_error';
+  votes: VotesDict;
+  serialNumber: number;
+  status: Voting.PrinterStatus;
+}
+
 interface ReviewPrintedBallotState {
   type: 'review_printed';
   votes: VotesDict;
@@ -88,6 +95,7 @@ type VoterFlowState =
   | MarkState
   | ReviewOnscreenState
   | PrintBallotState
+  | PrintBallotErrorState
   | ReviewPrintedBallotState
   | DestroyPrintedBallotState
   | SubmitState
@@ -240,6 +248,39 @@ function RegisteredStateScreen({
         type: 'review_printed',
         votes: prev.votes,
         serialNumber: prev.serialNumber,
+      };
+    });
+  }
+
+  function onPrintBallotError(status: Voting.PrinterStatus) {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'print_ballot');
+      return {
+        type: 'print_ballot_error',
+        votes: prev.votes,
+        serialNumber: prev.serialNumber,
+        status,
+      };
+    });
+  }
+
+  function onTryPrintBallotAgain() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'print_ballot_error');
+      return {
+        type: 'print_ballot',
+        votes: prev.votes,
+        serialNumber: prev.serialNumber,
+      };
+    });
+  }
+
+  function onBackAfterPrintBallotError() {
+    setVoterFlowState((prev) => {
+      assert(prev?.type === 'print_ballot_error');
+      return {
+        type: 'review_onscreen',
+        votes: prev.votes,
       };
     });
   }
@@ -441,8 +482,18 @@ function RegisteredStateScreen({
           // TODO: use live vs test mode?
           isLiveMode={false}
           onPrintCompleted={onPrintBallotCompleted}
+          onPrintError={onPrintBallotError}
         />
       ) : null;
+
+    case 'print_ballot_error':
+      return (
+        <Voting.PrintBallotErrorScreen
+          status={voterFlowState.status}
+          onTryAgain={onTryPrintBallotAgain}
+          onBack={onBackAfterPrintBallotError}
+        />
+      );
 
     case 'review_printed':
       return (

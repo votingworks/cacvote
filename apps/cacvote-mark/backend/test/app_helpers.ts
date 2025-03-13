@@ -1,13 +1,14 @@
-import { Buffer } from 'buffer';
+import { ok } from '@votingworks/basics';
 import * as grout from '@votingworks/grout';
+import { mockLogger } from '@votingworks/logging';
+import { Buffer } from 'buffer';
 import { Application } from 'express';
 import { Server } from 'http';
 import { AddressInfo } from 'net';
 import { dirSync } from 'tmp';
-import { ok } from '@votingworks/basics';
 import { Api, buildApp } from '../src/app';
-import { createWorkspace } from '../src/workspace';
 import { Auth, AuthStatus } from '../src/types/auth';
+import { createWorkspace } from '../src/workspace';
 
 interface MockAppContents {
   apiClient: grout.Client<Api>;
@@ -68,6 +69,7 @@ export function createApp(): MockAppContents {
   const app = buildApp({
     auth: mockAuth,
     workspace: createWorkspace(workdir),
+    logger: mockLogger(),
   });
 
   const server = app.listen();

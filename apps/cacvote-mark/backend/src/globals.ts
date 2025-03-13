@@ -37,7 +37,7 @@ for (const dotenvFile of dotenvFiles) {
 const BASE_PORT = safeParseInt(process.env.BASE_PORT).ok() || 3000;
 
 /**
- * Default port for the RaveMark backend.
+ * Default port for the CACvoteMark backend.
  */
 export const PORT = safeParseInt(process.env.PORT).ok() || BASE_PORT + 2;
 

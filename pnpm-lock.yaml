@@ -325,6 +325,9 @@ importers:
       '@votingworks/fs':
         specifier: workspace:*
         version: link:../../../libs/fs
+      '@votingworks/fujitsu-thermal-printer':
+        specifier: workspace:*
+        version: link:../../../libs/fujitsu-thermal-printer
       '@votingworks/grout':
         specifier: workspace:*
         version: link:../../../libs/grout

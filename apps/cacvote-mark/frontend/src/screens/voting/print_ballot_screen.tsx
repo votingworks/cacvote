@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import { useBallotPrinter } from '@votingworks/mark-flow-ui';
 import {
   BallotStyleId,
@@ -5,12 +6,42 @@ import {
   PrecinctId,
   VotesDict,
 } from '@votingworks/types';
-import { H2, Main, P, Screen, appStrings, printElement } from '@votingworks/ui';
-import { useEffect, useRef } from 'react';
+import {
+  H2,
+  Main,
+  P,
+  Screen,
+  appStrings,
+  printElementToPdf,
+} from '@votingworks/ui';
+import { useEffect } from 'react';
 import styled from 'styled-components';
 import { ArrowDownIcon } from '../../components/arrow_down_icon';
 import { BallotIcon } from '../../components/ballot_icon';
 import { ThermalPrinterIcon } from '../../components/thermal_printer_icon';
+import { printBallotPdf } from '../../api';
+
+// Copied from libs/fujitsu-thermal-printer/src/types.ts
+export type ErrorType =
+  | 'hardware'
+  | 'supply-voltage'
+  | 'receive-data'
+  | 'temperature'
+  | 'disconnected';
+export type PrinterStatus =
+  | {
+      state: 'cover-open';
+    }
+  | {
+      state: 'no-paper';
+    }
+  | {
+      state: 'idle';
+    }
+  | {
+      state: 'error';
+      type: ErrorType;
+    };
 
 export interface PrintBallotScreenProps {
   electionDefinition: ElectionDefinition;
@@ -20,6 +51,7 @@ export interface PrintBallotScreenProps {
   generateBallotId: () => string;
   isLiveMode: boolean;
   onPrintCompleted: () => void;
+  onPrintError: (printerStatus: PrinterStatus) => void;
 }
 
 const ArrowDownIconContainer = styled.div`
@@ -54,32 +86,29 @@ export function PrintBallotScreenStatic(): JSX.Element {
 
 export function PrintBallotScreen({
   onPrintCompleted,
+  onPrintError,
   ...rest
 }: PrintBallotScreenProps): JSX.Element {
-  const printTimer = useRef<number>();
+  const printBallotPdfMutation = printBallotPdf.useMutation();
 
   const printBallot = useBallotPrinter({
     ...rest,
 
-    printElement: (element, printOptions) =>
-      printElement(element, {
-        ...printOptions,
-        deviceName: process.env.REACT_APP_BALLOT_PRINTER,
-      }),
-
-    onPrintStarted() {
-      printTimer.current = window.setTimeout(
-        onPrintCompleted,
-        process.env.IS_INTEGRATION_TEST === 'true' ? 500 : 5000
-      );
+    printElement: async (element) => {
+      const pdfData = await printElementToPdf(element);
+      const result = await printBallotPdfMutation.mutateAsync({
+        pdfData: Buffer.from(pdfData),
+      });
+      if (result.isErr()) {
+        onPrintError(result.err());
+      } else {
+        onPrintCompleted();
+      }
     },
   });
 
   useEffect(() => {
     printBallot();
-    return () => {
-      window.clearTimeout(printTimer.current);
-    };
   }, [printBallot]);
 
   return <PrintBallotScreenStatic />;

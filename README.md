@@ -107,11 +107,12 @@ To print with PDF, run this:
 
 ```sh
 $ sudo apt-get -y install cups-pdf
-$ echo REACT_APP_BALLOT_PRINTER=PDF >> apps/cacvote-mark/frontend/.env.local
+$ echo REACT_APP_VX_USE_MOCK_PRINTER=TRUE >> apps/cacvote-mark/backend/.env.local
 $ echo MAILING_LABEL_PRINTER=PDF >> apps/cacvote-mark/backend/.env.local
 ```
 
-When printing, the PDFs will be saved to `~/PDF`.
+When printing, the mailing label PDFs will be saved to `~/PDF` and the ballot
+PDFs will be saved to `apps/cacvote-mark/backend/dev-workspace/prints`.
 
 ## Release
 

@@ -175,3 +175,15 @@ export const printMailingLabel = {
     });
   },
 } as const;
+
+export const printBallotPdf = {
+  useMutation() {
+    const apiClient = useApiClient();
+    const queryClient = useQueryClient();
+    return useMutation(apiClient.printBallotPdf, {
+      async onSuccess() {
+        await queryClient.invalidateQueries();
+      },
+    });
+  },
+} as const;
