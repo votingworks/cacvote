@@ -183,6 +183,8 @@ test('ensureImageData', () => {
   expect(ensureImageData(imageData) === imageData).toBeTruthy();
   expect(ensureImageData(imageData)).toBeInstanceOf(ImageData);
 
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore - colorSpace is not a valid property of ImageData
   const imageDataLike: ImageData = {
     width: 1,
     height: 1,

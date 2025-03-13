@@ -34,7 +34,7 @@
   "devDependencies": {
     "@types/debug": "4.1.8",
     "@types/jest": "^29.5.3",
-    "@types/node": "20.16.0",
+    "@types/node": "16.18.23",
     "esbuild": "0.21.2",
     "esbuild-runner": "2.2.2",
     "eslint-plugin-vx": "workspace:*",
@@ -44,5 +44,5 @@
     "jest-watch-typeahead": "^2.2.2",
     "ts-jest": "29.1.1"
   },
-  "packageManager": "pnpm@8.15.5"
+  "packageManager": "pnpm@8.1.0"
 }

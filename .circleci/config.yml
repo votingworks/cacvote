@@ -424,6 +424,29 @@ jobs:
       - store_test_results:
           path: libs/fs/reports/
 
+  # @votingworks/fujitsu-thermal-printer
+  test-libs-fujitsu-thermal-printer:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/fujitsu-thermal-printer build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/fujitsu-thermal-printer lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/fujitsu-thermal-printer test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/fujitsu-thermal-printer/reports/
+
   # @votingworks/grout
   test-libs-grout:
     executor: nodejs
@@ -538,6 +561,29 @@ jobs:
             JEST_JUNIT_OUTPUT_DIR: ./reports/
       - store_test_results:
           path: libs/mark-flow-ui/reports/
+
+  # @votingworks/message-coder
+  test-libs-message-coder:
+    executor: nodejs
+    resource_class: xlarge
+    steps:
+      - checkout-and-install
+      - run:
+          name: Build
+          command: |
+            pnpm --dir libs/message-coder build
+      - run:
+          name: Lint
+          command: |
+            pnpm --dir libs/message-coder lint
+      - run:
+          name: Test
+          command: |
+            pnpm --dir libs/message-coder test
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/
+      - store_test_results:
+          path: libs/message-coder/reports/
 
   # @votingworks/monorepo-utils
   test-libs-monorepo-utils:
@@ -921,11 +967,13 @@ workflows:
       - test-libs-eslint-plugin-vx
       - test-libs-fixtures
       - test-libs-fs
+      - test-libs-fujitsu-thermal-printer
       - test-libs-grout
       - test-libs-grout-test-utils
       - test-libs-image-utils
       - test-libs-logging
       - test-libs-mark-flow-ui
+      - test-libs-message-coder
       - test-libs-monorepo-utils
       - test-libs-printing
       - test-libs-res-to-ts

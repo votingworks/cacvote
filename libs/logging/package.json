@@ -41,7 +41,7 @@
     "@types/debug": "4.1.8",
     "@types/jest": "^29.5.3",
     "@types/kiosk-browser": "workspace:*",
-    "@types/node": "20.16.0",
+    "@types/node": "16.18.23",
     "@types/yargs": "17.0.22",
     "@votingworks/fixtures": "workspace:*",
     "@votingworks/test-utils": "workspace:*",
@@ -57,5 +57,5 @@
     "sort-package-json": "^1.50.0",
     "ts-jest": "29.1.1"
   },
-  "packageManager": "pnpm@8.15.5"
+  "packageManager": "pnpm@8.1.0"
 }
