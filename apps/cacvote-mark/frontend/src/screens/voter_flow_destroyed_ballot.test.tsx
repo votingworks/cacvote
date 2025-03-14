@@ -1,36 +1,22 @@
+import { Buffer } from 'buffer';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { assertDefined } from '@votingworks/basics';
+import { assertDefined, ok } from '@votingworks/basics';
 import { electionFamousNames2021Fixtures } from '@votingworks/fixtures';
 import { createMockClient } from '@votingworks/grout-test-utils';
-import { useBallotPrinter } from '@votingworks/mark-flow-ui';
 import { getBallotStyle, getContests } from '@votingworks/types';
-import { renderWithThemes } from '@votingworks/ui';
+import { renderWithThemes, printElementToPdf } from '@votingworks/ui';
 import { ApiClient, ApiClientContext, createQueryClient } from '../api';
 import { VoterFlowScreen } from './voter_flow_screen';
 
-jest.mock('@votingworks/mark-flow-ui', () => ({
-  ...jest.requireActual('@votingworks/mark-flow-ui'),
-  useBallotPrinter: jest.fn(),
+jest.mock('@votingworks/ui', () => ({
+  ...jest.requireActual('@votingworks/ui'),
+  printElementToPdf: jest.fn(),
 }));
-
-const useBallotPrinterMock = useBallotPrinter as jest.Mock<
-  ReturnType<typeof useBallotPrinter>,
-  Parameters<typeof useBallotPrinter>
->;
 
 test('destroyed ballot', async () => {
   jest.useFakeTimers();
-
-  let useBallotPrinterMockOptions:
-    | Parameters<typeof useBallotPrinter>[0]
-    | undefined;
-  const printBallotMock = jest.fn();
-  useBallotPrinterMock.mockImplementation((options) => {
-    useBallotPrinterMockOptions = options;
-    return printBallotMock;
-  });
 
   const apiClient = createMockClient<ApiClient>();
   const queryClient = createQueryClient();
@@ -74,13 +60,17 @@ test('destroyed ballot', async () => {
     userEvent.click(screen.getByRole('button', { name: 'Next' }));
   }
 
+  jest.mocked(printElementToPdf).mockResolvedValue(Buffer.of());
+  apiClient.printBallotPdf
+    .expectCallWith({ pdfData: Buffer.of() })
+    .resolves(ok());
+
   // Done voting, review onscreen selections
   await screen.findByText('Review Your Votes');
   userEvent.click(screen.getByText('Print My Ballot'));
 
   await screen.findByText(/Printing Your Official Ballot/);
-  expect(printBallotMock).toHaveBeenCalled();
-  useBallotPrinterMockOptions?.onPrintStarted?.();
+  expect(printElementToPdf).toHaveBeenCalled();
 
   // Wait for the ballot to print
   act(() => {
