@@ -12,7 +12,13 @@ import {
   ok,
   throwIllegalValue,
 } from '@votingworks/basics';
+import {
+  FujitsuThermalPrinterInterface,
+  getFujitsuThermalPrinter,
+  PrintResult,
+} from '@votingworks/fujitsu-thermal-printer';
 import * as grout from '@votingworks/grout';
+import { Logger } from '@votingworks/logging';
 import {
   BallotIdSchema,
   BallotStyleId,
@@ -55,9 +61,11 @@ export type VoterStatus =
 function buildApi({
   auth,
   workspace: { store },
+  ballotPrinter,
 }: {
   auth: Auth;
   workspace: Workspace;
+  ballotPrinter: FujitsuThermalPrinterInterface;
 }) {
   async function getAuthStatus(): Promise<AuthStatus> {
     return await auth.getAuthStatus();
@@ -428,6 +436,15 @@ function buildApi({
       });
     },
 
+    async printBallotPdf(input: { pdfData: Buffer }): Promise<PrintResult> {
+      const status = await ballotPrinter.getStatus();
+      if (status.state !== 'idle') {
+        return err(status);
+      }
+
+      return await ballotPrinter.print(input.pdfData);
+    },
+
     logOut() {
       return auth.logOut();
     },
@@ -439,12 +456,15 @@ export type Api = ReturnType<typeof buildApi>;
 export function buildApp({
   auth,
   workspace,
+  logger,
 }: {
   auth: Auth;
   workspace: Workspace;
+  logger: Logger;
 }): Application {
   const app: Application = express();
-  const api = buildApi({ auth, workspace });
+  const ballotPrinter = getFujitsuThermalPrinter(logger);
+  const api = buildApi({ auth, workspace, ballotPrinter });
 
   app.use('/api/status', (_req, res) => {
     res.json({ status: 'ok' });

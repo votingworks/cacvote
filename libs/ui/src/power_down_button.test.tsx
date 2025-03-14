@@ -11,7 +11,9 @@ const { mockApiClient, render } = newTestContext({
 test('renders as expected.', async () => {
   render(
     <PowerDownButton
-      logger={new Logger(LogSource.VxAdminFrontend)}
+      logger={
+        new Logger(LogSource.VxAdminFrontend, () => Promise.resolve('system'))
+      }
       userRole="poll_worker"
     />
   );

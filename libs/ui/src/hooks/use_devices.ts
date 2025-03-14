@@ -93,7 +93,7 @@ export function useDevices({ hardware, logger }: Props): Devices {
           connected: newPrinter.connected,
         });
       } else if (previousCopyOfPrinter.connected !== newPrinter.connected) {
-        void logger.log(LogEventId.PrinterConnectionUpdate, 'system', {
+        void logger.log(LogEventId.PrinterStatusChanged, 'system', {
           message: `Printer ${newPrinter.name} has been ${
             newPrinter.connected ? 'connected' : 'disconnected'
           }.`,

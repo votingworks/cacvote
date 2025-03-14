@@ -3,7 +3,7 @@ import { assertDefined, iter, ok } from '@votingworks/basics';
 import { electionFamousNames2021Fixtures } from '@votingworks/fixtures';
 import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
-import { fakeLogger } from '@votingworks/logging';
+import { mockLogger } from '@votingworks/logging';
 import { JURISDICTION_CODE, createVerifiedObject } from './mock_object';
 import {
   CastBallot,
@@ -22,7 +22,7 @@ import { UsabilityTestClient } from './usability_test_client';
 const jurisdictionCode = JurisdictionCodeSchema.parse('st.test-jurisdiction');
 
 test('empty state', async () => {
-  const client = new UsabilityTestClient({ logger: fakeLogger() });
+  const client = new UsabilityTestClient({ logger: mockLogger() });
 
   const status = await client.checkStatus();
   expect(status).toEqual(ok());
@@ -51,7 +51,7 @@ test('create object', async () => {
     )
   );
 
-  const client = new UsabilityTestClient({ logger: fakeLogger() });
+  const client = new UsabilityTestClient({ logger: mockLogger() });
 
   // echoes the object ID
   const result = await client.createObject(object);
@@ -94,7 +94,7 @@ test('auto expire completed voting sessions (ballot only)', async () => {
     )
   );
 
-  const client = new UsabilityTestClient({ logger: fakeLogger() });
+  const client = new UsabilityTestClient({ logger: mockLogger() });
   (await client.createObject(electionObject)).unsafeUnwrap();
 
   const registrationRequestObject = await createVerifiedObject(
@@ -176,7 +176,7 @@ test('auto expire completed voting sessions (ballot and registration)', async ()
     )
   );
 
-  const client = new UsabilityTestClient({ logger: fakeLogger() });
+  const client = new UsabilityTestClient({ logger: mockLogger() });
   (await client.createObject(electionObject)).unsafeUnwrap();
 
   const registrationRequestObject = await createVerifiedObject(
@@ -252,7 +252,7 @@ egtest('with an election', async () => {
   const client = (
     await UsabilityTestClient.withElection(
       electionFamousNames2021Fixtures.electionDefinition,
-      { logger: fakeLogger() }
+      { logger: mockLogger() }
     )
   ).unsafeUnwrap();
 

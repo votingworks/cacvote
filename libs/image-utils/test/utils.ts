@@ -1,5 +1,5 @@
 import { Rect } from '@votingworks/types';
-import { createImageData } from 'canvas';
+import { createImageData, ImageData } from 'canvas';
 import { lines } from '@votingworks/basics';
 import { int } from '../src';
 import { getImageChannelCount } from '../src/image_data';

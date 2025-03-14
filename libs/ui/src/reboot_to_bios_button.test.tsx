@@ -8,7 +8,13 @@ import { newTestContext } from '../test/test_context';
 const { render, mockApiClient } = newTestContext({ skipUiStringsApi: true });
 
 test('renders as expected.', async () => {
-  render(<RebootToBiosButton logger={new Logger(LogSource.VxAdminFrontend)} />);
+  render(
+    <RebootToBiosButton
+      logger={
+        new Logger(LogSource.VxAdminFrontend, () => Promise.resolve('system'))
+      }
+    />
+  );
 
   userEvent.click(screen.getByText('Reboot to BIOS'));
   await screen.findByText(/Rebooting/);

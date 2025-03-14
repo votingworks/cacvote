@@ -1,56 +1,88 @@
-import { Buffer } from 'buffer';
+import { Buffer } from 'node:buffer';
 import { ImageData, createImageData } from 'canvas';
 import fc from 'fast-check';
-import { writeFile } from 'fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { fileSync } from 'tmp';
+import { randomFillSync } from 'node:crypto';
+import { MaybePromise } from '@votingworks/basics';
+import { arbitraryImageData } from '../test/arbitraries';
 import {
-  arbitraryImageData,
-  arbitraryImageDataRgba,
-} from '../test/arbitraries';
-import {
-  getImageChannelCount,
-  GRAY_CHANNEL_COUNT,
-  isGrayscale,
-  isRgba,
-  loadImage,
-  loadImageData,
   RGBA_CHANNEL_COUNT,
-  RGB_CHANNEL_COUNT,
-  toDataUrl,
-  toGrayscale,
-  toImageData,
-  toRgba,
-  writeImageData,
+  encodeImageData,
   ensureImageData,
+  fromGrayScale,
+  getImageChannelCount,
+  isRgba,
+  loadImageData,
+  toDataUrl,
+  toImageBuffer,
+  writeImageData,
 } from './image_data';
 
 test('channels', () => {
   const rgbaImage = createImageData(1, 1);
-  const rgbImage = createImageData(Uint8ClampedArray.of(0, 0, 0), 1, 1);
-  const grayImage = createImageData(Uint8ClampedArray.of(0), 1, 1);
-
   expect(getImageChannelCount(rgbaImage)).toEqual(RGBA_CHANNEL_COUNT);
-  expect(getImageChannelCount(grayImage)).toEqual(GRAY_CHANNEL_COUNT);
-  expect(getImageChannelCount(rgbImage)).toEqual(RGB_CHANNEL_COUNT);
-
   expect(isRgba(rgbaImage)).toEqual(true);
-  expect(isRgba(grayImage)).toEqual(false);
-  expect(isRgba(rgbImage)).toEqual(false);
 });
 
 test('getImageChannelCount always returns an integer', () => {
   fc.assert(
+    fc.property(arbitraryImageData(), (imageData) => {
+      expect(getImageChannelCount(imageData)).toEqual(RGBA_CHANNEL_COUNT);
+    })
+  );
+});
+
+test('fromGrayScale', () => {
+  expect(() => fromGrayScale(Buffer.of(0), 0, 1)).toThrow('Invalid width');
+  expect(() => fromGrayScale(Buffer.of(0), 1, 0)).toThrow('Invalid height');
+  expect(() => fromGrayScale(Buffer.of(0), 1, 2)).toThrow(
+    'Invalid pixel count'
+  );
+
+  // accepts a Buffer
+  expect(fromGrayScale(Buffer.of(0), 1, 1)).toBeInstanceOf(ImageData);
+
+  // accepts a Uint8ClampedArray
+  expect(fromGrayScale(Uint8ClampedArray.of(0), 1, 1)).toBeInstanceOf(
+    ImageData
+  );
+
+  // accepts a number[]
+  expect(fromGrayScale([0], 1, 1)).toBeInstanceOf(ImageData);
+
+  fc.assert(
     fc.property(
-      fc.integer({ min: 1, max: 10 }).chain((channels) =>
-        fc.record({
-          channels: fc.constant(channels),
-          imageData: arbitraryImageData({ channels }),
-        })
-      ),
-      ({ channels, imageData }) => {
-        expect(getImageChannelCount(imageData)).toEqual(channels);
-        expect(isGrayscale(imageData)).toEqual(channels === GRAY_CHANNEL_COUNT);
-        expect(isRgba(imageData)).toEqual(channels === RGBA_CHANNEL_COUNT);
+      fc
+        .tuple(fc.integer({ min: 1, max: 10 }), fc.integer({ min: 1, max: 10 }))
+        .chain(([width, height]) =>
+          fc.tuple(
+            fc.array(fc.integer({ min: 0, max: 0xff }), {
+              minLength: width * height,
+              maxLength: width * height,
+            }),
+            fc.constant(width),
+            fc.constant(height)
+          )
+        ),
+      ([pixels, width, height]) => {
+        const imageData = fromGrayScale(pixels, width, height);
+        expect({
+          width: imageData.width,
+          height: imageData.height,
+          dataLength: imageData.data.length,
+        }).toEqual({
+          width,
+          height,
+          dataLength: width * height * RGBA_CHANNEL_COUNT,
+        });
+
+        for (const [i, pixel] of pixels.entries()) {
+          expect(imageData.data[i * RGBA_CHANNEL_COUNT]).toEqual(pixel);
+          expect(imageData.data[i * RGBA_CHANNEL_COUNT + 1]).toEqual(pixel);
+          expect(imageData.data[i * RGBA_CHANNEL_COUNT + 2]).toEqual(pixel);
+          expect(imageData.data[i * RGBA_CHANNEL_COUNT + 3]).toEqual(0xff);
+        }
       }
     )
   );
@@ -67,93 +99,7 @@ test('loadImage/writeImageData', async () => {
 
   await fc.assert(
     fc.asyncProperty(
-      arbitraryImageDataRgba(),
-      fc.constantFrom('png', 'jpeg', 'jpg'),
-      async (imageData, format) => {
-        const filePath = fileSync({ template: `tmp-XXXXXX.${format}` }).name;
-        await writeImageData(filePath, imageData);
-        const loadedImageData = toImageData(await loadImage(filePath));
-        expect({
-          width: loadedImageData.width,
-          height: loadedImageData.height,
-          dataLength: loadedImageData.data.length,
-        }).toEqual({
-          width: imageData.width,
-          height: imageData.height,
-          dataLength: imageData.data.length,
-        });
-      }
-    )
-  );
-});
-
-test('loadImageData with invalid PGM format', async () => {
-  const filePath = fileSync({
-    template: `tmp-XXXXXX.pgm`,
-  }).name;
-  await writeFile(filePath, `P5\n0\n255\n`);
-  await expect(loadImageData(filePath)).rejects.toThrow(
-    new Error(`Invalid PGM image: ${filePath}`)
-  );
-});
-
-test('loadImage/loadImageData with PGM format', async () => {
-  await fc.assert(
-    fc.asyncProperty(arbitraryImageData({ channels: 1 }), async (imageData) => {
-      const filePath = fileSync({
-        template: `tmp-XXXXXX.pgm`,
-      }).name;
-      const pgmData = Buffer.concat([
-        Buffer.from('P5\n'),
-        Buffer.from(`${imageData.width} ${imageData.height}\n`),
-        Buffer.from('255\n'),
-        Buffer.from(imageData.data),
-      ]);
-
-      await writeFile(filePath, pgmData);
-
-      const loadedImageFromFile = await loadImage(filePath);
-      const loadedImageDataFromFile = await loadImageData(filePath);
-      expect({
-        width: loadedImageDataFromFile.width,
-        height: loadedImageDataFromFile.height,
-      }).toEqual({
-        width: imageData.width,
-        height: imageData.height,
-      });
-      expect({
-        width: loadedImageFromFile.width,
-        height: loadedImageFromFile.height,
-      }).toEqual({
-        width: imageData.width,
-        height: imageData.height,
-      });
-
-      const pgmDataUrl = toDataUrl(imageData, 'image/x-portable-graymap');
-      const loadedImageFromDataUrl = await loadImage(pgmDataUrl);
-      const loadedImageDataFromDataUrl = await loadImageData(pgmDataUrl);
-      expect({
-        width: loadedImageDataFromDataUrl.width,
-        height: loadedImageDataFromDataUrl.height,
-      }).toEqual({
-        width: imageData.width,
-        height: imageData.height,
-      });
-      expect({
-        width: loadedImageFromDataUrl.width,
-        height: loadedImageFromDataUrl.height,
-      }).toEqual({
-        width: imageData.width,
-        height: imageData.height,
-      });
-    })
-  );
-});
-
-test('loadImageData', async () => {
-  await fc.assert(
-    fc.asyncProperty(
-      arbitraryImageDataRgba(),
+      arbitraryImageData(),
       fc.constantFrom('png', 'jpeg', 'jpg'),
       async (imageData, format) => {
         const filePath = fileSync({ template: `tmp-XXXXXX.${format}` }).name;
@@ -173,49 +119,24 @@ test('loadImageData', async () => {
   );
 });
 
-test('toRgba', () => {
-  fc.assert(
-    fc.property(
-      fc.integer({ min: 1, max: 10 }).chain((channels) =>
-        fc.record({
-          channels: fc.constant(channels),
-          imageData: arbitraryImageData({ channels }),
-        })
-      ),
-      ({ channels, imageData }) => {
-        if (channels === RGBA_CHANNEL_COUNT) {
-          expect(toRgba(imageData).unsafeUnwrap()).toEqual(imageData);
-        } else if (channels === GRAY_CHANNEL_COUNT) {
-          expect(toRgba(imageData).unsafeUnwrap().data).toHaveLength(
-            imageData.width * imageData.height * RGBA_CHANNEL_COUNT
-          );
-        } else {
-          toRgba(imageData).unsafeUnwrapErr();
-        }
-      }
-    )
-  );
-});
-
-test('toGrayscale', () => {
-  fc.assert(
-    fc.property(
-      fc.integer({ min: 1, max: 10 }).chain((channels) =>
-        fc.record({
-          channels: fc.constant(channels),
-          imageData: arbitraryImageData({ channels }),
-        })
-      ),
-      ({ channels, imageData }) => {
-        if (channels === GRAY_CHANNEL_COUNT) {
-          expect(toGrayscale(imageData).unsafeUnwrap()).toEqual(imageData);
-        } else if (channels === RGBA_CHANNEL_COUNT) {
-          expect(toGrayscale(imageData).unsafeUnwrap().data).toHaveLength(
-            imageData.width * imageData.height * GRAY_CHANNEL_COUNT
-          );
-        } else {
-          toGrayscale(imageData).unsafeUnwrapErr();
-        }
+test('loadImageData', async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      arbitraryImageData(),
+      fc.constantFrom('png', 'jpeg', 'jpg'),
+      async (imageData, format) => {
+        const filePath = fileSync({ template: `tmp-XXXXXX.${format}` }).name;
+        await writeImageData(filePath, imageData);
+        const loadedImageData = await loadImageData(filePath);
+        expect({
+          width: loadedImageData.width,
+          height: loadedImageData.height,
+          dataLength: loadedImageData.data.length,
+        }).toEqual({
+          width: imageData.width,
+          height: imageData.height,
+          dataLength: imageData.data.length,
+        });
       }
     )
   );
@@ -224,13 +145,12 @@ test('toGrayscale', () => {
 test('toDataUrl image/png', async () => {
   await fc.assert(
     fc.asyncProperty(
-      arbitraryImageData({ width: 5, height: 5, channels: 4 }),
+      arbitraryImageData({ width: 5, height: 5 }),
       async (imageData) => {
         const dataUrl = toDataUrl(imageData, 'image/png');
         expect(dataUrl).toMatch(/^data:image\/png;base64,/);
-        const { width: decodedWidth, height: decodedHeight } = toImageData(
-          await loadImage(dataUrl)
-        );
+        const { width: decodedWidth, height: decodedHeight } =
+          await loadImageData(dataUrl);
         expect({ width: decodedWidth, height: decodedHeight }).toStrictEqual({
           width: imageData.width,
           height: imageData.height,
@@ -243,46 +163,18 @@ test('toDataUrl image/png', async () => {
 test('toDataUrl image/jpeg', async () => {
   await fc.assert(
     fc.asyncProperty(
-      arbitraryImageData({ width: 5, height: 5, channels: 4 }),
+      arbitraryImageData({ width: 5, height: 5 }),
       async (imageData) => {
         const dataUrl = toDataUrl(imageData, 'image/jpeg');
         expect(dataUrl).toMatch(/^data:image\/jpeg;base64,/);
-        const { width: decodedWidth, height: decodedHeight } = toImageData(
-          await loadImage(dataUrl)
-        );
+        const { width: decodedWidth, height: decodedHeight } =
+          await loadImageData(dataUrl);
         expect({ width: decodedWidth, height: decodedHeight }).toStrictEqual({
           width: imageData.width,
           height: imageData.height,
         });
       }
     )
-  );
-});
-
-test('toDataUrl image/x-portable-graymap', async () => {
-  await fc.assert(
-    fc.asyncProperty(
-      arbitraryImageData({ width: 5, height: 5, channels: 1 }),
-      async (imageData) => {
-        const dataUrl = toDataUrl(imageData, 'image/x-portable-graymap');
-        expect(dataUrl).toMatch(/^data:image\/x-portable-graymap;base64,/);
-        const { width: decodedWidth, height: decodedHeight } = toImageData(
-          await loadImage(dataUrl)
-        );
-        expect({ width: decodedWidth, height: decodedHeight }).toStrictEqual({
-          width: imageData.width,
-          height: imageData.height,
-        });
-      }
-    )
-  );
-});
-
-test('toDataUrl image/x-portable-graymap with more than one channel', () => {
-  const imageData = createImageData(5, 5);
-  expect(getImageChannelCount(imageData)).toEqual(4);
-  expect(() => toDataUrl(imageData, 'image/x-portable-graymap')).toThrow(
-    'image/x-portable-graymap only supports one channel'
   );
 });
 
@@ -291,12 +183,126 @@ test('ensureImageData', () => {
   expect(ensureImageData(imageData) === imageData).toBeTruthy();
   expect(ensureImageData(imageData)).toBeInstanceOf(ImageData);
 
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore - colorSpace is not a valid property of ImageData
   const imageDataLike: ImageData = {
     width: 1,
     height: 1,
     data: Uint8ClampedArray.of(0),
-    colorSpace: 'srgb',
   };
   expect(ensureImageData(imageDataLike) === imageDataLike).toBeFalsy();
   expect(ensureImageData(imageDataLike)).toBeInstanceOf(ImageData);
+});
+
+test('toImageBuffer', async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      arbitraryImageData({ width: 5, height: 5 }),
+      fc.constantFrom<'png' | 'jpeg' | undefined>('png', 'jpeg', undefined),
+      async (imageData, format) => {
+        const buffer = toImageBuffer(imageData, format && `image/${format}`);
+        const filePath = fileSync({ template: `tmp-XXXXXX.${format}` }).name;
+        await writeFile(filePath, buffer);
+        const { width: decodedWidth, height: decodedHeight } =
+          await loadImageData(filePath);
+        expect({ width: decodedWidth, height: decodedHeight }).toStrictEqual({
+          width: imageData.width,
+          height: imageData.height,
+        });
+      }
+    )
+  );
+});
+
+test('encodeImageData', async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      arbitraryImageData({ width: 5, height: 5 }),
+      fc.constantFrom<'image/png' | 'image/jpeg'>('image/png', 'image/jpeg'),
+      async (imageData, mimeType) => {
+        const buffer =
+          mimeType === 'image/png'
+            ? await encodeImageData(imageData, mimeType)
+            : await encodeImageData(imageData, mimeType);
+        const filePath = fileSync({
+          template: `tmp-XXXXXX.${mimeType === 'image/png' ? 'png' : 'jpeg'}`,
+        }).name;
+        await writeFile(filePath, buffer);
+        const { width: decodedWidth, height: decodedHeight } =
+          await loadImageData(filePath);
+        expect({ width: decodedWidth, height: decodedHeight }).toStrictEqual({
+          width: imageData.width,
+          height: imageData.height,
+        });
+      }
+    )
+  );
+});
+
+/**
+ * Measure `fn` repeatedly until `timeLimitSeconds` has elapsed.
+ */
+async function measureRepeatedly(
+  fn: () => MaybePromise<unknown>,
+  { timeLimitSeconds }: { timeLimitSeconds: number }
+): Promise<{
+  count: number;
+  elapsed: bigint;
+  elapsedSeconds: number;
+  rate: number;
+}> {
+  const NANOS_PER_SECOND = BigInt(1e9);
+  const start = process.hrtime.bigint();
+  const timeLimitNanos = BigInt(
+    // eslint-disable-next-line vx/gts-safe-number-parse
+    Math.floor(Number(NANOS_PER_SECOND) * timeLimitSeconds)
+  );
+
+  for (let count = 0; ; count += 1) {
+    await fn();
+    const elapsed = process.hrtime.bigint() - start;
+
+    if (elapsed >= timeLimitNanos) {
+      // eslint-disable-next-line vx/gts-safe-number-parse
+      const elapsedSeconds = Number(elapsed) / Number(NANOS_PER_SECOND);
+      const rate = count / elapsedSeconds;
+      return { count, elapsed, elapsedSeconds, rate };
+    }
+  }
+}
+
+// TODO: Replace this with a service specifically geared toward measuring performance.
+//
+// This is too inconsistent to be a reliable performance benchmark. It's unclear whether
+// it's the test environment, the test itself, or the code being tested that's causing
+// the inconsistency.
+//
+// Consider replacing with a service like https://codspeed.io/.
+test.skip('encodeImageData performance', async () => {
+  const imageData = createImageData(1000, 1000);
+  randomFillSync(imageData.data);
+
+  const serial1x = await measureRepeatedly(
+    () => encodeImageData(imageData, 'image/png'),
+    { timeLimitSeconds: 0.5 }
+  );
+
+  const parallel2x = await measureRepeatedly(
+    () =>
+      // we want to ensure that these are running in parallel
+      Promise.all([
+        encodeImageData(imageData, 'image/png'),
+        encodeImageData(imageData, 'image/png'),
+      ]),
+    { timeLimitSeconds: 0.5 }
+  );
+
+  const serial1xCount = serial1x.count;
+  const parallel2xCount = parallel2x.count * 2;
+
+  // Ideally we'd get a 2x speedup, but we'll settle for 1.5x given the overhead
+  // of running in parallel and the uncertainty of the test environment. This
+  // should at least ensure that running in parallel is faster in practice than
+  // the serial one.
+  expect(parallel2xCount / serial1xCount).toBeGreaterThan(1.5);
 });

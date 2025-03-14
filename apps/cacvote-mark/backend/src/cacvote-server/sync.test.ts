@@ -1,5 +1,5 @@
 import { deferred, err } from '@votingworks/basics';
-import { fakeLogger } from '@votingworks/logging';
+import { mockLogger } from '@votingworks/logging';
 import e from 'express';
 import { DateTime } from 'luxon';
 import {
@@ -32,7 +32,7 @@ test('syncPeriodically', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   const stopSyncing = syncPeriodically(server.client, store, logger, 0);
 
@@ -62,7 +62,7 @@ test('syncPeriodically loops', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   const stopSyncing = syncPeriodically(server.client, store, logger, 0);
 
@@ -87,7 +87,7 @@ test('sync / checkStatus failure', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   await sync(server.client, store, logger);
 
@@ -117,7 +117,7 @@ test('sync / getJournalEntries failure', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   await sync(server.client, store, logger);
 
@@ -143,7 +143,7 @@ test('sync / getJournalEntries success / no entries', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   await sync(server.client, store, logger);
 
@@ -183,7 +183,7 @@ test('sync / getJournalEntries success / with entries', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   await sync(server.client, store, logger);
 
@@ -209,7 +209,7 @@ test('sync / createObject success / no objects', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   await sync(server.client, store, logger);
 
@@ -252,7 +252,7 @@ test('sync / createObject success / with objects', async () => {
   (await store.addObject(object)).unsafeUnwrap();
   expect(store.getObjectsToPush()).toHaveLength(1);
 
-  const logger = fakeLogger();
+  const logger = mockLogger();
   await sync(server.client, store, logger);
 
   // wait for the server to stop
@@ -294,7 +294,7 @@ test('sync / createObject failure', async () => {
   (await store.addObject(object)).unsafeUnwrap();
   expect(store.getObjectsToPush()).toHaveLength(1);
 
-  const logger = fakeLogger();
+  const logger = mockLogger();
   await sync(server.client, store, logger);
 
   // wait for the server to stop
@@ -348,7 +348,7 @@ test('sync / fetches RegistrationRequest objects', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
   await sync(server.client, store, logger);
 
   // wait for the server to stop
@@ -416,7 +416,7 @@ test('sync / delete after initial sync', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   // first sync
   await sync(server.client, store, logger);
@@ -486,7 +486,7 @@ test('sync / delete before initial sync', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   await sync(server.client, store, logger);
 
@@ -517,7 +517,7 @@ test('sync / fetch ignores unknown object types', async () => {
   const server = await mockCacvoteServer(app);
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
   await sync(server.client, store, logger);
 
   // wait for the server to stop
@@ -552,7 +552,7 @@ test('sync / fetch failing to get object', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
   await sync(server.client, store, logger);
 
   // wait for the server to stop
@@ -593,7 +593,7 @@ test('sync / fetch object but object does not exist', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
   await sync(server.client, store, logger);
 
   // wait for the server to stop
@@ -644,7 +644,7 @@ test('sync / fetch object but cannot add to store', async () => {
   );
 
   const store = Store.memoryStore();
-  const logger = fakeLogger();
+  const logger = mockLogger();
 
   jest
     .spyOn(store, 'addObjectFromServer')

@@ -97,6 +97,7 @@ export async function start({
   const app = buildApp({
     workspace,
     auth: resolvedAuth,
+    logger,
   });
 
   if (USABILITY_TEST_ELECTION_PATH) {

@@ -66,7 +66,6 @@ test('images never lose pixels of the outlined color', () => {
   fc.assert(
     fc.property(
       arbitraryImageData({
-        channels: fc.constantFrom(1, 4),
         pixels: fc.constantFrom(PIXEL_WHITE, PIXEL_BLACK),
       }),
       (imageData) => {

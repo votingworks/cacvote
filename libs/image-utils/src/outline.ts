@@ -1,4 +1,4 @@
-import { createImageData } from 'canvas';
+import { createImageData, ImageData } from 'canvas';
 import { MAX_LUM, PIXEL_BLACK } from './diff';
 import { getImageChannelCount } from './image_data';
 import { int } from './types';

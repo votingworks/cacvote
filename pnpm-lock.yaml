@@ -325,6 +325,9 @@ importers:
       '@votingworks/fs':
         specifier: workspace:*
         version: link:../../../libs/fs
+      '@votingworks/fujitsu-thermal-printer':
+        specifier: workspace:*
+        version: link:../../../libs/fujitsu-thermal-printer
       '@votingworks/grout':
         specifier: workspace:*
         version: link:../../../libs/grout
@@ -418,7 +421,7 @@ importers:
         version: link:../../../libs/test-utils
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint:
         specifier: 8.51.0
         version: 8.51.0
@@ -466,7 +469,7 @@ importers:
         version: 3.0.3
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   apps/cacvote-mark/frontend:
     dependencies:
@@ -855,7 +858,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/@types/compress-commons:
     dependencies:
@@ -967,7 +970,7 @@ importers:
         version: link:../test-utils
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint-plugin-vx:
         specifier: workspace:*
         version: link:../eslint-plugin-vx
@@ -994,7 +997,7 @@ importers:
         version: 1.53.1
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
       wait-for-expect:
         specifier: ^3.0.2
         version: 3.0.2
@@ -1160,7 +1163,7 @@ importers:
         version: 1.53.1
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/ballot-encoder:
     dependencies:
@@ -1221,7 +1224,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/basics:
     dependencies:
@@ -1267,7 +1270,7 @@ importers:
         version: 1.53.1
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/cdf-schema-builder:
     dependencies:
@@ -1319,7 +1322,7 @@ importers:
         version: 1.53.1
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/db:
     dependencies:
@@ -1444,7 +1447,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/dev-dock/frontend:
     dependencies:
@@ -1550,7 +1553,7 @@ importers:
         version: 5.3.11(react-dom@18.2.0)(react-is@18.2.0)(react@18.2.0)
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/electionguard:
     dependencies:
@@ -1587,7 +1590,7 @@ importers:
         version: 2.2.2(jest@29.6.2)
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/eslint-plugin-vx:
     dependencies:
@@ -1666,7 +1669,7 @@ importers:
         version: 18.2.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/fixtures:
     dependencies:
@@ -1718,7 +1721,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/fs:
     dependencies:
@@ -1797,7 +1800,74 @@ importers:
         version: 0.2.1
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
+
+  libs/fujitsu-thermal-printer:
+    dependencies:
+      '@votingworks/basics':
+        specifier: workspace:*
+        version: link:../basics
+      '@votingworks/image-utils':
+        specifier: workspace:*
+        version: link:../image-utils
+      '@votingworks/logging':
+        specifier: workspace:*
+        version: link:../logging
+      '@votingworks/message-coder':
+        specifier: workspace:*
+        version: link:../message-coder
+      '@votingworks/types':
+        specifier: workspace:*
+        version: link:../types
+      '@votingworks/utils':
+        specifier: workspace:*
+        version: link:../utils
+      buffer:
+        specifier: ^6.0.3
+        version: 6.0.3
+      debug:
+        specifier: 4.3.4
+        version: 4.3.4(supports-color@5.5.0)
+      tmp-promise:
+        specifier: ^3.0.3
+        version: 3.0.3
+      usb:
+        specifier: ^2.6.0
+        version: 2.6.0
+    devDependencies:
+      '@types/debug':
+        specifier: 4.1.8
+        version: 4.1.8
+      '@types/jest':
+        specifier: ^29.5.3
+        version: 29.5.3
+      '@types/node':
+        specifier: 16.18.23
+        version: 16.18.23
+      esbuild:
+        specifier: 0.21.2
+        version: 0.21.2
+      esbuild-runner:
+        specifier: 2.2.2
+        version: 2.2.2(esbuild@0.21.2)
+      eslint-plugin-vx:
+        specifier: workspace:*
+        version: link:../eslint-plugin-vx
+      is-ci-cli:
+        specifier: 2.2.0
+        version: 2.2.0
+      jest:
+        specifier: ^29.6.2
+        version: 29.6.2(@types/node@16.18.23)
+      jest-junit:
+        specifier: ^16.0.0
+        version: 16.0.0
+      jest-watch-typeahead:
+        specifier: ^2.2.2
+        version: 2.2.2(jest@29.6.2)
+      ts-jest:
+        specifier: 29.1.1
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/grout:
     dependencies:
@@ -1858,7 +1928,7 @@ importers:
         version: 1.53.1
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/grout/test-utils:
     dependencies:
@@ -1898,7 +1968,7 @@ importers:
         version: 1.53.1
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/image-utils:
     dependencies:
@@ -1920,9 +1990,15 @@ importers:
       debug:
         specifier: 4.3.4
         version: 4.3.4(supports-color@5.5.0)
+      jest-image-snapshot:
+        specifier: ^6.4.0
+        version: 6.4.0(jest@29.6.2)
       pdfjs-dist:
         specifier: 2.3.200
         version: 2.3.200(webpack@4.47.0)
+      pixelmatch:
+        specifier: ^5.3.0
+        version: 5.3.0
       tmp:
         specifier: ^0.2.1
         version: 0.2.1
@@ -1945,15 +2021,18 @@ importers:
       '@types/pdfjs-dist':
         specifier: 2.1.3
         version: 2.1.3
+      '@types/pixelmatch':
+        specifier: ^5.2.6
+        version: 5.2.6
       '@types/tmp':
         specifier: 0.2.4
         version: 0.2.4
       esbuild:
-        specifier: 0.17.11
-        version: 0.17.11
+        specifier: 0.21.2
+        version: 0.21.2
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint-plugin-vx:
         specifier: workspace:*
         version: link:../eslint-plugin-vx
@@ -1966,9 +2045,6 @@ importers:
       jest:
         specifier: ^29.6.2
         version: 29.6.2(@types/node@16.18.23)
-      jest-image-snapshot:
-        specifier: ^6.4.0
-        version: 6.4.0(jest@29.6.2)
       jest-junit:
         specifier: ^16.0.0
         version: 16.0.0
@@ -1980,7 +2056,7 @@ importers:
         version: 11.0.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/logging:
     dependencies:
@@ -1999,6 +2075,9 @@ importers:
       debug:
         specifier: 4.3.4
         version: 4.3.4(supports-color@5.5.0)
+      stream:
+        specifier: ^0.0.3
+        version: 0.0.3
       yargs:
         specifier: 17.7.1
         version: 17.7.1
@@ -2009,9 +2088,6 @@ importers:
       '@types/debug':
         specifier: 4.1.8
         version: 4.1.8
-      '@types/fs-extra':
-        specifier: 11.0.1
-        version: 11.0.1
       '@types/jest':
         specifier: ^29.5.3
         version: 29.5.3
@@ -2031,20 +2107,17 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       esbuild:
-        specifier: 0.17.11
-        version: 0.17.11
+        specifier: 0.21.2
+        version: 0.21.2
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint-plugin-vx:
         specifier: workspace:*
         version: link:../eslint-plugin-vx
       fast-check:
         specifier: 2.23.2
         version: 2.23.2
-      fs-extra:
-        specifier: 11.1.1
-        version: 11.1.1
       is-ci-cli:
         specifier: 2.2.0
         version: 2.2.0
@@ -2065,7 +2138,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/mark-flow-ui:
     dependencies:
@@ -2288,13 +2361,47 @@ importers:
         version: 5.3.11(react-dom@18.2.0)(react-is@18.2.0)(react@18.2.0)
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
       util:
         specifier: ^0.12.4
         version: 0.12.4
       vite:
         specifier: 4.5.0
         version: 4.5.0(@types/node@16.18.23)
+
+  libs/message-coder:
+    dependencies:
+      '@votingworks/basics':
+        specifier: workspace:*
+        version: link:../basics
+      buffer:
+        specifier: ^6.0.3
+        version: 6.0.3
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.3
+        version: 29.5.3
+      eslint-plugin-vx:
+        specifier: workspace:*
+        version: link:../eslint-plugin-vx
+      fast-check:
+        specifier: 2.23.2
+        version: 2.23.2
+      is-ci-cli:
+        specifier: 2.2.0
+        version: 2.2.0
+      jest:
+        specifier: ^29.6.2
+        version: 29.6.2(@types/node@16.18.23)
+      jest-junit:
+        specifier: ^16.0.0
+        version: 16.0.0
+      jest-watch-typeahead:
+        specifier: ^2.2.2
+        version: 2.2.2(jest@29.6.2)
+      ts-jest:
+        specifier: 29.1.1
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/monorepo-utils:
     dependencies:
@@ -2316,7 +2423,7 @@ importers:
         version: 6.7.0(eslint@8.51.0)(typescript@5.4.5)
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint:
         specifier: 8.51.0
         version: 8.51.0
@@ -2364,7 +2471,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/printing:
     dependencies:
@@ -2448,11 +2555,11 @@ importers:
         specifier: workspace:*
         version: link:../image-utils
       esbuild:
-        specifier: 0.17.11
-        version: 0.17.11
+        specifier: 0.21.2
+        version: 0.21.2
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint-plugin-vx:
         specifier: workspace:*
         version: link:../eslint-plugin-vx
@@ -2479,7 +2586,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/res-to-ts:
     dependencies:
@@ -2512,11 +2619,11 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       esbuild:
-        specifier: 0.17.11
-        version: 0.17.11
+        specifier: 0.21.2
+        version: 0.21.2
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint-plugin-vx:
         specifier: workspace:*
         version: link:../eslint-plugin-vx
@@ -2534,7 +2641,7 @@ importers:
         version: 2.2.2(jest@29.6.2)
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/test-utils:
     dependencies:
@@ -2619,7 +2726,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/types:
     dependencies:
@@ -2674,7 +2781,7 @@ importers:
         version: 1.0.0(ajv@8.12.0)
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint-plugin-vx:
         specifier: workspace:*
         version: link:../eslint-plugin-vx
@@ -2710,7 +2817,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/ui:
     dependencies:
@@ -2914,11 +3021,11 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       esbuild:
-        specifier: 0.17.11
-        version: 0.17.11
+        specifier: 0.21.2
+        version: 0.21.2
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint-plugin-storybook:
         specifier: ^0.6.10
         version: 0.6.10(eslint@8.51.0)(typescript@5.4.5)
@@ -2987,7 +3094,7 @@ importers:
         version: 0.2.1
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
       util:
         specifier: ^0.12.4
         version: 0.12.4
@@ -3032,11 +3139,11 @@ importers:
         specifier: 0.2.4
         version: 0.2.4
       esbuild:
-        specifier: 0.17.11
-        version: 0.17.11
+        specifier: 0.21.2
+        version: 0.21.2
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       eslint-plugin-vx:
         specifier: workspace:*
         version: link:../eslint-plugin-vx
@@ -3060,7 +3167,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   libs/utils:
     dependencies:
@@ -3184,7 +3291,7 @@ importers:
         version: 1.50.0
       ts-jest:
         specifier: 29.1.1
-        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5)
+        version: 29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5)
 
   script:
     dependencies:
@@ -3211,11 +3318,11 @@ importers:
         specifier: 16.18.23
         version: 16.18.23
       esbuild:
-        specifier: 0.17.11
-        version: 0.17.11
+        specifier: 0.21.2
+        version: 0.21.2
       esbuild-runner:
         specifier: 2.2.2
-        version: 2.2.2(esbuild@0.17.11)
+        version: 2.2.2(esbuild@0.21.2)
       prettier:
         specifier: 3.0.3
         version: 3.0.3
@@ -5906,12 +6013,21 @@ packages:
     resolution: {integrity: sha512-EsBwpc7hBUJWAsNPBmJy4hxWx12v6bshQsldrVmjxJoc3isbxhOrF2IcCpaXxfvq03NwkI7sbsOLXbYuqF/8Ww==}
     dev: false
 
+  /@esbuild/aix-ppc64@0.21.2:
+    resolution: {integrity: sha512-/c7hocx0pm14bHQlqUVKmxwdT/e5/KkyoY1W8F9lk/8CkE037STDDz8PXUP/LE6faj2HqchvDs9GcShxFhI78Q==}
+    engines: {node: '>=12'}
+    cpu: [ppc64]
+    os: [aix]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/android-arm64@0.17.11:
     resolution: {integrity: sha512-QnK4d/zhVTuV4/pRM4HUjcsbl43POALU2zvBynmrrqZt9LPcLA3x1fTZPBg2RRguBQnJcnU059yKr+bydkntjg==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [android]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/android-arm64@0.18.17:
@@ -5923,12 +6039,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/android-arm64@0.21.2:
+    resolution: {integrity: sha512-SGZKngoTWVUriO5bDjI4WDGsNx2VKZoXcds+ita/kVYB+8IkSCKDRDaK+5yu0b5S0eq6B3S7fpiEvpsa2ammlQ==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [android]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/android-arm@0.17.11:
     resolution: {integrity: sha512-CdyX6sRVh1NzFCsf5vw3kULwlAhfy9wVt8SZlrhQ7eL2qBjGbFhRBWkkAzuZm9IIEOCKJw4DXA6R85g+qc8RDw==}
     engines: {node: '>=12'}
     cpu: [arm]
     os: [android]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/android-arm@0.18.17:
@@ -5940,12 +6065,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/android-arm@0.21.2:
+    resolution: {integrity: sha512-G1ve3b4FeyJeyCjB4MX1CiWyTaIJwT9wAYE+8+IRA53YoN/reC/Bf2GDRXAzDTnh69Fpl+1uIKg76DiB3U6vwQ==}
+    engines: {node: '>=12'}
+    cpu: [arm]
+    os: [android]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/android-x64@0.17.11:
     resolution: {integrity: sha512-3PL3HKtsDIXGQcSCKtWD/dy+mgc4p2Tvo2qKgKHj9Yf+eniwFnuoQ0OUhlSfAEpKAFzF9N21Nwgnap6zy3L3MQ==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [android]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/android-x64@0.18.17:
@@ -5957,12 +6091,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/android-x64@0.21.2:
+    resolution: {integrity: sha512-1wzzNoj2QtNkAYwIcWJ66UTRA80+RTQ/kuPMtEuP0X6dp5Ar23Dn566q3aV61h4EYrrgGlOgl/HdcqN/2S/2vg==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [android]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/darwin-arm64@0.17.11:
     resolution: {integrity: sha512-pJ950bNKgzhkGNO3Z9TeHzIFtEyC2GDQL3wxkMApDEghYx5Qers84UTNc1bAxWbRkuJOgmOha5V0WUeh8G+YGw==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/darwin-arm64@0.18.17:
@@ -5974,12 +6117,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/darwin-arm64@0.21.2:
+    resolution: {integrity: sha512-ZyMkPWc5eTROcLOA10lEqdDSTc6ds6nuh3DeHgKip/XJrYjZDfnkCVSty8svWdy+SC1f77ULtVeIqymTzaB6/Q==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/darwin-x64@0.17.11:
     resolution: {integrity: sha512-iB0dQkIHXyczK3BZtzw1tqegf0F0Ab5texX2TvMQjiJIWXAfM4FQl7D909YfXWnB92OQz4ivBYQ2RlxBJrMJOw==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/darwin-x64@0.18.17:
@@ -5991,12 +6143,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/darwin-x64@0.21.2:
+    resolution: {integrity: sha512-K4ZdVq1zP9v51h/cKVna7im7G0zGTKKB6bP2yJiSmHjjOykbd8DdhrSi8V978sF69rkwrn8zCyL2t6I3ei6j9A==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/freebsd-arm64@0.17.11:
     resolution: {integrity: sha512-7EFzUADmI1jCHeDRGKgbnF5sDIceZsQGapoO6dmw7r/ZBEKX7CCDnIz8m9yEclzr7mFsd+DyasHzpjfJnmBB1Q==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [freebsd]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/freebsd-arm64@0.18.17:
@@ -6008,12 +6169,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/freebsd-arm64@0.21.2:
+    resolution: {integrity: sha512-4kbOGdpA61CXqadD+Gb/Pw3YXamQGiz9mal/h93rFVSjr5cgMnmJd/gbfPRm+3BMifvnaOfS1gNWaIDxkE2A3A==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [freebsd]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/freebsd-x64@0.17.11:
     resolution: {integrity: sha512-iPgenptC8i8pdvkHQvXJFzc1eVMR7W2lBPrTE6GbhR54sLcF42mk3zBOjKPOodezzuAz/KSu8CPyFSjcBMkE9g==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [freebsd]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/freebsd-x64@0.18.17:
@@ -6025,12 +6195,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/freebsd-x64@0.21.2:
+    resolution: {integrity: sha512-ShS+R09nuHzDBfPeMUliKZX27Wrmr8UFp93aFf/S8p+++x5BZ+D344CLKXxmY6qzgTL3mILSImPCNJOzD6+RRg==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [freebsd]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-arm64@0.17.11:
     resolution: {integrity: sha512-Qxth3gsWWGKz2/qG2d5DsW/57SeA2AmpSMhdg9TSB5Svn2KDob3qxfQSkdnWjSd42kqoxIPy3EJFs+6w1+6Qjg==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-arm64@0.18.17:
@@ -6042,12 +6221,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-arm64@0.21.2:
+    resolution: {integrity: sha512-Hdu8BL+AmO+eCDvvT6kz/fPQhvuHL8YK4ExKZfANWsNe1kFGOHw7VJvS/FKSLFqheXmB3rTF3xFQIgUWPYsGnA==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-arm@0.17.11:
     resolution: {integrity: sha512-M9iK/d4lgZH0U5M1R2p2gqhPV/7JPJcRz+8O8GBKVgqndTzydQ7B2XGDbxtbvFkvIs53uXTobOhv+RyaqhUiMg==}
     engines: {node: '>=12'}
     cpu: [arm]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-arm@0.18.17:
@@ -6059,12 +6247,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-arm@0.21.2:
+    resolution: {integrity: sha512-nnGXjOAv+7cM3LYRx4tJsYdgy8dGDGkAzF06oIDGppWbUkUKN9SmgQA8H0KukpU0Pjrj9XmgbWqMVSX/U7eeTA==}
+    engines: {node: '>=12'}
+    cpu: [arm]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-ia32@0.17.11:
     resolution: {integrity: sha512-dB1nGaVWtUlb/rRDHmuDQhfqazWE0LMro/AIbT2lWM3CDMHJNpLckH+gCddQyhhcLac2OYw69ikUMO34JLt3wA==}
     engines: {node: '>=12'}
     cpu: [ia32]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-ia32@0.18.17:
@@ -6076,12 +6273,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-ia32@0.21.2:
+    resolution: {integrity: sha512-m73BOCW2V9lcj7RtEMi+gBfHC6n3+VHpwQXP5offtQMPLDkpVolYn1YGXxOZ9hp4h3UPRKuezL7WkBsw+3EB3Q==}
+    engines: {node: '>=12'}
+    cpu: [ia32]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-loong64@0.17.11:
     resolution: {integrity: sha512-aCWlq70Q7Nc9WDnormntGS1ar6ZFvUpqr8gXtO+HRejRYPweAFQN615PcgaSJkZjhHp61+MNLhzyVALSF2/Q0g==}
     engines: {node: '>=12'}
     cpu: [loong64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-loong64@0.18.17:
@@ -6093,12 +6299,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-loong64@0.21.2:
+    resolution: {integrity: sha512-84eYHwwWHq3myIY/6ikALMcnwkf6Qo7NIq++xH0x+cJuUNpdwh8mlpUtRY+JiGUc60yu7ElWBbVHGWTABTclGw==}
+    engines: {node: '>=12'}
+    cpu: [loong64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-mips64el@0.17.11:
     resolution: {integrity: sha512-cGeGNdQxqY8qJwlYH1BP6rjIIiEcrM05H7k3tR7WxOLmD1ZxRMd6/QIOWMb8mD2s2YJFNRuNQ+wjMhgEL2oCEw==}
     engines: {node: '>=12'}
     cpu: [mips64el]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-mips64el@0.18.17:
@@ -6110,12 +6325,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-mips64el@0.21.2:
+    resolution: {integrity: sha512-9siSZngT0/ZKG+AH+/agwKF29LdCxw4ODi/PiE0F52B2rtLozlDP92umf8G2GPoVV611LN4pZ+nSTckebOscUA==}
+    engines: {node: '>=12'}
+    cpu: [mips64el]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-ppc64@0.17.11:
     resolution: {integrity: sha512-BdlziJQPW/bNe0E8eYsHB40mYOluS+jULPCjlWiHzDgr+ZBRXPtgMV1nkLEGdpjrwgmtkZHEGEPaKdS/8faLDA==}
     engines: {node: '>=12'}
     cpu: [ppc64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-ppc64@0.18.17:
@@ -6127,12 +6351,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-ppc64@0.21.2:
+    resolution: {integrity: sha512-y0T4aV2CA+ic04ULya1A/8M2RDpDSK2ckgTj6jzHKFJvCq0jQg8afQQIn4EM0G8u2neyOiNHgSF9YKPfuqKOVw==}
+    engines: {node: '>=12'}
+    cpu: [ppc64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-riscv64@0.17.11:
     resolution: {integrity: sha512-MDLwQbtF+83oJCI1Cixn68Et/ME6gelmhssPebC40RdJaect+IM+l7o/CuG0ZlDs6tZTEIoxUe53H3GmMn8oMA==}
     engines: {node: '>=12'}
     cpu: [riscv64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-riscv64@0.18.17:
@@ -6144,12 +6377,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-riscv64@0.21.2:
+    resolution: {integrity: sha512-x5ssCdXmZC86L2Li1qQPF/VaC4VP20u/Zm8jlAu9IiVOVi79YsSz6cpPDYZl1rfKSHYCJW9XBfFCo66S5gVPSA==}
+    engines: {node: '>=12'}
+    cpu: [riscv64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-s390x@0.17.11:
     resolution: {integrity: sha512-4N5EMESvws0Ozr2J94VoUD8HIRi7X0uvUv4c0wpTHZyZY9qpaaN7THjosdiW56irQ4qnJ6Lsc+i+5zGWnyqWqQ==}
     engines: {node: '>=12'}
     cpu: [s390x]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-s390x@0.18.17:
@@ -6161,12 +6403,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-s390x@0.21.2:
+    resolution: {integrity: sha512-NP7fTpGSFWdXyvp8iAFU04uFh9ARoplFVM/m+8lTRpaYG+2ytHPZWyscSsMM6cvObSIK2KoPHXiZD4l99WaxbQ==}
+    engines: {node: '>=12'}
+    cpu: [s390x]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-x64@0.17.11:
     resolution: {integrity: sha512-rM/v8UlluxpytFSmVdbCe1yyKQd/e+FmIJE2oPJvbBo+D0XVWi1y/NQ4iTNx+436WmDHQBjVLrbnAQLQ6U7wlw==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-x64@0.18.17:
@@ -6178,12 +6429,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-x64@0.21.2:
+    resolution: {integrity: sha512-giZ/uOxWDKda44ZuyfKbykeXznfuVNkTgXOUOPJIjbayJV6FRpQ4zxUy9JMBPLaK9IJcdWtaoeQrYBMh3Rr4vQ==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/netbsd-x64@0.17.11:
     resolution: {integrity: sha512-4WaAhuz5f91h3/g43VBGdto1Q+X7VEZfpcWGtOFXnggEuLvjV+cP6DyLRU15IjiU9fKLLk41OoJfBFN5DhPvag==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [netbsd]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/netbsd-x64@0.18.17:
@@ -6195,12 +6455,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/netbsd-x64@0.21.2:
+    resolution: {integrity: sha512-IeFMfGFSQfIj1d4XU+6lkbFzMR+mFELUUVYrZ+jvWzG4NGvs6o53ReEHLHpYkjRbdEjJy2W3lTekTxrFHW7YJg==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [netbsd]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/openbsd-x64@0.17.11:
     resolution: {integrity: sha512-UBj135Nx4FpnvtE+C8TWGp98oUgBcmNmdYgl5ToKc0mBHxVVqVE7FUS5/ELMImOp205qDAittL6Ezhasc2Ev/w==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [openbsd]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/openbsd-x64@0.18.17:
@@ -6212,12 +6481,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/openbsd-x64@0.21.2:
+    resolution: {integrity: sha512-48QhWD6WxcebNNaE4FCwgvQVUnAycuTd+BdvA/oZu+/MmbpU8pY2dMEYlYzj5uNHWIG5jvdDmFXu0naQeOWUoA==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [openbsd]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/sunos-x64@0.17.11:
     resolution: {integrity: sha512-1/gxTifDC9aXbV2xOfCbOceh5AlIidUrPsMpivgzo8P8zUtczlq1ncFpeN1ZyQJ9lVs2hILy1PG5KPp+w8QPPg==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [sunos]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/sunos-x64@0.18.17:
@@ -6229,12 +6507,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/sunos-x64@0.21.2:
+    resolution: {integrity: sha512-90r3nTBLgdIgD4FCVV9+cR6Hq2Dzs319icVsln+NTmTVwffWcCqXGml8rAoocHuJ85kZK36DCteii96ba/PX8g==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [sunos]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/win32-arm64@0.17.11:
     resolution: {integrity: sha512-vtSfyx5yRdpiOW9yp6Ax0zyNOv9HjOAw8WaZg3dF5djEHKKm3UnoohftVvIJtRh0Ec7Hso0RIdTqZvPXJ7FdvQ==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/win32-arm64@0.18.17:
@@ -6246,12 +6533,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/win32-arm64@0.21.2:
+    resolution: {integrity: sha512-sNndlsBT8OeE/MZDSGpRDJlWuhjuUz/dn80nH0EP4ZzDUYvMDVa7G87DVpweBrn4xdJYyXS/y4CQNrf7R2ODXg==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [win32]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/win32-ia32@0.17.11:
     resolution: {integrity: sha512-GFPSLEGQr4wHFTiIUJQrnJKZhZjjq4Sphf+mM76nQR6WkQn73vm7IsacmBRPkALfpOCHsopSvLgqdd4iUW2mYw==}
     engines: {node: '>=12'}
     cpu: [ia32]
     os: [win32]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/win32-ia32@0.18.17:
@@ -6263,12 +6559,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/win32-ia32@0.21.2:
+    resolution: {integrity: sha512-Ti2QChGNFzWhUNNVuU4w21YkYTErsNh3h+CzvlEhzgRbwsJ7TrWQqRzW3bllLKKvTppuF3DJ3XP1GEg11AfrEQ==}
+    engines: {node: '>=12'}
+    cpu: [ia32]
+    os: [win32]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/win32-x64@0.17.11:
     resolution: {integrity: sha512-N9vXqLP3eRL8BqSy8yn4Y98cZI2pZ8fyuHx6lKjiG2WABpT2l01TXdzq5Ma2ZUBzfB7tx5dXVhge8X9u0S70ZQ==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/win32-x64@0.18.17:
@@ -6278,6 +6583,14 @@ packages:
     os: [win32]
     requiresBuild: true
     dev: true
+    optional: true
+
+  /@esbuild/win32-x64@0.21.2:
+    resolution: {integrity: sha512-VEfTCZicoZnZ6sGkjFPGRFFJuL2fZn2bLhsekZl1CJslflp2cJS/VoKs1jMk+3pDfsGW6CfQVUckP707HwbXeQ==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
     optional: true
 
   /@eslint-community/eslint-utils@4.4.0(eslint@8.49.0):
@@ -10910,6 +11223,11 @@ packages:
     resolution: {integrity: sha512-T0+barUSQRTUQASh8bx02dl+DhF54GtIDY13Y3m9oWTklKbb3Wv974meRpeZ3lp1JpLVECWWNHC4vaG2XHXouQ==}
     dev: false
 
+  /component-emitter@2.0.0:
+    resolution: {integrity: sha512-4m5s3Me2xxlVKG9PkZpQqHQR7bgpnN7joDMJ4yvVkVXngjoITG76IaZmzmywSeRTeTpc6N6r3H3+KyUurV8OYw==}
+    engines: {node: '>=18'}
+    dev: false
+
   /compress-commons@4.1.1:
     resolution: {integrity: sha512-QLdDLCKNV2dtoTorqgxngQCMA+gWXkM/Nwu7FpeBhk/RdkzimqC3jueb/FDmaZeXh+uby1jkBqE3xArsLBE5wQ==}
     engines: {node: '>= 10'}
@@ -11980,13 +12298,13 @@ packages:
       tslib: 2.4.0
     dev: true
 
-  /esbuild-runner@2.2.2(esbuild@0.17.11):
+  /esbuild-runner@2.2.2(esbuild@0.21.2):
     resolution: {integrity: sha512-fRFVXcmYVmSmtYm2mL8RlUASt2TDkGh3uRcvHFOKNr/T58VrfVeKD9uT9nlgxk96u0LS0ehS/GY7Da/bXWKkhw==}
     hasBin: true
     peerDependencies:
       esbuild: '*'
     dependencies:
-      esbuild: 0.17.11
+      esbuild: 0.21.2
       source-map-support: 0.5.21
       tslib: 2.4.0
     dev: true
@@ -12075,6 +12393,7 @@ packages:
       '@esbuild/win32-arm64': 0.17.11
       '@esbuild/win32-ia32': 0.17.11
       '@esbuild/win32-x64': 0.17.11
+    dev: false
 
   /esbuild@0.18.17:
     resolution: {integrity: sha512-1GJtYnUxsJreHYA0Y+iQz2UEykonY66HNWOb0yXYZi9/kNrORUEHVg87eQsCtqh59PEJ5YVZJO98JHznMJSWjg==}
@@ -12105,6 +12424,36 @@ packages:
       '@esbuild/win32-ia32': 0.18.17
       '@esbuild/win32-x64': 0.18.17
     dev: true
+
+  /esbuild@0.21.2:
+    resolution: {integrity: sha512-LmHPAa5h4tSxz+g/D8IHY6wCjtIiFx8I7/Q0Aq+NmvtoYvyMnJU0KQJcqB6QH30X9x/W4CemgUtPgQDZFca5SA==}
+    engines: {node: '>=12'}
+    hasBin: true
+    requiresBuild: true
+    optionalDependencies:
+      '@esbuild/aix-ppc64': 0.21.2
+      '@esbuild/android-arm': 0.21.2
+      '@esbuild/android-arm64': 0.21.2
+      '@esbuild/android-x64': 0.21.2
+      '@esbuild/darwin-arm64': 0.21.2
+      '@esbuild/darwin-x64': 0.21.2
+      '@esbuild/freebsd-arm64': 0.21.2
+      '@esbuild/freebsd-x64': 0.21.2
+      '@esbuild/linux-arm': 0.21.2
+      '@esbuild/linux-arm64': 0.21.2
+      '@esbuild/linux-ia32': 0.21.2
+      '@esbuild/linux-loong64': 0.21.2
+      '@esbuild/linux-mips64el': 0.21.2
+      '@esbuild/linux-ppc64': 0.21.2
+      '@esbuild/linux-riscv64': 0.21.2
+      '@esbuild/linux-s390x': 0.21.2
+      '@esbuild/linux-x64': 0.21.2
+      '@esbuild/netbsd-x64': 0.21.2
+      '@esbuild/openbsd-x64': 0.21.2
+      '@esbuild/sunos-x64': 0.21.2
+      '@esbuild/win32-arm64': 0.21.2
+      '@esbuild/win32-ia32': 0.21.2
+      '@esbuild/win32-x64': 0.21.2
 
   /escalade@3.1.1:
     resolution: {integrity: sha512-k0er2gUkLf8O0zKJiAhmkTnJlTvINGv7ygDNPbeIsX/TJjGJZHuh9B2UxbsaEkmlEo9MfhrSzmhIlhRlI2GXnw==}
@@ -13372,7 +13721,6 @@ packages:
   /get-stdin@5.0.1:
     resolution: {integrity: sha512-jZV7n6jGE3Gt7fgSTJoz91Ak5MuTLwMwkoYdjxuJ/AmjIsE1UC03y/IWkZCQGEvVNS9qoRNwy5BCqxImv0FVeA==}
     engines: {node: '>=0.12.0'}
-    dev: true
 
   /get-stream@5.2.0:
     resolution: {integrity: sha512-nBF+F1rAZVCu/p7rjzgA+Yb4lfYXrpl7a6VmJrU8wF9I1CKvP/QwPNZHnOlwbTkY6dvtFIzFMSyQXbLoTQPRpA==}
@@ -13491,6 +13839,7 @@ packages:
 
   /glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
+    deprecated: Glob versions prior to v9 are no longer supported
     dependencies:
       fs.realpath: 1.0.0
       inflight: 1.0.6
@@ -13572,7 +13921,6 @@ packages:
 
   /glur@1.1.2:
     resolution: {integrity: sha512-l+8esYHTKOx2G/Aao4lEQ0bnHWg4fWtJbVoZZT9Knxi01pB8C80BR85nONLFwkkQoFRCmXY+BUcGZN3yZ2QsRA==}
-    dev: true
 
   /gopd@1.0.1:
     resolution: {integrity: sha512-d65bNlIadxvpb/A2abVdlqKqV563juRnZ1Wtk6s1sIR8uNsXR70xqIzVqxVf1eTqDunwT2MkczEeaezCKTZhwA==}
@@ -14023,6 +14371,7 @@ packages:
 
   /inflight@1.0.6:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
+    deprecated: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
     dependencies:
       once: 1.4.0
       wrappy: 1.0.2
@@ -14764,7 +15113,6 @@ packages:
       pngjs: 3.4.0
       rimraf: 2.7.1
       ssim.js: 3.5.0
-    dev: true
 
   /jest-junit@16.0.0:
     resolution: {integrity: sha512-A94mmw6NfJab4Fg/BlvVOUXzXgF0XIH6EmTgJ5NDPp4xoKq0Kr7sErb+4Xs9nZvu58pJojz5RFGpqnZYJTrRfQ==}
@@ -16618,7 +16966,6 @@ packages:
     hasBin: true
     dependencies:
       pngjs: 6.0.0
-    dev: true
 
   /pkg-dir@3.0.0:
     resolution: {integrity: sha512-/E57AYkoeQ25qkxMj5PBOVgF8Kiu/h7cYS30Z5+R7WaiCCBfLq58ZI/dSeaEKb9WVJV5n/03QwrN3IeWIFllvw==}
@@ -16668,12 +17015,10 @@ packages:
   /pngjs@3.4.0:
     resolution: {integrity: sha512-NCrCHhWmnQklfH4MtJMRjZ2a8c80qXeMlQMv2uVp9ISJMTt562SbGd6n2oq0PaPgKm7Z6pL9E2UlLIhC+SHL3w==}
     engines: {node: '>=4.0.0'}
-    dev: true
 
   /pngjs@6.0.0:
     resolution: {integrity: sha512-TRzzuFRRmEoSW/p1KVAmiOgPco2Irlah+bGFCeNfJXxxYGwSw7YwAOAcd7X28K/m5bjBWKsC29KyoMfHbypayg==}
     engines: {node: '>=12.13.0'}
-    dev: true
 
   /polished@4.2.2:
     resolution: {integrity: sha512-Sz2Lkdxz6F2Pgnpi9U5Ng/WdWAUZxmHrNPoVlm3aAemxoy2Qy7LGjQg4uf8qKelDAUW94F4np3iH2YPf2qefcQ==}
@@ -17693,6 +18038,7 @@ packages:
 
   /rimraf@2.6.3:
     resolution: {integrity: sha512-mwqeW5XsA2qAejG46gYdENaxXjx9onRNCfn7L0duuP4hCuTIi/QO7PDK07KJfp1d+izWPrzEJDcSqBa0OZQriA==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
     dependencies:
       glob: 7.2.3
@@ -17706,6 +18052,7 @@ packages:
 
   /rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
     dependencies:
       glob: 7.2.3
@@ -18167,7 +18514,6 @@ packages:
 
   /ssim.js@3.5.0:
     resolution: {integrity: sha512-Aj6Jl2z6oDmgYFFbQqK7fght19bXdOxY7Tj03nF+03M9gCBAjeIiO8/PlEGMfKDwYpw4q6iBqVq2YuREorGg/g==}
-    dev: true
 
   /ssri@6.0.2:
     resolution: {integrity: sha512-cepbSq/neFK7xB6A50KHN0xHDotYzq58wWCa5LeWqnPrHG8GzfEjO/4O8kpmcGW+oaxkvhEJCWgbgNk4/ZV93Q==}
@@ -18272,6 +18618,12 @@ packages:
 
   /stream-shift@1.0.1:
     resolution: {integrity: sha512-AiisoFqQ0vbGcZgQPY1cdP2I76glaVA/RauYR4G4thNFgkTqr90yXTo4LYX60Jl+sIlPNHHdGSwo01AvbKUSVQ==}
+
+  /stream@0.0.3:
+    resolution: {integrity: sha512-aMsbn7VKrl4A2T7QAQQbzgN7NVc70vgF5INQrBXqn4dCXN1zy3L9HGgLO5s7PExmdrzTJ8uR/27aviW8or8/+A==}
+    dependencies:
+      component-emitter: 2.0.0
+    dev: false
 
   /streamx@2.15.1:
     resolution: {integrity: sha512-fQMzy2O/Q47rgwErk/eGeLu/roaFWV0jVsogDmrszM9uIw8L5OA+t+V93MgYlufNptfjmYR1tOMWhei/Eh7TQA==}
@@ -18880,41 +19232,6 @@ packages:
     engines: {node: '>=6.10'}
     dev: true
 
-  /ts-jest@29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.17.11)(jest@29.6.2)(typescript@5.4.5):
-    resolution: {integrity: sha512-D6xjnnbP17cC85nliwGiL+tpoKN0StpgE0TeOjXQTU6MVCfsB4v7aW05CgQ/1OywGb0x/oy9hHFnN+sczTiRaA==}
-    engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
-    hasBin: true
-    peerDependencies:
-      '@babel/core': '>=7.0.0-beta.0 <8'
-      '@jest/types': ^29.0.0
-      babel-jest: ^29.0.0
-      esbuild: '*'
-      jest: ^29.0.0
-      typescript: '>=4.3 <6'
-    peerDependenciesMeta:
-      '@babel/core':
-        optional: true
-      '@jest/types':
-        optional: true
-      babel-jest:
-        optional: true
-      esbuild:
-        optional: true
-    dependencies:
-      '@babel/core': 7.22.9
-      '@jest/types': 29.6.1
-      bs-logger: 0.2.6
-      esbuild: 0.17.11
-      fast-json-stable-stringify: 2.1.0
-      jest: 29.6.2(@types/node@16.18.23)
-      jest-util: 29.6.2
-      json5: 2.2.3
-      lodash.memoize: 4.1.2
-      make-error: 1.3.6
-      semver: 7.5.4
-      typescript: 5.4.5
-      yargs-parser: 21.1.1
-
   /ts-jest@29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.18.17)(jest@29.6.2)(typescript@5.4.5):
     resolution: {integrity: sha512-D6xjnnbP17cC85nliwGiL+tpoKN0StpgE0TeOjXQTU6MVCfsB4v7aW05CgQ/1OywGb0x/oy9hHFnN+sczTiRaA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -18950,6 +19267,41 @@ packages:
       typescript: 5.4.5
       yargs-parser: 21.1.1
     dev: true
+
+  /ts-jest@29.1.1(@babel/core@7.22.9)(@jest/types@29.6.1)(esbuild@0.21.2)(jest@29.6.2)(typescript@5.4.5):
+    resolution: {integrity: sha512-D6xjnnbP17cC85nliwGiL+tpoKN0StpgE0TeOjXQTU6MVCfsB4v7aW05CgQ/1OywGb0x/oy9hHFnN+sczTiRaA==}
+    engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
+    hasBin: true
+    peerDependencies:
+      '@babel/core': '>=7.0.0-beta.0 <8'
+      '@jest/types': ^29.0.0
+      babel-jest: ^29.0.0
+      esbuild: '*'
+      jest: ^29.0.0
+      typescript: '>=4.3 <6'
+    peerDependenciesMeta:
+      '@babel/core':
+        optional: true
+      '@jest/types':
+        optional: true
+      babel-jest:
+        optional: true
+      esbuild:
+        optional: true
+    dependencies:
+      '@babel/core': 7.22.9
+      '@jest/types': 29.6.1
+      bs-logger: 0.2.6
+      esbuild: 0.21.2
+      fast-json-stable-stringify: 2.1.0
+      jest: 29.6.2(@types/node@16.18.23)
+      jest-util: 29.6.2
+      json5: 2.2.3
+      lodash.memoize: 4.1.2
+      make-error: 1.3.6
+      semver: 7.5.4
+      typescript: 5.4.5
+      yargs-parser: 21.1.1
 
   /tsconfig-paths@3.14.1:
     resolution: {integrity: sha512-fxDhWnFSLt3VuTwtvJt5fpwxBHg5AdKWMsgcPOOIilyjymcYVZoCQF8fvFRezCNfblEXmi+PcM1eYHeOAgXCOQ==}

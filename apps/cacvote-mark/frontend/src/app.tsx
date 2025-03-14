@@ -23,7 +23,9 @@ export interface Props {
 
 export function App({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  logger = new Logger(LogSource.VxMarkFrontend),
+  logger = new Logger(LogSource.VxMarkFrontend, () =>
+    Promise.resolve('unknown')
+  ),
   /* istanbul ignore next */ apiClient = createApiClient(),
   queryClient = createQueryClient(),
 }: Props): JSX.Element {
