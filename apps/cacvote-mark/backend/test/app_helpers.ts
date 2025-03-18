@@ -62,11 +62,11 @@ export function buildMockAuth({
   };
 }
 
-export function createApp(): MockAppContents {
+export async function createApp(): Promise<MockAppContents> {
   const mockAuth = buildMockAuth();
   const workdir = dirSync().name;
 
-  const app = buildApp({
+  const app = await buildApp({
     auth: mockAuth,
     workspace: createWorkspace(workdir),
     logger: mockLogger(),

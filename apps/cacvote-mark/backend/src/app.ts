@@ -14,8 +14,8 @@ import {
 } from '@votingworks/basics';
 import {
   FujitsuThermalPrinterInterface,
-  getFujitsuThermalPrinter,
   PrintResult,
+  getFujitsuThermalPrinter,
 } from '@votingworks/fujitsu-thermal-printer';
 import * as grout from '@votingworks/grout';
 import { Logger } from '@votingworks/logging';
@@ -29,7 +29,6 @@ import {
   unsafeParse,
 } from '@votingworks/types';
 import { Buffer } from 'buffer';
-import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import express, { Application } from 'express';
 import { DateTime } from 'luxon';
@@ -46,8 +45,7 @@ import {
   Uuid,
 } from './cacvote-server/types';
 import { createEncryptedBallotPayload } from './electionguard';
-import { MAILING_LABEL_PRINTER } from './globals';
-import * as mailingLabel from './mailing_label';
+import * as mailLabel from './mail-label';
 import { Auth, AuthStatus } from './types/auth';
 import { BallotVerificationPayload, SignedBuffer } from './verification';
 import { Workspace } from './workspace';
@@ -62,10 +60,12 @@ function buildApi({
   auth,
   workspace: { store },
   ballotPrinter,
+  labelPrinter,
 }: {
   auth: Auth;
   workspace: Workspace;
   ballotPrinter: FujitsuThermalPrinterInterface;
+  labelPrinter: mailLabel.printing.LabelPrinterInterface;
 }) {
   async function getAuthStatus(): Promise<AuthStatus> {
     return await auth.getAuthStatus();
@@ -421,16 +421,12 @@ function buildApi({
           signedBuffer.encode().toString('base64')
         );
 
-        const pdf = await mailingLabel.buildPdf({
+        const pdf = await mailLabel.rendering.buildPdf({
           mailingAddress: election.getMailingAddress(),
           qrCodeData,
         });
 
-        execFileSync(
-          'lpr',
-          ['-P', MAILING_LABEL_PRINTER, '-o', 'media=Custom.4.08x6.47in'],
-          { input: pdf }
-        );
+        await labelPrinter.printPdf(pdf);
 
         return ok();
       });
@@ -453,7 +449,7 @@ function buildApi({
 
 export type Api = ReturnType<typeof buildApi>;
 
-export function buildApp({
+export async function buildApp({
   auth,
   workspace,
   logger,
@@ -461,10 +457,14 @@ export function buildApp({
   auth: Auth;
   workspace: Workspace;
   logger: Logger;
-}): Application {
+}): Promise<Application> {
   const app: Application = express();
   const ballotPrinter = getFujitsuThermalPrinter(logger);
-  const api = buildApi({ auth, workspace, ballotPrinter });
+  const labelPrinter = await mailLabel.printing.getLabelPrinter(
+    workspace,
+    logger
+  );
+  const api = buildApi({ auth, workspace, ballotPrinter, labelPrinter });
 
   app.use('/api/status', (_req, res) => {
     res.json({ status: 'ok' });

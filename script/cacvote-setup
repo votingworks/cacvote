@@ -25,7 +25,6 @@ setup-prereqs() {
   sudo apt-get install \
     build-essential \
     chromium \
-    cups-bsd \
     curl \
     git \
     libcairo2-dev \
@@ -288,52 +287,14 @@ setup-kiosk-browser() {
 setup-label-printer() {
   echo "🖨️ Label Printer Driver"
 
-  if lpstat -p | grep -q "SP420"; then
-    echo -e "\e[1m[skip]\e[0m SP420 is already set up"
+  if ! [ -f /usr/lib/libNPrint.so ]; then
+    echo -e "\e[1;31merror:\e[0;31m libNPrint.so not found, expected at /usr/lib/libNPrint.so\e[0m" >&2
     return
   fi
 
-  local URL="https://www.idprt.com/prt_v2/files/down_file/id/131/fid/432.html"
-  local DIR="/tmp/cacvote-install-label-printer-driver"
-  local ZIPFILE="${DIR}/idprt_tspl_printer_linux_driver_v1.4.2.zip"
-
-  sudo apt install libcupsimage2 -y
-
-  mkdir -p "${DIR}"
   (
-    cd "${DIR}"
-    curl -sLo- "${URL}" > "${ZIPFILE}"
-    unzip "${ZIPFILE}"
-    cd idprt_tspl_printer_linux_driver_v1.4.2
-    sudo bash install
-  )
-}
-
-setup-thermal-printer() {
-  echo "🖨️ Brother printer Drivers"
-
-  if lpstat -p | grep -q "PJ-822"; then
-    echo -e "\e[1m[skip]\e[0m PJ-822 is already set up"
-    return
-  fi
-
-  local DIR="/tmp/cacvote-install-thermal-printer-driver"
-
-  echo "Ensuring 32-bit binary support…"
-  sudo dpkg --add-architecture i386
-  sudo apt update
-  sudo apt install libc6:i386 libncurses5:i386 libstdc++6:i386 -y
-  sudo apt-get install cups-filters -y
-
-  mkdir -p "${DIR}"
-  (
-    cd "${DIR}"
-    echo "Downloading drivers…"
-    wget https://download.brother.com/welcome/dlfp100949/pj822pdrv-1.2.0-1.i386.deb
-    wget https://download.brother.com/welcome/dlfp100952/pj823pdrv-1.2.0-1.i386.deb
-
-    echo "Installing drivers…"
-    sudo dpkg -i pj822pdrv-1.2.0-1.i386.deb pj823pdrv-1.2.0-1.i386.deb
+    cd apps/cacvote-mark/nprint
+    cargo build --release
   )
 }
 
@@ -375,7 +336,6 @@ setup-global-devtools
 setup-postgresql
 setup-kiosk-browser
 setup-label-printer
-setup-thermal-printer
 setup-electionguard
 do-initial-build
 

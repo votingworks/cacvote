@@ -120,9 +120,9 @@ export const USABILITY_TEST_AUTOMATIC_EXPIRATION_TYPE =
   ) ?? 'castBallotOnly';
 
 /**
- * What is the name of the mailing label printer?
+ * Where is the `libNPrint` wrapper binary located?
  */
-export const MAILING_LABEL_PRINTER = unsafeParse(
+export const LIBNPRINT_WRAPPER_PATH = unsafeParse(
   z.string(),
-  process.env.MAILING_LABEL_PRINTER
+  process.env.LIBNPRINT_WRAPPER_PATH
 );

@@ -17,5 +17,6 @@ declare namespace NodeJS {
     readonly MACHINE_CERT?: string;
     readonly SIGNER?: string;
     readonly MAILING_LABEL_PRINTER?: string;
+    readonly LIBNPRINT_WRAPPER_PATH?: string;
   }
 }

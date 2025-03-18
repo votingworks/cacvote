@@ -106,13 +106,12 @@ you'll get errors when attempting to print.
 To print with PDF, run this:
 
 ```sh
-$ sudo apt-get -y install cups-pdf
 $ echo REACT_APP_VX_USE_MOCK_PRINTER=TRUE >> apps/cacvote-mark/backend/.env.local
-$ echo MAILING_LABEL_PRINTER=PDF >> apps/cacvote-mark/backend/.env.local
 ```
 
-When printing, the mailing label PDFs will be saved to `~/PDF` and the ballot
-PDFs will be saved to `apps/cacvote-mark/backend/dev-workspace/prints`.
+When printing, the ballot PDF prints will be saved to
+`libs/fujitsu-thermal-printer/dev-workspace/prints` and the mail label PDF
+prints will be saved to `apps/cacvote-mark/backend/dev-workspace/prints`.
 
 ## Release
 
