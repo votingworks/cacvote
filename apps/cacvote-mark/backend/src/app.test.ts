@@ -6,8 +6,8 @@ import { Api } from './app';
 let apiClient: grout.Client<Api>;
 let server: Server;
 
-beforeEach(() => {
-  ({ apiClient, server } = createApp());
+beforeEach(async () => {
+  ({ apiClient, server } = await createApp());
 });
 
 afterEach(() => {

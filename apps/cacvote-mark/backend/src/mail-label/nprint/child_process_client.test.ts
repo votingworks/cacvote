@@ -1,6 +1,6 @@
 import { iter } from '@votingworks/basics';
 import { ChildProcessClient } from './child_process_client';
-import { mockChildProcessClientTestServer } from '../../test/child_process_client_test_server';
+import { mockChildProcessClientTestServer } from '../../../test/child_process_client_test_server';
 
 type Request =
   | {
