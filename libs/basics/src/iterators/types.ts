@@ -9,7 +9,7 @@ export interface IteratorPlus<T> extends Iterable<T> {
   /**
    * Returns an async iterator that yields the same values as this iterator.
    */
-  async(): AsyncIteratorPlus<T>;
+  async(): AsyncIteratorPlus<Awaited<T>>;
 
   /**
    * Chains elements from `this` and `other` together.
@@ -97,6 +97,17 @@ export interface IteratorPlus<T> extends Iterable<T> {
    * ```
    */
   count(): number;
+
+  /**
+   * Cycles elements from `this` indefinitely.
+   *
+   * @example
+   *
+   * ```ts
+   * expect(iter([1, 2, 3]).cycle().take(7).toArray()).toEqual([1, 2, 3, 1, 2, 3, 1]);
+   * ```
+   */
+  cycle(): IteratorPlus<T>;
 
   /**
    * Enumerates elements along with their index.
@@ -292,7 +303,7 @@ export interface IteratorPlus<T> extends Iterable<T> {
    * expect(iter([]).max()).toBeUndefined();
    * ```
    */
-  max(): T | undefined;
+  max(this: IteratorPlus<number>): T | undefined;
 
   /**
    * Returns the maximum element of `this` or `undefined` if `this` is empty.
@@ -334,7 +345,7 @@ export interface IteratorPlus<T> extends Iterable<T> {
    * expect(iter([]).min()).toBeUndefined();
    * ```
    */
-  min(): T | undefined;
+  min(this: IteratorPlus<number>): T | undefined;
 
   /**
    * Returns the minimum element of `this` or `undefined` if `this` is empty.
@@ -457,7 +468,7 @@ export interface IteratorPlus<T> extends Iterable<T> {
    * expect(iter([1, 2, 3, 4, 5]).sum()).toEqual(15);
    * ```
    */
-  sum(): T extends number ? number : unknown;
+  sum(this: IteratorPlus<number>): T;
 
   /**
    * Sums elements from `this` using `fn` to transform each element. Consumes
@@ -814,6 +825,20 @@ export interface AsyncIteratorPlus<T> extends AsyncIterable<T> {
   count(): Promise<number>;
 
   /**
+   * Cycles elements from `this` indefinitely.
+   *
+   * @example
+   *
+   * ```ts
+   * const input = fs.createReadStream('file.txt', { encoding: 'utf8' });
+   * for await (const line of lines(input).cycle().take(100)) {
+   *   …
+   * }
+   * ```
+   */
+  cycle(): AsyncIteratorPlus<T>;
+
+  /**
    * Enumerates elements along with their index.
    *
    * @example
@@ -1017,7 +1042,7 @@ export interface AsyncIteratorPlus<T> extends AsyncIterable<T> {
    *   .max();
    * ```
    */
-  max(): Promise<T | undefined>;
+  max(this: AsyncIteratorPlus<number>): Promise<T | undefined>;
 
   /**
    * Returns the maximum element of `this` or `undefined` if `this` is empty.
@@ -1042,10 +1067,22 @@ export interface AsyncIteratorPlus<T> extends AsyncIterable<T> {
 
   /**
    * Returns the minimum element of `this` or `undefined` if `this` is empty.
-   * Comparison happens using `compareFn` if provided, otherwise using `>` and
-   * `<`. Consumes the entire contained iterable.
+   * Consumes the entire contained iterable.
+   *
+   * @example
+   *
+   * ```ts
+   * expect(await iter([10, 40, 30]).async().min()).toEqual(10);
+   * expect(await iter([]).async().min()).toBeUndefined();
+   * ```
    */
-  min(compareFn?: (a: T, b: T) => MaybePromise<number>): Promise<T | undefined>;
+  min(this: AsyncIteratorPlus<number>): Promise<T | undefined>;
+
+  /**
+   * Returns the minimum element of `this` or `undefined` if `this` is empty.
+   * Comparison happens using `compareFn`. Consumes the entire contained iterable.
+   */
+  min(compareFn: (a: T, b: T) => MaybePromise<number>): Promise<T | undefined>;
 
   /**
    * Returns the element of `this` whose return value from `fn` is the minimum.
@@ -1153,7 +1190,7 @@ export interface AsyncIteratorPlus<T> extends AsyncIterable<T> {
    * ).sum();
    * ```
    */
-  sum(): Promise<T extends number ? number : unknown>;
+  sum(this: AsyncIteratorPlus<number>): Promise<T>;
 
   /**
    * Sums elements from `this` using `fn` to transform each element. Consumes
@@ -1167,7 +1204,7 @@ export interface AsyncIteratorPlus<T> extends AsyncIterable<T> {
    * const sum = await input.sum((line) => safeParseInt(line).ok() ?? 0);
    * ```
    */
-  sum(fn: (item: T) => MaybePromise<number>): Promise<number>;
+  sum(fn: (item: T) => MaybePromise<number>): Promise<T>;
 
   /**
    * Takes up to the first `count` elements from `iterable`.
