@@ -8,12 +8,12 @@ export function QrCode({ data }: { data: Uint8Array }): JSX.Element {
     qrcodegen.QrCode.Ecc.MEDIUM
   );
 
-  const constrainingSize = 70;
-  const moduleSize = 16;
+  const constrainingSize = 87.5;
+  const moduleSize = 20;
   const scale = constrainingSize / encoded.size / moduleSize;
 
   return (
-    <svg width={80} height={70}>
+    <svg width={100} height={87.5}>
       {[
         ...integers()
           .take(encoded.size)

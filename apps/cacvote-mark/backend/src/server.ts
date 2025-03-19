@@ -94,7 +94,7 @@ export async function start({
   workspace,
 }: StartOptions): Promise<Server> {
   const resolvedAuth = auth ?? getDefaultAuth();
-  const app = buildApp({
+  const app = await buildApp({
     workspace,
     auth: resolvedAuth,
     logger,

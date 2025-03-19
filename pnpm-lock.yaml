@@ -331,6 +331,9 @@ importers:
       '@votingworks/grout':
         specifier: workspace:*
         version: link:../../../libs/grout
+      '@votingworks/image-utils':
+        specifier: workspace:*
+        version: link:../../../libs/image-utils
       '@votingworks/logging':
         specifier: workspace:*
         version: link:../../../libs/logging
@@ -340,6 +343,9 @@ importers:
       '@votingworks/utils':
         specifier: workspace:*
         version: link:../../../libs/utils
+      bmp-ts:
+        specifier: ^1.0.9
+        version: 1.0.9
       cross-fetch:
         specifier: ^4.0.0
         version: 4.0.0
@@ -2405,9 +2411,15 @@ importers:
 
   libs/monorepo-utils:
     dependencies:
+      '@iarna/toml':
+        specifier: ^2.2.5
+        version: 2.2.5
       '@votingworks/basics':
         specifier: workspace:*
         version: link:../basics
+      zod:
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/jest':
         specifier: ^29.5.3
@@ -10538,6 +10550,10 @@ packages:
 
   /bluebird@3.7.2:
     resolution: {integrity: sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==}
+    dev: false
+
+  /bmp-ts@1.0.9:
+    resolution: {integrity: sha512-cTEHk2jLrPyi+12M3dhpEbnnPOsaZuq7C45ylbbQIiWgDFZq4UVYPEY5mlqjvsj/6gJv9qX5sa+ebDzLXT28Vw==}
     dev: false
 
   /bn.js@4.12.0:

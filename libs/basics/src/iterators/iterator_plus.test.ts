@@ -1,5 +1,4 @@
 import * as fc from 'fast-check';
-import { typedAs } from '../typed_as';
 import { integers } from './integers';
 import { iter } from './iter';
 import { naturals } from './naturals';
@@ -188,6 +187,19 @@ test('take', () => {
   expect(iter(integers()).take(1).toArray()).toEqual([0]);
   expect(iter(integers()).take(5).toArray()).toEqual([0, 1, 2, 3, 4]);
   expect(iter([]).take(-1).toArray()).toEqual([]);
+
+  let count = 0;
+  iter({
+    [Symbol.iterator]: () => ({
+      next: () => {
+        count += 1;
+        return { value: count, done: false };
+      },
+    }),
+  })
+    .take(2)
+    .toArray();
+  expect(count).toEqual(2);
 });
 
 test('skip', () => {
@@ -390,9 +402,8 @@ test('min', () => {
     })
   );
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  typedAs<number | undefined>(iter(['a']).min());
+  // @ts-expect-error - should be an array of numbers
+  iter(['a']).min();
 });
 
 test('minBy', () => {
@@ -417,6 +428,9 @@ test('max', () => {
       expect(iter(arr).max()).toEqual(Math.max(...arr));
     })
   );
+
+  // @ts-expect-error - should be an array of numbers
+  iter(['a']).max();
 });
 
 test('maxBy', () => {
@@ -439,6 +453,9 @@ test('sum', () => {
       expect(iter(arr).sum()).toEqual(arr.reduce((a, b) => a + b));
     })
   );
+
+  // @ts-expect-error - should be an array of numbers
+  iter(['a']).sum();
 });
 
 test('partition', () => {
@@ -510,5 +527,29 @@ test('single ownership', () => {
   expect(it.toArray()).toEqual([1, 2, 3]);
   expect(() => it.toArray()).toThrowError(
     'inner iterable has already been taken'
+  );
+});
+
+test('cycle', () => {
+  expect(iter([]).cycle().take(5).toArray()).toEqual([]);
+  expect(iter([1]).cycle().take(5).toArray()).toEqual([1, 1, 1, 1, 1]);
+  expect(iter([1, 2, 3]).cycle().take(5).toArray()).toEqual([1, 2, 3, 1, 2]);
+
+  fc.assert(
+    fc.property(fc.array(fc.anything()), (arr) => {
+      expect(iter(arr).cycle().take(0).toArray()).toEqual([]);
+    })
+  );
+
+  fc.assert(
+    fc.property(
+      fc.record({
+        arr: fc.array(fc.anything(), { minLength: 1 }),
+        n: fc.integer({ min: 1, max: 100 }),
+      }),
+      ({ arr, n }) => {
+        expect(iter(arr).cycle().take(n).toArray()).toHaveLength(n);
+      }
+    )
   );
 });

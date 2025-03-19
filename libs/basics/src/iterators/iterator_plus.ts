@@ -49,10 +49,10 @@ export class IteratorPlusImpl<T> implements IteratorPlus<T>, AsyncIterable<T> {
     return this.async()[Symbol.asyncIterator]();
   }
 
-  async(): AsyncIteratorPlus<T> {
+  async(): AsyncIteratorPlus<Awaited<T>> {
     const iterable = this.intoInner();
     return new AsyncIteratorPlusImpl(
-      (async function* gen(): AsyncGenerator<T> {
+      (async function* gen(): AsyncGenerator<Awaited<T>> {
         for (const value of iterable) {
           yield await Promise.resolve(value);
         }
@@ -113,6 +113,28 @@ export class IteratorPlusImpl<T> implements IteratorPlus<T>, AsyncIterable<T> {
       count += 1;
     }
     return count;
+  }
+
+  cycle(): IteratorPlus<T> {
+    const iterable = this.intoInner();
+    return new IteratorPlusImpl(
+      (function* gen(): IterableIterator<T> {
+        const array = Array.of<T>();
+
+        for (const value of iterable) {
+          array.push(value);
+          yield value;
+        }
+
+        if (array.length === 0) {
+          return;
+        }
+
+        while (true) {
+          yield* array;
+        }
+      })()
+    );
   }
 
   enumerate(): IteratorPlus<[number, T]> {
@@ -222,7 +244,7 @@ export class IteratorPlusImpl<T> implements IteratorPlus<T>, AsyncIterable<T> {
   }
 
   isEmpty(): boolean {
-    /* istanbul ignore next - `done` is typed as `{ done?: false } | { done: true }`, but in practice is never undefined */
+    /* istanbul ignore next - @preserve `done` is typed as `{ done?: false } | { done: true }`, but in practice is never undefined */
     return this.intoInner()[Symbol.iterator]().next().done ?? true;
   }
 
@@ -251,7 +273,7 @@ export class IteratorPlusImpl<T> implements IteratorPlus<T>, AsyncIterable<T> {
     );
   }
 
-  max(): T | undefined;
+  max(this: IteratorPlus<number>): T;
   max(compareFn: (a: T, b: T) => number): T | undefined;
   max(
     compareFn: (a: T, b: T) => number = (a, b) => (a < b ? -1 : a > b ? 1 : 0)
@@ -263,7 +285,7 @@ export class IteratorPlusImpl<T> implements IteratorPlus<T>, AsyncIterable<T> {
     return this.minBy((item) => -fn(item));
   }
 
-  min(): T extends number ? T | undefined : unknown;
+  min(this: IteratorPlus<number>): T;
   min(compareFn?: (a: T, b: T) => number): T | undefined;
   min(
     compareFn: (a: T, b: T) => number = (a, b) => (a < b ? -1 : a > b ? 1 : 0)
@@ -363,7 +385,7 @@ export class IteratorPlusImpl<T> implements IteratorPlus<T>, AsyncIterable<T> {
     return false;
   }
 
-  sum(): T extends number ? number : unknown;
+  sum(this: IteratorPlus<number>): T;
   sum(fn: (item: T) => number): number;
   sum(fn?: (item: T) => number): number | unknown {
     let sum = 0;
@@ -375,16 +397,15 @@ export class IteratorPlusImpl<T> implements IteratorPlus<T>, AsyncIterable<T> {
 
   take(count: number): IteratorPlus<T> {
     const iterable = this.intoInner();
+    const iterator = iterable[Symbol.iterator]();
     return new IteratorPlusImpl(
       (function* gen(): IterableIterator<T> {
-        let remaining = count;
-        for (const value of iterable) {
-          if (remaining <= 0) {
+        for (let remaining = count; remaining > 0; remaining -= 1) {
+          const next = iterator.next();
+          if (next.done) {
             break;
-          } else {
-            yield value;
-            remaining -= 1;
           }
+          yield next.value;
         }
       })()
     );

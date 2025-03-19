@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 import React from 'react';
 import ReactDomServer from 'react-dom/server';
 import { writeFile } from 'fs/promises';
-import { QrCode } from './rendering/qrcode';
+import { QrCode } from './qrcode';
 
 export const SIZE_INCHES = {
   width: 4,
@@ -58,9 +58,9 @@ export function buildSvg({
           />
           <line
             x1={0}
-            y1={'4.5in'}
+            y1={'4in'}
             x2={inner.width - thickBorderSize}
-            y2={'4.5in'}
+            y2={'4in'}
             stroke="black"
             strokeWidth={mediumBorderSize}
           />
@@ -125,7 +125,7 @@ export function buildSvg({
         </g>
 
         {/* QR Code */}
-        <g transform="translate(290, 8)">
+        <g transform="translate(270, 425)">
           <QrCode data={qrCodeData} />
         </g>
 

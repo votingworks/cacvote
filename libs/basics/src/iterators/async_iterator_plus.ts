@@ -44,8 +44,8 @@ export class AsyncIteratorPlusImpl<T> implements AsyncIteratorPlus<T> {
     return this.intoInner()[Symbol.asyncIterator]();
   }
 
-  async(): AsyncIteratorPlus<T> {
-    return this;
+  async(): AsyncIteratorPlus<Awaited<T>> {
+    return this as AsyncIteratorPlus<Awaited<T>>;
   }
 
   chain<U>(other: AsyncIterable<U>): AsyncIteratorPlus<T | U> {
@@ -105,6 +105,27 @@ export class AsyncIteratorPlusImpl<T> implements AsyncIteratorPlus<T> {
       count += 1;
     }
     return count;
+  }
+
+  cycle(): AsyncIteratorPlus<T> {
+    const iterable = this.intoInner();
+    return new AsyncIteratorPlusImpl(
+      (async function* gen(): AsyncIterableIterator<T> {
+        const array = Array.of<T>();
+        for await (const value of iterable) {
+          array.push(value);
+          yield value;
+        }
+
+        if (array.length === 0) {
+          return;
+        }
+
+        while (true) {
+          yield* array;
+        }
+      })()
+    );
   }
 
   enumerate(): AsyncIteratorPlus<[number, T]> {
@@ -221,7 +242,7 @@ export class AsyncIteratorPlusImpl<T> implements AsyncIteratorPlus<T> {
   }
 
   async isEmpty(): Promise<boolean> {
-    /* istanbul ignore next - `done` is typed as `{ done?: false } | { done: true }`, but in practice is never undefined */
+    /* istanbul ignore next - @preserve `done` is typed as `{ done?: false } | { done: true }`, but in practice is never undefined */
     return (await this.intoInner()[Symbol.asyncIterator]().next()).done ?? true;
   }
 
@@ -252,7 +273,7 @@ export class AsyncIteratorPlusImpl<T> implements AsyncIteratorPlus<T> {
     );
   }
 
-  max(): Promise<T | undefined>;
+  max(this: AsyncIteratorPlus<number>): Promise<T | undefined>;
   max(compareFn: (a: T, b: T) => MaybePromise<number>): Promise<T | undefined>;
   max(
     compareFn: (a: T, b: T) => MaybePromise<number> = (a, b) =>
@@ -265,7 +286,7 @@ export class AsyncIteratorPlusImpl<T> implements AsyncIteratorPlus<T> {
     return this.minBy(async (item) => -(await fn(item)));
   }
 
-  min(): Promise<T | undefined>;
+  min(this: AsyncIteratorPlus<number>): Promise<T | undefined>;
   min(compareFn: (a: T, b: T) => MaybePromise<number>): Promise<T | undefined>;
   async min(
     compareFn: (a: T, b: T) => MaybePromise<number> = (a, b) =>
@@ -352,9 +373,9 @@ export class AsyncIteratorPlusImpl<T> implements AsyncIteratorPlus<T> {
     return false;
   }
 
-  sum(): Promise<T extends number ? number : unknown>;
-  sum(fn: (item: T) => MaybePromise<number>): Promise<number>;
-  async sum(fn?: (item: T) => MaybePromise<number>): Promise<number | unknown> {
+  sum(this: AsyncIteratorPlus<number>): Promise<T>;
+  sum(fn: (item: T) => MaybePromise<number>): Promise<T>;
+  async sum(fn?: (item: T) => MaybePromise<number>): Promise<T | unknown> {
     let sum = 0;
     for await (const it of this.intoInner()) {
       sum += await (fn ? fn(it) : (it as unknown as number));
@@ -380,16 +401,15 @@ export class AsyncIteratorPlusImpl<T> implements AsyncIteratorPlus<T> {
 
   take(count: number): AsyncIteratorPlus<T> {
     const iterable = this.intoInner();
+    const iterator = iterable[Symbol.asyncIterator]();
     return new AsyncIteratorPlusImpl(
       (async function* gen(): AsyncIterableIterator<T> {
-        let remaining = count;
-        for await (const value of iterable) {
-          if (remaining <= 0) {
+        for (let remaining = count; remaining > 0; remaining -= 1) {
+          const next = await iterator.next();
+          if (next.done) {
             break;
-          } else {
-            yield value;
-            remaining -= 1;
           }
+          yield next.value;
         }
       })()
     );

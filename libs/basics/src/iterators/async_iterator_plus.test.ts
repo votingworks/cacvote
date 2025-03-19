@@ -2,10 +2,20 @@ import * as fc from 'fast-check';
 import { integers } from './integers';
 import { iter } from './iter';
 import { naturals } from './naturals';
+import { typedAs } from '../typed_as';
 
-test('async', () => {
+test('async', async () => {
   const it = iter([]).async();
   expect(it.async()).toEqual(it);
+
+  // ensure `.async()` transforms `IteratorPlus<Promise<T>>` to `AsyncIteratorPlus<T>`
+  expect(
+    await typedAs<Promise<number[]>>(
+      iter([Promise.resolve(0)])
+        .async()
+        .toArray()
+    )
+  ).toEqual([0]);
 });
 
 test('map', async () => {
@@ -251,6 +261,19 @@ test('take', async () => {
     0, 1, 2, 3, 4,
   ]);
   expect(await iter([]).async().take(-1).toArray()).toEqual([]);
+
+  let count = 0;
+  await iter({
+    [Symbol.asyncIterator]: () => ({
+      next: () => {
+        count += 1;
+        return Promise.resolve({ value: count, done: false });
+      },
+    }),
+  })
+    .take(2)
+    .toArray();
+  expect(count).toEqual(2);
 });
 
 test('skip', async () => {
@@ -555,6 +578,9 @@ test('min', async () => {
       expect(await iter(arr).async().min()).toEqual(Math.min(...arr));
     })
   );
+
+  // @ts-expect-error - should be an array of numbers
+  await iter(['a']).async().min();
 });
 
 test('minBy', async () => {
@@ -621,6 +647,9 @@ test('max', async () => {
       expect(await iter(arr).async().max()).toEqual(Math.max(...arr));
     })
   );
+
+  // @ts-expect-error - should be an array of numbers
+  await iter(['a']).async().max();
 });
 
 test('maxBy', async () => {
@@ -669,6 +698,9 @@ test('sum', async () => {
       );
     })
   );
+
+  // @ts-expect-error - should be an array of numbers
+  await iter(['a']).async().sum();
 });
 
 test('partition', async () => {
@@ -773,5 +805,35 @@ test('single ownership', async () => {
   expect(await it.toArray()).toEqual([1, 2, 3]);
   await expect(it.toArray()).rejects.toThrowError(
     'inner iterable has already been taken'
+  );
+});
+
+test('cycle', async () => {
+  expect(await iter([]).async().cycle().take(3).toArray()).toEqual([]);
+  expect(await iter([1, 2]).async().cycle().take(3).toArray()).toEqual([
+    1, 2, 1,
+  ]);
+  expect(await iter([1, 2]).async().cycle().take(5).toArray()).toEqual([
+    1, 2, 1, 2, 1,
+  ]);
+
+  await fc.assert(
+    fc.asyncProperty(fc.array(fc.anything()), async (arr) => {
+      expect(await iter(arr).async().cycle().take(0).toArray()).toEqual([]);
+    })
+  );
+
+  await fc.assert(
+    fc.asyncProperty(
+      fc.record({
+        arr: fc.array(fc.anything(), { minLength: 1 }),
+        n: fc.integer({ min: 1, max: 100 }),
+      }),
+      async ({ arr, n }) => {
+        expect(await iter(arr).async().cycle().take(n).toArray()).toHaveLength(
+          n
+        );
+      }
+    )
   );
 });
