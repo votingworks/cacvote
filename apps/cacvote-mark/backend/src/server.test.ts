@@ -1,13 +1,27 @@
 import { mockLogger } from '@votingworks/logging';
 import { rmSync } from 'fs-extra';
 import { dirSync } from 'tmp';
+import {
+  BooleanEnvironmentVariableName,
+  getFeatureFlagMock,
+} from '@votingworks/utils';
 import { start } from './server';
 import { createWorkspace } from './workspace';
 import { buildMockAuth } from '../test/app_helpers';
 
 let workdir: string;
 
+const mockFeatureFlagger = getFeatureFlagMock();
+
+jest.mock('@votingworks/utils', (): typeof import('@votingworks/utils') => ({
+  ...jest.requireActual('@votingworks/utils'),
+  isFeatureFlagEnabled: (flag) => mockFeatureFlagger.isEnabled(flag),
+}));
+
 beforeEach(() => {
+  mockFeatureFlagger.enableFeatureFlag(
+    BooleanEnvironmentVariableName.USE_MOCK_PRINTER
+  );
   workdir = dirSync().name;
 });
 
