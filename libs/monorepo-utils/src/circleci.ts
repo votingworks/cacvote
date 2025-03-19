@@ -1,8 +1,9 @@
+import toml from '@iarna/toml';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { existsSync } from 'fs';
-import { iter } from '@votingworks/basics';
-import { PnpmPackageInfo } from './types';
+import { z } from 'zod';
 import { CargoCrate } from './cargo';
+import { PnpmPackageInfo } from './types';
 
 function jobIdForPackage(pkg: PnpmPackageInfo): string {
   return `test-${pkg.relativePath.replace(/\//g, '-')}`;
@@ -60,6 +61,7 @@ function* generateTestJobForNodeJsPackage(
   }
 }
 
+/* istanbul ignore next */
 function* generateTestJobForRustCrate(crate: CargoCrate): Iterable<string> {
   const hasDatabase = existsSync(join(crate.absolutePath, 'db/migrations'));
   const databaseUrl = hasDatabase
@@ -118,6 +120,22 @@ export const CIRCLECI_CONFIG_PATH = join(
   '../../../.circleci/config.yml'
 );
 
+const CargoTomlSchema = z.object({
+  package: z
+    .object({
+      metadata: z
+        .object({
+          ci: z
+            .object({
+              enabled: z.boolean(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
 /**
  * Generate a CircleCI config file.
  */
@@ -135,10 +153,22 @@ export function* generateConfig(
     const jobLines = generateTestJobForPackage(pkg);
     return memo.set(pkg, jobLines);
   }, new Map<PnpmPackageInfo, Iterable<string>>());
-  const rustJobs = rustCrates.map(generateTestJobForRustCrate);
+  const rustJobs = rustCrates.reduce((memo, crate) => {
+    const cargoTomlPath = join(crate.absolutePath, 'Cargo.toml');
+    const cargoToml = CargoTomlSchema.parse(
+      toml.parse(readFileSync(cargoTomlPath, 'utf8'))
+    );
+    /* istanbul ignore next */
+    if (cargoToml.package?.metadata?.ci?.enabled === false) {
+      return memo;
+    }
+
+    const jobLines = generateTestJobForRustCrate(crate);
+    return memo.set(crate, jobLines);
+  }, new Map<CargoCrate, Iterable<string>>());
   const jobIds = [
     ...[...pnpmJobs.keys()].map(jobIdForPackage),
-    ...iter(rustCrates).map(jobIdForRustCrate),
+    ...[...rustJobs.keys()].map(jobIdForRustCrate),
     // hardcoded jobs
     'validate-monorepo',
   ];
@@ -179,7 +209,7 @@ export function* generateConfig(
   yield `\n`;
   yield `jobs:\n`;
 
-  for (const group of [pnpmJobs.values(), rustJobs]) {
+  for (const group of [pnpmJobs.values(), rustJobs.values()]) {
     for (const pnpmJob of group) {
       for (const line of pnpmJob) {
         yield `  ${line}`;

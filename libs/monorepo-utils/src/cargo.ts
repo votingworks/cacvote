@@ -30,7 +30,7 @@ export function getCargoCrates(root: string): Promise<CargoCrate[]> {
 
   return lines(stdout)
     .filterMap((line) => {
-      const match = line.match(/^(\S+) v(\S+) \((.+)\)$/);
+      const match = line.match(/^(\S+) v(\S+)(?: \(proc-macro\))? \((.+)\)$/);
       if (!match) {
         return;
       }

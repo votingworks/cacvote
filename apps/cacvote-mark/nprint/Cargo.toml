@@ -3,6 +3,9 @@ name = "nprint"
 version = "0.1.0"
 edition = "2021"
 
+[package.metadata]
+ci = { enabled = false }
+
 [dependencies]
 anyhow = { workspace = true }
 futures-lite = { workspace = true }

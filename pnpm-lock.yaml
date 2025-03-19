@@ -2411,9 +2411,15 @@ importers:
 
   libs/monorepo-utils:
     dependencies:
+      '@iarna/toml':
+        specifier: ^2.2.5
+        version: 2.2.5
       '@votingworks/basics':
         specifier: workspace:*
         version: link:../basics
+      zod:
+        specifier: 3.23.5
+        version: 3.23.5
     devDependencies:
       '@types/jest':
         specifier: ^29.5.3
