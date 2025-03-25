@@ -1,23 +1,25 @@
-import { Result, ok } from '@votingworks/basics';
+import { Result, err, ok } from '@votingworks/basics';
+import {
+  FujitsuThermalPrinter,
+  FujitsuThermalPrinterInterface,
+  MockFileFujitsuPrinter,
+  getFujitsuThermalPrinter,
+} from '@votingworks/fujitsu-thermal-printer';
 import { LogSource, Logger } from '@votingworks/logging';
 import {
   BooleanEnvironmentVariableName,
   isFeatureFlagEnabled,
 } from '@votingworks/utils';
-import { Buffer } from 'buffer';
 import { readFile } from 'fs/promises';
-import * as mailLabel from '../../mail-label';
-import { resolveWorkspace } from '../../workspace';
 
 const useMockPrinterByDefault = isFeatureFlagEnabled(
   BooleanEnvironmentVariableName.USE_MOCK_PRINTER
 );
 
 function usage(out: NodeJS.WriteStream) {
-  out.write('Usage: test-print-mail-label [--printer <type>]\n');
+  out.write('Usage: test-print-ballot <PDF> [--printer <type>]\n');
   out.write('\n');
   out.write('Options:\n');
-  out.write(' --input <path>     Specify the path to the input file\n');
   out.write(
     `  --printer <type>  Specify whether to use a real or mock printer (default: ${
       useMockPrinterByDefault ? 'mock' : 'real'
@@ -26,15 +28,14 @@ function usage(out: NodeJS.WriteStream) {
   out.write('  --help            Display this help message\n');
   out.write('\n');
   out.write('Example:\n');
-  out.write('  test-print-mail-label --printer mock\n');
+  out.write('  test-print-ballot --printer mock\n');
 }
 
 export async function main(
   argv: readonly string[]
 ): Promise<Result<number, Error>> {
   const logger = new Logger(LogSource.System, () => Promise.resolve('system'));
-  const workspace = await resolveWorkspace(logger);
-  let printer: mailLabel.printing.LabelPrinterInterface;
+  let printer: FujitsuThermalPrinterInterface;
   let inputPath: string | undefined;
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -48,36 +49,43 @@ export async function main(
       const printerType = argv[i + 1];
       switch (printerType) {
         case 'real':
-          printer = await mailLabel.printing.getRealLabelPrinter(logger);
+          printer = new FujitsuThermalPrinter(logger);
           break;
         case 'mock':
-          printer = mailLabel.printing.getMockLabelPrinter(workspace, logger);
+          printer = new MockFileFujitsuPrinter(logger);
           break;
         default:
           throw new Error(`Invalid printer type: ${printerType}`);
       }
       i += 1;
-    } else if (arg === '--input') {
-      inputPath = argv[i + 1];
-      i += 1;
     } else if (arg?.startsWith('-')) {
       usage(process.stderr);
       return ok(1);
+    } else if (arg) {
+      inputPath = arg;
     }
   }
 
-  printer ??= await mailLabel.printing.getLabelPrinter(workspace, logger);
+  if (!inputPath) {
+    usage(process.stderr);
+    return ok(1);
+  }
 
-  const pdf = inputPath
-    ? await readFile(inputPath)
-    : await mailLabel.rendering.buildPdf({
-        mailingAddress: '123 Main St\nAnytown, CA 90210',
-        qrCodeData: Buffer.from(
-          'BkUCAzAwMAMKMDEyMzQ1Njc4OQQQNysj0vgURf+Gi2Xo1o6dAgUgEIxqEkEQ0QTGUEQzLmsp8NAMBUw3opShGVfJ2H3WHDIHRzBFAiEAubQrU91NQ/HejiIGWYPkX29QWDZ75ofJO7jBqdwSq7kCIATMY7NHAOuV3Dm9lbLUD8yF2VpiyOomQGmEyIitm0eE'
-        ),
-      });
+  printer ??= getFujitsuThermalPrinter(logger);
 
-  await printer.printPdf(pdf);
+  const status = await printer.getStatus();
+
+  if (status.state !== 'idle') {
+    return err(new Error(`Printer is not ready. Got state=${status.state}`));
+  }
+
+  const pdf = await readFile(inputPath);
+  const printResult = await printer.print(pdf);
+
+  if (printResult.isErr()) {
+    return err(new Error(JSON.stringify(printResult.err())));
+  }
+
   await printer.close();
 
   return ok(0);

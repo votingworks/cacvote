@@ -185,9 +185,14 @@ export class MockFileFujitsuPrinter implements FujitsuThermalPrinterInterface {
 
     void this.logger.logAsCurrentRole(LogEventId.PrinterPrintComplete, {
       message: 'Print job completed successfully',
+      filename,
       disposition: 'success',
     });
     return ok();
+  }
+
+  close(): Promise<void> {
+    return Promise.resolve();
   }
 }
 

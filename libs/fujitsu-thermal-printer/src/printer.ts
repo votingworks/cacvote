@@ -144,6 +144,10 @@ export class FujitsuThermalPrinter implements FujitsuThermalPrinterInterface {
     );
     return ok();
   }
+
+  async close(): Promise<void> {
+    await this.driver?.disconnect();
+  }
 }
 
 export function getFujitsuThermalPrinter(
