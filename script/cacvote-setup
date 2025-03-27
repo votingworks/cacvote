@@ -287,9 +287,32 @@ setup-kiosk-browser() {
 setup-label-printer() {
   echo "🖨️ Label Printer Driver"
 
-  if ! [ -f /usr/lib/libNPrint.so ]; then
-    echo -e "\e[1;31merror:\e[0;31m libNPrint.so not found, expected at /usr/lib/libNPrint.so\e[0m" >&2
-    return
+  local LIB_PATH="/usr/lib/libNPrint.so"
+  local ZIP_FILE
+  local LIB_INSIDE_ZIP
+
+  if ! [ -f "${LIB_PATH}" ]; then
+    ARCH=$(arch)
+
+    case "${ARCH}" in
+      aarch64)
+        ZIP_FILE="${DIR}/../apps/cacvote-mark/Library_for_Linux_ARM_(Raspberry_Pi)_2.9_install.zip"
+        LIB_INSIDE_ZIP="libNPrint.so_Raspi_2.9_E_20230711(20240314)/Library/64bit/libNPrint.so.2.9"
+        ;;
+
+      x86_64)
+        ZIP_FILE="${DIR}/../apps/cacvote-mark/Library_for_Linux_2.9_install.zip"
+        LIB_INSIDE_ZIP="libNPrint.so_Linux_2.9_E_20230711(20240314)/Library/x86/libNPrint.so.2.9"
+        ;;
+
+      *)
+        echo "Unsupported architecture: ${ARCH}" >&2
+        exit 1
+        ;;
+    esac
+
+    # Extract and install the library
+    unzip -p "${ZIP_FILE}" "${LIB_INSIDE_ZIP}" | sudo tee "${LIB_PATH}" > /dev/null
   fi
 
   (
