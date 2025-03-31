@@ -103,16 +103,18 @@ test('forEachObjectOfType', async () => {
   );
 
   expect(
-    store.forEachObjectOfType(payload.getObjectType()).isEmpty()
+    await store.forEachObjectOfType(payload.getObjectType()).isEmpty()
   ).toBeTruthy();
 
   (await store.addObject(object)).unsafeUnwrap();
 
-  expect(store.forEachObjectOfType(payload.getObjectType()).count()).toEqual(1);
-  expect(store.forEachObjectOfType(payload.getObjectType()).first()).toEqual(
-    object
-  );
-  expect(store.forEachObjectOfType('NonExistent').count()).toEqual(0);
+  expect(
+    await store.forEachObjectOfType(payload.getObjectType()).count()
+  ).toEqual(1);
+  expect(
+    await store.forEachObjectOfType(payload.getObjectType()).first()
+  ).toEqual(object);
+  expect(await store.forEachObjectOfType('NonExistent').count()).toEqual(0);
 });
 
 test('forEachRegistrationRequest', async () => {
@@ -135,16 +137,16 @@ test('forEachRegistrationRequest', async () => {
   );
 
   expect(
-    store.forEachRegistrationRequest({ commonAccessCardId }).isEmpty()
+    await store.forEachRegistrationRequest({ commonAccessCardId }).isEmpty()
   ).toBeTruthy();
 
   (await store.addObject(object)).unsafeUnwrap();
 
   expect(
-    store.forEachRegistrationRequest({ commonAccessCardId }).count()
+    await store.forEachRegistrationRequest({ commonAccessCardId }).count()
   ).toEqual(1);
   expect(
-    store.forEachRegistrationRequest({ commonAccessCardId }).first()
+    await store.forEachRegistrationRequest({ commonAccessCardId }).first()
   ).toEqual({ object, registrationRequest });
   expect(
     store
