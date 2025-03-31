@@ -891,12 +891,3 @@ export const CreateSessionResponseSchema =
   CreateSessionResponseStructSchema.transform(
     (o) => new CreateSessionResponse(o.bearerToken)
   ) as unknown as z.ZodSchema<CreateSessionResponse>;
-
-export const AutomaticExpirationTypeSchema = z.enum([
-  'castBallotOnly',
-  'castBallotAndRegistration',
-]);
-
-export type AutomaticExpirationType = z.infer<
-  typeof AutomaticExpirationTypeSchema
->;

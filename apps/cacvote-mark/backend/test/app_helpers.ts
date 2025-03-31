@@ -9,6 +9,7 @@ import { dirSync } from 'tmp';
 import { Api, buildApp } from '../src/app';
 import { Auth, AuthStatus } from '../src/types/auth';
 import { createWorkspace } from '../src/workspace';
+import { Store } from '../src/store';
 
 interface MockAppContents {
   apiClient: grout.Client<Api>;
@@ -68,7 +69,7 @@ export async function createApp(): Promise<MockAppContents> {
 
   const app = await buildApp({
     auth: mockAuth,
-    workspace: createWorkspace(workdir),
+    workspace: createWorkspace(workdir, Store),
     logger: mockLogger(),
   });
 

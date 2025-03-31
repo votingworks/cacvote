@@ -1,9 +1,10 @@
+import { cryptography } from '@votingworks/auth';
+import { LogSource, Logger } from '@votingworks/logging';
 import { Buffer } from 'buffer';
 import { readFile } from 'fs/promises';
-import { cryptography } from '@votingworks/auth';
-import { Readable } from 'stream';
-import { join } from 'path';
 import { DateTime } from 'luxon';
+import { join } from 'path';
+import { Readable } from 'stream';
 import {
   JurisdictionCodeSchema,
   Payload,
@@ -11,6 +12,7 @@ import {
   SignedObject,
   Uuid,
 } from '../../cacvote-server/types';
+import { Store } from '../../store';
 import { resolveWorkspace } from '../../workspace';
 
 const DEV_CERTS_PATH = join(__dirname, '../../../../../../libs/auth/certs/dev');
@@ -21,7 +23,10 @@ const VX_ADMIN_CERT_AUTHORITY_CERT_PATH = join(
 );
 
 export async function main(): Promise<void> {
-  const workspace = await resolveWorkspace();
+  const workspace = await resolveWorkspace(
+    new Logger(LogSource.VxMarkBackend, () => Promise.resolve('system')),
+    Store
+  );
 
   const payload = Payload.RegistrationRequest(
     new RegistrationRequest(

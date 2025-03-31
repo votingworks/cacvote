@@ -1,26 +1,22 @@
-import { Buffer } from 'buffer';
 import { cac, cryptography } from '@votingworks/auth';
+import { VX_MACHINE_ID } from '@votingworks/backend';
 import { throwIllegalValue } from '@votingworks/basics';
 import { LogEventId, Logger } from '@votingworks/logging';
+import { Buffer } from 'buffer';
 import { Server } from 'http';
-import { DateTime } from 'luxon';
-import { readElection } from '@votingworks/fs';
-import { VX_MACHINE_ID } from '@votingworks/backend';
 import { Readable } from 'stream';
 import { inspect } from 'util';
 import { buildApp } from './app';
 import { Client } from './cacvote-server/client';
 import { syncPeriodically } from './cacvote-server/sync';
 import {
-  MACHINE_CERT,
   CACVOTE_URL,
+  IS_RUNNING_USABILITY_TEST,
+  MACHINE_CERT,
   SIGNER,
-  USABILITY_TEST_ELECTION_PATH,
-  USABILITY_TEST_EXPIRATION_MINUTES,
 } from './globals';
 import { Auth } from './types/auth';
 import { Workspace } from './workspace';
-import { UsabilityTestClient } from './usability-test/usability_test_client';
 
 export interface StartOptions {
   auth?: Auth;
@@ -100,29 +96,7 @@ export async function start({
     logger,
   });
 
-  if (USABILITY_TEST_ELECTION_PATH) {
-    const electionDefinition = (
-      await readElection(USABILITY_TEST_ELECTION_PATH)
-    ).unsafeUnwrap();
-    const client = (
-      await UsabilityTestClient.withElection(electionDefinition, { logger })
-    ).unsafeUnwrap();
-
-    syncPeriodically(client, workspace.store, logger);
-
-    void logger.log(LogEventId.ApplicationStartup, 'system', {
-      message: 'Starting mock CACvote Server client',
-    });
-
-    setInterval(() => {
-      client.autoExpireCompletedVotingSessions({
-        before: DateTime.now().minus({
-          minutes: USABILITY_TEST_EXPIRATION_MINUTES,
-        }),
-        expire: 'castBallotOnly',
-      });
-    }, 1000);
-  } else {
+  if (!IS_RUNNING_USABILITY_TEST) {
     if (!CACVOTE_URL) {
       throw new Error('CACVOTE_URL not set');
     }
