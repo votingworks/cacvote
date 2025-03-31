@@ -4,7 +4,10 @@ import { electionFamousNames2021Fixtures } from '@votingworks/fixtures';
 import { Buffer } from 'buffer';
 import { DateTime } from 'luxon';
 import { mockLogger } from '@votingworks/logging';
-import { JURISDICTION_CODE, createVerifiedObject } from './mock_object';
+import {
+  JURISDICTION_CODE,
+  createVerifiedObject,
+} from '../cacvote-server/mock_object';
 import {
   CastBallot,
   Election,
@@ -16,7 +19,7 @@ import {
   RegistrationRequest,
   RegistrationRequestObjectType,
   UuidSchema,
-} from './types';
+} from '../cacvote-server/types';
 import { UsabilityTestClient } from './usability_test_client';
 
 const jurisdictionCode = JurisdictionCodeSchema.parse('st.test-jurisdiction');

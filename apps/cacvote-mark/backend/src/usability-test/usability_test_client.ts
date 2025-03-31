@@ -16,8 +16,11 @@ import {
 import { ElectionDefinition } from '@votingworks/types';
 import { DateTime } from 'luxon';
 import { LogEventId, Logger } from '@votingworks/logging';
-import { ClientApi, ClientResult } from './client';
-import { JURISDICTION_CODE, createVerifiedObject } from './mock_object';
+import { ClientApi, ClientResult } from '../cacvote-server/client';
+import {
+  JURISDICTION_CODE,
+  createVerifiedObject,
+} from '../cacvote-server/mock_object';
 import {
   AutomaticExpirationType,
   CastBallotObjectType,
@@ -30,7 +33,7 @@ import {
   RegistrationRequestObjectType,
   SignedObject,
   Uuid,
-} from './types';
+} from '../cacvote-server/types';
 
 /**
  * Provides a mock client API for usability testing, specifically:

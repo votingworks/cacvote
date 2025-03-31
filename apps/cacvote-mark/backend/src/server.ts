@@ -20,7 +20,7 @@ import {
 } from './globals';
 import { Auth } from './types/auth';
 import { Workspace } from './workspace';
-import { UsabilityTestClient } from './cacvote-server/usability_test_client';
+import { UsabilityTestClient } from './usability-test/usability_test_client';
 
 export interface StartOptions {
   auth?: Auth;
