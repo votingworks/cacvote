@@ -103,6 +103,18 @@ export const SIGNER = process.env.SIGNER?.match(/^tpm(:.+)?$/)
 export const { USABILITY_TEST_ELECTION_PATH } = process.env;
 
 /**
+ * True if the app should run in usability test mode.
+ */
+export const IS_RUNNING_USABILITY_TEST = !!USABILITY_TEST_ELECTION_PATH;
+
+/**
+ * Should the usability test flow skip registration or not?
+ */
+export const USABILITY_TEST_SKIP_REGISTRATION = ['true', 'TRUE', '1'].includes(
+  process.env.USABILITY_TEST_SKIP_REGISTRATION ?? 'false'
+);
+
+/**
  * How many minutes should we wait before expiring a completed voting session
  * during the usability test?
  */

@@ -92,7 +92,7 @@ function buildApi({
       const { commonAccessCardId } = authStatus.card;
 
       // TODO: support more than one registration request for a given voter
-      const registrationRequest = store
+      const registrationRequest = await store
         .forEachRegistrationRequest({ commonAccessCardId })
         .first();
 
@@ -100,7 +100,7 @@ function buildApi({
         return { status: 'unregistered' };
       }
 
-      const registration = store
+      const registration = await store
         .forEachRegistration({
           commonAccessCardId,
           registrationRequestObjectId: registrationRequest.object.getId(),
@@ -111,7 +111,7 @@ function buildApi({
         return { status: 'registration_pending' };
       }
 
-      const castBallot = store
+      const castBallot = await store
         .forEachCastBallot({
           commonAccessCardId,
           electionObjectId: registration.registration.getElectionObjectId(),
@@ -217,7 +217,7 @@ function buildApi({
         return undefined;
       }
 
-      const registrationInfo = store
+      const registrationInfo = await store
         .forEachRegistration({
           commonAccessCardId: authStatus.card.commonAccessCardId,
         })
@@ -276,7 +276,7 @@ function buildApi({
 
         const { commonAccessCardId } = authStatus.card;
         // TODO: Handle multiple registrations
-        const registration = store
+        const registration = await store
           .forEachRegistration({ commonAccessCardId })
           .first();
 
