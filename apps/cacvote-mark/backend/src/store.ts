@@ -35,7 +35,7 @@ const SchemaPath = join(__dirname, '../schema.sql');
  * Manages a data store for imported election definition and system settings
  */
 export class Store {
-  private constructor(private readonly client: DbClient) {}
+  protected constructor(private readonly client: DbClient) {}
 
   getDbPath(): string {
     return this.client.getDatabasePath();
@@ -45,14 +45,14 @@ export class Store {
    * Builds and returns a new store whose data is kept in memory.
    */
   static memoryStore(): Store {
-    return new Store(DbClient.memoryClient(SchemaPath));
+    return new this(DbClient.memoryClient(SchemaPath));
   }
 
   /**
    * Builds and returns a new store at `dbPath`.
    */
   static fileStore(dbPath: string): Store {
-    return new Store(DbClient.fileClient(dbPath, SchemaPath));
+    return new this(DbClient.fileClient(dbPath, SchemaPath));
   }
 
   /**
