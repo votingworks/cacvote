@@ -29,11 +29,10 @@ function officeId(contestId: Vxf.ContestId): string {
 
 export function convertVxfElectionToCdfBallotDefinition(
   vxfElection: Vxf.Election,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   translatedElectionStrings: UiStringsPackage
 ): Cdf.BallotDefinition {
   function text(content: string): Cdf.InternationalizedText {
-    const cdfText: Cdf.LanguageString[] = [];
-
     return {
       '@type': 'BallotDefinition.InternationalizedText',
       Text: [

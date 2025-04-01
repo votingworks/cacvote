@@ -10,8 +10,8 @@ test('displays current language', async () => {
   mockApiClient.getAvailableLanguages.mockResolvedValue(['en', 'es']);
 
   const testTranslations: UiStringsPackage = {
-    ['en']: { [ElectionStringKey.BALLOT_LANGUAGE]: 'English' },
-    ['es']: { [ElectionStringKey.BALLOT_LANGUAGE]: 'Español' },
+    en: { [ElectionStringKey.BALLOT_LANGUAGE]: 'English' },
+    es: { [ElectionStringKey.BALLOT_LANGUAGE]: 'Español' },
   };
   mockApiClient.getUiStrings.mockImplementation((input) =>
     Promise.resolve(testTranslations[input.languageCode] || null)

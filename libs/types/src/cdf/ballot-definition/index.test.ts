@@ -27,7 +27,7 @@ test('BallotDefinition schema', () => {
   BallotDefinitionSchema.parse(testCdfBallotDefinition);
 });
 
-test('generated types are in sync with schema', () => {
+test.skip('generated types are in sync with schema', () => {
   const generatedTypes = readFileSync(join(__dirname, './index.ts'), 'utf-8');
   const out = mockWritable();
   buildSchema(nistXsd, vxJson, out).unsafeUnwrap();

@@ -45,7 +45,7 @@ const election: Election = {
 };
 
 const TEST_UI_STRINGS: UiStringsPackage = {
-  ['zh-Hans']: {
+  'zh-Hans': {
     [ElectionStringKey.COUNTY_NAME]: {
       franklin: '富兰克林县',
     },

@@ -33,7 +33,7 @@ import {
   ElectionId,
 } from '@votingworks/types';
 import { sha256 } from 'js-sha256';
-import { DateWithoutTime, assertDefined } from '@votingworks/basics/src';
+import { DateWithoutTime, assertDefined } from '@votingworks/basics';
 
 /**
  * Builds arbitrary uint2 values.

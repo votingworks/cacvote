@@ -1,4 +1,11 @@
-import { Result, err, ok, assertDefined, find } from '@votingworks/basics';
+import {
+  Result,
+  err,
+  ok,
+  assertDefined,
+  find,
+  DateWithoutTime,
+} from '@votingworks/basics';
 import { sha256 } from 'js-sha256';
 import { z } from 'zod';
 import { safeParseCdfBallotDefinition } from './cdf/ballot-definition/convert';
@@ -27,6 +34,14 @@ function maintainBackwardsCompatibility(value: unknown): unknown {
 
   // Fill in a default empty seal value
   election = { ...election, seal: election.seal ?? '' };
+
+  if (typeof election.date === 'string') {
+    try {
+      election = { ...election, date: new DateWithoutTime(election.date) };
+    } catch {
+      // let the validation handle it
+    }
+  }
 
   // Fill in `Party#fullName` from `Party#name` if it's missing.
   const isMissingPartyFullName = election.parties?.some(

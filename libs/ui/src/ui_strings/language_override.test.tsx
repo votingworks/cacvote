@@ -13,15 +13,15 @@ test('LanguageOverride overrides current active language', async () => {
   const { getLanguageContext, mockApiClient, render } = newTestContext();
 
   const testTranslations: UiStringsPackage = {
-    ['en']: { buttonOkay: 'Cool beans' },
-    ['es']: { buttonOkay: 'Bueno' },
+    en: { buttonOkay: 'Cool beans' },
+    es: { buttonOkay: 'Bueno' },
   };
   mockApiClient.getUiStrings.mockImplementation(({ languageCode }) =>
     Promise.resolve(testTranslations[languageCode] || null)
   );
 
   render(
-    <LanguageOverride languageCode={'es'}>
+    <LanguageOverride languageCode="es">
       <Button onPress={() => {}}>{appStrings.buttonOkay()}</Button>
     </LanguageOverride>
   );
@@ -34,15 +34,15 @@ test('LanguageOverride is no-op when parent context is missing', async () => {
   const { mockApiClient } = newTestContext();
 
   const testTranslations: UiStringsPackage = {
-    ['en']: { buttonOkay: 'Cool beans' },
-    ['es']: { buttonOkay: 'Bueno' },
+    en: { buttonOkay: 'Cool beans' },
+    es: { buttonOkay: 'Bueno' },
   };
   mockApiClient.getUiStrings.mockImplementation(({ languageCode }) =>
     Promise.resolve(testTranslations[languageCode] || null)
   );
 
   renderWithoutContext(
-    <LanguageOverride languageCode={'es'}>
+    <LanguageOverride languageCode="es">
       <Button onPress={() => {}}>{appStrings.buttonOkay()}</Button>
     </LanguageOverride>
   );
@@ -54,8 +54,8 @@ test('InEnglish forces English translation', async () => {
   const { getLanguageContext, mockApiClient, render } = newTestContext();
 
   const testTranslations: UiStringsPackage = {
-    ['en']: { buttonOkay: 'Cool beans' },
-    ['es']: { buttonOkay: 'Bueno' },
+    en: { buttonOkay: 'Cool beans' },
+    es: { buttonOkay: 'Bueno' },
   };
   mockApiClient.getUiStrings.mockImplementation(({ languageCode }) =>
     Promise.resolve(testTranslations[languageCode] || null)
