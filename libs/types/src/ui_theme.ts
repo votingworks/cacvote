@@ -19,10 +19,8 @@ export type TouchColorMode = (typeof TOUCH_COLOR_MODES)[number];
 /** Standard color mode for non-voter-facing desktop apps. */
 export type DesktopColorMode = 'desktop';
 
-export type PrintColorMode = 'print';
-
 /** Options for supported UI color themes. */
-export type ColorMode = DesktopColorMode | PrintColorMode | TouchColorMode;
+export type ColorMode = DesktopColorMode | TouchColorMode;
 
 export const TOUCH_SIZE_MODES = [
   'touchSmall',
@@ -37,10 +35,8 @@ export type TouchSizeMode = (typeof TOUCH_SIZE_MODES)[number];
 /** Standard size mode for non-voter-facing desktop apps. */
 export type DesktopSizeMode = 'desktop';
 
-export type PrintSizeMode = 'print';
-
 /** Options for supported UI sizing themes. */
-export type SizeMode = DesktopSizeMode | PrintSizeMode | TouchSizeMode;
+export type SizeMode = DesktopSizeMode | TouchSizeMode;
 
 export function isTouchSizeMode(sizeMode: SizeMode): sizeMode is TouchSizeMode {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

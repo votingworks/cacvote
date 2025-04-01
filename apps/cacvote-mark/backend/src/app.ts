@@ -302,7 +302,7 @@ function buildApi({
         const castVoteRecordId = unsafeParse(BallotIdSchema, ballotId);
         const castVoteRecord = buildCastVoteRecord({
           electionDefinition,
-          electionId: electionDefinition.ballotHash,
+          electionId: electionDefinition.electionHash,
           scannerId: VX_MACHINE_ID,
           // TODO: what should the batch ID be?
           batchId: '',
@@ -313,17 +313,11 @@ function buildApi({
               ballotStyleId: registration.registration.getBallotStyleId(),
               precinctId: registration.registration.getPrecinctId(),
               ballotType: BallotType.Absentee,
-              ballotHash: electionDefinition.ballotHash,
+              electionHash: electionDefinition.electionHash,
               // TODO: support test mode
               isTestMode: false,
             },
             votes: input.votes,
-            adjudicationInfo: {
-              requiresAdjudication: false,
-              enabledReasons: [],
-              ignoredReasonInfos: [],
-              enabledReasonInfos: [],
-            },
           },
           ballotMarkingMode: 'machine',
         });

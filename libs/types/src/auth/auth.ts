@@ -1,36 +1,7 @@
 import { z } from 'zod';
 
-import { DateWithoutTime } from '@votingworks/basics';
-import { BallotStyleId, Election, ElectionId, PrecinctId } from '../election';
-
-/**
- * An election key identifies an election. It can be encoded in a smart card and
- * later validated to make sure a smart card is only used for the election it
- * was programmed for.
- *
- * It contains both the election ID (which should be unique) and the election
- * date (as defense in depth in case, for example, someone manually copies an
- * election definition and forgets to change the ID).
- */
-export interface ElectionKey {
-  id: ElectionId;
-  date: DateWithoutTime;
-}
-
-/**
- * Create an {@link ElectionKey} from an {@link Election}.
- */
-export function constructElectionKey(election: Election): ElectionKey {
-  return {
-    id: election.id,
-    date: election.date,
-  };
-}
-
-export interface VendorUser {
-  readonly role: 'vendor';
-  readonly jurisdiction: string;
-}
+import { BallotStyleId, PrecinctId } from '../election';
+import { Id } from '../generic';
 
 export interface SystemAdministratorUser {
   readonly role: 'system_administrator';
@@ -40,24 +11,22 @@ export interface SystemAdministratorUser {
 export interface ElectionManagerUser {
   readonly role: 'election_manager';
   readonly jurisdiction: string;
-  readonly electionKey: ElectionKey;
+  readonly electionHash: string;
 }
 
 export interface PollWorkerUser {
   readonly role: 'poll_worker';
   readonly jurisdiction: string;
-  readonly electionKey: ElectionKey;
+  readonly electionHash: string;
 }
 
 export interface CardlessVoterUser {
   readonly role: 'cardless_voter';
   readonly ballotStyleId: BallotStyleId;
   readonly precinctId: PrecinctId;
-  readonly sessionId: string;
 }
 
 export type User =
-  | VendorUser
   | SystemAdministratorUser
   | ElectionManagerUser
   | PollWorkerUser
@@ -68,12 +37,19 @@ export type UserWithCard = Exclude<User, CardlessVoterUser>;
 export type UserRole = User['role'];
 
 export const UserRoleSchema: z.ZodSchema<UserRole> = z.union([
-  z.literal('vendor'),
   z.literal('system_administrator'),
   z.literal('election_manager'),
   z.literal('poll_worker'),
   z.literal('cardless_voter'),
 ]);
+
+export interface RaveVoterUser {
+  readonly role: 'cacvote_voter';
+  readonly commonAccessCardId: Id;
+  readonly givenName: string;
+  readonly middleName?: string;
+  readonly familyName: string;
+}
 
 /**
  * See libs/auth/src/lockout.ts for more context.
@@ -158,28 +134,6 @@ export const OverallSessionTimeLimitHoursSchema: z.ZodSchema<OverallSessionTimeL
     z.literal(12),
   ]);
 export const DEFAULT_OVERALL_SESSION_TIME_LIMIT_HOURS: OverallSessionTimeLimitHours = 12;
-
-/**
- * The output of the signed hash validation QR code generation function
- */
-export interface SignedHashValidationQrCodeValue {
-  qrCodeValue: string;
-  qrCodeInputs: {
-    combinedBallotHash: string;
-    date: Date;
-    machineId: string;
-    softwareVersion: string;
-    systemHash: string;
-  };
-}
-
-/**
- * The machine ID in dev certs.
- *
- * We define this here instead of in @votingworks/auth so that it can be imported by frontends,
- * too.
- */
-export const DEV_MACHINE_ID = '0000';
 
 /**
  * The jurisdiction used across tests.

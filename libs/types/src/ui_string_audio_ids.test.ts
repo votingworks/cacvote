@@ -1,5 +1,5 @@
-import { err, ok } from '@votingworks/basics';
 import { safeParseJson } from './generic';
+import { LanguageCode } from './language_code';
 import {
   UiStringAudioIdsPackage,
   UiStringAudioIdsPackageSchema,
@@ -7,14 +7,14 @@ import {
 
 test('valid structure', () => {
   const testPackage: UiStringAudioIdsPackage = {
-    'es-US': {
+    [LanguageCode.SPANISH]: {
       appString: ['a1b2c3', 'f5e6d7'],
       appStringNested: {
         nestedA: ['aaa123'],
         nestedB: ['bbb333'],
       },
     },
-    en: {
+    [LanguageCode.ENGLISH]: {
       appString: ['4f4f4f', '3d3d3d'],
     },
   };
@@ -24,13 +24,30 @@ test('valid structure', () => {
     UiStringAudioIdsPackageSchema
   );
 
-  expect(result).toEqual(ok(testPackage));
+  expect(result.isOk()).toEqual(true);
+  expect(result.ok()).toEqual(testPackage);
+});
+
+test('invalid language code', () => {
+  const result = safeParseJson(
+    JSON.stringify({
+      [LanguageCode.SPANISH]: {
+        appString: ['a1b2c3', 'f5e6d7'],
+      },
+      Klingon: {
+        appString: ['4f4f4f', '3d3d3d'],
+      },
+    }),
+    UiStringAudioIdsPackageSchema
+  );
+
+  expect(result.isOk()).toEqual(false);
 });
 
 test('invalid values', () => {
   const result = safeParseJson(
     JSON.stringify({
-      'es-US': {
+      [LanguageCode.SPANISH]: {
         valid: ['a1b2c3', 'f5e6d7'],
         invalid: '4f4f4f',
       },
@@ -38,13 +55,13 @@ test('invalid values', () => {
     UiStringAudioIdsPackageSchema
   );
 
-  expect(result).toEqual(err(expect.anything()));
+  expect(result.isOk()).toEqual(false);
 });
 
 test('invalid nesting', () => {
   const result = safeParseJson(
     JSON.stringify({
-      'es-US': {
+      [LanguageCode.SPANISH]: {
         appString: ['a1b2c3', 'f5e6d7'],
         nested: {
           too: {
@@ -56,5 +73,5 @@ test('invalid nesting', () => {
     UiStringAudioIdsPackageSchema
   );
 
-  expect(result).toEqual(err(expect.anything()));
+  expect(result.isOk()).toEqual(false);
 });

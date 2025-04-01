@@ -1,8 +1,4 @@
-import {
-  BallotStyleGroupId,
-  ElectionDefinition,
-  Tabulation,
-} from '@votingworks/types';
+import { ElectionDefinition, Tabulation } from '@votingworks/types';
 import { electionTwoPartyPrimaryDefinition } from '@votingworks/fixtures';
 import {
   getContestById,
@@ -29,7 +25,7 @@ test('getPrecinctById', () => {
   // confirm that different elections are maintained separately
   const modifiedElectionDefinition: ElectionDefinition = {
     ...electionDefinition,
-    ballotHash: 'modified-ballot-hash',
+    electionHash: 'modified-election-hash',
     election: {
       ...electionDefinition.election,
       precincts: [
@@ -105,13 +101,7 @@ test('determinePartyId', () => {
   };
 
   const ballotStyleCardCounts: Tabulation.GroupOf<Tabulation.CardCounts> = {
-    ballotStyleGroupId: '1-Ma' as BallotStyleGroupId,
-    bmd: 1,
-    hmpb: [1],
-  };
-
-  const ballotStyleCardCounts2: Tabulation.GroupOf<Tabulation.CardCounts> = {
-    ballotStyleGroupId: 'fake-ballot-style' as BallotStyleGroupId,
+    ballotStyleId: '1M',
     bmd: 1,
     hmpb: [1],
   };
@@ -127,9 +117,6 @@ test('determinePartyId', () => {
     '0'
   );
   expect(determinePartyId(electionDefinition, precinctCardCounts)).toEqual(
-    undefined
-  );
-  expect(determinePartyId(electionDefinition, ballotStyleCardCounts2)).toEqual(
     undefined
   );
 });

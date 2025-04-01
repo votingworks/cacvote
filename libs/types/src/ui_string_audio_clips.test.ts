@@ -1,5 +1,5 @@
-import { err, ok } from '@votingworks/basics';
 import { safeParseJson } from './generic';
+import { LanguageCode } from './language_code';
 import { UiStringAudioClipSchema } from './ui_string_audio_clips';
 
 test('valid structure', () => {
@@ -7,28 +7,40 @@ test('valid structure', () => {
     JSON.stringify({
       dataBase64: 'test data',
       id: 'testKey',
-      languageCode: 'zh-Hant',
+      languageCode: LanguageCode.CHINESE_TRADITIONAL,
     }),
     UiStringAudioClipSchema
   );
 
-  expect(result).toEqual(
-    ok({
+  expect(result.isOk()).toEqual(true);
+  expect(result.ok()).toEqual({
+    dataBase64: 'test data',
+    id: 'testKey',
+    languageCode: LanguageCode.CHINESE_TRADITIONAL,
+  });
+});
+
+test('invalid language code', () => {
+  const result = safeParseJson(
+    JSON.stringify({
       dataBase64: 'test data',
       id: 'testKey',
-      languageCode: 'zh-Hant',
-    })
+      languageCode: 'Klingon',
+    }),
+    UiStringAudioClipSchema
   );
+
+  expect(result.isOk()).toEqual(false);
 });
 
 test('missing field', () => {
   const result = safeParseJson(
     JSON.stringify({
       dataBase64: 'test data',
-      languageCode: 'es-US',
+      languageCode: LanguageCode.SPANISH,
     }),
     UiStringAudioClipSchema
   );
 
-  expect(result).toEqual(err(expect.anything()));
+  expect(result.isOk()).toEqual(false);
 });

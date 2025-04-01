@@ -40,7 +40,6 @@ export interface InterpretedBmdPage {
   ballotId?: BallotId;
   metadata: BallotMetadata;
   votes: VotesDict;
-  adjudicationInfo: AdjudicationInfo;
 }
 export const InterpretedBmdPageSchema: z.ZodSchema<InterpretedBmdPage> =
   z.object({
@@ -48,7 +47,6 @@ export const InterpretedBmdPageSchema: z.ZodSchema<InterpretedBmdPage> =
     ballotId: BallotIdSchema.optional(),
     metadata: BallotMetadataSchema,
     votes: VotesDictSchema,
-    adjudicationInfo: AdjudicationInfoSchema,
   });
 
 export interface UnmarkedWriteIn {
@@ -83,16 +81,16 @@ export const InterpretedHmpbPageSchema: z.ZodSchema<InterpretedHmpbPage> =
     layout: BallotPageLayoutSchema,
   });
 
-export interface InvalidBallotHashPage {
-  type: 'InvalidBallotHashPage';
-  expectedBallotHash: string;
-  actualBallotHash: string;
+export interface InvalidElectionHashPage {
+  type: 'InvalidElectionHashPage';
+  expectedElectionHash: string;
+  actualElectionHash: string;
 }
-export const InvalidBallotHashPageSchema: z.ZodSchema<InvalidBallotHashPage> =
+export const InvalidElectionHashPageSchema: z.ZodSchema<InvalidElectionHashPage> =
   z.object({
-    type: z.literal('InvalidBallotHashPage'),
-    expectedBallotHash: z.string(),
-    actualBallotHash: z.string(),
+    type: z.literal('InvalidElectionHashPage'),
+    expectedElectionHash: z.string(),
+    actualElectionHash: z.string(),
   });
 
 export interface InvalidTestModePage {
@@ -135,7 +133,7 @@ export type PageInterpretation =
   | BlankPage
   | InterpretedBmdPage
   | InterpretedHmpbPage
-  | InvalidBallotHashPage
+  | InvalidElectionHashPage
   | InvalidTestModePage
   | InvalidPrecinctPage
   | UnreadablePage;
@@ -144,13 +142,11 @@ export const PageInterpretationSchema: z.ZodSchema<PageInterpretation> =
     BlankPageSchema,
     InterpretedBmdPageSchema,
     InterpretedHmpbPageSchema,
-    InvalidBallotHashPageSchema,
+    InvalidElectionHashPageSchema,
     InvalidTestModePageSchema,
     InvalidPrecinctPageSchema,
     UnreadablePageSchema,
   ]);
-
-export type PageInterpretationType = PageInterpretation['type'];
 
 export interface PageInterpretationWithFiles {
   imagePath: string;
@@ -188,9 +184,8 @@ export const BallotSheetInfoSchema: z.ZodSchema<BallotSheetInfo> = z.object({
 
 export type InvalidInterpretationReason =
   | 'invalid_test_mode'
-  | 'invalid_ballot_hash'
+  | 'invalid_election_hash'
   | 'invalid_precinct'
-  | 'vertical_streaks_detected'
   | 'unreadable'
   | 'unknown';
 

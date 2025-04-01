@@ -648,7 +648,7 @@ export interface RegistrationPresenterStruct {
   id: Uuid;
   displayName: string;
   electionTitle: string;
-  ballotHash: string;
+  electionHash: string;
   registration: RegistrationStruct;
   createdAt: string;
   isSynced: boolean;
@@ -659,7 +659,7 @@ export const RegistrationPresenterStructSchema: z.ZodSchema<RegistrationPresente
     id: UuidSchema,
     displayName: z.string(),
     electionTitle: z.string(),
-    ballotHash: z.string(),
+    electionHash: z.string(),
     registration: RegistrationStructSchema,
     createdAt: z.string(),
     isSynced: z.boolean(),
@@ -670,7 +670,7 @@ export class RegistrationPresenter {
     private readonly id: Uuid,
     private readonly displayName: string,
     private readonly electionTitle: string,
-    private readonly ballotHash: string,
+    private readonly electionHash: string,
     private readonly registration: Registration,
     private readonly createdAt: DateTime,
     private readonly isSynced: boolean
@@ -688,8 +688,8 @@ export class RegistrationPresenter {
     return this.electionTitle;
   }
 
-  getBallotHash(): string {
-    return this.ballotHash;
+  getElectionHash(): string {
+    return this.electionHash;
   }
 
   getRegistration(): Registration {
@@ -709,7 +709,7 @@ export class RegistrationPresenter {
       id: this.id,
       displayName: this.displayName,
       electionTitle: this.electionTitle,
-      ballotHash: this.ballotHash,
+      electionHash: this.electionHash,
       registration: this.registration.toJSON(),
       createdAt: this.createdAt.toISO(),
       isSynced: this.isSynced,
@@ -724,7 +724,7 @@ export const RegistrationPresenterSchema: z.ZodSchema<RegistrationPresenter> =
         struct.id,
         struct.displayName,
         struct.electionTitle,
-        struct.ballotHash,
+        struct.electionHash,
         RegistrationSchema.parse(struct.registration),
         DateTime.fromISO(struct.createdAt),
         struct.isSynced

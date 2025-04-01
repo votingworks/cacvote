@@ -9,7 +9,6 @@ import {
 import {
   BallotStyle,
   BallotStyleId,
-  BallotStyleIdSchema,
   LanguageCode,
   Party,
 } from '@votingworks/types';
@@ -21,11 +20,9 @@ function generateBallotStyleGroupId(params: {
   ballotStyleIndex: number;
   party?: Party;
 }): BallotStyleId {
-  return BallotStyleIdSchema.parse(
-    params.party
-      ? `${params.ballotStyleIndex}${GROUP_ID_PARTS_SEPARATOR}${params.party.abbrev}`
-      : params.ballotStyleIndex.toString()
-  );
+  return params.party
+    ? `${params.ballotStyleIndex}${GROUP_ID_PARTS_SEPARATOR}${params.party.abbrev}`
+    : params.ballotStyleIndex.toString();
 }
 
 /**
@@ -37,19 +34,15 @@ export function generateBallotStyleId(params: {
   languages: LanguageCode[];
   party?: Party;
 }): BallotStyleId {
-  return BallotStyleIdSchema.parse(
-    [generateBallotStyleGroupId(params), ...params.languages].join(
-      ID_LANGUAGES_SEPARATOR
-    )
+  return [generateBallotStyleGroupId(params), ...params.languages].join(
+    ID_LANGUAGES_SEPARATOR
   );
 }
 
 function extractBallotStyleGroupId(
   ballotStyleId: BallotStyleId
 ): BallotStyleId {
-  return BallotStyleIdSchema.parse(
-    ballotStyleId.split(ID_LANGUAGES_SEPARATOR)[0] || ballotStyleId
-  );
+  return ballotStyleId.split(ID_LANGUAGES_SEPARATOR)[0] || ballotStyleId;
 }
 
 /**

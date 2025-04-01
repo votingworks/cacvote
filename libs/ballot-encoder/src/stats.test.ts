@@ -1,37 +1,26 @@
 import { asElectionDefinition } from '@votingworks/fixtures';
 import {
-  HmpbBallotPaperSize,
-  BallotStyleGroupId,
-  BallotStyleId,
+  BallotPaperSize,
   BallotType,
   DistrictIdSchema,
   Election,
-  ElectionIdSchema,
   unsafeParse,
 } from '@votingworks/types';
-import { DateWithoutTime } from '@votingworks/basics';
 import { encodeBallot } from '.';
 
 const district1Id = unsafeParse(DistrictIdSchema, 'district1');
-const electionId = unsafeParse(ElectionIdSchema, 'election-1');
 const election: Election = {
-  id: electionId,
   type: 'general',
   title: 'Election',
   county: { id: 'nowhere', name: 'Nowhere' },
   state: 'Nowhere',
-  date: new DateWithoutTime('1989-06-23'),
+  date: '1989-06-23T00:00:00Z',
   seal: '<svg>test seal</svg>',
   districts: [{ id: district1Id, name: 'District 1' }],
   parties: [],
   precincts: [{ id: 'precinct1', name: 'Precinct 1' }],
   ballotStyles: [
-    {
-      id: 'style1_en' as BallotStyleId,
-      groupId: 'style1' as BallotStyleGroupId,
-      districts: [district1Id],
-      precincts: ['precinct1'],
-    },
+    { id: 'style1', districts: [district1Id], precincts: ['precinct1'] },
   ],
   contests: [
     {
@@ -45,17 +34,16 @@ const election: Election = {
     },
   ],
   ballotLayout: {
-    paperSize: HmpbBallotPaperSize.Letter,
+    paperSize: BallotPaperSize.Letter,
     metadataEncoding: 'qr-code',
   },
-  ballotStrings: {},
 };
-const { ballotHash } = asElectionDefinition(election);
+const { electionHash } = asElectionDefinition(election);
 
 test('smallest possible encoded ballot', () => {
   expect(
     encodeBallot(election, {
-      ballotHash,
+      electionHash,
       ballotStyleId: election.ballotStyles[0]!.id,
       precinctId: election.precincts[0]!.id,
       ballotType: BallotType.Precinct,

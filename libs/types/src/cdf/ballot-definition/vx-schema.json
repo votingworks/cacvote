@@ -12,6 +12,7 @@
         "Issuer",
         "IssuerAbbreviation",
         "Party",
+        "vxSeal",
         "SequenceEnd",
         "SequenceStart",
         "VendorApplicationId",
@@ -79,6 +80,10 @@
           },
           "minItems": 0,
           "type": "array"
+        },
+        "vxSeal": {
+          "description": "SVG image content for the jurisdiction's seal in UTF8 text format",
+          "type": "string"
         },
         "SequenceEnd": {
           "type": "integer"
@@ -435,7 +440,6 @@
         "Contest",
         "ElectionScopeId",
         "EndDate",
-        "ExternalIdentifier",
         "Name",
         "StartDate",
         "Type"
@@ -481,13 +485,6 @@
         "EndDate": {
           "type": "string",
           "format": "date"
-        },
-        "ExternalIdentifier": {
-          "items": {
-            "$ref": "#/definitions/BallotDefinition.ExternalIdentifier"
-          },
-          "minItems": 1,
-          "type": "array"
         },
         "Name": {
           "$ref": "#/definitions/BallotDefinition.InternationalizedText"
@@ -741,8 +738,19 @@
       "enum": ["landscape", "portrait"],
       "type": "string"
     },
+    "BallotDefinition.vxOutset": {
+      "type": "object",
+      "properties": {
+        "top": { "type": "number" },
+        "bottom": { "type": "number" },
+        "left": { "type": "number" },
+        "right": { "type": "number" }
+      },
+      "required": ["top", "bottom", "left", "right"],
+      "additionalProperties": false
+    },
     "BallotDefinition.Party": {
-      "required": ["@id", "@type", "Abbreviation", "Name"],
+      "required": ["@id", "@type", "Abbreviation", "Name", "vxBallotLabel"],
       "additionalProperties": false,
       "properties": {
         "@id": {
@@ -757,12 +765,21 @@
         },
         "Name": {
           "$ref": "#/definitions/BallotDefinition.InternationalizedText"
+        },
+        "vxBallotLabel": {
+          "description": "The label to describe candidates from this party on a ballot.",
+          "$ref": "#/definitions/BallotDefinition.InternationalizedText"
         }
       },
       "type": "object"
     },
     "BallotDefinition.PhysicalContest": {
-      "required": ["@type", "BallotFormatId", "PhysicalContestOption"],
+      "required": [
+        "@type",
+        "BallotFormatId",
+        "PhysicalContestOption",
+        "vxOptionBoundsFromTargetMark"
+      ],
       "additionalProperties": false,
       "properties": {
         "@type": {
@@ -809,6 +826,9 @@
           },
           "minItems": 1,
           "type": "array"
+        },
+        "vxOptionBoundsFromTargetMark": {
+          "$ref": "#/definitions/BallotDefinition.vxOutset"
         }
       },
       "type": "object"

@@ -70,20 +70,19 @@ export const CastVoteRecordBatchMetadataSchema: z.ZodSchema<CastVoteRecordBatchM
  */
 export interface CastVoteRecordExportMetadata {
   arePollsClosed?: boolean;
-  /** A summary of batches in a cast vote record export */
-  batchManifest: CastVoteRecordBatchMetadata[];
   /** Global data relevant to all cast vote records in an export, e.g. election info */
   castVoteRecordReportMetadata: CastVoteRecordReport;
   /** A hash of all cast vote record files in an export */
   castVoteRecordRootHash: string;
+  batchManifest: CastVoteRecordBatchMetadata[];
 }
 
 export const CastVoteRecordExportMetadataSchema: z.ZodSchema<CastVoteRecordExportMetadata> =
   z.object({
     arePollsClosed: z.boolean().optional(),
-    batchManifest: z.array(CastVoteRecordBatchMetadataSchema),
     castVoteRecordReportMetadata: CastVoteRecordReportSchema,
     castVoteRecordRootHash: z.string(),
+    batchManifest: z.array(CastVoteRecordBatchMetadataSchema),
   });
 
 /**
@@ -118,8 +117,8 @@ export type SheetValidationError = {
       ballotTypes: SheetOf<BallotType>;
     }
   | {
-      subType: 'mismatched-ballot-hashes';
-      ballotHashes: SheetOf<ElectionDefinition['ballotHash']>;
+      subType: 'mismatched-election-hashes';
+      electionHashes: SheetOf<ElectionDefinition['electionHash']>;
     }
   | {
       subType: 'mismatched-precinct-ids';
@@ -131,20 +130,12 @@ export type SheetValidationError = {
     }
 );
 
-type RecoveryExportError = {
-  type: 'recovery-export-error';
-} & (
-  | { subType: 'expected-export-directory-does-not-exist' }
-  | { subType: 'hash-mismatch-after-recovery-export' }
-);
-
 /**
  * An error encountered while exporting cast vote records to a USB drive
  */
 export type ExportCastVoteRecordsToUsbDriveError =
   | { type: ExportDataError }
-  | SheetValidationError
-  | RecoveryExportError;
+  | SheetValidationError;
 
 /**
  * An error encountered while reading a cast vote record export's metadata file
@@ -159,7 +150,7 @@ export type ReadCastVoteRecordExportMetadataError =
  */
 export type ReadCastVoteRecordExportError =
   | ReadCastVoteRecordExportMetadataError
-  | { type: 'authentication-error'; details: string };
+  | { type: 'authentication-error' };
 
 export type ReferencedFileType = 'image' | 'layout-file';
 

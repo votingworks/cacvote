@@ -355,6 +355,11 @@ export interface BallotDefinition {
   readonly Party: readonly Party[];
 
   /**
+   * SVG image content for the jurisdiction's seal in UTF8 text format
+   */
+  readonly vxSeal: string;
+
+  /**
    * The upper bound of the sequence; e.g., “1” if there is only 1 report, “2” if there are two reports in the sequence, etc.
    */
   readonly SequenceEnd: integer;
@@ -394,6 +399,7 @@ export const BallotDefinitionSchema: z.ZodSchema<BallotDefinition> = z.object({
   IssuerAbbreviation: z.string(),
   Office: z.optional(z.array(z.lazy(/* istanbul ignore next */ () => OfficeSchema))),
   Party: z.array(z.lazy(/* istanbul ignore next */ () => PartySchema)),
+  vxSeal: z.string(),
   SequenceEnd: integerSchema,
   SequenceStart: integerSchema,
   Shape: z.optional(z.array(z.lazy(/* istanbul ignore next */ () => ShapeSchema))),
@@ -824,11 +830,6 @@ export interface Election {
   readonly EndDate: Date;
 
   /**
-   * For associating IDs with the election.
-   */
-  readonly ExternalIdentifier: readonly ExternalIdentifier[];
-
-  /**
    * For including a name for the election; the name could be the same name as appears on the ballot.
    */
   readonly Name: InternationalizedText;
@@ -854,7 +855,6 @@ export const ElectionSchema: z.ZodSchema<Election> = z.object({
   Contest: z.array(z.union([z.lazy(/* istanbul ignore next */ () => BallotMeasureContestSchema), z.lazy(/* istanbul ignore next */ () => CandidateContestSchema)])).min(1),
   ElectionScopeId: z.string(),
   EndDate: DateSchema,
-  ExternalIdentifier: z.array(z.lazy(/* istanbul ignore next */ () => ExternalIdentifierSchema)).min(1),
   Name: z.lazy(/* istanbul ignore next */ () => InternationalizedTextSchema),
   StartDate: DateSchema,
   Type: z.lazy(/* istanbul ignore next */ () => ElectionTypeSchema),
@@ -1193,6 +1193,26 @@ export const OrderedContestSchema: z.ZodSchema<OrderedContest> = z.object({
   Physical: z.array(z.lazy(/* istanbul ignore next */ () => PhysicalContestSchema)).min(1),
 });
 
+export interface vxOutset {
+  readonly top: number;
+
+  readonly bottom: number;
+
+  readonly left: number;
+
+  readonly right: number;
+}
+
+/**
+ * Schema for {@link vxOutset}.
+ */
+export const vxOutsetSchema: z.ZodSchema<vxOutset> = z.object({
+  top: z.number(),
+  bottom: z.number(),
+  left: z.number(),
+  right: z.number(),
+});
+
 /**
  * Used to describe a political party that can then be referenced in other elements. BallotDefinition includes Party. Candidate, PartyRegistration, and Person reference Party.
  * 
@@ -1214,6 +1234,11 @@ export interface Party {
    * Official full name of the party, e.g., “Republican”; can appear on the ballot.
    */
   readonly Name: InternationalizedText;
+
+  /**
+   * The label to describe candidates from this party on a ballot.
+   */
+  readonly vxBallotLabel: InternationalizedText;
 }
 
 /**
@@ -1224,6 +1249,7 @@ export const PartySchema: z.ZodSchema<Party> = z.object({
   '@type': z.literal('BallotDefinition.Party'),
   Abbreviation: z.lazy(/* istanbul ignore next */ () => InternationalizedTextSchema),
   Name: z.lazy(/* istanbul ignore next */ () => InternationalizedTextSchema),
+  vxBallotLabel: z.lazy(/* istanbul ignore next */ () => InternationalizedTextSchema),
 });
 
 /**
@@ -1251,6 +1277,8 @@ export interface PhysicalContest {
    * The contest options associated with the contest, including physical details.
    */
   readonly PhysicalContestOption: readonly PhysicalContestOption[];
+
+  readonly vxOptionBoundsFromTargetMark: vxOutset;
 }
 
 /**
@@ -1262,6 +1290,7 @@ export const PhysicalContestSchema: z.ZodSchema<PhysicalContest> = z.object({
   Extent: z.optional(z.array(z.union([z.lazy(/* istanbul ignore next */ () => BoundedObjectSchema), z.lazy(/* istanbul ignore next */ () => FiducialMarkSchema), z.lazy(/* istanbul ignore next */ () => OptionPositionSchema), z.lazy(/* istanbul ignore next */ () => WriteInPositionSchema), z.lazy(/* istanbul ignore next */ () => mCDFAreaSchema)]))),
   FiducialMark: z.optional(z.array(z.lazy(/* istanbul ignore next */ () => FiducialMarkSchema))),
   PhysicalContestOption: z.array(z.lazy(/* istanbul ignore next */ () => PhysicalContestOptionSchema)).min(1),
+  vxOptionBoundsFromTargetMark: z.lazy(/* istanbul ignore next */ () => vxOutsetSchema),
 });
 
 /**

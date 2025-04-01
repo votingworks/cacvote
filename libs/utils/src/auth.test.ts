@@ -1,9 +1,9 @@
 import {
-  mockCardlessVoterUser,
-  mockElectionManagerUser,
-  mockPollWorkerUser,
-  mockSessionExpiresAt,
-  mockSystemAdministratorUser,
+  fakeCardlessVoterUser,
+  fakeElectionManagerUser,
+  fakePollWorkerUser,
+  fakeSessionExpiresAt,
+  fakeSystemAdministratorUser,
 } from '@votingworks/test-utils';
 import { DippedSmartCardAuth, InsertedSmartCardAuth } from '@votingworks/types';
 
@@ -20,14 +20,14 @@ const systemAdministratorAuthStatus: {
 } = {
   dipped: {
     status: 'logged_in',
-    user: mockSystemAdministratorUser(),
-    sessionExpiresAt: mockSessionExpiresAt(),
+    user: fakeSystemAdministratorUser(),
+    sessionExpiresAt: fakeSessionExpiresAt(),
     programmableCard: { status: 'no_card' },
   },
   inserted: {
     status: 'logged_in',
-    user: mockSystemAdministratorUser(),
-    sessionExpiresAt: mockSessionExpiresAt(),
+    user: fakeSystemAdministratorUser(),
+    sessionExpiresAt: fakeSessionExpiresAt(),
   },
 };
 
@@ -37,13 +37,13 @@ const electionManagerAuthStatus: {
 } = {
   dipped: {
     status: 'logged_in',
-    user: mockElectionManagerUser(),
-    sessionExpiresAt: mockSessionExpiresAt(),
+    user: fakeElectionManagerUser(),
+    sessionExpiresAt: fakeSessionExpiresAt(),
   },
   inserted: {
     status: 'logged_in',
-    user: mockElectionManagerUser(),
-    sessionExpiresAt: mockSessionExpiresAt(),
+    user: fakeElectionManagerUser(),
+    sessionExpiresAt: fakeSessionExpiresAt(),
   },
 };
 
@@ -53,14 +53,14 @@ const pollWorkerAuthStatus: {
 } = {
   basic: {
     status: 'logged_in',
-    user: mockPollWorkerUser(),
-    sessionExpiresAt: mockSessionExpiresAt(),
+    user: fakePollWorkerUser(),
+    sessionExpiresAt: fakeSessionExpiresAt(),
   },
   withCardlessVoter: {
     status: 'logged_in',
-    user: mockPollWorkerUser(),
-    sessionExpiresAt: mockSessionExpiresAt(),
-    cardlessVoterUser: mockCardlessVoterUser(),
+    user: fakePollWorkerUser(),
+    sessionExpiresAt: fakeSessionExpiresAt(),
+    cardlessVoterUser: fakeCardlessVoterUser(),
   },
 };
 
@@ -69,8 +69,8 @@ const cardlessVoterAuthStatus: {
 } = {
   basic: {
     status: 'logged_in',
-    user: mockCardlessVoterUser(),
-    sessionExpiresAt: mockSessionExpiresAt(),
+    user: fakeCardlessVoterUser(),
+    sessionExpiresAt: fakeSessionExpiresAt(),
   },
 };
 
@@ -96,19 +96,19 @@ const checkingPinAuthStatus: {
 } = {
   dippedSysAdmin: {
     status: 'checking_pin',
-    user: mockSystemAdministratorUser(),
+    user: fakeSystemAdministratorUser(),
   },
   insertedSysAdmin: {
     status: 'checking_pin',
-    user: mockSystemAdministratorUser(),
+    user: fakeSystemAdministratorUser(),
   },
   dippedElectionManager: {
     status: 'checking_pin',
-    user: mockElectionManagerUser(),
+    user: fakeElectionManagerUser(),
   },
   insertedElectionManager: {
     status: 'checking_pin',
-    user: mockElectionManagerUser(),
+    user: fakeElectionManagerUser(),
   },
 };
 

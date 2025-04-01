@@ -1,7 +1,6 @@
 import { electionGeneral } from '@votingworks/fixtures';
 import {
   BallotStyle,
-  BallotStyleId,
   CandidateContest,
   CandidateVote,
   Dictionary,
@@ -84,7 +83,7 @@ describe('generateTestDeckBallots', () => {
     });
     const votes = ballots.map((b) => b.votes);
     const ballotStyle = getBallotStyle({
-      ballotStyleId: '12' as BallotStyleId,
+      ballotStyleId: '12',
       election: electionGeneral,
     }) as BallotStyle;
     const contests = getContests({ ballotStyle, election: electionGeneral });

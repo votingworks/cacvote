@@ -23,13 +23,13 @@ export function createElectionMetadataLookupFunction<T>(
   const cachedLookups: Record<string, Record<string, T>> = {};
 
   return (electionDefinition: ElectionDefinition, key: string): T => {
-    const cachedLookup = cachedLookups[electionDefinition.ballotHash];
+    const cachedLookup = cachedLookups[electionDefinition.electionHash];
     if (cachedLookup) {
       return assertDefined(cachedLookup[key]);
     }
 
     const lookup = buildLookupFn(electionDefinition.election);
-    cachedLookups[electionDefinition.ballotHash] = lookup;
+    cachedLookups[electionDefinition.electionHash] = lookup;
     return assertDefined(lookup[key]);
   };
 }
@@ -136,8 +136,7 @@ export function determinePartyId<T>(
 ): Optional<string> {
   if (group.partyId) return group.partyId;
 
-  if (!group.ballotStyleGroupId) return undefined;
+  if (!group.ballotStyleId) return undefined;
 
-  return getBallotStyleById(electionDefinition, group.ballotStyleGroupId)
-    .partyId;
+  return getBallotStyleById(electionDefinition, group.ballotStyleId).partyId;
 }

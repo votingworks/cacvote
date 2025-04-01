@@ -11,7 +11,3 @@ export const ElectionPackageMetadataSchema: z.ZodType<ElectionPackageMetadata> =
   z.object({
     version: z.literal('latest'),
   });
-
-export const LATEST_METADATA: ElectionPackageMetadata = {
-  version: 'latest',
-};

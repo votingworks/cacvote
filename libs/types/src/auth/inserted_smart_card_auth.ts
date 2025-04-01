@@ -4,20 +4,16 @@ import {
   PollWorkerUser,
   SystemAdministratorUser,
   UserWithCard,
-  VendorUser,
 } from './auth';
 
 export interface LoggedOut {
   readonly status: 'logged_out';
   readonly reason:
-    | 'card_error'
-    | 'certificate_expired'
-    | 'certificate_not_yet_valid'
-    | 'unprogrammed_or_invalid_card'
-    | 'machine_not_configured'
     | 'no_card_reader'
+    | 'card_error'
+    | 'invalid_user_on_card'
+    | 'machine_not_configured'
     | 'no_card'
-    | 'session_expired'
     | 'wrong_election'
     | 'wrong_jurisdiction';
   readonly cardJurisdiction?: string;
@@ -27,20 +23,10 @@ export interface LoggedOut {
 
 export interface CheckingPin {
   readonly status: 'checking_pin';
-  readonly user:
-    | VendorUser
-    | SystemAdministratorUser
-    | ElectionManagerUser
-    | PollWorkerUser;
+  readonly user: SystemAdministratorUser | ElectionManagerUser | PollWorkerUser;
   readonly error?: true;
   readonly lockedOutUntil?: Date;
   readonly wrongPinEnteredAt?: Date;
-}
-
-export interface VendorLoggedIn {
-  readonly status: 'logged_in';
-  readonly user: VendorUser;
-  readonly sessionExpiresAt: Date;
 }
 
 export interface SystemAdministratorLoggedIn {
@@ -69,7 +55,6 @@ export interface CardlessVoterLoggedIn {
 }
 
 export type LoggedIn =
-  | VendorLoggedIn
   | SystemAdministratorLoggedIn
   | ElectionManagerLoggedIn
   | PollWorkerLoggedIn

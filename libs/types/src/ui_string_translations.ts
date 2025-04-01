@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { mapObject, mergeObjects } from '@votingworks/basics';
 import { Dictionary } from './generic';
+import { LanguageCode } from './language_code';
 
 /**
  * Voter-facing election string content that need to be translated and/or
@@ -12,7 +12,6 @@ export enum ElectionStringKey {
   CANDIDATE_NAME = 'candidateName',
   CONTEST_DESCRIPTION = 'contestDescription',
   CONTEST_OPTION_LABEL = 'contestOptionLabel',
-  CONTEST_TERM = 'contestTerm',
   CONTEST_TITLE = 'contestTitle',
   COUNTY_NAME = 'countyName',
   DISTRICT_NAME = 'districtName',
@@ -44,40 +43,14 @@ export const UiStringTranslationsSchema: z.ZodType<UiStringTranslations> =
 /**
  * Map of language code to {@link UiStringTranslations}.
  */
-export interface UiStringsPackage {
-  [key: string]: UiStringTranslations;
-}
+export type UiStringsPackage = Partial<
+  Record<LanguageCode, UiStringTranslations>
+>;
 
 /**
  * Map of language code to {@link UiStringTranslations}.
  */
 export const UiStringsPackageSchema: z.ZodType<UiStringsPackage> = z.record(
-  z.string(),
+  z.nativeEnum(LanguageCode),
   UiStringTranslationsSchema
 );
-
-/**
- * Combines two UI strings packages, returning a new package. The second package
- * takes precedence in the case of key conflicts.
- */
-export function mergeUiStrings(
-  strings: UiStringsPackage,
-  ...otherStrings: UiStringsPackage[]
-): UiStringsPackage {
-  return otherStrings.reduce((acc, other) => mergeObjects(acc, other), strings);
-}
-
-/**
- * Filters a UI strings package, returning a new package with only the keys that
- * pass the condition function.
- */
-export function filterUiStrings(
-  uiStrings: UiStringsPackage,
-  condition: (key: string) => boolean
-): UiStringsPackage {
-  return mapObject(uiStrings, (languageStrings) =>
-    Object.fromEntries(
-      Object.entries(languageStrings).filter(([key]) => condition(key))
-    )
-  );
-}

@@ -1,6 +1,6 @@
 import * as fc from 'fast-check';
 import { sha256 } from 'js-sha256';
-import { find, ok } from '@votingworks/basics';
+import { find } from '@votingworks/basics';
 import {
   ballotPaperDimensions,
   getBallotStyle,
@@ -9,21 +9,19 @@ import {
   getContestDistrictName,
   getContests,
   getContestsFromIds,
-  formatBallotHash,
+  getDisplayElectionHash,
   getDistrictIdsForPartyId,
   getPartyAbbreviationByPartyId,
   getPartyFullNameFromBallotStyle,
   getPartyIdsInBallotStyles,
   getPartyIdsWithContests,
   getPartyPrimaryAdjectiveFromBallotStyle,
+  getPartySpecificElectionTitle,
   getPrecinctById,
   getPrecinctIndexById,
   isVotePresent,
   validateVotes,
   vote,
-  formatElectionPackageHash,
-  formatElectionHashes,
-  getGroupIdFromBallotStyleId,
 } from './election_utils';
 import {
   election,
@@ -32,21 +30,19 @@ import {
 } from '../test/election';
 import {
   BallotIdSchema,
-  HmpbBallotPaperSize,
-  BallotStyleId,
+  BallotPaperSize,
   BallotStyleSchema,
   CandidateContest,
   CandidateSchema,
   ElectionDefinitionSchema,
+  PartyId,
   PartyIdSchema,
   WriteInIdSchema,
   YesNoContest,
-  BmdBallotPaperSize,
-  hasSplits,
-  DistrictId,
 } from './election';
 import { safeParse, safeParseJson, unsafeParse } from './generic';
 import {
+  normalizeVxf,
   testCdfBallotDefinition,
   testVxfElection,
 } from './cdf/ballot-definition/fixtures';
@@ -54,7 +50,7 @@ import {
   safeParseElection,
   safeParseElectionDefinition,
 } from './election_parsing';
-import { normalizeVxfAfterCdfConversion } from '../test/cdf_conversion_helpers';
+import { LanguageCode } from '.';
 
 test('can build votes from a candidate ID', () => {
   const contests = election.contests.filter((c) => c.id === 'CC');
@@ -121,7 +117,7 @@ test('vote fills in empty votes', () => {
 });
 
 test('can get a party primary adjective from ballot style', () => {
-  const ballotStyleId = '1D' as BallotStyleId;
+  const ballotStyleId = '1D';
   expect(
     getPartyPrimaryAdjectiveFromBallotStyle({
       ballotStyleId,
@@ -147,7 +143,7 @@ test('can get a party abbreviation by party ID', () => {
 });
 
 test('can get a party full name from ballot style', () => {
-  const ballotStyleId = '1D' as BallotStyleId;
+  const ballotStyleId = '1D';
   expect(
     getPartyFullNameFromBallotStyle({
       ballotStyleId,
@@ -157,7 +153,7 @@ test('can get a party full name from ballot style', () => {
 });
 
 test('failing to get a full party name returns an empty string', () => {
-  const ballotStyleId = 'DOES_NOT_EXIST' as BallotStyleId;
+  const ballotStyleId = 'DOES_NOT_EXIST';
   expect(
     getPartyFullNameFromBallotStyle({
       ballotStyleId,
@@ -167,7 +163,7 @@ test('failing to get a full party name returns an empty string', () => {
 });
 
 test('special cases party primary adjective transform "Democrat" -> "Democratic"', () => {
-  const ballotStyleId = '1D' as BallotStyleId;
+  const ballotStyleId = '1D';
   expect(
     getPartyPrimaryAdjectiveFromBallotStyle({
       ballotStyleId,
@@ -177,7 +173,7 @@ test('special cases party primary adjective transform "Democrat" -> "Democratic"
 });
 
 test('defaults to empty string if no party can be found', () => {
-  const ballotStyleId = 'bogus' as BallotStyleId;
+  const ballotStyleId = 'bogus';
   expect(
     getPartyPrimaryAdjectiveFromBallotStyle({
       ballotStyleId,
@@ -227,21 +223,12 @@ test('getPartyIdsInBallotStyles', () => {
   );
 });
 
-test('getGroupIdFromBallotStyleId', () => {
-  expect(
-    getGroupIdFromBallotStyleId({
-      ballotStyleId: '1' as BallotStyleId,
-      election,
-    })!
-  ).toEqual('1');
-});
-
 test('getContests', () => {
   // general election ballot
   expect(
     getContests({
       ballotStyle: getBallotStyle({
-        ballotStyleId: '1' as BallotStyleId,
+        ballotStyleId: '1',
         election,
       })!,
       election,
@@ -252,7 +239,7 @@ test('getContests', () => {
   expect(
     getContests({
       ballotStyle: getBallotStyle({
-        ballotStyleId: '1M' as BallotStyleId,
+        ballotStyleId: '1M',
         election: electionTwoPartyPrimary,
       })!,
       election: electionTwoPartyPrimary,
@@ -262,7 +249,7 @@ test('getContests', () => {
   expect(
     getContests({
       ballotStyle: getBallotStyle({
-        ballotStyleId: '2F' as BallotStyleId,
+        ballotStyleId: '2F',
         election: electionTwoPartyPrimary,
       })!,
       election: electionTwoPartyPrimary,
@@ -293,6 +280,20 @@ test('getPartyIdsWithContests', () => {
     '1',
     undefined,
   ]);
+});
+
+test('getPartySpecificElectionTitle', () => {
+  expect(getPartySpecificElectionTitle(election, undefined)).toEqual(
+    'ELECTION'
+  );
+  expect(
+    getPartySpecificElectionTitle(electionTwoPartyPrimary, '0' as PartyId)
+  ).toEqual('Mammal Party Example Primary Election - Minimal Exhaustive');
+  expect(
+    getPartySpecificElectionTitle(electionTwoPartyPrimary, undefined)
+  ).toEqual(
+    'Example Primary Election - Minimal Exhaustive Nonpartisan Contests'
+  );
 });
 
 test('getContestDistrictName', () => {
@@ -366,39 +367,6 @@ test('candidate schema', () => {
     name: 'Write-in',
     isWriteIn: true,
   }).unsafeUnwrap();
-
-  expect(
-    safeParse(CandidateSchema, {
-      id: 'bob-loblaw',
-      name: 'Bob Loblaw',
-      firstName: 'Bob',
-      middleName: 'Lob',
-      lastName: 'Loblaw',
-    })
-  ).toEqual(
-    ok({
-      id: 'bob-loblaw',
-      name: 'Bob Loblaw',
-      firstName: 'Bob',
-      middleName: 'Lob',
-      lastName: 'Loblaw',
-    })
-  );
-
-  expect(
-    safeParse(CandidateSchema, {
-      id: 'bob-loblaw',
-      name: 'Bob Loblaw',
-      firstName: '',
-      middleName: '',
-      lastName: '',
-    })
-  ).toEqual(
-    ok({
-      id: 'bob-loblaw',
-      name: 'Bob Loblaw',
-    })
-  );
 });
 
 test('write-in ID schema', () => {
@@ -473,6 +441,22 @@ test('election schema', () => {
   }
 });
 
+test('election scheme results reporting URL', () => {
+  expect(() => {
+    safeParseElection({
+      ...election,
+      quickResultsReportingUrl: 'https://results.voting.works/',
+    }).unsafeUnwrap();
+  }).toThrowError();
+
+  expect(() => {
+    safeParseElection({
+      ...election,
+      quickResultsReportingUrl: 'https://results.voting.works',
+    }).unsafeUnwrap();
+  }).not.toThrowError();
+});
+
 test('getCandidateParties', () => {
   expect(
     getCandidateParties(election.parties, {
@@ -528,7 +512,7 @@ test('ElectionDefinitionSchema', () => {
 
   expect(() => {
     unsafeParse(ElectionDefinitionSchema, {
-      ballotHash: 'abc',
+      electionHash: 'abc',
       electionData,
       election: electionTwoPartyPrimary,
     });
@@ -536,7 +520,7 @@ test('ElectionDefinitionSchema', () => {
 
   expect(
     unsafeParse(ElectionDefinitionSchema, {
-      ballotHash: sha256(electionData),
+      electionHash: sha256(electionData),
       electionData,
       election,
     }).election
@@ -547,8 +531,7 @@ test('BallotStyleSchema with ballot style languages', () => {
   const ballotStyle = {
     districts: ['district1', 'district2'],
     id: 'ballotStyle1_en_es-US',
-    groupId: 'ballotStyle1',
-    languages: ['en', 'es-US'],
+    languages: [LanguageCode.ENGLISH, LanguageCode.SPANISH],
     precincts: ['precinct1', 'precinct2'],
   } as const;
 
@@ -559,33 +542,22 @@ test('BallotStyleSchema with ballot style languages', () => {
   ).toEqual(ballotStyle);
 });
 
-test('formatBallotHash', () => {
+test('getDisplayElectionHash', () => {
   const electionDefinition = safeParseElectionDefinition(
     JSON.stringify(election)
   ).unsafeUnwrap();
-  expect(electionDefinition.ballotHash).toContain(
-    formatBallotHash(electionDefinition.ballotHash)
+  expect(electionDefinition.electionHash).toContain(
+    getDisplayElectionHash(electionDefinition)
   );
-  expect(formatBallotHash('1234567890abcdef')).toEqual('1234567');
-});
-
-test('formatElectionPackageHash', () => {
-  expect(formatElectionPackageHash('1234567890abcdef')).toEqual('1234567');
-});
-
-test('formatElectionHashes', () => {
-  expect(
-    formatElectionHashes('00000000000000000000', '11111111111111111111')
-  ).toEqual('0000000-1111111');
 });
 
 test('safeParseElection converts CDF to VXF', () => {
   expect(safeParseElection(testCdfBallotDefinition).unsafeUnwrap()).toEqual(
-    normalizeVxfAfterCdfConversion(testVxfElection)
+    normalizeVxf(testVxfElection)
   );
   expect(
     safeParseElection(JSON.stringify(testCdfBallotDefinition)).unsafeUnwrap()
-  ).toEqual(normalizeVxfAfterCdfConversion(testVxfElection));
+  ).toEqual(normalizeVxf(testVxfElection));
 });
 
 test('safeParseElection shows VXF and CDF parsing errors', () => {
@@ -598,55 +570,28 @@ test('safeParseElection shows VXF and CDF parsing errors', () => {
 });
 
 test('ballotPaperDimensions', () => {
-  expect(ballotPaperDimensions(HmpbBallotPaperSize.Letter)).toEqual({
+  expect(ballotPaperDimensions(BallotPaperSize.Letter)).toEqual({
     width: 8.5,
     height: 11,
   });
-  expect(ballotPaperDimensions(HmpbBallotPaperSize.Legal)).toEqual({
+  expect(ballotPaperDimensions(BallotPaperSize.Legal)).toEqual({
     width: 8.5,
     height: 14,
   });
-  expect(ballotPaperDimensions(HmpbBallotPaperSize.Custom17)).toEqual({
+  expect(ballotPaperDimensions(BallotPaperSize.Custom17)).toEqual({
     width: 8.5,
     height: 17,
   });
-  expect(ballotPaperDimensions(HmpbBallotPaperSize.Custom19)).toEqual({
+  expect(ballotPaperDimensions(BallotPaperSize.Custom18)).toEqual({
     width: 8.5,
-    height: 19,
+    height: 18,
   });
-  expect(ballotPaperDimensions(HmpbBallotPaperSize.Custom22)).toEqual({
+  expect(ballotPaperDimensions(BallotPaperSize.Custom21)).toEqual({
+    width: 8.5,
+    height: 21,
+  });
+  expect(ballotPaperDimensions(BallotPaperSize.Custom22)).toEqual({
     width: 8.5,
     height: 22,
   });
-  expect(ballotPaperDimensions(BmdBallotPaperSize.Vsap150Thermal)).toEqual({
-    width: 8,
-    height: 13.25,
-  });
-});
-
-test('hasSplits', () => {
-  const districtIds: DistrictId[] = ['district-1' as DistrictId];
-  const precincts = [
-    {
-      id: 'precinct-1',
-      name: 'Precinct 1',
-      splits: [
-        {
-          districtIds,
-          id: 'split-a',
-          name: 'Split A',
-          clerkSignatureCaption: 'Signature',
-          electionTitleOverride: 'Title',
-        },
-      ],
-    },
-    {
-      id: 'precinct-2',
-      name: 'Precinct 2',
-      districtIds,
-    },
-  ];
-
-  expect(hasSplits(precincts[0])).toEqual(true);
-  expect(hasSplits(precincts[1])).toEqual(false);
 });

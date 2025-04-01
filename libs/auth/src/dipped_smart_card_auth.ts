@@ -20,7 +20,6 @@ import {
 
 import {
   arePollWorkerCardDetails,
-  areUniversalVendorCardDetails,
   Card,
   CardDetails,
   CardStatus,
@@ -347,7 +346,7 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
       throw new Error('User is not a system administrator');
     }
 
-    const { arePollWorkerCardPinsEnabled, electionKey, jurisdiction } =
+    const { arePollWorkerCardPinsEnabled, electionHash, jurisdiction } =
       machineState;
     assert(jurisdiction !== undefined);
     const pin = generatePin();
@@ -360,24 +359,24 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
         return pin;
       }
       case 'election_manager': {
-        assert(electionKey !== undefined);
+        assert(electionHash !== undefined);
         await this.card.program({
-          user: { role: 'election_manager', jurisdiction, electionKey },
+          user: { role: 'election_manager', jurisdiction, electionHash },
           pin,
         });
         return pin;
       }
       case 'poll_worker': {
-        assert(electionKey !== undefined);
+        assert(electionHash !== undefined);
         if (arePollWorkerCardPinsEnabled) {
           await this.card.program({
-            user: { role: 'poll_worker', jurisdiction, electionKey },
+            user: { role: 'poll_worker', jurisdiction, electionHash },
             pin,
           });
           return pin;
         }
         await this.card.program({
-          user: { role: 'poll_worker', jurisdiction, electionKey },
+          user: { role: 'poll_worker', jurisdiction, electionHash },
         });
         return undefined;
       }
@@ -507,32 +506,18 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
           case 'remove_card': {
             if (action.cardStatus.status === 'no_card') {
               const { user, sessionExpiresAt } = currentAuthStatus;
-              switch (user.role) {
-                case 'vendor': {
-                  return { status: 'logged_in', user, sessionExpiresAt };
-                }
-                case 'system_administrator': {
-                  return {
-                    status: 'logged_in',
-                    user,
-                    sessionExpiresAt,
-                    programmableCard: cardStatusToProgrammableCard(
-                      machineState,
-                      action.cardStatus
-                    ),
-                  };
-                }
-                case 'election_manager': {
-                  return { status: 'logged_in', user, sessionExpiresAt };
-                }
-                case 'poll_worker': {
-                  return { status: 'logged_in', user, sessionExpiresAt };
-                }
-                default: {
-                  /* istanbul ignore next: Compile-time check for completeness - @preserve */
-                  throwIllegalValue(user, 'role');
-                }
+              if (user.role === 'system_administrator') {
+                return {
+                  status: 'logged_in',
+                  user,
+                  sessionExpiresAt,
+                  programmableCard: cardStatusToProgrammableCard(
+                    machineState,
+                    action.cardStatus
+                  ),
+                };
               }
+              return { status: 'logged_in', user, sessionExpiresAt };
             }
             return currentAuthStatus;
           }
@@ -623,41 +608,34 @@ export class DippedSmartCardAuth implements DippedSmartCardAuthApi {
 
   private validateCard(
     machineState: DippedSmartCardAuthMachineState,
-    cardDetails: CardDetails
+    cardDetails?: CardDetails
   ): Result<void, DippedSmartCardAuthTypes.LoggedOut['reason']> {
-    if (!cardDetails.user) {
-      return err(cardDetails.reason);
+    if (!cardDetails) {
+      return err('invalid_user_on_card');
     }
 
     const { user } = cardDetails;
 
     if (
       machineState.jurisdiction &&
-      user.jurisdiction !== machineState.jurisdiction &&
-      !areUniversalVendorCardDetails(cardDetails)
+      user.jurisdiction !== machineState.jurisdiction
     ) {
       return err('wrong_jurisdiction');
     }
 
-    if (!this.config.allowedUserRoles.includes(user.role)) {
+    if (!['system_administrator', 'election_manager'].includes(user.role)) {
       return err('user_role_not_allowed');
     }
 
-    if (
-      !machineState.electionKey &&
-      ['election_manager', 'poll_worker'].includes(user.role)
-    ) {
-      return user.role === 'election_manager' &&
-        this.config.allowElectionManagersToAccessUnconfiguredMachines
-        ? ok()
-        : err('machine_not_configured');
-    }
-
-    if (
-      (user.role === 'election_manager' || user.role === 'poll_worker') &&
-      !deepEqual(user.electionKey, machineState.electionKey)
-    ) {
-      return err('wrong_election');
+    if (user.role === 'election_manager') {
+      if (!machineState.electionHash) {
+        return this.config.allowElectionManagersToAccessUnconfiguredMachines
+          ? ok()
+          : err('machine_not_configured');
+      }
+      if (user.electionHash !== machineState.electionHash) {
+        return err('wrong_election');
+      }
     }
 
     return ok();

@@ -6,6 +6,6 @@ export function asElectionDefinition(election: Election): ElectionDefinition {
   return {
     election,
     electionData,
-    ballotHash: sha256(electionData),
+    electionHash: sha256(electionData),
   };
 }

@@ -1,12 +1,7 @@
-import {
-  assert,
-  assertDefined,
-  find,
-  throwIllegalValue,
-} from '@votingworks/basics';
+import { assert, find, throwIllegalValue } from '@votingworks/basics';
 import {
   AnyContest,
-  HmpbBallotPaperSize,
+  BallotPaperSize,
   BallotStyle,
   BallotStyleId,
   Candidate,
@@ -17,7 +12,7 @@ import {
   District,
   DistrictId,
   Election,
-  BallotStyleGroup,
+  ElectionDefinition,
   Parties,
   Party,
   PartyId,
@@ -25,9 +20,6 @@ import {
   PrecinctId,
   Vote,
   VotesDict,
-  BallotStyleGroupId,
-  BmdBallotPaperSize,
-  BallotPaperSize,
 } from './election';
 
 /**
@@ -37,7 +29,7 @@ export function getContests({
   ballotStyle,
   election,
 }: {
-  ballotStyle: BallotStyle | BallotStyleGroup;
+  ballotStyle: BallotStyle;
   election: Election;
 }): Contests {
   return election.contests.filter(
@@ -86,22 +78,6 @@ export function getBallotStyle({
   election: Election;
 }): BallotStyle | undefined {
   return election.ballotStyles.find((bs) => bs.id === ballotStyleId);
-}
-
-/**
- * Retrieves a group ballot style id by ballot style id.
- */
-export function getGroupIdFromBallotStyleId({
-  ballotStyleId,
-  election,
-}: {
-  ballotStyleId: BallotStyleId;
-  election: Election;
-}): BallotStyleGroupId {
-  const ballotStyle = assertDefined(
-    getBallotStyle({ ballotStyleId, election })
-  );
-  return ballotStyle.groupId;
 }
 
 /**
@@ -289,6 +265,27 @@ export function getPartyIdsWithContests(
 }
 
 /**
+ * Gets the party specific election title for use in reports. Prefixes with
+ * the party name or suffixes with "Nonpartisan Contests" if the election is
+ * a primary. Simply returns the election title if election is not a primary.
+ */
+export function getPartySpecificElectionTitle(
+  election: Election,
+  partyId?: PartyId
+): string {
+  const party = election.parties.find((p) => p.id === partyId);
+  if (party) {
+    return `${party.fullName} ${election.title}`;
+  }
+
+  if (election.type === 'primary') {
+    return `${election.title} Nonpartisan Contests`;
+  }
+
+  return election.title;
+}
+
+/**
  * Returns an array of party ids present in ballot styles in the given election.
  * In the case of a ballot style without a party the element "undefined" will be included
  * in the returned array.
@@ -304,7 +301,7 @@ export function getContestDistrict(
   contest: ContestLike
 ): District {
   const district = election.districts.find((d) => d.id === contest.districtId);
-  /* istanbul ignore next */
+  // istanbul ignore next
   if (!district) {
     throw new Error(
       `Contest's associated district ${contest.districtId} not found.`
@@ -387,28 +384,12 @@ export function isVotePresent(v?: Vote): boolean {
   return !!v && v.length > 0;
 }
 
-export const BALLOT_HASH_DISPLAY_LENGTH = 7;
-export const ELECTION_PACKAGE_HASH_DISPLAY_LENGTH = 7;
+export const ELECTION_HASH_DISPLAY_LENGTH = 10;
 
-export function formatBallotHash(ballotHash: string): string {
-  return ballotHash.slice(0, BALLOT_HASH_DISPLAY_LENGTH);
-}
-
-export function formatElectionPackageHash(electionPackageHash: string): string {
-  return electionPackageHash.slice(0, ELECTION_PACKAGE_HASH_DISPLAY_LENGTH);
-}
-
-/**
- * Formats the election package hash and the ballot hash for display to users by
- * shortening and concatenating them (with a hyphen separator).
- */
-export function formatElectionHashes(
-  ballotHash: string,
-  electionPackageHash: string
+export function getDisplayElectionHash(
+  electionDefinition: Pick<ElectionDefinition, 'electionHash'>
 ): string {
-  return `${formatBallotHash(ballotHash)}-${formatElectionPackageHash(
-    electionPackageHash
-  )}`;
+  return electionDefinition.electionHash.slice(0, ELECTION_HASH_DISPLAY_LENGTH);
 }
 
 // In inches
@@ -417,39 +398,38 @@ export function ballotPaperDimensions(paperSize: BallotPaperSize): {
   height: number;
 } {
   switch (paperSize) {
-    case HmpbBallotPaperSize.Letter:
+    case BallotPaperSize.Letter:
       return {
         width: 8.5,
         height: 11,
       };
-    case HmpbBallotPaperSize.Legal:
+    case BallotPaperSize.Legal:
       return {
         width: 8.5,
         height: 14,
       };
-    case HmpbBallotPaperSize.Custom17:
+    case BallotPaperSize.Custom17:
       return {
         width: 8.5,
         height: 17,
       };
-    case HmpbBallotPaperSize.Custom19:
+    case BallotPaperSize.Custom18:
       return {
         width: 8.5,
-        height: 19,
+        height: 18,
       };
-    case HmpbBallotPaperSize.Custom22:
+    case BallotPaperSize.Custom21:
+      return {
+        width: 8.5,
+        height: 21,
+      };
+    case BallotPaperSize.Custom22:
       return {
         width: 8.5,
         height: 22,
       };
-    case BmdBallotPaperSize.Vsap150Thermal:
-      return {
-        width: 8,
-        height: 13.25,
-      };
-    default: {
-      /* istanbul ignore next */
+    /* istanbul ignore next */
+    default:
       return throwIllegalValue(paperSize);
-    }
   }
 }

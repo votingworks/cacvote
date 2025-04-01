@@ -8,7 +8,6 @@ export function fakeUseAudioControls(): jest.Mocked<AudioControls> {
     increaseVolume: jest.fn(),
     reset: jest.fn(),
     replay: jest.fn(),
-    setControlsEnabled: jest.fn(),
     setIsEnabled: jest.fn(),
     toggleEnabled: jest.fn(),
     togglePause: jest.fn(),

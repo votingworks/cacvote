@@ -13,9 +13,6 @@ import {
   CastVoteRecordExportFileName,
   CandidateContest,
   BallotType,
-  BallotStyleGroupId,
-  getGroupIdFromBallotStyleId,
-  BallotStyleId,
 } from '@votingworks/types';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -56,10 +53,7 @@ function castVoteRecordToTabulationCastVoteRecord(
   castVoteRecord: CVR.CVR
 ): Tabulation.CastVoteRecord {
   return {
-    ballotStyleGroupId: getGroupIdFromBallotStyleId({
-      ballotStyleId: castVoteRecord.BallotStyleId as BallotStyleId,
-      election: electionTwoPartyPrimaryFixtures.election,
-    }),
+    ballotStyleId: castVoteRecord.BallotStyleId,
     batchId: castVoteRecord.BatchId,
     card: castVoteRecord.BallotSheetId
       ? // eslint-disable-next-line vx/gts-safe-number-parse
@@ -556,7 +550,7 @@ test('getBallotStyleIdPartyIdLookup', () => {
 test('mapping from group keys to and from group specifiers', () => {
   function maintainsGroupSpecifier(groupSpecifier: GroupSpecifier) {
     const groupBy: Tabulation.GroupBy = {
-      groupByBallotStyle: groupSpecifier.ballotStyleGroupId !== undefined,
+      groupByBallotStyle: groupSpecifier.ballotStyleId !== undefined,
       groupByBatch: groupSpecifier.batchId !== undefined,
       groupByParty: groupSpecifier.partyId !== undefined,
       groupByPrecinct: groupSpecifier.precinctId !== undefined,
@@ -572,7 +566,7 @@ test('mapping from group keys to and from group specifiers', () => {
   maintainsGroupSpecifier({});
 
   // simple group specifiers, one attribute
-  maintainsGroupSpecifier({ ballotStyleGroupId: '1M' });
+  maintainsGroupSpecifier({ ballotStyleId: '1M' });
   maintainsGroupSpecifier({ batchId: 'batch-1' });
   maintainsGroupSpecifier({ partyId: '0' });
   maintainsGroupSpecifier({ precinctId: 'precinct-1' });
@@ -581,7 +575,7 @@ test('mapping from group keys to and from group specifiers', () => {
 
   // composite group specifiers, multiple attributes
   maintainsGroupSpecifier({
-    ballotStyleGroupId: '1M',
+    ballotStyleId: '1M',
     partyId: '0',
     votingMethod: 'absentee',
   });
@@ -595,12 +589,12 @@ test('mapping from group keys to and from group specifiers', () => {
   // with escaped characters
   expect(
     getGroupKey(
-      { ballotStyleGroupId: '=\\1M&', batchId: 'batch-1' },
+      { ballotStyleId: '=\\1M&', batchId: 'batch-1' },
       { groupByBatch: true, groupByBallotStyle: true }
     )
   ).toEqual('root&ballotStyleId=\\=\\\\1M\\&&batchId=batch-1');
 
-  maintainsGroupSpecifier({ ballotStyleGroupId: '=\\1M&', batchId: 'batch-1' });
+  maintainsGroupSpecifier({ ballotStyleId: '=\\1M&', batchId: 'batch-1' });
 });
 
 type ObjectWithGroupSpecifier = { something: 'something' } & GroupSpecifier;
@@ -610,7 +604,7 @@ test('extractGroupSpecifier', () => {
     extractGroupSpecifier(
       typedAs<ObjectWithGroupSpecifier>({
         something: 'something',
-        ballotStyleGroupId: '1M',
+        ballotStyleId: '1M',
         partyId: '0',
         votingMethod: 'absentee',
       })
@@ -655,7 +649,7 @@ describe('tabulateCastVoteRecords', () => {
     );
 
     const someMetadata = {
-      ballotStyleGroupId: '1M' as BallotStyleGroupId,
+      ballotStyleId: '1M',
       precinctId: 'precinct-1',
       votingMethod: BallotType.Precinct,
       batchId: 'batch-1',

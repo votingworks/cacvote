@@ -5,7 +5,6 @@ export interface AudioControls {
   increaseVolume: () => void;
   replay: () => void;
   reset: () => void;
-  setControlsEnabled: (enabled: boolean) => void;
   setIsEnabled: (enabled: boolean) => void;
   toggleEnabled: () => void;
   togglePause: () => void;
