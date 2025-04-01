@@ -1,6 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LanguageCode } from '@votingworks/types';
 import { act } from 'react-dom/test-utils';
 import { createUiStringsApi } from './ui_strings_api';
 import { UiStringsContextProvider, useCurrentLanguage } from '..';
@@ -45,8 +44,8 @@ test('returns current language when rendered within context', async () => {
     timeout: 100,
   });
 
-  act(() => setLanguage(LanguageCode.SPANISH));
-  await waitFor(() => expect(result.current).toEqual(LanguageCode.SPANISH), {
+  act(() => setLanguage('es'));
+  await waitFor(() => expect(result.current).toEqual('es'), {
     timeout: 100,
   });
 });

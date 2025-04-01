@@ -1,4 +1,3 @@
-import { LanguageCode } from '@votingworks/types';
 import { H1 } from '..';
 import {
   act,
@@ -16,10 +15,7 @@ import { UiStringAudioDataAttributeName } from './with_audio';
 const { getLanguageContext, mockApiClient, render } = newTestContext();
 
 beforeEach(() => {
-  mockApiClient.getAvailableLanguages.mockResolvedValue([
-    LanguageCode.ENGLISH,
-    LanguageCode.SPANISH,
-  ]);
+  mockApiClient.getAvailableLanguages.mockResolvedValue(['en', 'es']);
 
   mockApiClient.getUiStrings.mockImplementation(({ languageCode }) =>
     Promise.resolve(TEST_UI_STRING_TRANSLATIONS[languageCode] || null)
@@ -35,7 +31,7 @@ test('renders translation for current language', async () => {
   render(<H1>{testUiStrings.numPlanets(9)}</H1>);
   await screen.findByRole('heading', { name: 'There are 9 planets.' });
 
-  act(() => getLanguageContext()?.setLanguage(LanguageCode.SPANISH));
+  act(() => getLanguageContext()?.setLanguage('es'));
   await screen.findByRole('heading', { name: 'Hay 9 planetas.' });
 });
 
@@ -74,5 +70,5 @@ test('renders with audio data attributes', async () => {
   const pluto = await screen.findByRole('heading', { name: 'Pluto' });
   const container = pluto.parentElement;
   expect(container).toHaveAttribute(I18N_KEY, 'planetName.planet9');
-  expect(container).toHaveAttribute(LANGUAGE_CODE, LanguageCode.ENGLISH);
+  expect(container).toHaveAttribute(LANGUAGE_CODE, 'en');
 });

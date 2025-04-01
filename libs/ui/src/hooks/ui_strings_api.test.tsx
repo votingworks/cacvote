@@ -1,4 +1,4 @@
-import { LanguageCode, UiStringAudioClips } from '@votingworks/types';
+import { UiStringAudioClips } from '@votingworks/types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { act } from 'react-dom/test-utils';
@@ -37,17 +37,14 @@ test('getAvailableLanguages', async () => {
   // Simulate configuring an election:
   await act(async () => {
     mockApiClient.getAvailableLanguages.mockResolvedValueOnce([
-      LanguageCode.CHINESE_TRADITIONAL,
-      LanguageCode.SPANISH,
+      'zh-Hant',
+      'es',
     ]);
     await api.onMachineConfigurationChange(queryClient);
   });
 
   await waitFor(() => expect(result.current.isLoading).toEqual(false));
-  expect(result.current.data).toEqual([
-    LanguageCode.CHINESE_TRADITIONAL,
-    LanguageCode.SPANISH,
-  ]);
+  expect(result.current.data).toEqual(['zh-Hant', 'es']);
 
   // Simulate unconfiguring an election:
   await act(async () => {
@@ -60,7 +57,7 @@ test('getAvailableLanguages', async () => {
 });
 
 test('getUiStrings', async () => {
-  const languageCode = LanguageCode.SPANISH;
+  const languageCode = 'es';
 
   // Simulate initial machine state:
   mockApiClient.getUiStrings.mockResolvedValueOnce(null);
@@ -95,52 +92,50 @@ test('getUiStrings', async () => {
 });
 
 test('getAudioClip', async () => {
-  const { ENGLISH, SPANISH } = LanguageCode;
-
   // Simulate initial machine state:
   mockApiClient.getAudioClips.mockResolvedValue([]);
 
   const { result } = renderHook(
     () => ({
-      en1: api.getAudioClip.useQuery({ id: 'en1', languageCode: ENGLISH }),
-      es1: api.getAudioClip.useQuery({ id: 'es1', languageCode: SPANISH }),
-      es2: api.getAudioClip.useQuery({ id: 'es2', languageCode: SPANISH }),
+      en1: api.getAudioClip.useQuery({ id: 'en1', languageCode: 'en' }),
+      es1: api.getAudioClip.useQuery({ id: 'es1', languageCode: 'es' }),
+      es2: api.getAudioClip.useQuery({ id: 'es2', languageCode: 'es' }),
     }),
     { wrapper: QueryWrapper }
   );
 
-  // Expect a batch call for `ENGLISH` clips:
+  // Expect a batch call for `'en'` clips:
   await waitFor(() => expect(result.current.en1.isSuccess).toEqual(true));
   expect(result.current.en1.data).toBeNull();
   expect(mockApiClient.getAudioClips).toHaveBeenCalledWith({
     audioIds: ['en1'],
-    languageCode: ENGLISH,
+    languageCode: 'en',
   });
 
-  // Expect another batch call for `SPANISH` clips:
+  // Expect another batch call for `'es'` clips:
   await waitFor(() => expect(result.current.es1.isSuccess).toEqual(true));
   expect(result.current.es1.data).toBeNull();
   expect(result.current.es2.data).toBeNull();
   expect(mockApiClient.getAudioClips).toHaveBeenCalledWith({
     audioIds: ['es1', 'es2'],
-    languageCode: SPANISH,
+    languageCode: 'es',
   });
 
   expect(mockApiClient.getAudioClips).toHaveBeenCalledTimes(2);
 
   // Simulate configuring an election:
   const [clipEnglish1, clipSpanish1, clipSpanish2]: UiStringAudioClips = [
-    { dataBase64: 'ABC==', id: 'en1', languageCode: ENGLISH },
-    { dataBase64: 'DEF==', id: 'es1', languageCode: SPANISH },
-    { dataBase64: 'EDF==', id: 'es2', languageCode: SPANISH },
+    { dataBase64: 'ABC==', id: 'en1', languageCode: 'en' },
+    { dataBase64: 'DEF==', id: 'es1', languageCode: 'es' },
+    { dataBase64: 'EDF==', id: 'es2', languageCode: 'es' },
   ];
   await act(async () => {
     mockApiClient.getAudioClips.mockImplementation((input) => {
-      if (input.languageCode === ENGLISH) {
+      if (input.languageCode === 'en') {
         return Promise.resolve([clipEnglish1]);
       }
 
-      if (input.languageCode === SPANISH) {
+      if (input.languageCode === 'es') {
         return Promise.resolve([clipSpanish1, clipSpanish2]);
       }
 
@@ -170,7 +165,7 @@ test('getAudioClip', async () => {
 });
 
 test('getAudioIds', async () => {
-  const languageCode = LanguageCode.SPANISH;
+  const languageCode = 'es';
 
   // Simulate initial machine state:
   mockApiClient.getUiStringAudioIds.mockResolvedValueOnce(null);

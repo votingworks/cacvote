@@ -18,7 +18,9 @@ export function StartScreen({
         <H1>Ready to Vote</H1>
         <Text>{electionDefinition.election.title}</Text>
         <Text>
-          {formatShortDate(DateTime.fromISO(electionDefinition.election.date))}
+          {formatShortDate(
+            DateTime.fromISO(electionDefinition.election.date.toISOString())
+          )}
         </Text>
         <Button variant="primary" onPress={onStartVoting}>
           Start Voting

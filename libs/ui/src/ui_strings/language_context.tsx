@@ -2,21 +2,20 @@ import React from 'react';
 import i18next, { i18n } from 'i18next';
 import { initReactI18next, useTranslation } from 'react-i18next';
 
-import { LanguageCode } from '@votingworks/types';
 import { Optional, assertDefined } from '@votingworks/basics';
 import { Screen } from '../screen';
 import { UiStringsReactQueryApi } from '../hooks/ui_strings_api';
 
 export interface LanguageContextInterface {
   api: UiStringsReactQueryApi;
-  availableLanguages: LanguageCode[];
-  currentLanguageCode: LanguageCode;
+  availableLanguages: string[];
+  currentLanguageCode: string;
   i18next: i18n;
-  setLanguage: (code: LanguageCode) => void;
+  setLanguage: (code: string) => void;
   translationFunction: ReturnType<typeof useTranslation>['t'];
 }
 
-export const DEFAULT_LANGUAGE_CODE = LanguageCode.ENGLISH;
+export const DEFAULT_LANGUAGE_CODE = 'en';
 export const DEFAULT_I18NEXT_NAMESPACE = 'translation';
 
 export const LanguageContext =
@@ -28,7 +27,6 @@ export function useLanguageContext(): Optional<LanguageContextInterface> {
 
 const i18nextInitPromise = i18next.use(initReactI18next).init({
   lng: DEFAULT_LANGUAGE_CODE,
-  supportedLngs: Object.values(LanguageCode),
   interpolation: {
     escapeValue: false, // Sanitization already handled by React.
   },

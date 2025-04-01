@@ -3,7 +3,6 @@ import {
   Election,
   ElectionDefinition,
   ElectionStringKey,
-  LanguageCode,
   VotesDict,
   YesNoContest,
   getContests,
@@ -38,7 +37,7 @@ const mockUiStringRenderer = mockOf(UiString);
 
 const baseElection = electionGeneralDefinition.election;
 
-const ballotLanguages = [LanguageCode.ENGLISH, LanguageCode.SPANISH];
+const ballotLanguages = ['en', 'es'];
 const election: Election = {
   ...baseElection,
   ballotStyles: baseElection.ballotStyles.flatMap((ballotStyle, i) =>
@@ -63,11 +62,11 @@ type UiStringKey = ElectionStringKey | AppStringKey;
 
 interface MockUiStringOutput {
   key: UiStringKey;
-  languageCode: LanguageCode;
+  languageCode: string;
   subKey?: string;
 }
 
-function getMockUiStringPrefix(languageCode: LanguageCode) {
+function getMockUiStringPrefix(languageCode: string) {
   return `~${languageCode}~`;
 }
 
@@ -81,21 +80,14 @@ function generateMockUiString(params: MockUiStringOutput) {
 function expectDualLanguageString(
   params: Omit<MockUiStringOutput, 'languageCode'>
 ) {
-  screen.getByText(
-    generateMockUiString({ ...params, languageCode: LanguageCode.SPANISH })
-  );
-  screen.getByText(
-    generateMockUiString({ ...params, languageCode: LanguageCode.ENGLISH })
-  );
+  screen.getByText(generateMockUiString({ ...params, languageCode: 'es' }));
+  screen.getByText(generateMockUiString({ ...params, languageCode: 'en' }));
 }
 
 function expectSingleLanguageString(params: MockUiStringOutput) {
   screen.getByText(generateMockUiString(params));
 
-  const otherLanguage =
-    params.languageCode === LanguageCode.SPANISH
-      ? LanguageCode.ENGLISH
-      : LanguageCode.SPANISH;
+  const otherLanguage = params.languageCode === 'es' ? 'en' : 'es';
 
   expect(
     screen.queryByText(
@@ -129,7 +121,7 @@ beforeEach(() => {
 describe('non-English ballot style', () => {
   const spanishBallotStyle = find(
     election.ballotStyles,
-    (b) => b.languages?.[0] === LanguageCode.SPANISH
+    (b) => b.languages?.[0] === 'es'
   );
 
   const contests = getContests({ ballotStyle: spanishBallotStyle, election });
@@ -147,9 +139,7 @@ describe('non-English ballot style', () => {
     );
 
     await waitFor(() =>
-      expect(getLanguageContext()?.currentLanguageCode).toEqual(
-        LanguageCode.ENGLISH
-      )
+      expect(getLanguageContext()?.currentLanguageCode).toEqual('en')
     );
 
     expectDualLanguageString({ key: 'titleOfficialBallot' });
@@ -157,12 +147,12 @@ describe('non-English ballot style', () => {
     expectDualLanguageString({ key: ElectionStringKey.ELECTION_DATE });
     expectSingleLanguageString({
       key: ElectionStringKey.COUNTY_NAME,
-      languageCode: LanguageCode.SPANISH,
+      languageCode: 'es',
       subKey: election.county.id,
     });
     expectSingleLanguageString({
       key: ElectionStringKey.STATE_NAME,
-      languageCode: LanguageCode.SPANISH,
+      languageCode: 'es',
     });
   });
 
@@ -193,9 +183,7 @@ describe('non-English ballot style', () => {
     );
 
     await waitFor(() =>
-      expect(getLanguageContext()?.currentLanguageCode).toEqual(
-        LanguageCode.ENGLISH
-      )
+      expect(getLanguageContext()?.currentLanguageCode).toEqual('en')
     );
 
     expectDualLanguageString({
@@ -205,7 +193,7 @@ describe('non-English ballot style', () => {
 
     expectSingleLanguageString({
       key: ElectionStringKey.CANDIDATE_NAME,
-      languageCode: LanguageCode.ENGLISH,
+      languageCode: 'en',
       subKey: candidate.id,
     });
 
@@ -243,9 +231,7 @@ describe('non-English ballot style', () => {
     );
 
     await waitFor(() =>
-      expect(getLanguageContext()?.currentLanguageCode).toEqual(
-        LanguageCode.ENGLISH
-      )
+      expect(getLanguageContext()?.currentLanguageCode).toEqual('en')
     );
 
     expectDualLanguageString({ key: 'noteBallotContestNoSelection' });
@@ -271,9 +257,7 @@ describe('non-English ballot style', () => {
     );
 
     await waitFor(() =>
-      expect(getLanguageContext()?.currentLanguageCode).toEqual(
-        LanguageCode.ENGLISH
-      )
+      expect(getLanguageContext()?.currentLanguageCode).toEqual('en')
     );
 
     expectDualLanguageString({
@@ -308,9 +292,7 @@ describe('non-English ballot style', () => {
     );
 
     await waitFor(() =>
-      expect(getLanguageContext()?.currentLanguageCode).toEqual(
-        LanguageCode.ENGLISH
-      )
+      expect(getLanguageContext()?.currentLanguageCode).toEqual('en')
     );
 
     expectDualLanguageString({
@@ -325,7 +307,7 @@ describe('non-English ballot style', () => {
 describe('English ballot style', () => {
   const englishBallotStyle = find(
     election.ballotStyles,
-    (b) => b.languages?.[0] === LanguageCode.ENGLISH
+    (b) => b.languages?.[0] === 'en'
   );
 
   const contests = getContests({ ballotStyle: englishBallotStyle, election });
@@ -353,15 +335,13 @@ describe('English ballot style', () => {
 
     // Change app-wide language to Spanish to verify ballot language is not
     // affected:
-    act(() => getLanguageContext()!.setLanguage(LanguageCode.SPANISH));
+    act(() => getLanguageContext()!.setLanguage('es'));
     await waitFor(() =>
-      expect(getLanguageContext()?.currentLanguageCode).toEqual(
-        LanguageCode.SPANISH
-      )
+      expect(getLanguageContext()?.currentLanguageCode).toEqual('es')
     );
 
     expect(container).not.toHaveTextContent(
-      new RegExp(getMockUiStringPrefix(LanguageCode.SPANISH))
+      new RegExp(getMockUiStringPrefix('es'))
     );
   });
 
@@ -378,13 +358,11 @@ describe('English ballot style', () => {
     );
 
     await waitFor(() =>
-      expect(getLanguageContext()?.currentLanguageCode).toEqual(
-        LanguageCode.ENGLISH
-      )
+      expect(getLanguageContext()?.currentLanguageCode).toEqual('en')
     );
 
     expect(container).not.toHaveTextContent(
-      new RegExp(getMockUiStringPrefix(LanguageCode.SPANISH))
+      new RegExp(getMockUiStringPrefix('es'))
     );
   });
 });

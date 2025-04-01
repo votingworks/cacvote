@@ -1,4 +1,3 @@
-import { LanguageCode } from '@votingworks/types';
 import { mockOf } from '@votingworks/test-utils';
 import { deferred } from '@votingworks/basics';
 
@@ -13,8 +12,6 @@ jest.mock('./audio_player', (): typeof import('./audio_player') => ({
   ...jest.requireActual('./audio_player'),
   newAudioPlayer: jest.fn(),
 }));
-
-const { ENGLISH, SPANISH } = LanguageCode;
 
 function initMockPlayer() {
   const mockPlayer: jest.Mocked<AudioPlayer> = {
@@ -52,8 +49,8 @@ afterAll(() => {
 test('plays clips in order', async () => {
   const { mockApiClient, render } = newTestContext();
   mockApiClient.getAudioClips.mockResolvedValue([
-    { id: 'abc', dataBase64: 'data-for-abc', languageCode: ENGLISH },
-    { id: 'def', dataBase64: 'data-for-def', languageCode: SPANISH },
+    { id: 'abc', dataBase64: 'data-for-abc', languageCode: 'en' },
+    { id: 'def', dataBase64: 'data-for-def', languageCode: 'es' },
   ]);
 
   const { mockOfNewAudioPlayer, mockPlayer } = initMockPlayer();
@@ -63,8 +60,8 @@ test('plays clips in order', async () => {
   render(
     <PlayAudioClips
       clips={[
-        { audioId: 'abc', languageCode: ENGLISH },
-        { audioId: 'def', languageCode: SPANISH },
+        { audioId: 'abc', languageCode: 'en' },
+        { audioId: 'def', languageCode: 'es' },
       ]}
     />
   );
@@ -72,7 +69,7 @@ test('plays clips in order', async () => {
   // Verify player instantiation and playback for the 1st clip:
   await waitFor(() =>
     expect(mockOfNewAudioPlayer).toHaveBeenCalledWith<[AudioPlayerParams]>({
-      clip: { id: 'abc', dataBase64: 'data-for-abc', languageCode: ENGLISH },
+      clip: { id: 'abc', dataBase64: 'data-for-abc', languageCode: 'en' },
       webAudioContext: mockWebAudioContext,
     })
   );
@@ -93,7 +90,7 @@ test('plays clips in order', async () => {
   // Verify player instantiation and playback for the 2nd clip:
   await waitFor(() =>
     expect(mockOfNewAudioPlayer).toHaveBeenCalledWith<[AudioPlayerParams]>({
-      clip: { id: 'def', dataBase64: 'data-for-def', languageCode: SPANISH },
+      clip: { id: 'def', dataBase64: 'data-for-def', languageCode: 'es' },
       webAudioContext: mockWebAudioContext,
     })
   );
@@ -120,15 +117,13 @@ test('plays clips in order', async () => {
 test('playback rate follows user setting', async () => {
   const { getAudioContext, mockApiClient, render } = newTestContext();
   mockApiClient.getAudioClips.mockResolvedValue([
-    { id: 'abc', dataBase64: 'data-for-abc', languageCode: ENGLISH },
+    { id: 'abc', dataBase64: 'data-for-abc', languageCode: 'en' },
   ]);
 
   const { mockOfNewAudioPlayer, mockPlayer } = initMockPlayer();
   mockPlayer.play.mockReturnValueOnce(deferred<void>().promise);
 
-  render(
-    <PlayAudioClips clips={[{ audioId: 'abc', languageCode: ENGLISH }]} />
-  );
+  render(<PlayAudioClips clips={[{ audioId: 'abc', languageCode: 'en' }]} />);
 
   await waitFor(() => expect(mockOfNewAudioPlayer).toHaveBeenCalled());
   expect(mockPlayer.setPlaybackRate).toHaveBeenCalledTimes(1);
@@ -147,15 +142,13 @@ test('playback rate follows user setting', async () => {
 test('volume follows user setting', async () => {
   const { getAudioContext, mockApiClient, render } = newTestContext();
   mockApiClient.getAudioClips.mockResolvedValue([
-    { id: 'abc', dataBase64: 'data-for-abc', languageCode: ENGLISH },
+    { id: 'abc', dataBase64: 'data-for-abc', languageCode: 'en' },
   ]);
 
   const { mockOfNewAudioPlayer, mockPlayer } = initMockPlayer();
   mockPlayer.play.mockReturnValueOnce(deferred<void>().promise);
 
-  render(
-    <PlayAudioClips clips={[{ audioId: 'abc', languageCode: ENGLISH }]} />
-  );
+  render(<PlayAudioClips clips={[{ audioId: 'abc', languageCode: 'en' }]} />);
 
   await waitFor(() => expect(mockOfNewAudioPlayer).toHaveBeenCalled());
   expect(mockPlayer.setVolume).toHaveBeenCalledTimes(1);
@@ -172,34 +165,32 @@ test('volume follows user setting', async () => {
 test('stops playback and resets when clip queue is changed', async () => {
   const { mockApiClient, render } = newTestContext();
   mockApiClient.getAudioClips.mockResolvedValue([
-    { id: 'abc', dataBase64: 'data-for-abc', languageCode: ENGLISH },
-    { id: 'def', dataBase64: 'data-for-def', languageCode: ENGLISH },
+    { id: 'abc', dataBase64: 'data-for-abc', languageCode: 'en' },
+    { id: 'def', dataBase64: 'data-for-def', languageCode: 'en' },
   ]);
 
   const { mockOfNewAudioPlayer, mockPlayer } = initMockPlayer();
   mockPlayer.play.mockReturnValue(deferred<void>().promise);
 
   const { rerender } = render(
-    <PlayAudioClips clips={[{ audioId: 'abc', languageCode: ENGLISH }]} />
+    <PlayAudioClips clips={[{ audioId: 'abc', languageCode: 'en' }]} />
   );
 
   await waitFor(() =>
     expect(mockOfNewAudioPlayer).toHaveBeenCalledWith<[AudioPlayerParams]>({
-      clip: { id: 'abc', dataBase64: 'data-for-abc', languageCode: ENGLISH },
+      clip: { id: 'abc', dataBase64: 'data-for-abc', languageCode: 'en' },
       webAudioContext: mockWebAudioContext,
     })
   );
   expect(mockPlayer.stop).not.toHaveBeenCalled();
   expect(mockPlayer.play).toHaveBeenCalledTimes(1);
 
-  rerender(
-    <PlayAudioClips clips={[{ audioId: 'def', languageCode: ENGLISH }]} />
-  );
+  rerender(<PlayAudioClips clips={[{ audioId: 'def', languageCode: 'en' }]} />);
 
   expect(mockPlayer.stop).toHaveBeenCalled();
   await waitFor(() =>
     expect(mockOfNewAudioPlayer).toHaveBeenCalledWith<[AudioPlayerParams]>({
-      clip: { id: 'def', dataBase64: 'data-for-def', languageCode: ENGLISH },
+      clip: { id: 'def', dataBase64: 'data-for-def', languageCode: 'en' },
       webAudioContext: mockWebAudioContext,
     })
   );
@@ -214,7 +205,7 @@ test('is no-op in environments with no web AudioContext support', async () => {
 
   render(
     <div>
-      <PlayAudioClips clips={[{ audioId: 'abc', languageCode: ENGLISH }]} />
+      <PlayAudioClips clips={[{ audioId: 'abc', languageCode: 'en' }]} />
       <span data-testid="renderDone" />
     </div>
   );
@@ -230,9 +221,7 @@ test('is no-op while loading clip data', async () => {
 
   mockApiClient.getAudioClips.mockImplementation(() => new Promise(() => {}));
 
-  render(
-    <PlayAudioClips clips={[{ audioId: 'abc', languageCode: ENGLISH }]} />
-  );
+  render(<PlayAudioClips clips={[{ audioId: 'abc', languageCode: 'en' }]} />);
 
   await waitFor(() => expect(mockApiClient.getAudioClips).toHaveBeenCalled());
 
@@ -245,9 +234,7 @@ test('handles missing clip data', async () => {
 
   mockApiClient.getAudioClips.mockResolvedValue([]);
 
-  render(
-    <PlayAudioClips clips={[{ audioId: 'abc', languageCode: ENGLISH }]} />
-  );
+  render(<PlayAudioClips clips={[{ audioId: 'abc', languageCode: 'en' }]} />);
 
   await waitFor(() => expect(mockApiClient.getAudioClips).toHaveBeenCalled());
 

@@ -1,19 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { LanguageCode } from '@votingworks/types';
-
 import { createUiStringsApi } from './ui_strings_api';
 import { useAvailableLanguages } from './use_available_languages';
 import { UiStringsContextProvider } from '../ui_strings';
 import { DEFAULT_LANGUAGE_CODE } from '../ui_strings/language_context';
 import { renderHook, waitFor } from '../../test/react_testing_library';
 
-const { ENGLISH, SPANISH } = LanguageCode;
-
 test('returns available languages from backend', async () => {
   const mockApi = createUiStringsApi(() => ({
     getAudioClips: jest.fn(),
-    getAvailableLanguages: jest.fn().mockResolvedValue([ENGLISH, SPANISH]),
+    getAvailableLanguages: jest.fn().mockResolvedValue(['en', 'es']),
     getUiStringAudioIds: jest.fn(),
     getUiStrings: jest.fn().mockResolvedValue(null),
   }));
@@ -30,7 +26,7 @@ test('returns available languages from backend', async () => {
     wrapper: TestHookWrapper,
   });
 
-  await waitFor(() => expect(result.current).toEqual([ENGLISH, SPANISH]), {
+  await waitFor(() => expect(result.current).toEqual(['en', 'es']), {
     timeout: 100,
   });
 });

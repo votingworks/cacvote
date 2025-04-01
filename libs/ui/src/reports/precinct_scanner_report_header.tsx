@@ -75,7 +75,7 @@ export function PrecinctScannerReportHeader({
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(new Date(election.date));
+  }).format(election.date.toMidnightDatetimeWithSystemTimezone());
 
   const electionTitle = showTallies
     ? getPartySpecificElectionTitle(election, partyId)

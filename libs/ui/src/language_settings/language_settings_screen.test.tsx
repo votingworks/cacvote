@@ -1,8 +1,4 @@
-import {
-  ElectionStringKey,
-  LanguageCode,
-  UiStringsPackage,
-} from '@votingworks/types';
+import { ElectionStringKey, UiStringsPackage } from '@votingworks/types';
 import userEvent from '@testing-library/user-event';
 import { newTestContext } from '../../test/test_context';
 import { LanguageSettingsScreen } from './language_settings_screen';
@@ -14,19 +10,18 @@ import {
 } from '../../test/react_testing_library';
 
 test('displays all available languages', async () => {
-  const { CHINESE_SIMPLIFIED, ENGLISH, SPANISH } = LanguageCode;
   const { getLanguageContext, mockApiClient, render } = newTestContext();
 
   mockApiClient.getAvailableLanguages.mockResolvedValue([
-    CHINESE_SIMPLIFIED,
-    ENGLISH,
-    SPANISH,
+    'zh-Hans',
+    'en',
+    'es',
   ]);
 
   const testTranslations: UiStringsPackage = {
-    [CHINESE_SIMPLIFIED]: { [ElectionStringKey.BALLOT_LANGUAGE]: '简体中文' },
-    [ENGLISH]: { [ElectionStringKey.BALLOT_LANGUAGE]: 'English' },
-    [SPANISH]: { [ElectionStringKey.BALLOT_LANGUAGE]: 'Español' },
+    'zh-Hans': { [ElectionStringKey.BALLOT_LANGUAGE]: '简体中文' },
+    en: { [ElectionStringKey.BALLOT_LANGUAGE]: 'English' },
+    es: { [ElectionStringKey.BALLOT_LANGUAGE]: 'Español' },
   };
   mockApiClient.getUiStrings.mockImplementation((input) =>
     Promise.resolve(testTranslations[input.languageCode] || null)
@@ -35,7 +30,7 @@ test('displays all available languages', async () => {
   render(<LanguageSettingsScreen onDone={jest.fn()} />);
 
   await waitFor(() => expect(getLanguageContext()).toBeDefined());
-  act(() => getLanguageContext()?.setLanguage(SPANISH));
+  act(() => getLanguageContext()?.setLanguage('es'));
 
   const languageButtons = screen.getAllByRole('radio');
   expect(languageButtons).toHaveLength(3);

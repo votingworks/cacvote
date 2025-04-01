@@ -1,12 +1,12 @@
-import { Optional } from '@votingworks/basics';
+import { DateWithoutTime, Optional } from '@votingworks/basics';
 import { sha256 } from 'js-sha256';
 import * as z from 'zod';
 import {
+  DateWithoutTimeSchema,
   Dictionary,
   ElectionHash,
   Id,
   IdSchema,
-  Iso8601Date,
   Iso8601Timestamp,
   Iso8601TimestampSchema,
   NewType,
@@ -21,7 +21,6 @@ import {
   Size,
   SizeSchema,
 } from './geometry';
-import { LanguageCode } from './language_code';
 
 // Generic
 function* findDuplicateIds<T extends { id: unknown }>(
@@ -277,6 +276,10 @@ export const ContestsSchema = z
   });
 
 // Election
+export type ElectionId = NewType<string, 'ElectionId'>;
+export const ElectionIdSchema: z.ZodSchema<ElectionId> =
+  IdSchema as unknown as z.ZodSchema<ElectionId>;
+
 export type PrecinctId = Id;
 export const PrecinctIdSchema: z.ZodSchema<PrecinctId> = IdSchema;
 export interface Precinct {
@@ -304,17 +307,23 @@ export type BallotStyleId = Id;
 export const BallotStyleIdSchema: z.ZodSchema<BallotStyleId> = IdSchema;
 export interface BallotStyle {
   readonly id: BallotStyleId;
+  readonly groupId: BallotStyleGroupId;
   readonly precincts: readonly PrecinctId[];
   readonly districts: readonly DistrictId[];
   readonly partyId?: PartyId;
-  readonly languages?: readonly LanguageCode[]; // TODO(kofi): Make required.
+  readonly languages?: readonly string[]; // TODO(kofi): Make required.
 }
+
+export type BallotStyleGroupId = NewType<string, 'BallotStyleGroupId'>;
+export const BallotStyleGroupIdSchema =
+  IdSchema as unknown as z.ZodSchema<BallotStyleGroupId>;
 export const BallotStyleSchema: z.ZodSchema<BallotStyle> = z.object({
   id: BallotStyleIdSchema,
+  groupId: BallotStyleGroupIdSchema,
   precincts: z.array(PrecinctIdSchema),
   districts: z.array(DistrictIdSchema),
   partyId: PartyIdSchema.optional(),
-  languages: z.array(z.nativeEnum(LanguageCode)).optional(),
+  languages: z.array(z.string()).optional(),
 });
 export const BallotStylesSchema = z
   .array(BallotStyleSchema)
@@ -453,17 +462,18 @@ export interface Election {
   readonly ballotLayout: BallotLayout;
   readonly ballotStyles: readonly BallotStyle[];
   readonly contests: Contests;
-  readonly gridLayouts?: readonly GridLayout[];
   readonly county: County;
-  readonly date: string;
+  readonly date: DateWithoutTime;
   readonly districts: readonly District[];
+  readonly gridLayouts?: readonly GridLayout[];
+  readonly id: ElectionId;
   readonly parties: Parties;
   readonly precincts: readonly Precinct[];
-  readonly quickResultsReportingUrl?: string; // a server where results are posted, enables VxQR if present
   readonly seal: string;
   readonly state: string;
   readonly title: string;
   readonly type: ElectionType;
+  readonly additionalHashInput?: Record<string, unknown>;
 }
 export const ElectionSchema: z.ZodSchema<Election> = z
   .object({
@@ -472,20 +482,16 @@ export const ElectionSchema: z.ZodSchema<Election> = z
     contests: ContestsSchema,
     gridLayouts: z.array(GridLayoutSchema).optional(),
     county: CountySchema,
-    date: Iso8601Date,
+    date: DateWithoutTimeSchema,
     districts: DistrictsSchema,
+    id: ElectionIdSchema,
     parties: PartiesSchema,
     precincts: PrecinctsSchema,
-    quickResultsReportingUrl: z
-      .string()
-      .url()
-      .nonempty()
-      .refine((val) => !val.endsWith('/'), 'URL cannot end with a slash')
-      .optional(),
     seal: z.string(),
     state: z.string().nonempty(),
     title: z.string().nonempty(),
     type: ElectionTypeSchema,
+    additionalHashInput: z.record(z.any()).optional(),
   })
   .superRefine((election, ctx) => {
     for (const [

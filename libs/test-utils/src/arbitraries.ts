@@ -10,6 +10,7 @@ import {
   BallotPaperSize,
   BallotStyle,
   BallotStyleId,
+  BallotStyleGroupId,
   Candidate,
   CandidateContest,
   CandidateId,
@@ -29,8 +30,10 @@ import {
   PrecinctId,
   YesNoContest,
   YesNoOption,
+  ElectionId,
 } from '@votingworks/types';
 import { sha256 } from 'js-sha256';
+import { DateWithoutTime, assertDefined } from '@votingworks/basics/src';
 
 /**
  * Builds arbitrary uint2 values.
@@ -116,6 +119,13 @@ export function arbitraryBallotStyleId(): fc.Arbitrary<BallotStyleId> {
 }
 
 /**
+ * Builds values suitable for ballot style IDs.
+ */
+export function arbitraryBallotStyleGroupId(): fc.Arbitrary<BallotStyleGroupId> {
+  return arbitraryId() as fc.Arbitrary<BallotStyleGroupId>;
+}
+
+/**
  * Builds values suitable for candidate IDs.
  */
 export function arbitraryCandidateId(): fc.Arbitrary<CandidateId> {
@@ -141,6 +151,13 @@ export function arbitraryCountyId(): fc.Arbitrary<CountyId> {
  */
 export function arbitraryDistrictId(): fc.Arbitrary<DistrictId> {
   return arbitraryId() as fc.Arbitrary<DistrictId>;
+}
+
+/**
+ * Builds values suitable for election IDs.
+ */
+export function arbitraryElectionId(): fc.Arbitrary<ElectionId> {
+  return arbitraryId() as fc.Arbitrary<ElectionId>;
 }
 
 /**
@@ -326,15 +343,18 @@ export function arbitraryPrecinct({
 
 export function arbitraryBallotStyle({
   id = arbitraryBallotStyleId(),
+  groupId = arbitraryBallotStyleGroupId(),
   districtIds = fc.array(arbitraryDistrictId()),
   precinctIds = fc.array(arbitraryPrecinctId()),
 }: {
   id?: fc.Arbitrary<BallotStyle['id']>;
+  groupId?: fc.Arbitrary<BallotStyle['groupId']>;
   districtIds?: fc.Arbitrary<Array<District['id']>>;
   precinctIds?: fc.Arbitrary<Array<Precinct['id']>>;
 } = {}): fc.Arbitrary<BallotStyle> {
   return fc.record({
     id,
+    groupId,
     districts: districtIds,
     precincts: precinctIds,
   });
@@ -379,11 +399,22 @@ export function arbitraryElection(): fc.Arbitrary<Election> {
       })
       .chain(({ districts, precincts, parties }) =>
         fc.record<Election>({
+          id: arbitraryElectionId(),
           type: fc.constantFrom(...ELECTION_TYPES),
           title: fc.string({ minLength: 1 }),
           county: arbitraryCounty(),
           state: fc.string({ minLength: 2, maxLength: 2 }),
-          date: fc.date().map((date) => date.toISOString()),
+          date: fc
+            .date({
+              min: new Date('0001-01-01'),
+              max: new Date('9999-12-31'),
+            })
+            .map(
+              (date) =>
+                new DateWithoutTime(
+                  assertDefined(date.toISOString().split('T')[0])
+                )
+            ),
           seal: fc.string({ minLength: 1, maxLength: 200 }),
           parties: fc.constant(parties),
           contests: arbitraryContests({

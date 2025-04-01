@@ -1,7 +1,6 @@
 import React from 'react';
 import { mockOf } from '@votingworks/test-utils';
 import { assertDefined } from '@votingworks/basics';
-import { LanguageCode } from '@votingworks/types';
 import { WithAltAudio } from './with_alt_audio';
 import { newTestContext } from '../../test/test_context';
 import { useAudioContext } from './audio_context';
@@ -14,9 +13,7 @@ jest.mock('./audio_only', (): typeof import('./audio_only') => ({
   AudioOnly: jest.fn(),
 }));
 
-const { ENGLISH, SPANISH } = LanguageCode;
-
-function getMockAudioOnlyContentPrefix(languageCode: LanguageCode) {
+function getMockAudioOnlyContentPrefix(languageCode: string) {
   return `[${languageCode}]`;
 }
 
@@ -55,11 +52,11 @@ test('with audio in user language', async () => {
   await waitFor(() => expect(getLanguageContext()).toBeDefined());
 
   const { setLanguage } = assertDefined(getLanguageContext());
-  act(() => setLanguage(SPANISH));
+  act(() => setLanguage('es'));
 
   expect(screen.getByTestId('textOnly')).toHaveTextContent('Text-Only String');
   expect(screen.getByTestId('audioOnly')).toHaveTextContent(
-    `${getMockAudioOnlyContentPrefix(SPANISH)} Audio-Only String`
+    `${getMockAudioOnlyContentPrefix('es')} Audio-Only String`
   );
 });
 
@@ -67,7 +64,7 @@ test('with audio language override', async () => {
   const { getLanguageContext, render } = newTestContext();
 
   render(
-    <WithAltAudio audioText="Audio-Only String" audioLanguageOverride={ENGLISH}>
+    <WithAltAudio audioText="Audio-Only String" audioLanguageOverride="en">
       <TestTextOnlyString>Text-Only String</TestTextOnlyString>
     </WithAltAudio>
   );
@@ -75,10 +72,10 @@ test('with audio language override', async () => {
   await waitFor(() => expect(getLanguageContext()).toBeDefined());
 
   const { setLanguage } = assertDefined(getLanguageContext());
-  act(() => setLanguage(SPANISH));
+  act(() => setLanguage('es'));
 
   expect(screen.getByTestId('textOnly')).toHaveTextContent('Text-Only String');
   expect(screen.getByTestId('audioOnly')).toHaveTextContent(
-    `${getMockAudioOnlyContentPrefix(ENGLISH)} Audio-Only String`
+    `${getMockAudioOnlyContentPrefix('en')} Audio-Only String`
   );
 });

@@ -8,7 +8,6 @@ import {
   District,
   Election,
   ElectionStringKey as Key,
-  LanguageCode,
   Party,
   Precinct,
   YesNoOption,
@@ -29,7 +28,7 @@ type ContestWithDescription = ContestLike & {
  */
 /* istanbul ignore next - mostly presentational, tested via apps where relevant */
 export const electionStrings = {
-  [Key.BALLOT_LANGUAGE]: (languageCode: LanguageCode) => (
+  [Key.BALLOT_LANGUAGE]: (languageCode: string) => (
     <LanguageOverride languageCode={languageCode}>
       <UiString uiStringKey={Key.BALLOT_LANGUAGE}>
         {format.languageDisplayName({ languageCode })}
@@ -89,7 +88,9 @@ export const electionStrings = {
 
   [Key.ELECTION_DATE]: (election: Election) => (
     <UiString uiStringKey={Key.ELECTION_DATE}>
-      <DateString value={new Date(election.date)} />
+      <DateString
+        value={election.date.toMidnightDatetimeWithSystemTimezone()}
+      />
     </UiString>
   ),
 

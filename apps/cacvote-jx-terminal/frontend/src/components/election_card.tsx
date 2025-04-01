@@ -27,7 +27,9 @@ export function ElectionCard({ election }: ElectionCardProps): JSX.Element {
         <P>
           {election.county.name}, {election.state}
           <br />
-          {format.localeDate(new Date(election.date))}
+          {format.localeDate(
+            election.date.toMidnightDatetimeWithSystemTimezone()
+          )}
         </P>
       </div>
     </Wrapper>

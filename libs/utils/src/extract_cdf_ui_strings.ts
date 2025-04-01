@@ -1,17 +1,13 @@
 // TODO(kofi): Remove once extractors are implemented.
 
-import setWith from 'lodash.setwith';
-
+import { assertDefined } from '@votingworks/basics';
 import {
   BallotDefinition,
   ElectionStringKey,
-  LanguageCode,
   UiStringsPackage,
   getElectionDistricts,
 } from '@votingworks/types';
-import { assertDefined } from '@votingworks/basics';
-
-const SUPPORTED_LANGUAGES = new Set<string>(Object.values(LanguageCode));
+import setWith from 'lodash.setwith';
 
 /**
  * String translation string key, with support for one level of optional nesting
@@ -35,10 +31,6 @@ function setInternationalizedUiStrings(params: {
 
   for (const value of values) {
     const languageCode = value.Language;
-    if (!SUPPORTED_LANGUAGES.has(languageCode)) {
-      continue;
-    }
-
     const valuePath = [languageCode, stringKey].flat();
     setWith(uiStrings, valuePath, value.Content, Object);
   }
@@ -55,7 +47,7 @@ function setStaticUiString(params: {
 }) {
   const { stringKey, uiStrings, value } = params;
 
-  const valuePath = [LanguageCode.ENGLISH, stringKey].flat();
+  const valuePath = ['en', stringKey].flat();
   setWith(uiStrings, valuePath, value, Object);
 }
 
@@ -127,6 +119,10 @@ const extractorFns: Record<
         });
       }
     }
+  },
+
+  [ElectionStringKey.CONTEST_TERM]() {
+    throw new Error('CONTEST_TERM not implemented');
   },
 
   [ElectionStringKey.CONTEST_TITLE](cdfElection, uiStrings) {

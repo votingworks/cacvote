@@ -13,7 +13,7 @@ import {
   fakeUseAudioControls,
   mockOf,
 } from '@votingworks/test-utils';
-import { AudioControls, LanguageCode, VotesDict } from '@votingworks/types';
+import { AudioControls, VotesDict } from '@votingworks/types';
 import { act, render } from '../../test/react_testing_library';
 import {
   UseSessionSettingsManagerParams,
@@ -42,7 +42,6 @@ const DEFAULT_THEME: Partial<DefaultTheme> = {
 };
 const ACTIVE_VOTING_SESSION_VOTES: VotesDict = {};
 const NEW_VOTING_SESSION_VOTES = undefined;
-const { CHINESE_SIMPLIFIED, SPANISH } = LanguageCode;
 
 let currentTheme: DefaultTheme;
 let voterSettingsManager: VoterSettingsManagerContextInterface;
@@ -103,7 +102,7 @@ test('Resets settings when election official logs in', () => {
       sizeMode: 'touchExtraLarge',
     })
   );
-  mockUseCurrentLanguage.mockReturnValue(SPANISH);
+  mockUseCurrentLanguage.mockReturnValue('es');
 
   // Should reset session settings on Election Manager login:
   rerender(
@@ -133,7 +132,7 @@ test('Resets settings when election official logs in', () => {
       sizeMode: 'touchSmall',
     })
   );
-  mockUseCurrentLanguage.mockReturnValue(CHINESE_SIMPLIFIED);
+  mockUseCurrentLanguage.mockReturnValue('zh-Hans');
 
   // Should return to voter settings on return to voter session:
   rerender(
@@ -152,7 +151,7 @@ test('Resets settings when election official logs in', () => {
       sizeMode: 'touchExtraLarge',
     })
   );
-  expect(mockLanguageControls.setLanguage).toHaveBeenCalledWith(SPANISH);
+  expect(mockLanguageControls.setLanguage).toHaveBeenCalledWith('es');
   expect(mockAudioControls.reset).not.toHaveBeenCalled();
 });
 
@@ -174,7 +173,7 @@ test('Resets theme to default if returning to a new voter session', () => {
     voterSettingsManager.setColorMode('contrastLow');
     voterSettingsManager.setSizeMode('touchExtraLarge');
   });
-  mockUseCurrentLanguage.mockReturnValue(SPANISH);
+  mockUseCurrentLanguage.mockReturnValue('es');
 
   expect(currentTheme).toEqual(
     expect.objectContaining<Partial<DefaultTheme>>({
@@ -194,7 +193,7 @@ test('Resets theme to default if returning to a new voter session', () => {
       votes={ACTIVE_VOTING_SESSION_VOTES}
     />
   );
-  mockUseCurrentLanguage.mockReturnValue(CHINESE_SIMPLIFIED);
+  mockUseCurrentLanguage.mockReturnValue('zh-Hans');
   act(() => {
     voterSettingsManager.setColorMode('contrastHighDark');
     voterSettingsManager.setSizeMode('touchSmall');

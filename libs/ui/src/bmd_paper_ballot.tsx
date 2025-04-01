@@ -13,7 +13,6 @@ import {
   getBallotStyle,
   getContests,
   getPrecinctById,
-  LanguageCode,
   OptionalYesNoVote,
   PrecinctId,
   VotesDict,
@@ -155,7 +154,7 @@ const SecondaryLanguageText = styled.span`
 
 function DualLanguageText(props: {
   children: React.ReactNode;
-  primaryLanguage: LanguageCode;
+  primaryLanguage: string;
   englishTextWrapper: React.JSXElementConstructor<{
     children: React.ReactElement;
   }>;
@@ -166,7 +165,7 @@ function DualLanguageText(props: {
     englishTextWrapper: EnglishTextWrapper,
   } = props;
 
-  if (primaryLanguage === LanguageCode.ENGLISH) {
+  if (primaryLanguage === 'en') {
     return children;
   }
 
@@ -211,9 +210,7 @@ function ParenthesizedText(props: { children: JSX.Element }) {
   return <React.Fragment> ({children})</React.Fragment>;
 }
 
-function NoSelection(props: {
-  primaryBallotLanguage: LanguageCode;
-}): JSX.Element {
+function NoSelection(props: { primaryBallotLanguage: string }): JSX.Element {
   const { primaryBallotLanguage } = props;
 
   return (
@@ -233,7 +230,7 @@ function NoSelection(props: {
 interface CandidateContestResultProps {
   contest: CandidateContest;
   election: Election;
-  primaryBallotLanguage: LanguageCode;
+  primaryBallotLanguage: string;
   vote?: CandidateVote;
 }
 
@@ -300,7 +297,7 @@ function CandidateContestResult({
 
 interface YesNoContestResultProps {
   contest: YesNoContest;
-  primaryBallotLanguage: LanguageCode;
+  primaryBallotLanguage: string;
   vote: OptionalYesNoVote;
 }
 
@@ -373,8 +370,7 @@ export function BmdPaperBallot({
   } = electionDefinition;
   const ballotStyle = getBallotStyle({ ballotStyleId, election });
   assert(ballotStyle);
-  const primaryBallotLanguage =
-    ballotStyle.languages?.[0] || LanguageCode.ENGLISH;
+  const primaryBallotLanguage = ballotStyle.languages?.[0] || 'en';
   const contests = getContests({ ballotStyle, election });
   const precinct = getPrecinctById({ election, precinctId });
   assert(precinct);

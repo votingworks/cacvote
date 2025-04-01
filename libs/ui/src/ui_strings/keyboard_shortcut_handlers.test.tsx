@@ -1,12 +1,11 @@
 import userEvent from '@testing-library/user-event';
-import { AudioControls, LanguageCode } from '@votingworks/types';
+import { AudioControls } from '@votingworks/types';
 import { advancePromises, fakeUseAudioControls } from '@votingworks/test-utils';
 import { newTestContext } from '../../test/test_context';
 import { KeyboardShortcutHandlers } from './keyboard_shortcut_handlers';
 import { act, render, screen, waitFor } from '../../test/react_testing_library';
 import { useCurrentLanguage } from '../hooks/use_current_language';
 
-const { CHINESE_SIMPLIFIED, ENGLISH, SPANISH } = LanguageCode;
 const audioControls: AudioControls = fakeUseAudioControls();
 
 jest.mock(
@@ -20,12 +19,12 @@ test('Shift+L switches display language', async () => {
   const { mockApiClient, render: renderWithContext } = newTestContext();
 
   mockApiClient.getAvailableLanguages.mockResolvedValue([
-    CHINESE_SIMPLIFIED,
-    ENGLISH,
-    SPANISH,
+    'zh-Hans',
+    'en',
+    'es',
   ]);
 
-  let currentLanguage: LanguageCode | undefined;
+  let currentLanguage: string | undefined;
 
   function CurrentLanguageConsumer() {
     currentLanguage = useCurrentLanguage();
@@ -42,20 +41,20 @@ test('Shift+L switches display language', async () => {
 
   await waitFor(() => screen.getByText('foo'));
 
-  expect(currentLanguage).toEqual(ENGLISH);
+  expect(currentLanguage).toEqual('en');
 
   await act(() => userEvent.keyboard('L'));
-  expect(currentLanguage).toEqual(SPANISH);
+  expect(currentLanguage).toEqual('es');
 
   await act(() => userEvent.keyboard('L'));
-  expect(currentLanguage).toEqual(CHINESE_SIMPLIFIED);
+  expect(currentLanguage).toEqual('zh-Hans');
 
   await act(() => userEvent.keyboard('L'));
-  expect(currentLanguage).toEqual(ENGLISH);
+  expect(currentLanguage).toEqual('en');
 
   // Should be a no-op without the `Shift` key modifier:
   await act(() => userEvent.keyboard('l'));
-  expect(currentLanguage).toEqual(ENGLISH);
+  expect(currentLanguage).toEqual('en');
 });
 
 test.each([

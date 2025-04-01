@@ -6,12 +6,7 @@ import {
   iter,
   ok,
 } from '@votingworks/basics';
-import {
-  BallotStyle,
-  BallotStyleId,
-  LanguageCode,
-  Party,
-} from '@votingworks/types';
+import { BallotStyle, BallotStyleId, Party } from '@votingworks/types';
 
 const ID_LANGUAGES_SEPARATOR = '_';
 const GROUP_ID_PARTS_SEPARATOR = '-';
@@ -31,7 +26,7 @@ function generateBallotStyleGroupId(params: {
  */
 export function generateBallotStyleId(params: {
   ballotStyleIndex: number;
-  languages: LanguageCode[];
+  languages: string[];
   party?: Party;
 }): BallotStyleId {
   return [generateBallotStyleGroupId(params), ...params.languages].join(
@@ -65,7 +60,7 @@ export function getBallotStyleGroups(
 export function getRelatedBallotStyle(params: {
   ballotStyles: readonly BallotStyle[];
   sourceBallotStyleId: BallotStyleId;
-  targetBallotStyleLanguage: LanguageCode;
+  targetBallotStyleLanguage: string;
 }): Result<BallotStyle, string> {
   const { ballotStyles, sourceBallotStyleId, targetBallotStyleLanguage } =
     params;
@@ -113,7 +108,7 @@ export function getDefaultLanguageBallotStyles(
       let legacyBallotStyle: BallotStyle | undefined;
 
       for (const ballotStyle of ballotStyleGroup) {
-        if (deepEqual(ballotStyle.languages, [LanguageCode.ENGLISH])) {
+        if (deepEqual(ballotStyle.languages, ['en'])) {
           englishBallotStyle = ballotStyle;
         } else if (!ballotStyle.languages) {
           legacyBallotStyle = ballotStyle;

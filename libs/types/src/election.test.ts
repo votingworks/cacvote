@@ -42,7 +42,6 @@ import {
 } from './election';
 import { safeParse, safeParseJson, unsafeParse } from './generic';
 import {
-  normalizeVxf,
   testCdfBallotDefinition,
   testVxfElection,
 } from './cdf/ballot-definition/fixtures';
@@ -50,7 +49,7 @@ import {
   safeParseElection,
   safeParseElectionDefinition,
 } from './election_parsing';
-import { LanguageCode } from '.';
+import { DEFAULT_LANGUAGE_CODE } from './languages';
 
 test('can build votes from a candidate ID', () => {
   const contests = election.contests.filter((c) => c.id === 'CC');
@@ -531,7 +530,7 @@ test('BallotStyleSchema with ballot style languages', () => {
   const ballotStyle = {
     districts: ['district1', 'district2'],
     id: 'ballotStyle1_en_es-US',
-    languages: [LanguageCode.ENGLISH, LanguageCode.SPANISH],
+    languages: [DEFAULT_LANGUAGE_CODE, 'es'],
     precincts: ['precinct1', 'precinct2'],
   } as const;
 
@@ -553,11 +552,11 @@ test('getDisplayElectionHash', () => {
 
 test('safeParseElection converts CDF to VXF', () => {
   expect(safeParseElection(testCdfBallotDefinition).unsafeUnwrap()).toEqual(
-    normalizeVxf(testVxfElection)
+    testVxfElection
   );
   expect(
     safeParseElection(JSON.stringify(testCdfBallotDefinition)).unsafeUnwrap()
-  ).toEqual(normalizeVxf(testVxfElection));
+  ).toEqual(testVxfElection);
 });
 
 test('safeParseElection shows VXF and CDF parsing errors', () => {

@@ -1,5 +1,4 @@
 import { advanceTimersAndPromises, mockOf } from '@votingworks/test-utils';
-import { LanguageCode } from '@votingworks/types';
 import userEvent from '@testing-library/user-event';
 import { act, screen, waitFor } from '../../test/react_testing_library';
 import { newTestContext } from '../../test/test_context';
@@ -13,8 +12,6 @@ jest.mock('./play_audio_clips', (): typeof import('./play_audio_clips') => ({
   ...jest.requireActual('./play_audio_clips'),
   PlayAudioClips: jest.fn(),
 }));
-
-const { CHINESE_SIMPLIFIED, ENGLISH, SPANISH } = LanguageCode;
 
 function getMockClipOutput(clip: ClipParams) {
   return JSON.stringify(clip);
@@ -44,14 +41,14 @@ test('queues up audio for <UiString>s within focus/click event targets', async (
   const { getAudioContext, mockApiClient, render } = newTestContext();
 
   mockApiClient.getUiStringAudioIds.mockImplementation((input) => {
-    if (input.languageCode === ENGLISH) {
+    if (input.languageCode === 'en') {
       return Promise.resolve({
         buttonDone: ['abc'],
         titleBmdReviewScreen: ['cba'],
       });
     }
 
-    if (input.languageCode === SPANISH) {
+    if (input.languageCode === 'es') {
       return Promise.resolve({
         instructionsBmdReviewPageNavigation: ['def', '123'],
       });
@@ -65,7 +62,7 @@ test('queues up audio for <UiString>s within focus/click event targets', async (
       <div data-testid="clickTarget">
         <h1>{appStrings.titleBmdReviewScreen()}</h1>
         <AudioOnly>
-          <LanguageOverride languageCode={SPANISH}>
+          <LanguageOverride languageCode="es">
             {appStrings.instructionsBmdReviewPageNavigation()}
           </LanguageOverride>
         </AudioOnly>
@@ -85,13 +82,13 @@ test('queues up audio for <UiString>s within focus/click event targets', async (
   const mockClipOutputs = await screen.findAllByTestId('mockClipOutput');
   expect(mockClipOutputs).toHaveLength(3);
   expect(mockClipOutputs[0]).toHaveTextContent(
-    getMockClipOutput({ audioId: 'cba', languageCode: ENGLISH })
+    getMockClipOutput({ audioId: 'cba', languageCode: 'en' })
   );
   expect(mockClipOutputs[1]).toHaveTextContent(
-    getMockClipOutput({ audioId: 'def', languageCode: SPANISH })
+    getMockClipOutput({ audioId: 'def', languageCode: 'es' })
   );
   expect(mockClipOutputs[2]).toHaveTextContent(
-    getMockClipOutput({ audioId: '123', languageCode: SPANISH })
+    getMockClipOutput({ audioId: '123', languageCode: 'es' })
   );
 
   // Should trigger audio on focus events:
@@ -103,7 +100,7 @@ test('queues up audio for <UiString>s within focus/click event targets', async (
     expect(screen.queryAllByTestId('mockClipOutput')).toHaveLength(1)
   );
   expect(screen.getByTestId('mockClipOutput')).toHaveTextContent(
-    getMockClipOutput({ audioId: 'abc', languageCode: ENGLISH })
+    getMockClipOutput({ audioId: 'abc', languageCode: 'en' })
   );
 });
 
@@ -149,7 +146,7 @@ test('clears audio queue on blur', async () => {
 
   const mockClipOutput = await screen.findByTestId('mockClipOutput');
   expect(mockClipOutput).toHaveTextContent(
-    getMockClipOutput({ audioId: 'abc', languageCode: ENGLISH })
+    getMockClipOutput({ audioId: 'abc', languageCode: 'en' })
   );
 
   act(() => {
@@ -166,13 +163,13 @@ test('triggers replay when user language is changed', async () => {
     newTestContext();
 
   mockApiClient.getUiStringAudioIds.mockImplementation((input) => {
-    if (input.languageCode === CHINESE_SIMPLIFIED) {
+    if (input.languageCode === 'zh-Hans') {
       return Promise.resolve({
         titleBmdReviewScreen: ['abc'],
       });
     }
 
-    if (input.languageCode === SPANISH) {
+    if (input.languageCode === 'es') {
       return Promise.resolve({
         titleBmdReviewScreen: ['def'],
       });
@@ -188,20 +185,20 @@ test('triggers replay when user language is changed', async () => {
   const clickTarget = await screen.findByTestId('clickTarget');
   act(() => {
     getAudioContext()?.setIsEnabled(true);
-    getLanguageContext()?.setLanguage(CHINESE_SIMPLIFIED);
+    getLanguageContext()?.setLanguage('zh-Hans');
   });
   act(() => userEvent.click(clickTarget));
 
   const mockClipOutput = await screen.findByTestId('mockClipOutput');
   expect(mockClipOutput).toHaveTextContent(
-    getMockClipOutput({ audioId: 'abc', languageCode: CHINESE_SIMPLIFIED })
+    getMockClipOutput({ audioId: 'abc', languageCode: 'zh-Hans' })
   );
 
-  act(() => getLanguageContext()?.setLanguage(SPANISH));
+  act(() => getLanguageContext()?.setLanguage('es'));
 
   const updatedMockClipOutput = await screen.findByTestId('mockClipOutput');
   expect(updatedMockClipOutput).toHaveTextContent(
-    getMockClipOutput({ audioId: 'def', languageCode: SPANISH })
+    getMockClipOutput({ audioId: 'def', languageCode: 'es' })
   );
 });
 

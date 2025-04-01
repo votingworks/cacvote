@@ -1,7 +1,6 @@
 import {
   BallotDefinition,
   ElectionStringKey,
-  LanguageCode,
   testCdfBallotDefinition,
 } from '@votingworks/types';
 import { assertDefined } from '@votingworks/basics';
@@ -33,7 +32,7 @@ const tests: Record<ElectionStringKey, () => void> = {
     const uiStrings = extractCdfUiStrings(testCdfBallotDefinition);
 
     expect(
-      uiStrings[LanguageCode.ENGLISH]?.[ElectionStringKey.BALLOT_LANGUAGE]
+      uiStrings['en']?.[ElectionStringKey.BALLOT_LANGUAGE]
     ).toBeUndefined();
   },
 
@@ -70,7 +69,7 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.BALLOT_STYLE_ID]: {
           ballot_style_1: 'ballot_style_1',
           ballot_style_2: 'ballot_style_2',
@@ -92,8 +91,8 @@ const tests: Record<ElectionStringKey, () => void> = {
               ...assertDefined(originalCandidates[0]),
               '@id': 'candidate1',
               BallotName: buildInternationalizedText({
-                [LanguageCode.ENGLISH]: 'Pinky and The Brain',
-                [LanguageCode.SPANISH]: 'Pinky y Cerebro',
+                en: 'Pinky and The Brain',
+                'es-US': 'Pinky y Cerebro',
                 unsupported_lang: '🌸🧠',
               }),
             },
@@ -101,8 +100,8 @@ const tests: Record<ElectionStringKey, () => void> = {
               ...assertDefined(originalCandidates[1]),
               '@id': 'candidate2',
               BallotName: buildInternationalizedText({
-                [LanguageCode.ENGLISH]: 'Tom and Jerry',
-                [LanguageCode.SPANISH]: 'Tom y Jerry',
+                en: 'Tom and Jerry',
+                'es-US': 'Tom y Jerry',
                 unsupported_lang: '🐈🐁',
               }),
             },
@@ -112,13 +111,13 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.CANDIDATE_NAME]: {
           candidate1: 'Pinky and The Brain',
           candidate2: 'Tom and Jerry',
         },
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.CANDIDATE_NAME]: {
           candidate1: 'Pinky y Cerebro',
           candidate2: 'Tom y Jerry',
@@ -139,8 +138,8 @@ const tests: Record<ElectionStringKey, () => void> = {
               '@id': 'contest1',
               '@type': 'BallotDefinition.BallotMeasureContest',
               FullText: buildInternationalizedText({
-                [LanguageCode.ENGLISH]: 'Would you like apples or oranges?',
-                [LanguageCode.CHINESE_TRADITIONAL]: '你想要蘋果還是橘子？',
+                en: 'Would you like apples or oranges?',
+                'zh-Hans': '你想要蘋果還是橘子？',
                 unsupported_lang: '🍎🍊',
               }),
               ContestOption: [],
@@ -150,8 +149,8 @@ const tests: Record<ElectionStringKey, () => void> = {
               '@id': 'contest2',
               '@type': 'BallotDefinition.BallotMeasureContest',
               FullText: buildInternationalizedText({
-                [LanguageCode.ENGLISH]: 'Would you like olives or pickles?',
-                [LanguageCode.CHINESE_TRADITIONAL]: '您想要橄欖還是泡菜？',
+                en: 'Would you like olives or pickles?',
+                'zh-Hans': '您想要橄欖還是泡菜？',
                 unsupported_lang: '🫒🥒',
               }),
               ContestOption: [],
@@ -162,19 +161,23 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.CONTEST_DESCRIPTION]: {
           contest1: 'Would you like apples or oranges?',
           contest2: 'Would you like olives or pickles?',
         },
       }),
-      [LanguageCode.CHINESE_TRADITIONAL]: expect.objectContaining({
+      'zh-Hans': expect.objectContaining({
         [ElectionStringKey.CONTEST_DESCRIPTION]: {
           contest1: '你想要蘋果還是橘子？',
           contest2: '您想要橄欖還是泡菜？',
         },
       }),
     });
+  },
+
+  [ElectionStringKey.CONTEST_TERM]() {
+    throw new Error('Not implemented');
   },
 
   [ElectionStringKey.CONTEST_OPTION_LABEL]() {
@@ -188,15 +191,15 @@ const tests: Record<ElectionStringKey, () => void> = {
               ...assertDefined(ORIGINAL_ELECTION.Contest[0]),
               '@type': 'BallotDefinition.BallotMeasureContest',
               FullText: buildInternationalizedText({
-                [LanguageCode.ENGLISH]: 'Apples or Oranges?',
+                en: 'Apples or Oranges?',
               }),
               ContestOption: [
                 {
                   '@id': 'appleOrOrangeOptionApple',
                   '@type': 'BallotDefinition.BallotMeasureOption',
                   Selection: buildInternationalizedText({
-                    [LanguageCode.ENGLISH]: 'Apples',
-                    [LanguageCode.SPANISH]: 'Manzanas',
+                    en: 'Apples',
+                    'es-US': 'Manzanas',
                     unsupported_lang: '🍎',
                   }),
                 },
@@ -204,8 +207,8 @@ const tests: Record<ElectionStringKey, () => void> = {
                   '@id': 'appleOrOrangeOptionOrange',
                   '@type': 'BallotDefinition.BallotMeasureOption',
                   Selection: buildInternationalizedText({
-                    [LanguageCode.ENGLISH]: 'Oranges',
-                    [LanguageCode.SPANISH]: 'Naranjas',
+                    en: 'Oranges',
+                    'es-US': 'Naranjas',
                     unsupported_lang: '🍊',
                   }),
                 },
@@ -215,15 +218,15 @@ const tests: Record<ElectionStringKey, () => void> = {
               ...assertDefined(ORIGINAL_ELECTION.Contest[1]),
               '@type': 'BallotDefinition.BallotMeasureContest',
               FullText: buildInternationalizedText({
-                [LanguageCode.ENGLISH]: 'Apples or Bananas?',
+                en: 'Apples or Bananas?',
               }),
               ContestOption: [
                 {
                   '@id': 'appleOrBananaOptionApple',
                   '@type': 'BallotDefinition.BallotMeasureOption',
                   Selection: buildInternationalizedText({
-                    [LanguageCode.ENGLISH]: 'Apples',
-                    [LanguageCode.SPANISH]: 'Manzanas',
+                    en: 'Apples',
+                    'es-US': 'Manzanas',
                     unsupported_lang: '🍎',
                   }),
                 },
@@ -231,8 +234,8 @@ const tests: Record<ElectionStringKey, () => void> = {
                   '@id': 'appleOrBananaOptionBanana',
                   '@type': 'BallotDefinition.BallotMeasureOption',
                   Selection: buildInternationalizedText({
-                    [LanguageCode.ENGLISH]: 'Bananas',
-                    [LanguageCode.SPANISH]: 'Plátanos',
+                    en: 'Bananas',
+                    'es-US': 'Plátanos',
                     unsupported_lang: '🍌',
                   }),
                 },
@@ -244,7 +247,7 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.CONTEST_OPTION_LABEL]: {
           appleOrOrangeOptionApple: 'Apples',
           appleOrBananaOptionApple: 'Apples',
@@ -252,7 +255,7 @@ const tests: Record<ElectionStringKey, () => void> = {
           appleOrBananaOptionBanana: 'Bananas',
         },
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.CONTEST_OPTION_LABEL]: {
           appleOrOrangeOptionApple: 'Manzanas',
           appleOrBananaOptionApple: 'Manzanas',
@@ -274,8 +277,8 @@ const tests: Record<ElectionStringKey, () => void> = {
               ...assertDefined(ORIGINAL_ELECTION.Contest[0]),
               '@id': 'contest1',
               BallotTitle: buildInternationalizedText({
-                [LanguageCode.ENGLISH]: 'President',
-                [LanguageCode.CHINESE_TRADITIONAL]: '總統',
+                en: 'President',
+                'zh-Hans': '總統',
                 unsupported_lang: '🗳✅',
               }),
             },
@@ -283,8 +286,8 @@ const tests: Record<ElectionStringKey, () => void> = {
               ...assertDefined(ORIGINAL_ELECTION.Contest[1]),
               '@id': 'contest2',
               BallotTitle: buildInternationalizedText({
-                [LanguageCode.ENGLISH]: 'Mayor',
-                [LanguageCode.CHINESE_TRADITIONAL]: '市長',
+                en: 'Mayor',
+                'zh-Hans': '市長',
                 unsupported_lang: '🗳✅',
               }),
             },
@@ -294,13 +297,13 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.CONTEST_TITLE]: {
           contest1: 'President',
           contest2: 'Mayor',
         },
       }),
-      [LanguageCode.CHINESE_TRADITIONAL]: expect.objectContaining({
+      'zh-Hans': expect.objectContaining({
         [ElectionStringKey.CONTEST_TITLE]: {
           contest1: '總統',
           contest2: '市長',
@@ -317,8 +320,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           '@id': 'kingsCounty',
           '@type': 'BallotDefinition.ReportingUnit',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'Kings County',
-            [LanguageCode.SPANISH]: 'Condado de Kings',
+            en: 'Kings County',
+            'es-US': 'Condado de Kings',
             unsupported_lang: '🗽',
           }),
           Type: BallotDefinition.ReportingUnitType.County,
@@ -327,10 +330,10 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.COUNTY_NAME]: 'Kings County',
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.COUNTY_NAME]: 'Condado de Kings',
       }),
     });
@@ -344,8 +347,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           '@id': 'district9',
           '@type': 'BallotDefinition.ReportingUnit',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'District 9',
-            [LanguageCode.SPANISH]: 'Distrito 9',
+            en: 'District 9',
+            'es-US': 'Distrito 9',
             unsupported_lang: '👽',
           }),
           Type: BallotDefinition.ReportingUnitType.Other,
@@ -354,7 +357,7 @@ const tests: Record<ElectionStringKey, () => void> = {
           '@id': 'notADistrict',
           '@type': 'BallotDefinition.ReportingUnit',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'Not A District',
+            en: 'Not A District',
           }),
           Type: BallotDefinition.ReportingUnitType.Other,
         },
@@ -362,8 +365,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           '@id': 'district10',
           '@type': 'BallotDefinition.ReportingUnit',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'District 10',
-            [LanguageCode.SPANISH]: 'Distrito 10',
+            en: 'District 10',
+            'es-US': 'Distrito 10',
             unsupported_lang: '🛸',
           }),
           Type: BallotDefinition.ReportingUnitType.Other,
@@ -387,13 +390,13 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.DISTRICT_NAME]: {
           district9: 'District 9',
           district10: 'District 10',
         },
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.DISTRICT_NAME]: {
           district9: 'Distrito 9',
           district10: 'Distrito 10',
@@ -405,9 +408,7 @@ const tests: Record<ElectionStringKey, () => void> = {
   [ElectionStringKey.ELECTION_DATE]() {
     const uiStrings = extractCdfUiStrings(testCdfBallotDefinition);
 
-    expect(
-      uiStrings[LanguageCode.ENGLISH]?.[ElectionStringKey.ELECTION_DATE]
-    ).toBeUndefined();
+    expect(uiStrings['en']?.[ElectionStringKey.ELECTION_DATE]).toBeUndefined();
   },
 
   [ElectionStringKey.ELECTION_TITLE]() {
@@ -417,8 +418,8 @@ const tests: Record<ElectionStringKey, () => void> = {
         {
           ...ORIGINAL_ELECTION,
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'General Election',
-            [LanguageCode.SPANISH]: 'Elección General',
+            en: 'General Election',
+            'es-US': 'Elección General',
             unsupported_lang: '🗳✅',
           }),
         },
@@ -426,10 +427,10 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.ELECTION_TITLE]: 'General Election',
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.ELECTION_TITLE]: 'Elección General',
       }),
     });
@@ -443,8 +444,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           ...assertDefined(testCdfBallotDefinition.Party[0]),
           '@id': 'party1',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'Block Party',
-            [LanguageCode.SPANISH]: 'Fiesta En La Calle',
+            en: 'Block Party',
+            'es-US': 'Fiesta En La Calle',
             unsupported_lang: '🥳',
           }),
         },
@@ -452,8 +453,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           ...assertDefined(testCdfBallotDefinition.Party[1]),
           '@id': 'party2',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'Pool Party',
-            [LanguageCode.SPANISH]: 'Fiesta De Piscina',
+            en: 'Pool Party',
+            'es-US': 'Fiesta De Piscina',
             unsupported_lang: '🏖',
           }),
         },
@@ -461,13 +462,13 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.PARTY_FULL_NAME]: {
           party1: 'Block Party',
           party2: 'Pool Party',
         },
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.PARTY_FULL_NAME]: {
           party1: 'Fiesta En La Calle',
           party2: 'Fiesta De Piscina',
@@ -484,8 +485,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           ...assertDefined(testCdfBallotDefinition.Party[0]),
           '@id': 'party1',
           vxBallotLabel: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'Block Party',
-            [LanguageCode.SPANISH]: 'Fiesta En La Calle',
+            en: 'Block Party',
+            'es-US': 'Fiesta En La Calle',
             unsupported_lang: '🥳',
           }),
         },
@@ -493,8 +494,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           ...assertDefined(testCdfBallotDefinition.Party[1]),
           '@id': 'party2',
           vxBallotLabel: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'Pool Party',
-            [LanguageCode.SPANISH]: 'Fiesta De Piscina',
+            en: 'Pool Party',
+            'es-US': 'Fiesta De Piscina',
             unsupported_lang: '🏖',
           }),
         },
@@ -502,13 +503,13 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.PARTY_NAME]: {
           party1: 'Block Party',
           party2: 'Pool Party',
         },
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.PARTY_NAME]: {
           party1: 'Fiesta En La Calle',
           party2: 'Fiesta De Piscina',
@@ -525,8 +526,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           '@id': 'brooklyn99',
           '@type': 'BallotDefinition.ReportingUnit',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'Brooklyn Nine-Nine',
-            [LanguageCode.SPANISH]: 'Brooklyn Nueve-Nueve',
+            en: 'Brooklyn Nine-Nine',
+            'es-US': 'Brooklyn Nueve-Nueve',
             unsupported_lang: '9️⃣',
           }),
           Type: BallotDefinition.ReportingUnitType.Precinct,
@@ -535,8 +536,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           '@id': 'westRiver',
           '@type': 'BallotDefinition.ReportingUnit',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'West River',
-            [LanguageCode.SPANISH]: 'Río Oeste',
+            en: 'West River',
+            'es-US': 'Río Oeste',
             unsupported_lang: '⬅️',
           }),
           Type: BallotDefinition.ReportingUnitType.Precinct,
@@ -545,7 +546,7 @@ const tests: Record<ElectionStringKey, () => void> = {
           '@id': 'district9',
           '@type': 'BallotDefinition.ReportingUnit',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'District9',
+            en: 'District9',
           }),
           Type: BallotDefinition.ReportingUnitType.Other,
         },
@@ -553,13 +554,13 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.PRECINCT_NAME]: {
           brooklyn99: 'Brooklyn Nine-Nine',
           westRiver: 'West River',
         },
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.PRECINCT_NAME]: {
           brooklyn99: 'Brooklyn Nueve-Nueve',
           westRiver: 'Río Oeste',
@@ -576,8 +577,8 @@ const tests: Record<ElectionStringKey, () => void> = {
           '@id': 'newYork',
           '@type': 'BallotDefinition.ReportingUnit',
           Name: buildInternationalizedText({
-            [LanguageCode.ENGLISH]: 'New York',
-            [LanguageCode.SPANISH]: 'Nueva York',
+            en: 'New York',
+            'es-US': 'Nueva York',
             unsupported_lang: '🗽',
           }),
           Type: BallotDefinition.ReportingUnitType.State,
@@ -586,10 +587,10 @@ const tests: Record<ElectionStringKey, () => void> = {
     });
 
     expect(uiStrings).toEqual({
-      [LanguageCode.ENGLISH]: expect.objectContaining({
+      en: expect.objectContaining({
         [ElectionStringKey.STATE_NAME]: 'New York',
       }),
-      [LanguageCode.SPANISH]: expect.objectContaining({
+      'es-US': expect.objectContaining({
         [ElectionStringKey.STATE_NAME]: 'Nueva York',
       }),
     });
@@ -608,7 +609,7 @@ test('handles legacy numeric entity IDs', () => {
         '@id': '0',
         '@type': 'BallotDefinition.ReportingUnit',
         Name: buildInternationalizedText({
-          [LanguageCode.ENGLISH]: 'Brooklyn Nine-Nine',
+          en: 'Brooklyn Nine-Nine',
         }),
         Type: BallotDefinition.ReportingUnitType.Precinct,
       },
@@ -616,7 +617,7 @@ test('handles legacy numeric entity IDs', () => {
         '@id': '1',
         '@type': 'BallotDefinition.ReportingUnit',
         Name: buildInternationalizedText({
-          [LanguageCode.ENGLISH]: 'West River',
+          en: 'West River',
         }),
         Type: BallotDefinition.ReportingUnitType.Precinct,
       },
@@ -624,7 +625,7 @@ test('handles legacy numeric entity IDs', () => {
   });
 
   expect(uiStrings).toEqual({
-    [LanguageCode.ENGLISH]: expect.objectContaining({
+    en: expect.objectContaining({
       [ElectionStringKey.PRECINCT_NAME]: {
         '0': 'Brooklyn Nine-Nine',
         '1': 'West River',

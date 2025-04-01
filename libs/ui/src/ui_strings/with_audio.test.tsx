@@ -1,7 +1,5 @@
 import { act } from 'react-dom/test-utils';
 
-import { LanguageCode } from '@votingworks/types';
-
 import { UiStringAudioDataAttributeName, WithAudio } from './with_audio';
 import {
   render as renderWithoutContext,
@@ -11,8 +9,6 @@ import {
 import { newTestContext } from '../../test/test_context';
 import { LanguageOverride } from './language_override';
 
-const { ENGLISH, SPANISH } = LanguageCode;
-
 function expectI18nKeyAttribute(element: HTMLElement, i18nKey: string) {
   expect(element).toHaveAttribute(
     UiStringAudioDataAttributeName.I18N_KEY,
@@ -20,7 +16,7 @@ function expectI18nKeyAttribute(element: HTMLElement, i18nKey: string) {
   );
 }
 
-function expectLanguageAttribute(element: HTMLElement, code: LanguageCode) {
+function expectLanguageAttribute(element: HTMLElement, code: string) {
   expect(element).toHaveAttribute(
     UiStringAudioDataAttributeName.LANGUAGE_CODE,
     code
@@ -45,7 +41,7 @@ test('uses language code from closest language context', async () => {
   render(
     <div>
       <WithAudio i18nKey="contestTitle.contest1">Mayor</WithAudio>
-      <LanguageOverride languageCode={SPANISH}>
+      <LanguageOverride languageCode="es">
         <WithAudio i18nKey="contestTitle.contest2">President</WithAudio>
       </LanguageOverride>
     </div>
@@ -53,18 +49,18 @@ test('uses language code from closest language context', async () => {
 
   const mayor = await screen.findByText('Mayor');
   expectI18nKeyAttribute(mayor, 'contestTitle.contest1');
-  expectLanguageAttribute(mayor, ENGLISH);
+  expectLanguageAttribute(mayor, 'en');
 
   const president = screen.getByText('President');
   expectI18nKeyAttribute(president, 'contestTitle.contest2');
-  expectLanguageAttribute(president, SPANISH);
+  expectLanguageAttribute(president, 'es');
 });
 
 test('pre-fetches audio clips when within audio context', async () => {
   const { getLanguageContext, mockApiClient, render } = newTestContext();
 
   mockApiClient.getUiStringAudioIds.mockImplementation((input) => {
-    if (input.languageCode === SPANISH) {
+    if (input.languageCode === 'es') {
       return Promise.resolve({
         contestTitle: {
           contest1: ['foo_es', 'bar_es'],
@@ -80,11 +76,11 @@ test('pre-fetches audio clips when within audio context', async () => {
 
   await screen.findByText('Mayor');
 
-  act(() => getLanguageContext()?.setLanguage(SPANISH));
+  act(() => getLanguageContext()?.setLanguage('es'));
 
   await waitFor(() =>
     expect(mockApiClient.getAudioClips).toHaveBeenLastCalledWith({
-      languageCode: LanguageCode.SPANISH,
+      languageCode: 'es',
       audioIds: ['foo_es', 'bar_es'],
     })
   );

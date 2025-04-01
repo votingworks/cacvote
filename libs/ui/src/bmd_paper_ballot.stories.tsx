@@ -3,7 +3,6 @@ import { Meta } from '@storybook/react';
 import {
   Election,
   ElectionStringKey,
-  LanguageCode,
   UiStringsPackage,
   YesNoContest,
   getContests,
@@ -30,7 +29,7 @@ import {
 } from './bmd_paper_ballot_test_utils';
 import { TouchscreenPalette } from './themes/make_theme';
 
-const ballotLanguages = [LanguageCode.ENGLISH, LanguageCode.CHINESE_SIMPLIFIED];
+const ballotLanguages = ['en', 'zh-Hans'];
 const election: Election = {
   ...electionGeneral,
   ballotStyles: electionGeneral.ballotStyles.flatMap((ballotStyle, i) =>
@@ -46,7 +45,7 @@ const election: Election = {
 };
 
 const TEST_UI_STRINGS: UiStringsPackage = {
-  [LanguageCode.CHINESE_SIMPLIFIED]: {
+  ['zh-Hans']: {
     [ElectionStringKey.COUNTY_NAME]: {
       franklin: '富兰克林县',
     },

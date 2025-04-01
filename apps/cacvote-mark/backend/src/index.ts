@@ -14,7 +14,7 @@ export type { AuthStatus } from './types/auth';
 export type { JurisdictionCode, Uuid } from './cacvote-server/types';
 
 const logger = new Logger(LogSource.VxMarkBackend, () =>
-  Promise.resolve('system')
+  Promise.resolve('system' as const)
 );
 
 function resolveWorkspace(storeClass: typeof Store): Workspace {

@@ -1,31 +1,28 @@
+import { DateWithoutTime } from '@votingworks/basics';
 import {
   BallotDefinition,
+  BallotDefinitionVersion,
+  BallotSideType,
   ElectionType,
   IdentifierType,
-  ReportingUnitType,
-  BallotDefinitionVersion,
   MeasurementUnitType,
   OrientationType,
+  ReportingUnitType,
   SelectionCaptureMethod,
-  BallotSideType,
 } from '.';
-import { LanguageCode } from '../../language_code';
-import { BallotPaperSize, DistrictId, Election, PartyId } from '../../election';
-
-/**
- * For testing a round trip from VXF -> CDF -> VXF, we need to normalize a few
- * less strict parts of VXF to match stricter CDF constraints.
- */
-export function normalizeVxf(vxfElection: Election): Election {
-  const dateWithoutTime = new Date(vxfElection.date.split('T')[0]);
-  const isoDateString = `${dateWithoutTime.toISOString().split('.')[0]}Z`;
-  return {
-    ...vxfElection,
-    date: isoDateString,
-  };
-}
+import {
+  BallotPaperSize,
+  BallotStyleGroupId,
+  BallotStyleId,
+  DistrictId,
+  Election,
+  ElectionId,
+  PartyId,
+} from '../../election';
+import { DEFAULT_LANGUAGE_CODE } from '../../languages';
 
 export const testVxfElection: Election = {
+  id: 'election-1' as ElectionId,
   type: 'general',
   title: 'Lincoln Municipal General Election',
   state: 'State of Hamilton',
@@ -33,7 +30,7 @@ export const testVxfElection: Election = {
     id: 'county-1',
     name: 'Franklin County',
   },
-  date: '2021-06-06T00:00:00Z',
+  date: new DateWithoutTime('2021-06-06'),
   seal: '<svg>test seal</svg>',
   parties: [
     {
@@ -124,22 +121,32 @@ export const testVxfElection: Election = {
   ballotStyles: [
     // Simulate a split precinct with two ballot styles for the same precinct
     {
-      id: '1_en',
+      id: '1_en' as BallotStyleId,
+      groupId: '1' as BallotStyleGroupId,
       precincts: ['precinct-1'],
       districts: ['district-1' as DistrictId],
-      languages: [LanguageCode.ENGLISH],
+      languages: ['en'],
     },
     {
-      id: '2_en',
+      id: '2_en' as BallotStyleId,
+      groupId: '2' as BallotStyleGroupId,
       precincts: ['precinct-1'],
       districts: ['district-2' as DistrictId],
-      languages: [LanguageCode.ENGLISH],
+      languages: ['en'],
     },
     {
-      id: '3_en_es-US',
+      id: '3_en' as BallotStyleId,
+      groupId: '3' as BallotStyleGroupId,
       precincts: ['precinct-2'],
       districts: ['district-1' as DistrictId, 'district-2' as DistrictId],
-      languages: [LanguageCode.ENGLISH, LanguageCode.SPANISH],
+      languages: ['en'],
+    },
+    {
+      id: '3_es-US' as BallotStyleId,
+      groupId: '3' as BallotStyleGroupId,
+      precincts: ['precinct-2'],
+      districts: ['district-1' as DistrictId, 'district-2' as DistrictId],
+      languages: ['es-US'],
     },
   ],
   ballotLayout: {
@@ -333,6 +340,13 @@ export const testCdfBallotDefinition: BallotDefinition = {
       ElectionScopeId: 'state-of-hamilton',
       StartDate: '2021-06-06',
       EndDate: '2021-06-06',
+      ExternalIdentifier: [
+        {
+          '@type': 'BallotDefinition.ExternalIdentifier',
+          Type: IdentifierType.Other,
+          Value: 'election-1',
+        },
+      ],
       Type: ElectionType.General,
       Name: {
         '@type': 'BallotDefinition.InternationalizedText',
@@ -651,7 +665,7 @@ export const testCdfBallotDefinition: BallotDefinition = {
               Value: '1_en',
             },
           ],
-          Language: [LanguageCode.ENGLISH],
+          Language: [DEFAULT_LANGUAGE_CODE],
         },
         {
           '@type': 'BallotDefinition.BallotStyle',
@@ -699,7 +713,7 @@ export const testCdfBallotDefinition: BallotDefinition = {
               Value: '2_en',
             },
           ],
-          Language: [LanguageCode.ENGLISH],
+          Language: [DEFAULT_LANGUAGE_CODE],
         },
         {
           '@type': 'BallotDefinition.BallotStyle',
@@ -874,7 +888,7 @@ export const testCdfBallotDefinition: BallotDefinition = {
               Value: '3_en_es-US',
             },
           ],
-          Language: [LanguageCode.ENGLISH, LanguageCode.SPANISH],
+          Language: [DEFAULT_LANGUAGE_CODE, 'es'],
         },
       ],
     },

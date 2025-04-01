@@ -3,8 +3,6 @@
 import { Optional } from '@votingworks/basics';
 import { Client as DbClient } from '@votingworks/db';
 import {
-  LanguageCode,
-  LanguageCodeSchema,
   safeParse,
   safeParseJson,
   UiStringAudioClip,
@@ -18,28 +16,28 @@ import {
 
 /** Store interface for UI String API endpoints. */
 export interface UiStringsStore {
-  addLanguage(code: LanguageCode): void;
+  addLanguage(code: string): void;
 
-  getLanguages(): LanguageCode[];
+  getLanguages(): string[];
 
-  getUiStrings(languageCode: LanguageCode): UiStringTranslations | null;
+  getUiStrings(languageCode: string): UiStringTranslations | null;
 
   getAudioClips(input: {
-    languageCode: LanguageCode;
+    languageCode: string;
     audioIds: string[];
   }): UiStringAudioClips;
 
-  getUiStringAudioIds(languageCode: LanguageCode): UiStringAudioIds | null;
+  getUiStringAudioIds(languageCode: string): UiStringAudioIds | null;
 
   setAudioClip(input: UiStringAudioClip): void;
 
   setUiStringAudioIds(input: {
-    languageCode: LanguageCode;
+    languageCode: string;
     data: UiStringAudioIds;
   }): void;
 
   setUiStrings(input: {
-    languageCode: LanguageCode;
+    languageCode: string;
     data: UiStringTranslations;
   }): void;
 }
@@ -47,7 +45,7 @@ export interface UiStringsStore {
 /** Creates a shareable implementation of the {@link UiStringsStore}. */
 export function createUiStringStore(dbClient: DbClient): UiStringsStore {
   return {
-    addLanguage(languageCode: LanguageCode): void {
+    addLanguage(languageCode: string): void {
       dbClient.run(
         'insert or ignore into languages (code) values (?)',
         languageCode
@@ -77,14 +75,12 @@ export function createUiStringStore(dbClient: DbClient): UiStringsStore {
       );
     },
 
-    getLanguages(): LanguageCode[] {
+    getLanguages(): string[] {
       const result = dbClient.all('select code from languages') as Array<{
         code: string;
       }>;
 
-      return result.map((row) =>
-        safeParse(LanguageCodeSchema, row.code).unsafeUnwrap()
-      );
+      return result.map((row) => row.code);
     },
 
     getUiStrings(languageCode) {

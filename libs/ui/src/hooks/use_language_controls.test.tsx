@@ -1,14 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { LanguageCode } from '@votingworks/types';
-
 import { useLanguageControls } from './use_language_controls';
 import { createUiStringsApi } from './ui_strings_api';
 import { useCurrentLanguage } from './use_current_language';
 import { UiStringsContextProvider } from '../ui_strings';
 import { act, renderHook, waitFor } from '../../test/react_testing_library';
-
-const { ENGLISH, SPANISH } = LanguageCode;
 
 test('returns external-facing language context API', async () => {
   const mockApi = createUiStringsApi(() => ({
@@ -42,13 +38,13 @@ test('returns external-facing language context API', async () => {
 
   await waitFor(() => expect(result.current).toBeTruthy());
 
-  expect(result.current.currentLanguage).toEqual(ENGLISH);
+  expect(result.current.currentLanguage).toEqual('en');
 
-  act(() => result.current.controls.setLanguage(SPANISH));
-  expect(result.current.currentLanguage).toEqual(SPANISH);
+  act(() => result.current.controls.setLanguage('es'));
+  expect(result.current.currentLanguage).toEqual('es');
 
   act(() => result.current.controls.reset());
-  expect(result.current.currentLanguage).toEqual(ENGLISH);
+  expect(result.current.currentLanguage).toEqual('en');
 });
 
 test('returns no-op API when no language context is present', () => {
@@ -57,11 +53,11 @@ test('returns no-op API when no language context is present', () => {
     controls: useLanguageControls(),
   }));
 
-  expect(result.current.currentLanguage).toEqual(ENGLISH);
+  expect(result.current.currentLanguage).toEqual('en');
 
-  act(() => result.current.controls.setLanguage(SPANISH));
-  expect(result.current.currentLanguage).toEqual(ENGLISH);
+  act(() => result.current.controls.setLanguage('es'));
+  expect(result.current.currentLanguage).toEqual('en');
 
   act(() => result.current.controls.reset());
-  expect(result.current.currentLanguage).toEqual(ENGLISH);
+  expect(result.current.currentLanguage).toEqual('en');
 });

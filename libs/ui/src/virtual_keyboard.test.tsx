@@ -6,7 +6,6 @@ import {
   mockOf,
 } from '@votingworks/test-utils';
 import { assertDefined } from '@votingworks/basics';
-import { LanguageCode } from '@votingworks/types';
 
 import { act, render, screen, waitFor } from '../test/react_testing_library';
 import { US_ENGLISH_ALNUM_KEYMAP, VirtualKeyboard } from './virtual_keyboard';
@@ -22,9 +21,7 @@ jest.mock(
   })
 );
 
-const { ENGLISH, SPANISH } = LanguageCode;
-
-function getMockAudioOnlyTextPrefix(languageCode: LanguageCode) {
+function getMockAudioOnlyTextPrefix(languageCode: string) {
   return `[AudioOnly] [${languageCode}]`;
 }
 
@@ -59,15 +56,15 @@ test('fires key events', async () => {
   await waitFor(() => expect(getLanguageContext()).toBeDefined());
 
   const { setLanguage } = assertDefined(getLanguageContext());
-  act(() => setLanguage(SPANISH));
+  act(() => setLanguage('es'));
 
   const keysSpokenInVoterLanguage = new Set([',', '.', "'", '"', '-']);
 
   for (const row of US_ENGLISH_ALNUM_KEYMAP.rows) {
     for (const key of row) {
       const expectedLanguageCode = keysSpokenInVoterLanguage.has(key.value)
-        ? SPANISH
-        : ENGLISH;
+        ? 'es'
+        : 'en';
 
       const expectedButtonContent = `${key.value}${getMockAudioOnlyTextPrefix(
         expectedLanguageCode
@@ -85,7 +82,7 @@ test('fires key events', async () => {
   }
 
   const spaceBar = screen.getButton(
-    `space ${getMockAudioOnlyTextPrefix(SPANISH)} space`
+    `space ${getMockAudioOnlyTextPrefix('es')} space`
   );
   userEvent.click(spaceBar);
   expect(onKeyPress).lastCalledWith(' ', buttonPressEventMatcher());
@@ -137,12 +134,12 @@ test('custom keymap', () => {
   );
 
   userEvent.click(
-    screen.getButton(`😂 ${getMockAudioOnlyTextPrefix(ENGLISH)} lol`)
+    screen.getButton(`😂 ${getMockAudioOnlyTextPrefix('en')} lol`)
   );
   expect(onKeyPress).lastCalledWith('😂', buttonPressEventMatcher());
 
   userEvent.click(
-    screen.getButton(`magic ${getMockAudioOnlyTextPrefix(ENGLISH)} magic`)
+    screen.getButton(`magic ${getMockAudioOnlyTextPrefix('en')} magic`)
   );
   expect(onKeyPress).lastCalledWith('✨', buttonPressEventMatcher());
 });

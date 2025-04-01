@@ -1,4 +1,3 @@
-import { LanguageCode } from '@votingworks/types';
 import * as format from './format';
 
 import { countPhrase } from './format';
@@ -17,10 +16,10 @@ test('formats counts properly', () => {
   expect(format.count(-3141)).toEqual('-3,141');
   expect(format.count(-1000000)).toEqual('-1,000,000');
   expect(format.count(-3141098210928)).toEqual('-3,141,098,210,928');
-  expect(format.count(40240, LanguageCode.ENGLISH)).toEqual('40,240');
-  expect(format.count(40240, LanguageCode.SPANISH)).toEqual('40,240');
+  expect(format.count(40240, 'en')).toEqual('40,240');
+  expect(format.count(40240, 'es-US')).toEqual('40,240');
   // Force-cast a non-Vx language to test locale-specific formatting:
-  expect(format.count(40240, 'es-ES' as LanguageCode)).toEqual('40.240');
+  expect(format.count(40240, 'es-ES')).toEqual('40.240');
 });
 
 test('formats locale long date and time properly', () => {
@@ -40,22 +39,13 @@ test('formats locale long date properly', () => {
     'April 14, 2020'
   );
   expect(
-    format.localeLongDate(
-      new Date(2020, 3, 14, 1, 15, 9, 26),
-      LanguageCode.ENGLISH
-    )
+    format.localeLongDate(new Date(2020, 3, 14, 1, 15, 9, 26), 'en')
   ).toEqual('April 14, 2020');
   expect(
-    format.localeLongDate(
-      new Date(2020, 3, 14, 1, 15, 9, 26),
-      LanguageCode.SPANISH
-    )
+    format.localeLongDate(new Date(2020, 3, 14, 1, 15, 9, 26), 'es-US')
   ).toEqual('14 de abril de 2020');
   expect(
-    format.localeLongDate(
-      new Date(2020, 3, 14, 1, 15, 9, 26),
-      LanguageCode.CHINESE_TRADITIONAL
-    )
+    format.localeLongDate(new Date(2020, 3, 14, 1, 15, 9, 26), 'zh-Hans')
   ).toEqual('2020年4月14日');
 });
 
@@ -107,7 +97,7 @@ test('countPhrase alternate locale', () => {
     value: 1000,
     one: '1 item',
     many: '{{count}} 物品',
-    locale: LanguageCode.CHINESE_SIMPLIFIED,
+    locale: 'zh-Hans',
   });
   expect(result).toEqual('1,000 物品');
 });
@@ -123,40 +113,24 @@ test('countPhrase avoids injection of prototype properties', () => {
 });
 
 describe('languageDisplayName()', () => {
-  const { ENGLISH, SPANISH } = LanguageCode;
-
   test('happy paths', () => {
-    expect(format.languageDisplayName({ languageCode: SPANISH })).toMatch(
+    expect(format.languageDisplayName({ languageCode: 'es-US' })).toMatch(
       /^español \(ee\. uu\.\)/i
     );
 
     expect(
       format.languageDisplayName({
-        displayLanguageCode: ENGLISH,
-        languageCode: SPANISH,
+        displayLanguageCode: 'en',
+        languageCode: 'es-US',
       })
     ).toMatch(/^spanish \(us\)/i);
 
     expect(
       format.languageDisplayName({
-        displayLanguageCode: ENGLISH,
-        languageCode: SPANISH,
+        displayLanguageCode: 'en',
+        languageCode: 'es-US',
         style: 'long',
       })
     ).toMatch(/^spanish \(united states\)/i);
-  });
-
-  test('is compatible with all Vx languages', () => {
-    for (const languageCode of Object.values(LanguageCode) as LanguageCode[]) {
-      expect(() => format.languageDisplayName({ languageCode })).not.toThrow();
-    }
-  });
-
-  test('throws for unsupported languages', () => {
-    expect(() =>
-      format.languageDisplayName({
-        languageCode: 'not-a-language' as LanguageCode,
-      })
-    ).toThrow();
   });
 });

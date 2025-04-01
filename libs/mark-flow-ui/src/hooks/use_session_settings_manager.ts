@@ -9,11 +9,7 @@ import {
   useCurrentTheme,
   useLanguageControls,
 } from '@votingworks/ui';
-import {
-  InsertedSmartCardAuth,
-  LanguageCode,
-  VotesDict,
-} from '@votingworks/types';
+import { InsertedSmartCardAuth, VotesDict } from '@votingworks/types';
 
 export interface UseSessionSettingsManagerParams {
   authStatus: InsertedSmartCardAuth.AuthStatus;
@@ -21,7 +17,7 @@ export interface UseSessionSettingsManagerParams {
 }
 
 interface VoterSettings {
-  language: LanguageCode;
+  language: string;
   theme: DefaultTheme;
 }
 

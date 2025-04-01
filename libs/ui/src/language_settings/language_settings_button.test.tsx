@@ -1,23 +1,17 @@
-import {
-  ElectionStringKey,
-  LanguageCode,
-  UiStringsPackage,
-} from '@votingworks/types';
+import { ElectionStringKey, UiStringsPackage } from '@votingworks/types';
 import userEvent from '@testing-library/user-event';
 import { newTestContext } from '../../test/test_context';
 import { LanguageSettingsButton } from './language_settings_button';
 import { act, screen } from '../../test/react_testing_library';
 
-const { ENGLISH, SPANISH } = LanguageCode;
-
 test('displays current language', async () => {
   const { getLanguageContext, mockApiClient, render } = newTestContext();
 
-  mockApiClient.getAvailableLanguages.mockResolvedValue([ENGLISH, SPANISH]);
+  mockApiClient.getAvailableLanguages.mockResolvedValue(['en', 'es']);
 
   const testTranslations: UiStringsPackage = {
-    [ENGLISH]: { [ElectionStringKey.BALLOT_LANGUAGE]: 'English' },
-    [SPANISH]: { [ElectionStringKey.BALLOT_LANGUAGE]: 'Español' },
+    ['en']: { [ElectionStringKey.BALLOT_LANGUAGE]: 'English' },
+    ['es']: { [ElectionStringKey.BALLOT_LANGUAGE]: 'Español' },
   };
   mockApiClient.getUiStrings.mockImplementation((input) =>
     Promise.resolve(testTranslations[input.languageCode] || null)
@@ -26,14 +20,14 @@ test('displays current language', async () => {
   render(<LanguageSettingsButton onPress={jest.fn()} />);
   await screen.findButton('English');
 
-  act(() => getLanguageContext()?.setLanguage(SPANISH));
+  act(() => getLanguageContext()?.setLanguage('es'));
   await screen.findButton('Español');
 });
 
 test('fires onPress event', async () => {
   const { mockApiClient, render } = newTestContext();
 
-  mockApiClient.getAvailableLanguages.mockResolvedValue([ENGLISH, SPANISH]);
+  mockApiClient.getAvailableLanguages.mockResolvedValue(['en', 'es']);
 
   const onPress = jest.fn();
 
@@ -47,7 +41,7 @@ test('fires onPress event', async () => {
 test('not rendered in single-language contexts', async () => {
   const { mockApiClient, render } = newTestContext();
 
-  mockApiClient.getAvailableLanguages.mockResolvedValue([ENGLISH]);
+  mockApiClient.getAvailableLanguages.mockResolvedValue(['en']);
 
   render(
     <div>

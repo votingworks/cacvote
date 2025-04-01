@@ -1,4 +1,3 @@
-import { LanguageCode } from '@votingworks/types';
 import { act } from 'react-dom/test-utils';
 import { waitFor } from '../../test/react_testing_library';
 import { newTestContext } from '../../test/test_context';
@@ -13,10 +12,7 @@ const { getLanguageContext, mockApiClient, render } = newTestContext();
 beforeEach(() => {
   jest.resetAllMocks();
 
-  mockApiClient.getAvailableLanguages.mockResolvedValueOnce([
-    LanguageCode.ENGLISH,
-    LanguageCode.CHINESE_TRADITIONAL,
-  ]);
+  mockApiClient.getAvailableLanguages.mockResolvedValueOnce(['en', 'zh-Hant']);
 
   mockApiClient.getUiStrings.mockImplementation(({ languageCode }) =>
     Promise.resolve(TEST_UI_STRING_TRANSLATIONS[languageCode] || null)
@@ -27,10 +23,7 @@ test('availableLanguages', async () => {
   render(<div>foo</div>);
 
   await waitFor(() => expect(getLanguageContext()).toBeDefined());
-  expect(getLanguageContext()?.availableLanguages).toEqual([
-    LanguageCode.ENGLISH,
-    LanguageCode.CHINESE_TRADITIONAL,
-  ]);
+  expect(getLanguageContext()?.availableLanguages).toEqual(['en', 'zh-Hant']);
 });
 
 test('setLanguage', async () => {
@@ -48,19 +41,15 @@ test('setLanguage', async () => {
     )
   ).toEqual(TEST_UI_STRING_TRANSLATIONS[DEFAULT_LANGUAGE_CODE]);
 
-  act(
-    () => getLanguageContext()?.setLanguage(LanguageCode.CHINESE_TRADITIONAL)
-  );
+  act(() => getLanguageContext()?.setLanguage('zh-Hant'));
 
   await waitFor(() =>
-    expect(getLanguageContext()?.currentLanguageCode).toEqual(
-      LanguageCode.CHINESE_TRADITIONAL
-    )
+    expect(getLanguageContext()?.currentLanguageCode).toEqual('zh-Hant')
   );
   expect(
     getLanguageContext()?.i18next.getResourceBundle(
-      LanguageCode.CHINESE_TRADITIONAL,
+      'zh-Hant',
       DEFAULT_I18NEXT_NAMESPACE
     )
-  ).toEqual(TEST_UI_STRING_TRANSLATIONS[LanguageCode.CHINESE_TRADITIONAL]);
+  ).toEqual(TEST_UI_STRING_TRANSLATIONS['zh-Hant']);
 });

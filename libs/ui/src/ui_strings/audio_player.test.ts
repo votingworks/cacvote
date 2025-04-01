@@ -6,7 +6,7 @@ import type {
   ToneAudioBuffer,
 } from 'tone';
 
-import { LanguageCode, UiStringAudioClip } from '@votingworks/types';
+import { UiStringAudioClip } from '@votingworks/types';
 
 import { waitFor } from '../../test/react_testing_library';
 import {
@@ -33,8 +33,6 @@ jest.mock('tone', () => ({
   GrainPlayer: mockToneJsGrainPlayerConstructor,
   setContext: mockToneJsSetContext,
 }));
-
-const { ENGLISH } = LanguageCode;
 
 function newMockWebAudioContext() {
   return {
@@ -125,7 +123,7 @@ test('lazy-initializes ToneJS only once', async () => {
   mockToneJsGetContext.mockReturnValue(mockToneJsContext);
 
   await newAudioPlayer({
-    clip: { dataBase64: '', id: 'clip-1', languageCode: ENGLISH },
+    clip: { dataBase64: '', id: 'clip-1', languageCode: 'en' },
     webAudioContext: mockWebAudioContext,
   });
 
@@ -144,7 +142,7 @@ test('lazy-initializes ToneJS only once', async () => {
   mockToneJsSetContext.mockReset();
 
   await newAudioPlayer({
-    clip: { dataBase64: '', id: 'clip-2', languageCode: ENGLISH },
+    clip: { dataBase64: '', id: 'clip-2', languageCode: 'en' },
     webAudioContext: mockWebAudioContext,
   });
 
@@ -156,7 +154,7 @@ test('trims beginning silence', async () => {
   const testClip: UiStringAudioClip = {
     dataBase64: 'AAAB',
     id: 'clip-1',
-    languageCode: ENGLISH,
+    languageCode: 'en',
   };
 
   const mockWebAudioContext = newMockWebAudioContext();
@@ -214,7 +212,7 @@ test('play()', async () => {
   mockToneJsGrainPlayerConstructor.mockReturnValue(mockGrainPlayer);
 
   const player = await newAudioPlayer({
-    clip: { dataBase64: 'AAAB', id: 'clip-1', languageCode: ENGLISH },
+    clip: { dataBase64: 'AAAB', id: 'clip-1', languageCode: 'en' },
     webAudioContext: mockWebAudioContext,
   });
 
@@ -258,7 +256,7 @@ test('stop()', async () => {
   mockToneJsGrainPlayerConstructor.mockReturnValue(mockGrainPlayer);
 
   const player = await newAudioPlayer({
-    clip: { dataBase64: 'AAAB', id: 'clip-1', languageCode: ENGLISH },
+    clip: { dataBase64: 'AAAB', id: 'clip-1', languageCode: 'en' },
     webAudioContext: mockWebAudioContext,
   });
 
@@ -291,7 +289,7 @@ test('setVolume()', async () => {
   mockToneJsGrainPlayerConstructor.mockReturnValue(mockGrainPlayer);
 
   const player = await newAudioPlayer({
-    clip: { dataBase64: 'AAAB', id: 'clip-1', languageCode: ENGLISH },
+    clip: { dataBase64: 'AAAB', id: 'clip-1', languageCode: 'en' },
     webAudioContext: mockWebAudioContext,
   });
 
@@ -317,7 +315,7 @@ test('setPlaybackRate()', async () => {
   mockToneJsGrainPlayerConstructor.mockReturnValue(mockGrainPlayer);
 
   const player = await newAudioPlayer({
-    clip: { dataBase64: 'AAAB', id: 'clip-1', languageCode: ENGLISH },
+    clip: { dataBase64: 'AAAB', id: 'clip-1', languageCode: 'en' },
     webAudioContext: mockWebAudioContext,
   });
 
