@@ -8,6 +8,7 @@ import {
 import { start } from './server';
 import { createWorkspace } from './workspace';
 import { buildMockAuth } from '../test/app_helpers';
+import { Store } from './store';
 
 let workdir: string;
 
@@ -38,7 +39,7 @@ test('can start server', async () => {
     auth,
     logger,
     port: 0,
-    workspace: createWorkspace(workdir),
+    workspace: createWorkspace(workdir, Store),
   });
   expect(server.listening).toBeTruthy();
   server.close();

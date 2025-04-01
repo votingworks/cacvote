@@ -7,6 +7,7 @@ import {
 import { Buffer } from 'buffer';
 import { readFile } from 'fs/promises';
 import * as mailLabel from '../../mail-label';
+import { Store } from '../../store';
 import { resolveWorkspace } from '../../workspace';
 
 const useMockPrinterByDefault = isFeatureFlagEnabled(
@@ -32,8 +33,10 @@ function usage(out: NodeJS.WriteStream) {
 export async function main(
   argv: readonly string[]
 ): Promise<Result<number, Error>> {
-  const logger = new Logger(LogSource.System, () => Promise.resolve('system'));
-  const workspace = await resolveWorkspace(logger);
+  const logger = new Logger(LogSource.System, () =>
+    Promise.resolve('system' as const)
+  );
+  const workspace = await resolveWorkspace(logger, Store);
   let printer: mailLabel.printing.LabelPrinterInterface;
   let inputPath: string | undefined;
 

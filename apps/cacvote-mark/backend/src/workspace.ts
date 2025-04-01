@@ -1,8 +1,8 @@
+import { LogEventId, Logger } from '@votingworks/logging';
 import { ensureDirSync } from 'fs-extra';
 import { join, resolve } from 'path';
-import { LogEventId, Logger } from '@votingworks/logging';
-import { Store } from './store';
 import { CACVOTE_MARK_WORKSPACE } from './globals';
+import { Store } from './store';
 
 export interface Workspace {
   /**
@@ -22,12 +22,15 @@ export interface Workspace {
   reset(): void;
 }
 
-export function createWorkspace(root: string): Workspace {
+export function createWorkspace(
+  root: string,
+  storeClass: typeof Store
+): Workspace {
   const resolvedRoot = resolve(root);
   ensureDirSync(resolvedRoot);
 
   const dbPath = join(resolvedRoot, 'cacvote-mark.db');
-  const store = Store.fileStore(dbPath);
+  const store = storeClass.fileStore(dbPath);
 
   return {
     path: resolvedRoot,
@@ -38,10 +41,13 @@ export function createWorkspace(root: string): Workspace {
   };
 }
 
-export async function resolveWorkspace(logger?: Logger): Promise<Workspace> {
+export async function resolveWorkspace(
+  logger: Logger,
+  storeClass: typeof Store
+): Promise<Workspace> {
   const workspacePath = CACVOTE_MARK_WORKSPACE;
   if (!workspacePath) {
-    await logger?.log(LogEventId.WorkspaceConfigurationMessage, 'system', {
+    await logger.log(LogEventId.WorkspaceConfigurationMessage, 'system', {
       message:
         'workspace path could not be determined; pass a workspace or run with MARK_WORKSPACE',
       disposition: 'failure',
@@ -50,5 +56,5 @@ export async function resolveWorkspace(logger?: Logger): Promise<Workspace> {
       'workspace path could not be determined; pass a workspace or run with MARK_WORKSPACE'
     );
   }
-  return createWorkspace(workspacePath);
+  return createWorkspace(workspacePath, storeClass);
 }

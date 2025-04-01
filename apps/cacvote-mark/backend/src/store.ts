@@ -1,5 +1,5 @@
 import {
-  IteratorPlus,
+  AsyncIteratorPlus,
   Optional,
   Result,
   assert,
@@ -35,7 +35,7 @@ const SchemaPath = join(__dirname, '../schema.sql');
  * Manages a data store for imported election definition and system settings
  */
 export class Store {
-  private constructor(private readonly client: DbClient) {}
+  protected constructor(private readonly client: DbClient) {}
 
   getDbPath(): string {
     return this.client.getDatabasePath();
@@ -45,14 +45,14 @@ export class Store {
    * Builds and returns a new store whose data is kept in memory.
    */
   static memoryStore(): Store {
-    return new Store(DbClient.memoryClient(SchemaPath));
+    return new this(DbClient.memoryClient(SchemaPath));
   }
 
   /**
    * Builds and returns a new store at `dbPath`.
    */
   static fileStore(dbPath: string): Store {
-    return new Store(DbClient.fileClient(dbPath, SchemaPath));
+    return new this(DbClient.fileClient(dbPath, SchemaPath));
   }
 
   /**
@@ -369,7 +369,7 @@ export class Store {
     );
   }
 
-  forEachElection(): IteratorPlus<{
+  forEachElection(): AsyncIteratorPlus<{
     object: SignedObject;
     election: Election;
   }> {
@@ -387,7 +387,7 @@ export class Store {
     commonAccessCardId,
   }: {
     commonAccessCardId: string;
-  }): IteratorPlus<{
+  }): AsyncIteratorPlus<{
     object: SignedObject;
     registrationRequest: RegistrationRequest;
   }> {
@@ -416,7 +416,7 @@ export class Store {
   }: {
     commonAccessCardId: string;
     registrationRequestObjectId?: Uuid;
-  }): IteratorPlus<{
+  }): AsyncIteratorPlus<{
     object: SignedObject;
     registration: Registration;
   }> {
@@ -445,7 +445,7 @@ export class Store {
   }: {
     commonAccessCardId: string;
     electionObjectId: Uuid;
-  }): IteratorPlus<{
+  }): AsyncIteratorPlus<{
     object: SignedObject;
     castBallot: CastBallot;
   }> {
@@ -465,7 +465,7 @@ export class Store {
     );
   }
 
-  forEachObjectOfType(objectType: string): IteratorPlus<SignedObject> {
+  forEachObjectOfType(objectType: string): AsyncIteratorPlus<SignedObject> {
     // FIXME: this should be using `this.client.each`, but there seems to be a race condition
     // that results in errors with "This database connection is busy executing a query"
     const rows = this.client.all(
@@ -479,16 +479,18 @@ export class Store {
       certificate: Buffer;
       signature: Buffer;
     }>;
-    return iter(rows).map(
-      (row) =>
-        new SignedObject(
-          UuidSchema.parse(row.id),
-          row.electionId ? UuidSchema.parse(row.electionId) : undefined,
-          row.payload,
-          row.certificate,
-          row.signature
-        )
-    );
+    return iter(rows)
+      .async()
+      .map(
+        (row) =>
+          new SignedObject(
+            UuidSchema.parse(row.id),
+            row.electionId ? UuidSchema.parse(row.electionId) : undefined,
+            row.payload,
+            row.certificate,
+            row.signature
+          )
+      );
   }
 
   getJurisdictionCodes(): JurisdictionCode[] {

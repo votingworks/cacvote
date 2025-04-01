@@ -7,7 +7,6 @@ import { join } from 'path';
 import { z } from 'zod';
 import { typedAs } from '@votingworks/basics';
 import { FileKey, TpmKey } from '@votingworks/auth';
-import { AutomaticExpirationTypeSchema } from './cacvote-server/types';
 
 // https://github.com/bkeepers/dotenv#what-other-env-files-can-i-use
 const dotEnvPath = '.env';
@@ -103,21 +102,16 @@ export const SIGNER = process.env.SIGNER?.match(/^tpm(:.+)?$/)
 export const { USABILITY_TEST_ELECTION_PATH } = process.env;
 
 /**
- * How many minutes should we wait before expiring a completed voting session
- * during the usability test?
+ * True if the app should run in usability test mode.
  */
-export const USABILITY_TEST_EXPIRATION_MINUTES =
-  safeParseInt(process.env.USABILITY_TEST_EXPIRATION_MINUTES, {
-    min: 1,
-  }).ok() ?? 2;
+export const IS_RUNNING_USABILITY_TEST = !!USABILITY_TEST_ELECTION_PATH;
 
 /**
- * Which type of automatic expiration should we use for the usability test?
+ * Should the usability test flow skip registration or not?
  */
-export const USABILITY_TEST_AUTOMATIC_EXPIRATION_TYPE =
-  AutomaticExpirationTypeSchema.optional().parse(
-    process.env.USABILITY_TEST_EXPIRATION_TYPE
-  ) ?? 'castBallotOnly';
+export const USABILITY_TEST_SKIP_REGISTRATION = ['true', 'TRUE', '1'].includes(
+  process.env.USABILITY_TEST_SKIP_REGISTRATION ?? 'false'
+);
 
 /**
  * Where is the `libNPrint` wrapper binary located?
