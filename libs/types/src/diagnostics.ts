@@ -1,25 +1,36 @@
 /**
  * Which pieces of hardware support a diagnostics test.
  */
-export type DiagnosticsHardware = 'printer';
+export type DiagnosticType =
+  | 'test-print'
+  | 'blank-sheet-scan'
+  | 'mark-scan-accessible-controller'
+  | 'mark-scan-paper-handler'
+  | 'mark-scan-pat-input'
+  | 'mark-scan-headphone-input'
+  | 'scan-audio';
 
 /**
  * The outcome of a hardware diagnostics test.
  */
-export type DiagnosticsOutcome = 'pass' | 'fail';
+export type DiagnosticOutcome = 'pass' | 'fail';
 
 /**
  * Record of a hardware diagnostics test.
  */
-export interface DiagnosticsRecord {
+export interface DiagnosticRecord {
   /**
    * The hardware that was tested.
    */
-  hardware: DiagnosticsHardware;
+  type: DiagnosticType;
   /**
    * The outcome of the test, either pass or fail.
    */
-  outcome: DiagnosticsOutcome;
+  outcome: DiagnosticOutcome;
+  /**
+   * Details about the outcome of the test.
+   */
+  message?: string;
   /**
    * Timestamp in milliseconds since the Unix epoch.
    */

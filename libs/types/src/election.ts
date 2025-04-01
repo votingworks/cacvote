@@ -1,15 +1,15 @@
-import { Optional } from '@votingworks/basics';
+import { Optional, DateWithoutTime } from '@votingworks/basics';
 import { sha256 } from 'js-sha256';
 import * as z from 'zod';
 import {
   Dictionary,
-  ElectionHash,
+  Sha256Hash,
   Id,
   IdSchema,
-  Iso8601Date,
   Iso8601Timestamp,
   Iso8601TimestampSchema,
   NewType,
+  DateWithoutTimeSchema,
 } from './generic';
 import {
   Offset,
@@ -21,7 +21,10 @@ import {
   Size,
   SizeSchema,
 } from './geometry';
-import { LanguageCode } from './language_code';
+import {
+  UiStringsPackage,
+  UiStringsPackageSchema,
+} from './ui_string_translations';
 
 // Generic
 function* findDuplicateIds<T extends { id: unknown }>(
@@ -109,14 +112,30 @@ export interface Candidate {
   readonly partyIds?: readonly PartyId[];
   readonly isWriteIn?: boolean;
   readonly writeInIndex?: number;
+  // Structured name properties are supported only in VxDesign.
+  readonly firstName?: string;
+  readonly middleName?: string;
+  readonly lastName?: string;
 }
 export const CandidateSchema: z.ZodSchema<Candidate> = z
   .object({
     id: CandidateIdSchema,
-    name: z.string().nonempty(),
+    name: z.string().min(1),
     partyIds: z.array(PartyIdSchema).optional(),
     isWriteIn: z.boolean().optional(),
     writeInIndex: z.number().int().nonnegative().optional(),
+    firstName: z
+      .string()
+      .transform((s) => s.trim() || undefined)
+      .optional(),
+    middleName: z
+      .string()
+      .transform((s) => s.trim() || undefined)
+      .optional(),
+    lastName: z
+      .string()
+      .transform((s) => s.trim() || undefined)
+      .optional(),
   })
   .refine(
     ({ id, isWriteIn }) => !!isWriteIn === id.startsWith('write-in'),
@@ -277,6 +296,10 @@ export const ContestsSchema = z
   });
 
 // Election
+export type ElectionId = NewType<string, 'ElectionId'>;
+export const ElectionIdSchema: z.ZodSchema<ElectionId> =
+  IdSchema as unknown as z.ZodSchema<ElectionId>;
+
 export type PrecinctId = Id;
 export const PrecinctIdSchema: z.ZodSchema<PrecinctId> = IdSchema;
 export interface Precinct {
@@ -300,21 +323,38 @@ export const PrecinctsSchema = z
     }
   });
 
-export type BallotStyleId = Id;
-export const BallotStyleIdSchema: z.ZodSchema<BallotStyleId> = IdSchema;
+export type BallotStyleId = NewType<string, 'BallotStyleId'>;
+export const BallotStyleIdSchema =
+  IdSchema as unknown as z.ZodSchema<BallotStyleId>;
+
 export interface BallotStyle {
   readonly id: BallotStyleId;
+  readonly groupId: BallotStyleGroupId;
   readonly precincts: readonly PrecinctId[];
   readonly districts: readonly DistrictId[];
   readonly partyId?: PartyId;
-  readonly languages?: readonly LanguageCode[]; // TODO(kofi): Make required.
+  readonly languages?: readonly string[]; // TODO(kofi): Make required.
 }
+
+export type BallotStyleGroupId = NewType<string, 'BallotStyleGroupId'>;
+export const BallotStyleGroupIdSchema =
+  IdSchema as unknown as z.ZodSchema<BallotStyleGroupId>;
+export interface BallotStyleGroup {
+  readonly id: BallotStyleGroupId;
+  readonly defaultLanguageBallotStyle: BallotStyle;
+  readonly ballotStyles: readonly BallotStyle[];
+  readonly precincts: readonly PrecinctId[];
+  readonly districts: readonly DistrictId[];
+  readonly partyId?: PartyId;
+}
+
 export const BallotStyleSchema: z.ZodSchema<BallotStyle> = z.object({
   id: BallotStyleIdSchema,
+  groupId: BallotStyleGroupIdSchema,
   precincts: z.array(PrecinctIdSchema),
   districts: z.array(DistrictIdSchema),
   partyId: PartyIdSchema.optional(),
-  languages: z.array(z.nativeEnum(LanguageCode)).optional(),
+  languages: z.array(z.string()).optional(),
 });
 export const BallotStylesSchema = z
   .array(BallotStyleSchema)
@@ -340,23 +380,30 @@ export const CountySchema: z.ZodSchema<County> = z.object({
   name: z.string().nonempty(),
 });
 
-export enum BallotPaperSize {
+export enum HmpbBallotPaperSize {
   Letter = 'letter',
   Legal = 'legal',
   Custom17 = 'custom-8.5x17',
-  Custom18 = 'custom-8.5x18',
-  Custom21 = 'custom-8.5x21',
+  Custom19 = 'custom-8.5x19',
   Custom22 = 'custom-8.5x22',
 }
-export const BallotPaperSizeSchema: z.ZodSchema<BallotPaperSize> =
-  z.nativeEnum(BallotPaperSize);
+export const HmpbBallotPaperSizeSchema: z.ZodSchema<HmpbBallotPaperSize> =
+  z.nativeEnum(HmpbBallotPaperSize);
+
+export enum BmdBallotPaperSize {
+  Vsap150Thermal = 'vsap-150-thermal',
+}
+export const BmdBallotPaperSizeSchema: z.ZodSchema<BmdBallotPaperSize> =
+  z.nativeEnum(BmdBallotPaperSize);
+
+export type BallotPaperSize = HmpbBallotPaperSize | BmdBallotPaperSize;
 
 export interface BallotLayout {
-  paperSize: BallotPaperSize;
+  paperSize: HmpbBallotPaperSize;
   metadataEncoding: 'qr-code' | 'timing-marks';
 }
 export const BallotLayoutSchema: z.ZodSchema<BallotLayout> = z.object({
-  paperSize: BallotPaperSizeSchema,
+  paperSize: HmpbBallotPaperSizeSchema,
   metadataEncoding: z.enum(['qr-code', 'timing-marks']),
 });
 
@@ -451,41 +498,40 @@ const ElectionTypeSchema: z.ZodSchema<ElectionType> = z.enum(ELECTION_TYPES);
 
 export interface Election {
   readonly ballotLayout: BallotLayout;
+  readonly ballotStrings: UiStringsPackage;
   readonly ballotStyles: readonly BallotStyle[];
   readonly contests: Contests;
-  readonly gridLayouts?: readonly GridLayout[];
   readonly county: County;
-  readonly date: string;
+  readonly date: DateWithoutTime;
   readonly districts: readonly District[];
+  readonly gridLayouts?: readonly GridLayout[];
+  readonly id: ElectionId;
   readonly parties: Parties;
   readonly precincts: readonly Precinct[];
-  readonly quickResultsReportingUrl?: string; // a server where results are posted, enables VxQR if present
   readonly seal: string;
   readonly state: string;
   readonly title: string;
   readonly type: ElectionType;
+  readonly additionalHashInput?: Record<string, unknown>;
 }
 export const ElectionSchema: z.ZodSchema<Election> = z
   .object({
     ballotLayout: BallotLayoutSchema,
+    ballotStrings: UiStringsPackageSchema,
     ballotStyles: BallotStylesSchema,
     contests: ContestsSchema,
     gridLayouts: z.array(GridLayoutSchema).optional(),
     county: CountySchema,
-    date: Iso8601Date,
+    date: DateWithoutTimeSchema,
     districts: DistrictsSchema,
+    id: ElectionIdSchema,
     parties: PartiesSchema,
     precincts: PrecinctsSchema,
-    quickResultsReportingUrl: z
-      .string()
-      .url()
-      .nonempty()
-      .refine((val) => !val.endsWith('/'), 'URL cannot end with a slash')
-      .optional(),
     seal: z.string(),
     state: z.string().nonempty(),
     title: z.string().nonempty(),
     type: ElectionTypeSchema,
+    additionalHashInput: z.record(z.any()).optional(),
   })
   .superRefine((election, ctx) => {
     for (const [
@@ -578,28 +624,44 @@ export const OptionalElectionSchema: z.ZodSchema<OptionalElection> =
 export interface ElectionDefinition {
   election: Election;
   electionData: string;
-  electionHash: string;
+  /**
+   * A sha256 hash of {@link electionData}. This hash is encoded on ballots and
+   * verified by tabulators to ensure that the ballots and the tabulators have
+   * the same configuration, therefore preventing any tabulation errors due to
+   * mismatched configurations.
+   *
+   * Note that the raw {@link electionData} string is hashed instead of the
+   * parsed {@link election} object since canonicalizing the JSON in order to
+   * hash it would be potentially insecure.
+   */
+  ballotHash: string;
 }
 export const ElectionDefinitionSchema: z.ZodSchema<ElectionDefinition> = z
   .object({
     election: ElectionSchema,
     electionData: z.string().nonempty(),
-    electionHash: ElectionHash,
+    ballotHash: Sha256Hash,
   })
   .superRefine((electionDefinition, ctx) => {
-    const { electionData, electionHash } = electionDefinition;
+    const { electionData, ballotHash } = electionDefinition;
     const electionDataHash = sha256(electionData);
-    if (electionDataHash !== electionHash) {
+    if (electionDataHash !== ballotHash) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['electionHash'],
-        message: `Election data hash '${electionDataHash}' does not match election hash '${electionHash}'.`,
+        path: ['ballotHash'],
+        message: `Election data hash '${electionDataHash}' does not match ballot hash '${ballotHash}'.`,
       });
     }
   });
 export type OptionalElectionDefinition = Optional<ElectionDefinition>;
 export const OptionalElectionDefinitionSchema: z.ZodSchema<OptionalElectionDefinition> =
   ElectionDefinitionSchema.optional();
+
+export const ELECTION_SERIALIZATION_FORMATS = ['vxf', 'cdf'] as const;
+export type ElectionSerializationFormat =
+  (typeof ELECTION_SERIALIZATION_FORMATS)[number];
+export const ElectionSerializationFormatSchema: z.ZodSchema<ElectionSerializationFormat> =
+  z.enum(ELECTION_SERIALIZATION_FORMATS);
 
 export enum BallotType {
   Precinct = 'precinct',
@@ -618,7 +680,6 @@ export interface CandidateContestOption {
   contestId: CandidateContest['id'];
   name: Candidate['name'];
   isWriteIn: boolean;
-  optionIndex: number;
   writeInIndex?: number;
 }
 export const CandidateContestOptionSchema: z.ZodSchema<CandidateContestOption> =
@@ -628,7 +689,6 @@ export const CandidateContestOptionSchema: z.ZodSchema<CandidateContestOption> =
     contestId: ContestIdSchema,
     name: z.string(),
     isWriteIn: z.boolean(),
-    optionIndex: z.number().nonnegative(),
     writeInIndex: z.number().nonnegative().optional(),
   });
 
@@ -640,7 +700,6 @@ export interface YesNoContestOption {
   id: YesNoContestOptionId;
   contestId: YesNoContest['id'];
   name: string;
-  optionIndex: number;
 }
 export const YesNoContestOptionSchema: z.ZodSchema<YesNoContestOption> =
   z.object({
@@ -648,7 +707,6 @@ export const YesNoContestOptionSchema: z.ZodSchema<YesNoContestOption> =
     id: YesNoContestOptionIdSchema,
     contestId: ContestIdSchema,
     name: z.string(),
-    optionIndex: z.number().nonnegative(),
   });
 
 export type ContestOption = CandidateContestOption | YesNoContestOption;
@@ -691,21 +749,18 @@ export interface MarginalMarkAdjudicationReasonInfo {
   type: AdjudicationReason.MarginalMark;
   contestId: ContestId;
   optionId: ContestOptionId;
-  optionIndex: number;
 }
 export const MarginalMarkAdjudicationReasonInfoSchema: z.ZodSchema<MarginalMarkAdjudicationReasonInfo> =
   z.object({
     type: z.literal(AdjudicationReason.MarginalMark),
     contestId: ContestIdSchema,
     optionId: ContestOptionIdSchema,
-    optionIndex: z.number(),
   });
 
 export interface OvervoteAdjudicationReasonInfo {
   type: AdjudicationReason.Overvote;
   contestId: ContestId;
   optionIds: ReadonlyArray<ContestOption['id']>;
-  optionIndexes: readonly number[];
   expected: number;
 }
 export const OvervoteAdjudicationReasonInfoSchema: z.ZodSchema<OvervoteAdjudicationReasonInfo> =
@@ -713,7 +768,6 @@ export const OvervoteAdjudicationReasonInfoSchema: z.ZodSchema<OvervoteAdjudicat
     type: z.literal(AdjudicationReason.Overvote),
     contestId: ContestIdSchema,
     optionIds: z.array(ContestOptionIdSchema),
-    optionIndexes: z.array(z.number().nonnegative()),
     expected: z.number(),
   });
 
@@ -721,7 +775,6 @@ export interface UndervoteAdjudicationReasonInfo {
   type: AdjudicationReason.Undervote;
   contestId: ContestId;
   optionIds: ReadonlyArray<ContestOption['id']>;
-  optionIndexes: readonly number[];
   expected: number;
 }
 export const UndervoteAdjudicationReasonInfoSchema: z.ZodSchema<UndervoteAdjudicationReasonInfo> =
@@ -729,7 +782,6 @@ export const UndervoteAdjudicationReasonInfoSchema: z.ZodSchema<UndervoteAdjudic
     type: z.literal(AdjudicationReason.Undervote),
     contestId: ContestIdSchema,
     optionIds: z.array(ContestOptionIdSchema),
-    optionIndexes: z.array(z.number().nonnegative()),
     expected: z.number(),
   });
 
@@ -764,7 +816,7 @@ export const BallotIdSchema = z
   ) as unknown as z.ZodSchema<BallotId>;
 
 export interface HmpbBallotPageMetadata {
-  electionHash: string; // a hexadecimal string
+  ballotHash: string; // a hexadecimal string
   precinctId: PrecinctId;
   ballotStyleId: BallotStyleId;
   pageNumber: number;
@@ -774,7 +826,7 @@ export interface HmpbBallotPageMetadata {
 }
 export const HmpbBallotPageMetadataSchema: z.ZodSchema<HmpbBallotPageMetadata> =
   z.object({
-    electionHash: ElectionHash,
+    ballotHash: Sha256Hash,
     precinctId: PrecinctIdSchema,
     ballotStyleId: BallotStyleIdSchema,
     pageNumber: z.number(),
@@ -788,7 +840,7 @@ export type BallotMetadata = Omit<
   'pageNumber' | 'ballotId'
 >;
 export const BallotMetadataSchema: z.ZodSchema<BallotMetadata> = z.object({
-  electionHash: ElectionHash,
+  ballotHash: Sha256Hash,
   precinctId: PrecinctIdSchema,
   ballotStyleId: BallotStyleIdSchema,
   isTestMode: z.boolean(),
@@ -922,7 +974,7 @@ export const BatchInfoSchema: z.ZodSchema<BatchInfo> = z.object({
 });
 
 export interface CompletedBallot {
-  readonly electionHash: string;
+  readonly ballotHash: string;
   readonly ballotStyleId: BallotStyleId;
   readonly precinctId: PrecinctId;
   readonly ballotId?: BallotId;
@@ -930,3 +982,75 @@ export interface CompletedBallot {
   readonly isTestMode: boolean;
   readonly ballotType: BallotType;
 }
+
+/**
+ * Precinct splits
+ */
+
+export interface NhPrecinctSplitOptions {
+  electionTitleOverride?: string;
+  electionSealOverride?: string;
+  clerkSignatureImage?: string;
+  clerkSignatureCaption?: string;
+}
+
+export interface PrecinctWithoutSplits {
+  districtIds: readonly DistrictId[];
+  id: PrecinctId;
+  name: string;
+}
+export interface PrecinctWithSplits {
+  id: PrecinctId;
+  name: string;
+  splits: readonly PrecinctSplit[];
+}
+interface PrecinctSplitBase {
+  districtIds: readonly DistrictId[];
+  id: Id;
+  name: string;
+}
+
+export type PrecinctSplit = PrecinctSplitBase & NhPrecinctSplitOptions;
+
+export type SplittablePrecinct = PrecinctWithoutSplits | PrecinctWithSplits;
+
+export function hasSplits(precinct: Precinct): precinct is PrecinctWithSplits {
+  return 'splits' in precinct && precinct.splits !== undefined;
+}
+
+export interface PrecinctOrSplitId {
+  precinctId: PrecinctId;
+  splitId?: Id;
+}
+
+const PrecinctWithoutSplitsSchema: z.ZodSchema<PrecinctWithoutSplits> =
+  z.object({
+    districtIds: z.array(DistrictIdSchema),
+    id: PrecinctIdSchema,
+    name: z.string().min(1),
+  });
+
+const PrecinctSplitBaseSchema = z.object({
+  districtIds: z.array(DistrictIdSchema),
+  id: IdSchema,
+  name: z.string().min(1),
+});
+
+const NhPrecinctSplitOptionsSchema = z.object({
+  electionTitleOverride: z.string().optional(),
+  electionSealOverride: z.string().optional(),
+  clerkSignatureImage: z.string().optional(),
+  clerkSignatureCaption: z.string().optional(),
+});
+
+const PrecinctSplitSchema: z.ZodSchema<PrecinctSplit> =
+  PrecinctSplitBaseSchema.merge(NhPrecinctSplitOptionsSchema);
+
+const PrecinctWithSplitsSchema: z.ZodSchema<PrecinctWithSplits> = z.object({
+  id: PrecinctIdSchema,
+  name: z.string().min(1),
+  splits: z.array(PrecinctSplitSchema),
+});
+
+export const SplittablePrecinctSchema: z.ZodSchema<SplittablePrecinct> =
+  z.union([PrecinctWithoutSplitsSchema, PrecinctWithSplitsSchema]);

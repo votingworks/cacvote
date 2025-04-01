@@ -17,7 +17,6 @@ export enum ElectionPackageFileName {
   ELECTION = 'election.json',
   METADATA = 'metadata.json',
   SYSTEM_SETTINGS = 'systemSettings.json',
-  VX_ELECTION_STRINGS = 'vxElectionStrings.json',
 }
 
 export interface ElectionPackage {
@@ -27,6 +26,16 @@ export interface ElectionPackage {
   uiStringAudioClips?: UiStringAudioClips; // TODO(kofi): Make required
   uiStringAudioIds?: UiStringAudioIdsPackage; // TODO(kofi): Make required
   uiStrings?: UiStringsPackage; // TODO(kofi): Make required
+}
+
+export interface ElectionPackageWithHash {
+  electionPackage: ElectionPackage;
+  /**
+   * Hash of the raw election package data (in ZIP format, before it's parsed).
+   * This can be used to ensure that a machine has been configured with the
+   * correct election package.
+   */
+  electionPackageHash: string;
 }
 
 export interface BallotStyleData {

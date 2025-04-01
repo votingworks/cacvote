@@ -1,3 +1,4 @@
+import { err } from '@votingworks/basics';
 import { election as electionGeneral, electionData } from '../test/election';
 import * as t from '.';
 import { safeParse, safeParseJson, unsafeParse } from './generic';
@@ -13,9 +14,7 @@ test('parsing JSON.parses a string', () => {
 });
 
 test('parsing invalid JSON', () => {
-  expect(t.safeParseElection('{').unsafeUnwrapErr().message).toEqual(
-    'Unexpected end of JSON input'
-  );
+  expect(t.safeParseElection('{')).toEqual(err(expect.anything()));
 });
 
 test('parsing JSON without a schema', () => {
@@ -40,7 +39,7 @@ test('parsing gives specific errors for nested objects', () => {
   ).toMatchSnapshot();
 });
 
-test('ensures dates are ISO 8601-formatted', () => {
+test('ensures election date is YYYY-MM-DD', () => {
   expect(
     t
       .safeParseVxfElection({
@@ -255,11 +254,11 @@ test('validates uniqueness of candidate ids within a contest', () => {
   ).toMatchSnapshot();
 });
 
-test('safeParseVxfElectionDefinition computes the election hash', () => {
+test('safeParseVxfElectionDefinition computes the ballot hash', () => {
   expect(
-    t.safeParseElectionDefinition(electionData).unsafeUnwrap().electionHash
-  ).toMatchSnapshot(
-    `"fa2ee0ab1672c771123bfa3878dc8a6a26213a2aee345adc409ce424ecfbb134"`
+    t.safeParseElectionDefinition(electionData).unsafeUnwrap().ballotHash
+  ).toMatchInlineSnapshot(
+    `"430e8eb209e61997237b1459e64d2400831089489655fb5fa4ffe536ee4d95ca"`
   );
 });
 

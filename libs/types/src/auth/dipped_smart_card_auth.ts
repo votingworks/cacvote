@@ -1,17 +1,22 @@
 import {
   ElectionManagerUser,
+  PollWorkerUser,
   SystemAdministratorUser,
   UserWithCard,
+  VendorUser,
 } from './auth';
 
 export interface LoggedOut {
   readonly status: 'logged_out';
   readonly reason:
-    | 'no_card_reader'
     | 'card_error'
-    | 'invalid_user_on_card'
+    | 'certificate_expired'
+    | 'certificate_not_yet_valid'
+    | 'unprogrammed_or_invalid_card'
+    | 'machine_locked_by_session_expiry'
     | 'machine_locked'
     | 'machine_not_configured'
+    | 'no_card_reader'
     | 'user_role_not_allowed'
     | 'wrong_election'
     | 'wrong_jurisdiction';
@@ -22,7 +27,11 @@ export interface LoggedOut {
 
 export interface CheckingPin {
   readonly status: 'checking_pin';
-  readonly user: SystemAdministratorUser | ElectionManagerUser;
+  readonly user:
+    | VendorUser
+    | SystemAdministratorUser
+    | ElectionManagerUser
+    | PollWorkerUser;
   readonly error?: { error: unknown; erroredAt: Date };
   readonly lockedOutUntil?: Date;
   readonly wrongPinEnteredAt?: Date;
@@ -30,11 +39,15 @@ export interface CheckingPin {
 
 export interface RemoveCard {
   readonly status: 'remove_card';
-  readonly user: SystemAdministratorUser | ElectionManagerUser;
+  readonly user:
+    | VendorUser
+    | SystemAdministratorUser
+    | ElectionManagerUser
+    | PollWorkerUser;
   readonly sessionExpiresAt: Date;
 }
 
-interface ProgrammableCardReady {
+export interface ProgrammableCardReady {
   status: 'ready';
   programmedUser?: UserWithCard;
 }
@@ -44,6 +57,12 @@ interface ProgrammableCardNotReady {
 }
 
 export type ProgrammableCard = ProgrammableCardReady | ProgrammableCardNotReady;
+
+export interface VendorLoggedIn {
+  readonly status: 'logged_in';
+  readonly user: VendorUser;
+  readonly sessionExpiresAt: Date;
+}
 
 export interface SystemAdministratorLoggedIn {
   readonly status: 'logged_in';
@@ -58,7 +77,17 @@ export interface ElectionManagerLoggedIn {
   readonly sessionExpiresAt: Date;
 }
 
-export type LoggedIn = SystemAdministratorLoggedIn | ElectionManagerLoggedIn;
+export interface PollWorkerLoggedIn {
+  readonly status: 'logged_in';
+  readonly user: PollWorkerUser;
+  readonly sessionExpiresAt: Date;
+}
+
+export type LoggedIn =
+  | VendorLoggedIn
+  | SystemAdministratorLoggedIn
+  | ElectionManagerLoggedIn
+  | PollWorkerLoggedIn;
 
 export type AuthStatus = LoggedOut | CheckingPin | RemoveCard | LoggedIn;
 

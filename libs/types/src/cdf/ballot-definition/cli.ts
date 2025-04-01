@@ -1,6 +1,6 @@
 /* istanbul ignore file */
-import { readFileSync } from 'fs';
-import { stderr } from 'process';
+import { readFileSync } from 'node:fs';
+import { stderr } from 'node:process';
 import { safeParseElection } from '../../election_parsing';
 import { convertVxfElectionToCdfBallotDefinition } from './convert';
 
@@ -30,10 +30,8 @@ export async function main(
   }
   const vxfElectionString = readFileSync(vxfPath, 'utf8');
   const vxfElection = safeParseElection(vxfElectionString).unsafeUnwrap();
-  const cdfBallotDefinition = convertVxfElectionToCdfBallotDefinition(
-    vxfElection,
-    {}
-  );
+  const cdfBallotDefinition =
+    convertVxfElectionToCdfBallotDefinition(vxfElection);
   stdout.write(`${JSON.stringify(cdfBallotDefinition, null, 2)}\n`);
   return 0;
 }

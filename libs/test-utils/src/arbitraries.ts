@@ -7,7 +7,7 @@ import { DateTime } from 'luxon';
 import {
   BallotId,
   BallotLayout,
-  BallotPaperSize,
+  HmpbBallotPaperSize,
   BallotStyle,
   BallotStyleId,
   Candidate,
@@ -29,8 +29,13 @@ import {
   PrecinctId,
   YesNoContest,
   YesNoOption,
+  UiStringsPackage,
+  ElectionId,
+  BallotStyleGroupId,
 } from '@votingworks/types';
 import { sha256 } from 'js-sha256';
+import { DateWithoutTime, assertDefined } from '@votingworks/basics';
+import { TestLanguageCode } from './test_language_code';
 
 /**
  * Builds arbitrary uint2 values.
@@ -112,7 +117,14 @@ export function arbitraryBallotId(): fc.Arbitrary<BallotId> {
  * Builds values suitable for ballot style IDs.
  */
 export function arbitraryBallotStyleId(): fc.Arbitrary<BallotStyleId> {
-  return arbitraryId();
+  return arbitraryId() as fc.Arbitrary<BallotStyleId>;
+}
+
+/**
+ * Builds values suitable for ballot style IDs.
+ */
+export function arbitraryBallotStyleGroupId(): fc.Arbitrary<BallotStyleGroupId> {
+  return arbitraryId() as fc.Arbitrary<BallotStyleGroupId>;
 }
 
 /**
@@ -141,6 +153,13 @@ export function arbitraryCountyId(): fc.Arbitrary<CountyId> {
  */
 export function arbitraryDistrictId(): fc.Arbitrary<DistrictId> {
   return arbitraryId() as fc.Arbitrary<DistrictId>;
+}
+
+/**
+ * Builds values suitable for election IDs.
+ */
+export function arbitraryElectionId(): fc.Arbitrary<ElectionId> {
+  return arbitraryId() as fc.Arbitrary<ElectionId>;
 }
 
 /**
@@ -177,7 +196,9 @@ export function arbitraryDateTime({
     })
     .map((parts) => {
       try {
-        const result = DateTime.fromObject(parts, { zone: zoneName });
+        const result = DateTime.fromObject(parts, {
+          zone: zoneName ?? undefined,
+        });
         if (
           result.year === parts.year &&
           result.month === parts.month &&
@@ -326,15 +347,18 @@ export function arbitraryPrecinct({
 
 export function arbitraryBallotStyle({
   id = arbitraryBallotStyleId(),
+  groupId = arbitraryBallotStyleGroupId(),
   districtIds = fc.array(arbitraryDistrictId()),
   precinctIds = fc.array(arbitraryPrecinctId()),
 }: {
   id?: fc.Arbitrary<BallotStyle['id']>;
+  groupId?: fc.Arbitrary<BallotStyle['groupId']>;
   districtIds?: fc.Arbitrary<Array<District['id']>>;
   precinctIds?: fc.Arbitrary<Array<Precinct['id']>>;
 } = {}): fc.Arbitrary<BallotStyle> {
   return fc.record({
     id,
+    groupId,
     districts: districtIds,
     precincts: precinctIds,
   });
@@ -360,9 +384,20 @@ export function arbitraryParty({
 
 export function arbitraryBallotLayout(): fc.Arbitrary<BallotLayout> {
   return fc.record({
-    paperSize: fc.constantFrom(...Object.values(BallotPaperSize)),
+    paperSize: fc.constantFrom(...Object.values(HmpbBallotPaperSize)),
     metadataEncoding: fc.constantFrom('qr-code', 'timing-marks'),
   });
+}
+
+export function arbitraryUiStrings(): fc.Arbitrary<UiStringsPackage> {
+  return fc.record(
+    Object.fromEntries(
+      Object.values(TestLanguageCode).map((languageCode) => [
+        languageCode,
+        fc.dictionary(fc.string(), fc.string()),
+      ])
+    )
+  );
 }
 
 export function arbitraryElection(): fc.Arbitrary<Election> {
@@ -379,11 +414,22 @@ export function arbitraryElection(): fc.Arbitrary<Election> {
       })
       .chain(({ districts, precincts, parties }) =>
         fc.record<Election>({
+          id: arbitraryElectionId(),
           type: fc.constantFrom(...ELECTION_TYPES),
           title: fc.string({ minLength: 1 }),
           county: arbitraryCounty(),
           state: fc.string({ minLength: 2, maxLength: 2 }),
-          date: fc.date().map((date) => date.toISOString()),
+          date: fc
+            .date({
+              min: new Date('0001-01-01'),
+              max: new Date('9999-12-31'),
+            })
+            .map(
+              (date) =>
+                new DateWithoutTime(
+                  assertDefined(date.toISOString().split('T')[0])
+                )
+            ),
           seal: fc.string({ minLength: 1, maxLength: 200 }),
           parties: fc.constant(parties),
           contests: arbitraryContests({
@@ -405,6 +451,7 @@ export function arbitraryElection(): fc.Arbitrary<Election> {
           districts: fc.constant(districts),
           precincts: fc.constant(precincts),
           ballotLayout: arbitraryBallotLayout(),
+          ballotStrings: arbitraryUiStrings(),
         })
       )
       // performing a shrink on this data structure takes forever
@@ -442,6 +489,6 @@ export function arbitraryElectionDefinition(): fc.Arbitrary<ElectionDefinition> 
     .map(({ election, electionData }) => ({
       election,
       electionData,
-      electionHash: sha256(electionData),
+      ballotHash: sha256(electionData),
     }));
 }

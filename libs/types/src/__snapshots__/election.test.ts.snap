@@ -6,6 +6,15 @@ exports[`safeParseElection shows VXF and CDF parsing errors 1`] = `
 VXF error: [
   {
     "code": "invalid_type",
+    "expected": "object",
+    "received": "undefined",
+    "path": [
+      "ballotStrings"
+    ],
+    "message": "Required"
+  },
+  {
+    "code": "invalid_type",
     "expected": "array",
     "received": "undefined",
     "path": [
@@ -32,13 +41,12 @@ VXF error: [
     "message": "Required"
   },
   {
-    "code": "invalid_type",
-    "expected": "string",
-    "received": "undefined",
+    "code": "custom",
+    "message": "Input not instance of DateWithoutTime",
+    "fatal": true,
     "path": [
       "date"
-    ],
-    "message": "Required"
+    ]
   },
   {
     "code": "invalid_type",
@@ -46,6 +54,15 @@ VXF error: [
     "received": "undefined",
     "path": [
       "districts"
+    ],
+    "message": "Required"
+  },
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "id"
     ],
     "message": "Required"
   },
@@ -156,15 +173,6 @@ CDF error: [
     "received": "undefined",
     "path": [
       "Party"
-    ],
-    "message": "Required"
-  },
-  {
-    "code": "invalid_type",
-    "expected": "string",
-    "received": "undefined",
-    "path": [
-      "vxSeal"
     ],
     "message": "Required"
   },

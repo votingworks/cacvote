@@ -53,27 +53,58 @@ export const MarkThresholdsSchema: z.ZodSchema<MarkThresholds> = z
 
 /**
  * Settings for various parts of the system that are not part of the election
- * definition. These settings can be changed without changing the election hash
+ * definition. These settings can be changed without changing the ballot hash
  * (and therefore not needing to reprint ballots, for example).
  */
 export interface SystemSettings {
+  readonly allowOfficialBallotsInTestMode?: boolean;
   readonly auth: AuthSettings;
   readonly markThresholds: MarkThresholds;
+  readonly bitonalThreshold?: number;
   readonly centralScanAdjudicationReasons: readonly AdjudicationReason[];
   readonly precinctScanAdjudicationReasons: readonly AdjudicationReason[];
-  readonly precinctScanDisallowCastingOvervotes: boolean;
+  readonly disallowCastingOvervotes: boolean;
+  readonly precinctScanEnableShoeshineMode?: boolean;
+  /**
+   * Includes original snapshots in cast vote record reports, increasing export size and
+   * import/export time (required for CDF).
+   */
+  readonly castVoteRecordsIncludeOriginalSnapshots?: boolean;
+  /**
+   * Includes redundant metadata in cast vote record reports, increasing export size and
+   * import/export time (required for CDF).
+   */
+  readonly castVoteRecordsIncludeRedundantMetadata?: boolean;
+  /**
+   * Disables vertical streak detection when scanning. This should only be used
+   * as a workaround in case the ballots have a design that triggers false
+   * positives.
+   */
+  readonly disableVerticalStreakDetection?: boolean;
+
+  /**
+   * Enables quick results reporting and provides the server URL to post results to
+   */
+  readonly quickResultsReportingUrl?: string;
 }
 
 export const SystemSettingsSchema: z.ZodType<SystemSettings> = z.object({
+  allowOfficialBallotsInTestMode: z.boolean().optional(),
   auth: AuthSettingsSchema,
   markThresholds: MarkThresholdsSchema,
+  bitonalThreshold: z.number().min(0).max(100).optional(),
   centralScanAdjudicationReasons: z.array(
     z.lazy(() => AdjudicationReasonSchema)
   ),
   precinctScanAdjudicationReasons: z.array(
     z.lazy(() => AdjudicationReasonSchema)
   ),
-  precinctScanDisallowCastingOvervotes: z.boolean(),
+  disallowCastingOvervotes: z.boolean(),
+  precinctScanEnableShoeshineMode: z.boolean().optional(),
+  castVoteRecordsIncludeOriginalSnapshots: z.boolean().optional(),
+  castVoteRecordsIncludeRedundantMetadata: z.boolean().optional(),
+  disableVerticalStreakDetection: z.boolean().optional(),
+  quickResultsReportingUrl: z.string().optional(),
 });
 
 /**
@@ -91,6 +122,12 @@ export const DEFAULT_MARK_THRESHOLDS: Readonly<MarkThresholds> = {
   writeInTextArea: 0.05,
 };
 
+/**
+ * The default bitonal threshold for scanning ballots.
+ * See Section 2.1.43 of the PDI PageScan software specification.
+ */
+export const DEFAULT_BITONAL_THRESHOLD = 75;
+
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   auth: {
     arePollWorkerCardPinsEnabled: false,
@@ -104,6 +141,6 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   },
   markThresholds: DEFAULT_MARK_THRESHOLDS,
   precinctScanAdjudicationReasons: [],
-  precinctScanDisallowCastingOvervotes: false,
+  disallowCastingOvervotes: false,
   centralScanAdjudicationReasons: [],
 };

@@ -1,7 +1,12 @@
+import {
+  assert,
+  DateWithoutTime,
+  throwIllegalValue,
+} from '@votingworks/basics';
 import { Buffer } from 'buffer';
 import { z } from 'zod';
-import { assert, throwIllegalValue } from '@votingworks/basics';
 
+import { ElectionId, ElectionKey } from '@votingworks/types';
 import { arePollWorkerCardDetails, CardDetails } from './card';
 import { openssl } from './cryptography';
 
@@ -66,17 +71,20 @@ interface CacvoteMarkCustomCertFields {
   component: 'cacvote-mark';
 }
 
-interface SystemAdministratorCardCustomCertFields {
+interface BaseCardCustomCertFields {
   component: 'card';
   jurisdiction: string;
+}
+
+interface SystemAdministratorCardCustomCertFields
+  extends BaseCardCustomCertFields {
   cardType: 'system-administrator';
 }
 
-interface ElectionCardCustomCertFields {
-  component: 'card';
-  jurisdiction: string;
+interface ElectionCardCustomCertFields extends BaseCardCustomCertFields {
   cardType: 'election-manager' | 'poll-worker' | 'poll-worker-with-pin';
-  electionHash: string;
+  electionId: string;
+  electionDate: string;
 }
 
 type CardCustomCertFields =
@@ -164,7 +172,8 @@ const ElectionCardCustomCertFieldsSchema: z.ZodSchema<ElectionCardCustomCertFiel
       z.literal('poll-worker'),
       z.literal('poll-worker-with-pin'),
     ]),
-    electionHash: z.string(),
+    electionId: z.string(),
+    electionDate: z.string(),
   });
 
 const CardCustomCertFieldsSchema: z.ZodSchema<CardCustomCertFields> = z.union([
@@ -240,6 +249,16 @@ export async function parseCert(cert: Buffer): Promise<CustomCertFields> {
   return certDetails;
 }
 
+function createElectionKey(
+  certDetails: ElectionCardCustomCertFields
+): ElectionKey {
+  const { electionId, electionDate } = certDetails;
+  return {
+    id: electionId as ElectionId,
+    date: new DateWithoutTime(electionDate),
+  };
+}
+
 /**
  * Parses the provided cert and returns card details. Throws an error if the cert doesn't follow
  * VotingWorks's card cert format.
@@ -258,22 +277,31 @@ export async function parseCardDetailsFromCert(
       };
     }
     case 'election-manager': {
-      const { electionHash } = certDetails;
       return {
-        user: { role: 'election_manager', jurisdiction, electionHash },
+        user: {
+          role: 'election_manager',
+          jurisdiction,
+          electionKey: createElectionKey(certDetails),
+        },
       };
     }
     case 'poll-worker': {
-      const { electionHash } = certDetails;
       return {
-        user: { role: 'poll_worker', jurisdiction, electionHash },
+        user: {
+          role: 'poll_worker',
+          jurisdiction,
+          electionKey: createElectionKey(certDetails),
+        },
         hasPin: false,
       };
     }
     case 'poll-worker-with-pin': {
-      const { electionHash } = certDetails;
       return {
-        user: { role: 'poll_worker', jurisdiction, electionHash },
+        user: {
+          role: 'poll_worker',
+          jurisdiction,
+          electionKey: createElectionKey(certDetails),
+        },
         hasPin: true,
       };
     }
@@ -292,7 +320,7 @@ export function constructCardCertSubject(cardDetails: CardDetails): string {
   const component: Component = 'card';
 
   let cardType: CardType;
-  let electionHash: string | undefined;
+  let electionKey: ElectionKey | undefined;
   switch (user.role) {
     case 'system_administrator': {
       cardType = 'system-administrator';
@@ -300,13 +328,13 @@ export function constructCardCertSubject(cardDetails: CardDetails): string {
     }
     case 'election_manager': {
       cardType = 'election-manager';
-      electionHash = user.electionHash;
+      electionKey = user.electionKey;
       break;
     }
     case 'poll_worker': {
       assert(arePollWorkerCardDetails(cardDetails));
       cardType = cardDetails.hasPin ? 'poll-worker-with-pin' : 'poll-worker';
-      electionHash = user.electionHash;
+      electionKey = user.electionKey;
       break;
     }
     /* istanbul ignore next: Compile-time check for completeness */
@@ -321,8 +349,8 @@ export function constructCardCertSubject(cardDetails: CardDetails): string {
     `${VX_CUSTOM_CERT_FIELD.JURISDICTION}=${user.jurisdiction}`,
     `${VX_CUSTOM_CERT_FIELD.CARD_TYPE}=${cardType}`,
   ];
-  if (electionHash) {
-    entries.push(`${VX_CUSTOM_CERT_FIELD.ELECTION_HASH}=${electionHash}`);
+  if (electionKey) {
+    entries.push(`${VX_CUSTOM_CERT_FIELD.ELECTION_HASH}=${electionKey}`);
   }
   const certSubject = `/${entries.join('/')}/`;
 

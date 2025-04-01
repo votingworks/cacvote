@@ -1,4 +1,4 @@
-import { Election, GridLayout } from '@votingworks/types';
+import { BallotStyleId, Election, GridLayout } from '@votingworks/types';
 import { election } from './election.json';
 import { asElectionDefinition } from '../../util';
 
@@ -18,7 +18,7 @@ const partialMockGridPosition = {
 
 const mockMultiSheetGridLayouts: GridLayout[] = [
   {
-    ballotStyleId: '1',
+    ballotStyleId: '1' as BallotStyleId,
     optionBoundsFromTargetMark: {
       left: 0,
       right: 0,

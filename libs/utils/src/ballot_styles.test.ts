@@ -1,5 +1,7 @@
 import {
   BallotStyle,
+  BallotStyleGroupId,
+  BallotStyleId,
   DistrictId,
   LanguageCode,
   Party,
@@ -42,7 +44,7 @@ describe('generateBallotStyleId', () => {
 
 describe('ballot style groups', () => {
   function makeBallotStyle(
-    params: Pick<BallotStyle, 'id' | 'languages' | 'partyId'>
+    params: Pick<BallotStyle, 'id' | 'groupId' | 'languages' | 'partyId'>
   ): BallotStyle {
     return {
       ...params,
@@ -52,40 +54,49 @@ describe('ballot style groups', () => {
   }
 
   const style1English = makeBallotStyle({
-    id: '1_en',
+    id: '1_en' as BallotStyleId,
+    groupId: '1' as BallotStyleGroupId,
     languages: [LanguageCode.ENGLISH],
   });
 
   const style1Spanish = makeBallotStyle({
-    id: '1_es-US',
+    id: '1_es-US' as BallotStyleId,
+    groupId: '1' as BallotStyleGroupId,
     languages: [LanguageCode.SPANISH],
   });
 
   const style2GreenEnglish = makeBallotStyle({
-    id: '2-G_en',
+    id: '2-G_en' as BallotStyleId,
+    groupId: '2-G' as BallotStyleGroupId,
     languages: [LanguageCode.ENGLISH],
     partyId: 'green-party' as PartyId,
   });
 
   const style2GreenEnglishMultiLanguage = makeBallotStyle({
-    id: '2-G_en_es-US',
+    id: '2-G_en_es-US' as BallotStyleId,
+    groupId: '2-G' as BallotStyleGroupId,
     languages: [LanguageCode.ENGLISH, LanguageCode.SPANISH],
     partyId: 'green-party' as PartyId,
   });
 
   const style2GreenNonEnglishSingleLanguage = makeBallotStyle({
-    id: '2-G_zh-Hans',
+    id: '2-G_zh-Hans' as BallotStyleId,
+    groupId: '2-G' as BallotStyleGroupId,
     languages: [LanguageCode.CHINESE_SIMPLIFIED],
     partyId: 'green-party' as PartyId,
   });
 
   const style2PurpleEnglish = makeBallotStyle({
-    id: '2-P_en',
+    id: '2-P_en' as BallotStyleId,
+    groupId: '2-P' as BallotStyleGroupId,
     languages: [LanguageCode.ENGLISH],
     partyId: 'purple-party' as PartyId,
   });
 
-  const style3LegacySchema = makeBallotStyle({ id: 'ballot-style-3' });
+  const style3LegacySchema = makeBallotStyle({
+    id: 'ballot-style-3' as BallotStyleId,
+    groupId: 'ballot-style-3' as BallotStyleGroupId,
+  });
 
   test('getBallotStyleGroups', () => {
     expect(

@@ -1,3 +1,4 @@
+import { DateWithoutTime } from '@votingworks/basics';
 import {
   BallotDefinition,
   ElectionType,
@@ -9,23 +10,18 @@ import {
   SelectionCaptureMethod,
   BallotSideType,
 } from '.';
-import { LanguageCode } from '../../language_code';
-import { BallotPaperSize, DistrictId, Election, PartyId } from '../../election';
-
-/**
- * For testing a round trip from VXF -> CDF -> VXF, we need to normalize a few
- * less strict parts of VXF to match stricter CDF constraints.
- */
-export function normalizeVxf(vxfElection: Election): Election {
-  const dateWithoutTime = new Date(vxfElection.date.split('T')[0]);
-  const isoDateString = `${dateWithoutTime.toISOString().split('.')[0]}Z`;
-  return {
-    ...vxfElection,
-    date: isoDateString,
-  };
-}
+import {
+  HmpbBallotPaperSize,
+  BallotStyleGroupId,
+  BallotStyleId,
+  DistrictId,
+  Election,
+  ElectionId,
+  PartyId,
+} from '../../election';
 
 export const testVxfElection: Election = {
+  id: 'election-1' as ElectionId,
   type: 'general',
   title: 'Lincoln Municipal General Election',
   state: 'State of Hamilton',
@@ -33,18 +29,18 @@ export const testVxfElection: Election = {
     id: 'county-1',
     name: 'Franklin County',
   },
-  date: '2021-06-06T00:00:00Z',
+  date: new DateWithoutTime('2021-06-06'),
   seal: '<svg>test seal</svg>',
   parties: [
     {
       id: 'party-1' as PartyId,
-      name: 'Democrat',
+      name: 'Democratic Party',
       fullName: 'Democratic Party',
       abbrev: 'D',
     },
     {
       id: 'party-2' as PartyId,
-      name: 'Republican',
+      name: 'Republican Party',
       fullName: 'Republican Party',
       abbrev: 'R',
     },
@@ -124,31 +120,41 @@ export const testVxfElection: Election = {
   ballotStyles: [
     // Simulate a split precinct with two ballot styles for the same precinct
     {
-      id: '1_en',
+      id: '1_en' as BallotStyleId,
+      groupId: '1' as BallotStyleGroupId,
       precincts: ['precinct-1'],
       districts: ['district-1' as DistrictId],
-      languages: [LanguageCode.ENGLISH],
+      languages: ['en'],
     },
     {
-      id: '2_en',
+      id: '2_en' as BallotStyleId,
+      groupId: '2' as BallotStyleGroupId,
       precincts: ['precinct-1'],
       districts: ['district-2' as DistrictId],
-      languages: [LanguageCode.ENGLISH],
+      languages: ['en'],
     },
     {
-      id: '3_en_es-US',
+      id: '3_en' as BallotStyleId,
+      groupId: '3' as BallotStyleGroupId,
       precincts: ['precinct-2'],
       districts: ['district-1' as DistrictId, 'district-2' as DistrictId],
-      languages: [LanguageCode.ENGLISH, LanguageCode.SPANISH],
+      languages: ['en'],
+    },
+    {
+      id: '3_es-US' as BallotStyleId,
+      groupId: '3' as BallotStyleGroupId,
+      precincts: ['precinct-2'],
+      districts: ['district-1' as DistrictId, 'district-2' as DistrictId],
+      languages: ['es-US'],
     },
   ],
   ballotLayout: {
-    paperSize: BallotPaperSize.Letter,
+    paperSize: HmpbBallotPaperSize.Letter,
     metadataEncoding: 'qr-code',
   },
   gridLayouts: [
     {
-      ballotStyleId: '1_en',
+      ballotStyleId: '1_en' as BallotStyleId,
       optionBoundsFromTargetMark: {
         bottom: 1,
         left: 1,
@@ -210,7 +216,7 @@ export const testVxfElection: Election = {
       ],
     },
     {
-      ballotStyleId: '2_en',
+      ballotStyleId: '2_en' as BallotStyleId,
       optionBoundsFromTargetMark: {
         bottom: 1,
         left: 1,
@@ -230,7 +236,78 @@ export const testVxfElection: Election = {
       ],
     },
     {
-      ballotStyleId: '3_en_es-US',
+      ballotStyleId: '3_en' as BallotStyleId,
+      optionBoundsFromTargetMark: {
+        bottom: 1,
+        left: 1,
+        right: 9,
+        top: 1,
+      },
+      gridPositions: [
+        {
+          type: 'option',
+          sheetNumber: 1,
+          side: 'front',
+          contestId: 'contest-1',
+          column: 2,
+          row: 12,
+          optionId: 'candidate-1',
+        },
+        {
+          type: 'option',
+          sheetNumber: 1,
+          side: 'front',
+          contestId: 'contest-1',
+          column: 2,
+          row: 14,
+          optionId: 'candidate-2',
+        },
+        {
+          type: 'write-in',
+          sheetNumber: 1,
+          side: 'front',
+          contestId: 'contest-1',
+          column: 2,
+          row: 16,
+          writeInIndex: 0,
+          writeInArea: {
+            x: 2.5,
+            y: 15,
+            width: 3,
+            height: 1,
+          },
+        },
+        {
+          type: 'option',
+          sheetNumber: 1,
+          side: 'front',
+          contestId: 'contest-2',
+          column: 2,
+          row: 21,
+          optionId: 'contest-2-option-yes',
+        },
+        {
+          type: 'option',
+          sheetNumber: 1,
+          side: 'front',
+          contestId: 'contest-2',
+          column: 2,
+          row: 22,
+          optionId: 'contest-2-option-no',
+        },
+        {
+          type: 'option',
+          sheetNumber: 1,
+          side: 'front',
+          contestId: 'contest-3',
+          column: 12,
+          row: 12,
+          optionId: 'candidate-3',
+        },
+      ],
+    },
+    {
+      ballotStyleId: '3_es-US' as BallotStyleId,
       optionBoundsFromTargetMark: {
         bottom: 1,
         left: 1,
@@ -301,6 +378,57 @@ export const testVxfElection: Election = {
       ],
     },
   ],
+  ballotStrings: {
+    en: {
+      ballotLanguage: 'English',
+      ballotStyleId: {
+        '1_en': '1_en',
+        '2_en': '2_en',
+        '3_en': '3_en',
+        '3_es-US': '3_es-US',
+      },
+      candidateName: {
+        'candidate-1': 'Sherlock Holmes',
+        'candidate-2': 'Thomas Edison',
+        'candidate-3': 'Winston Churchill',
+      },
+      contestDescription: {
+        'contest-2': 'Should we do this thing?',
+      },
+      contestOptionLabel: {
+        'contest-2-option-no': 'No',
+        'contest-2-option-yes': 'Yes',
+      },
+      contestTerm: {
+        'contest-1': '1 year',
+      },
+      contestTitle: {
+        'contest-1': 'Mayor',
+        'contest-2': 'Proposition 1',
+        'contest-3': 'Controller',
+      },
+      countyName: 'Franklin County',
+      districtName: {
+        'district-1': 'City of Lincoln',
+        'district-2': 'City of Washington',
+      },
+      electionDate: 'June 6, 2021',
+      electionTitle: 'Lincoln Municipal General Election',
+      partyFullName: {
+        'party-1': 'Democratic Party',
+        'party-2': 'Republican Party',
+      },
+      partyName: {
+        'party-1': 'Democratic Party',
+        'party-2': 'Republican Party',
+      },
+      precinctName: {
+        'precinct-1': 'North Lincoln',
+        'precinct-2': 'South Lincoln',
+      },
+      stateName: 'State of Hamilton',
+    },
+  },
 };
 
 export const testCdfBallotDefinition: BallotDefinition = {
@@ -333,6 +461,13 @@ export const testCdfBallotDefinition: BallotDefinition = {
       ElectionScopeId: 'state-of-hamilton',
       StartDate: '2021-06-06',
       EndDate: '2021-06-06',
+      ExternalIdentifier: [
+        {
+          '@type': 'BallotDefinition.ExternalIdentifier',
+          Type: IdentifierType.Other,
+          Value: 'election-1',
+        },
+      ],
       Type: ElectionType.General,
       Name: {
         '@type': 'BallotDefinition.InternationalizedText',
@@ -523,12 +658,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
                 {
                   '@type': 'BallotDefinition.PhysicalContest',
                   BallotFormatId: 'ballot-format',
-                  vxOptionBoundsFromTargetMark: {
-                    bottom: 1,
-                    left: 1,
-                    right: 9,
-                    top: 1,
-                  },
                   PhysicalContestOption: [
                     {
                       '@type': 'BallotDefinition.PhysicalContestOption',
@@ -600,12 +729,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
                 {
                   '@type': 'BallotDefinition.PhysicalContest',
                   BallotFormatId: 'ballot-format',
-                  vxOptionBoundsFromTargetMark: {
-                    bottom: 1,
-                    left: 1,
-                    right: 9,
-                    top: 1,
-                  },
                   PhysicalContestOption: [
                     {
                       '@type': 'BallotDefinition.PhysicalContestOption',
@@ -651,7 +774,7 @@ export const testCdfBallotDefinition: BallotDefinition = {
               Value: '1_en',
             },
           ],
-          Language: [LanguageCode.ENGLISH],
+          Language: ['en'],
         },
         {
           '@type': 'BallotDefinition.BallotStyle',
@@ -664,12 +787,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
                 {
                   '@type': 'BallotDefinition.PhysicalContest',
                   BallotFormatId: 'ballot-format',
-                  vxOptionBoundsFromTargetMark: {
-                    bottom: 1,
-                    left: 1,
-                    right: 9,
-                    top: 1,
-                  },
                   PhysicalContestOption: [
                     {
                       '@type': 'BallotDefinition.PhysicalContestOption',
@@ -699,7 +816,7 @@ export const testCdfBallotDefinition: BallotDefinition = {
               Value: '2_en',
             },
           ],
-          Language: [LanguageCode.ENGLISH],
+          Language: ['en'],
         },
         {
           '@type': 'BallotDefinition.BallotStyle',
@@ -712,12 +829,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
                 {
                   '@type': 'BallotDefinition.PhysicalContest',
                   BallotFormatId: 'ballot-format',
-                  vxOptionBoundsFromTargetMark: {
-                    bottom: 1,
-                    left: 1,
-                    right: 9,
-                    top: 1,
-                  },
                   PhysicalContestOption: [
                     {
                       '@type': 'BallotDefinition.PhysicalContestOption',
@@ -789,12 +900,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
                 {
                   '@type': 'BallotDefinition.PhysicalContest',
                   BallotFormatId: 'ballot-format',
-                  vxOptionBoundsFromTargetMark: {
-                    bottom: 1,
-                    left: 1,
-                    right: 9,
-                    top: 1,
-                  },
                   PhysicalContestOption: [
                     {
                       '@type': 'BallotDefinition.PhysicalContestOption',
@@ -839,12 +944,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
                 {
                   '@type': 'BallotDefinition.PhysicalContest',
                   BallotFormatId: 'ballot-format',
-                  vxOptionBoundsFromTargetMark: {
-                    bottom: 1,
-                    left: 1,
-                    right: 9,
-                    top: 1,
-                  },
                   PhysicalContestOption: [
                     {
                       '@type': 'BallotDefinition.PhysicalContestOption',
@@ -871,10 +970,167 @@ export const testCdfBallotDefinition: BallotDefinition = {
             {
               '@type': 'BallotDefinition.ExternalIdentifier',
               Type: IdentifierType.StateLevel,
-              Value: '3_en_es-US',
+              Value: '3_en',
             },
           ],
-          Language: [LanguageCode.ENGLISH, LanguageCode.SPANISH],
+          Language: ['en'],
+        },
+        {
+          '@type': 'BallotDefinition.BallotStyle',
+          GpUnitIds: ['precinct-2'],
+          OrderedContent: [
+            {
+              '@type': 'BallotDefinition.OrderedContest',
+              ContestId: 'contest-1',
+              Physical: [
+                {
+                  '@type': 'BallotDefinition.PhysicalContest',
+                  BallotFormatId: 'ballot-format',
+                  PhysicalContestOption: [
+                    {
+                      '@type': 'BallotDefinition.PhysicalContestOption',
+                      ContestOptionId: 'contest-1-option-candidate-1',
+                      OptionPosition: [
+                        {
+                          '@type': 'BallotDefinition.OptionPosition',
+                          Sheet: 1,
+                          Side: BallotSideType.Front,
+                          X: 2,
+                          Y: 12,
+                          H: 0,
+                          W: 0,
+                          NumberVotes: 1,
+                        },
+                      ],
+                    },
+                    {
+                      '@type': 'BallotDefinition.PhysicalContestOption',
+                      ContestOptionId: 'contest-1-option-candidate-2',
+                      OptionPosition: [
+                        {
+                          '@type': 'BallotDefinition.OptionPosition',
+                          Sheet: 1,
+                          Side: BallotSideType.Front,
+                          X: 2,
+                          Y: 14,
+                          H: 0,
+                          W: 0,
+                          NumberVotes: 1,
+                        },
+                      ],
+                    },
+                    {
+                      '@type': 'BallotDefinition.PhysicalContestOption',
+                      ContestOptionId: 'contest-1-option-write-in-0',
+                      OptionPosition: [
+                        {
+                          '@type': 'BallotDefinition.OptionPosition',
+                          Sheet: 1,
+                          Side: BallotSideType.Front,
+                          X: 2,
+                          Y: 16,
+                          H: 0,
+                          W: 0,
+                          NumberVotes: 1,
+                        },
+                      ],
+                      WriteInPosition: [
+                        {
+                          '@type': 'BallotDefinition.WriteInPosition',
+                          Sheet: 1,
+                          Side: BallotSideType.Front,
+                          H: 1,
+                          W: 3,
+                          X: 2.5,
+                          Y: 15,
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              '@type': 'BallotDefinition.OrderedContest',
+              ContestId: 'contest-2',
+              Physical: [
+                {
+                  '@type': 'BallotDefinition.PhysicalContest',
+                  BallotFormatId: 'ballot-format',
+                  PhysicalContestOption: [
+                    {
+                      '@type': 'BallotDefinition.PhysicalContestOption',
+                      ContestOptionId: 'contest-2-option-yes',
+                      OptionPosition: [
+                        {
+                          '@type': 'BallotDefinition.OptionPosition',
+                          Sheet: 1,
+                          Side: BallotSideType.Front,
+                          X: 2,
+                          Y: 21,
+                          H: 0,
+                          W: 0,
+                          NumberVotes: 1,
+                        },
+                      ],
+                    },
+                    {
+                      '@type': 'BallotDefinition.PhysicalContestOption',
+                      ContestOptionId: 'contest-2-option-no',
+                      OptionPosition: [
+                        {
+                          '@type': 'BallotDefinition.OptionPosition',
+                          Sheet: 1,
+                          Side: BallotSideType.Front,
+                          X: 2,
+                          Y: 22,
+                          H: 0,
+                          W: 0,
+                          NumberVotes: 1,
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              '@type': 'BallotDefinition.OrderedContest',
+              ContestId: 'contest-3',
+              Physical: [
+                {
+                  '@type': 'BallotDefinition.PhysicalContest',
+                  BallotFormatId: 'ballot-format',
+                  PhysicalContestOption: [
+                    {
+                      '@type': 'BallotDefinition.PhysicalContestOption',
+                      ContestOptionId: 'contest-3-option-candidate-3',
+                      OptionPosition: [
+                        {
+                          '@type': 'BallotDefinition.OptionPosition',
+                          Sheet: 1,
+                          Side: BallotSideType.Front,
+                          X: 12,
+                          Y: 12,
+                          H: 0,
+                          W: 0,
+                          NumberVotes: 1,
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          ExternalIdentifier: [
+            {
+              '@type': 'BallotDefinition.ExternalIdentifier',
+              Type: IdentifierType.StateLevel,
+              Value: '3_es-US',
+            },
+          ],
+          Language: ['es-US'],
         },
       ],
     },
@@ -904,16 +1160,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
           },
         ],
       },
-      vxBallotLabel: {
-        '@type': 'BallotDefinition.InternationalizedText',
-        Text: [
-          {
-            '@type': 'BallotDefinition.LanguageString',
-            Language: 'en',
-            Content: 'Democrat',
-          },
-        ],
-      },
     },
     {
       '@type': 'BallotDefinition.Party',
@@ -935,16 +1181,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
             '@type': 'BallotDefinition.LanguageString',
             Language: 'en',
             Content: 'R',
-          },
-        ],
-      },
-      vxBallotLabel: {
-        '@type': 'BallotDefinition.InternationalizedText',
-        Text: [
-          {
-            '@type': 'BallotDefinition.LanguageString',
-            Language: 'en',
-            Content: 'Republican',
           },
         ],
       },
@@ -1097,8 +1333,6 @@ export const testCdfBallotDefinition: BallotDefinition = {
       ShortEdge: 8.5,
     },
   ],
-
-  vxSeal: '<svg>test seal</svg>',
 
   GeneratedDate: '2021-06-06T00:00:00Z',
   Issuer: 'VotingWorks',

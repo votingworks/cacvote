@@ -1,12 +1,14 @@
 import { Result } from '@votingworks/basics';
 import {
   DippedSmartCardAuth,
+  ElectionKey,
   ElectionManagerUser,
   NumIncorrectPinAttemptsAllowedBeforeCardLockout,
   OverallSessionTimeLimitHours,
   PollWorkerUser,
   StartingCardLockoutDurationSeconds,
   SystemAdministratorUser,
+  UserRole,
 } from '@votingworks/types';
 
 /**
@@ -45,13 +47,14 @@ export interface DippedSmartCardAuthApi {
  */
 export interface DippedSmartCardAuthConfig {
   allowElectionManagersToAccessUnconfiguredMachines?: boolean;
+  allowedUserRoles: readonly UserRole[];
 }
 
 /**
  * Machine state that the consumer is responsible for providing
  */
 export interface DippedSmartCardAuthMachineState {
-  electionHash?: string;
+  electionKey?: ElectionKey;
   jurisdiction?: string;
   arePollWorkerCardPinsEnabled: boolean;
   numIncorrectPinAttemptsAllowedBeforeCardLockout: NumIncorrectPinAttemptsAllowedBeforeCardLockout;
