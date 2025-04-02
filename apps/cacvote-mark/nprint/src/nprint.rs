@@ -450,6 +450,29 @@ pub struct Printer {
 }
 
 impl Printer {
+    pub async fn enumerate_printers() -> Result<Vec<String>, Error> {
+        const BUFFER_SIZE: usize = 1024;
+        let mut printers_buffer = [0u8; BUFFER_SIZE];
+
+        np!(NEnumPrinters(
+            printers_buffer.as_mut_ptr() as *mut c_char,
+            std::ptr::null_mut()
+        ));
+
+        let printers_str = unsafe {
+            CStr::from_ptr(printers_buffer.as_ptr() as *const c_char)
+                .to_string_lossy()
+                .into_owned()
+        };
+
+        Ok(printers_str
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_owned())
+            .collect())
+    }
+
     pub async fn open(name: String) -> Result<Self, Error> {
         INIT.call_once(|| {
             let handler = CallbackHandler::new();
