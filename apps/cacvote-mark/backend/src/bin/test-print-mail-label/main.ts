@@ -1,4 +1,4 @@
-import { Result, ok } from '@votingworks/basics';
+import { Result, ok, throwIllegalValue } from '@votingworks/basics';
 import { LogSource, Logger } from '@votingworks/logging';
 import {
   BooleanEnvironmentVariableName,
@@ -37,7 +37,7 @@ export async function main(
     Promise.resolve('system' as const)
   );
   const workspace = await resolveWorkspace(logger, Store);
-  let printer: mailLabel.printing.LabelPrinterInterface;
+  let printerType: 'real' | 'mock' = 'real';
   let inputPath: string | undefined;
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -48,13 +48,11 @@ export async function main(
     }
 
     if (arg === '--printer') {
-      const printerType = argv[i + 1];
-      switch (printerType) {
+      const cliPrinterType = argv[i + 1];
+      switch (cliPrinterType) {
         case 'real':
-          printer = await mailLabel.printing.getRealLabelPrinter(logger);
-          break;
         case 'mock':
-          printer = mailLabel.printing.getMockLabelPrinter(workspace, logger);
+          printerType = cliPrinterType;
           break;
         default:
           throw new Error(`Invalid printer type: ${printerType}`);
@@ -69,8 +67,6 @@ export async function main(
     }
   }
 
-  printer ??= await mailLabel.printing.getLabelPrinter(workspace, logger);
-
   const pdf = inputPath
     ? await readFile(inputPath)
     : await mailLabel.rendering.buildPdf({
@@ -80,8 +76,18 @@ export async function main(
         ),
       });
 
-  await printer.printPdf(pdf);
-  await printer.close();
+  let printer: mailLabel.printing.LabelPrinterInterface | undefined;
+  try {
+    printer =
+      printerType === 'mock'
+        ? mailLabel.printing.getMockLabelPrinter(workspace, logger)
+        : printerType === 'real'
+        ? await mailLabel.printing.getLabelPrinter(workspace, logger)
+        : throwIllegalValue(printerType);
+    await printer.printPdf(pdf);
+  } finally {
+    await printer?.close();
+  }
 
   return ok(0);
 }

@@ -445,23 +445,33 @@ const IMG_RASTER_BLOCK: u8 = 0x01;
 const IMG_RASTER_GRADATION: u8 = 0x02;
 const IMG_BITIMG: u8 = 0x10;
 
+/// Path to the configuration file managed by `libNPrint`.
 const CONFIG_PATH: &str = "/usr/npi/NPrinterInf.inf";
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PrinterConfiguration {
     pub name: String,
     pub communication_type: CommunicationType,
     pub device_path: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub enum CommunicationType {
+    #[serde(rename = "Serial")]
     Serial = 0,
+    #[serde(rename = "USB")]
     Usb = 1,
 }
 
 impl PrinterConfiguration {
-    pub fn all() -> Result<Vec<Self>, Error> {
+    /// Returns a list of all printer configurations.
+    ///
+    /// NOTE: This function reads a configuration file owned by `libNPrint`
+    /// which is only written after `NEnumPrinters` is called. Therefore, you
+    /// must call this function after `NEnumPrinters` to ensure that the
+    /// configuration file is up-to-date.
+    fn all() -> Result<Vec<Self>, Error> {
         let mut printers = Vec::new();
         let file = std::fs::File::open(CONFIG_PATH)?;
         let reader = std::io::BufReader::new(file);
@@ -499,10 +509,6 @@ impl PrinterConfiguration {
     pub fn is_connected(&self) -> bool {
         std::path::Path::new(&self.device_path).exists()
     }
-
-    pub async fn open(&self) -> Result<Printer, Error> {
-        Printer::open(self.name.clone()).await
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -511,6 +517,34 @@ pub struct Printer {
 }
 
 impl Printer {
+    pub async fn enumerate_printers() -> Result<Vec<PrinterConfiguration>, Error> {
+        const BUFFER_SIZE: usize = 1024;
+        let mut printers_buffer = [0u8; BUFFER_SIZE];
+
+        np!(NEnumPrinters(
+            printers_buffer.as_mut_ptr() as *mut c_char,
+            std::ptr::null_mut()
+        ));
+
+        let printers_str = unsafe {
+            CStr::from_ptr(printers_buffer.as_ptr() as *const c_char)
+                .to_string_lossy()
+                .into_owned()
+        };
+
+        let printer_names = printers_str
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_owned())
+            .collect::<Vec<String>>();
+
+        Ok(PrinterConfiguration::all()?
+            .into_iter()
+            .filter(|config| printer_names.contains(&config.name))
+            .collect())
+    }
+
     pub async fn open(name: String) -> Result<Self, Error> {
         INIT.call_once(|| {
             let handler = CallbackHandler::new();

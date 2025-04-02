@@ -1,8 +1,8 @@
 import { Buffer } from 'buffer';
+import { writeFile } from 'fs/promises';
 import { chromium } from 'playwright';
 import React from 'react';
 import ReactDomServer from 'react-dom/server';
-import { writeFile } from 'fs/promises';
 import { QrCode } from './qrcode';
 
 export const SIZE_INCHES = {

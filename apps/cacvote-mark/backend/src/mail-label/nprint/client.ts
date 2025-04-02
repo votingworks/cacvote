@@ -2,6 +2,7 @@ import { assert, extractErrorMessage, iter } from '@votingworks/basics';
 import { pdfToImages } from '@votingworks/image-utils';
 import { LogEventId, Logger } from '@votingworks/logging';
 import * as bmp from 'bmp-ts';
+import { exists } from 'fs-extra';
 import { Buffer } from 'node:buffer';
 import { spawn } from 'node:child_process';
 import { unlink, writeFile } from 'node:fs/promises';
@@ -30,7 +31,7 @@ export class Client {
    */
   static async connect(bin: string, logger: Logger): Promise<Client> {
     await logger.log(LogEventId.Info, 'system', {
-      message: `Connecting to nprint client via ${bin}`,
+      message: `Establishing connection to nprint printer via ${bin}`,
     });
 
     const child = spawn(bin, { stdio: 'pipe' });
@@ -42,7 +43,39 @@ export class Client {
     });
 
     const client = new Client(new ChildProcessClient(child), logger);
-    await client.sendRequest({ request: 'connect' });
+
+    const response = await client.sendRequest({ request: 'listPrinters' });
+
+    if (response.response !== 'printers') {
+      void logger.log(LogEventId.Info, 'system', {
+        message: `nprint failed to list printers client responded with invalid response`,
+        disposition: 'error',
+        response: JSON.stringify(response),
+      });
+      throw new Error('Failed to list printers');
+    }
+
+    const printer = await iter(response.printers)
+      .async()
+      .filter(
+        async ({ communicationType, devicePath }) =>
+          communicationType === 'USB' && (await exists(devicePath))
+      )
+      .first();
+
+    if (!printer) {
+      void logger.log(LogEventId.Info, 'system', {
+        message: `No USB printer found`,
+        disposition: 'error',
+      });
+      throw new Error('No USB printer found');
+    }
+
+    await logger.log(LogEventId.Info, 'system', {
+      message: `Connecting to nprint printer ${printer.name} at ${printer.devicePath} via ${bin}`,
+    });
+
+    await client.sendRequest({ request: 'connect', printer: printer.name });
     return client;
   }
 

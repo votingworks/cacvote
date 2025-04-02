@@ -287,7 +287,9 @@ setup-kiosk-browser() {
 setup-label-printer() {
   echo "🖨️ Label Printer Driver"
 
-  local LIB_PATH="/usr/lib/libNPrint.so"
+  local LIB_PATH="/usr/lib/libNPrint.so.2.9"
+  local LIB_MAJOR_SYMLINK="/usr/lib/libNPrint.so.2"
+  local LIB_CURRENT_SYMLINK="/usr/lib/libNPrint.so"
   local ZIP_FILE
   local LIB_INSIDE_ZIP
 
@@ -313,12 +315,27 @@ setup-label-printer() {
 
     # Extract and install the library
     unzip -p "${ZIP_FILE}" "${LIB_INSIDE_ZIP}" | sudo tee "${LIB_PATH}" > /dev/null
+    sudo ln -sf "${LIB_PATH}" "${LIB_MAJOR_SYMLINK}"
+    sudo ln -sf "${LIB_MAJOR_SYMLINK}" "${LIB_CURRENT_SYMLINK}"
   fi
 
   (
     cd apps/cacvote-mark/nprint
     cargo build --release
   )
+
+  # Add a udev rule for the label printer so the `lp` group has read and write access
+  sudo tee /etc/udev/rules.d/99-label-printer.rules <<EOF
+SUBSYSTEM=="usb", ATTR{idVendor}=="1051", ATTR{idProduct}=="1000", MODE="0660", GROUP="lp"
+EOF
+
+  # Create `/usr/npi` and make `lp` group owner
+  sudo mkdir -p /usr/npi
+  sudo chown lp:lp /usr/npi
+  sudo chmod 770 /usr/npi
+
+  # Add the current user to the lp group
+  sudo usermod -aG lp "$(whoami)"
 }
 
 setup-electionguard() {
@@ -347,8 +364,11 @@ setup-electionguard() {
 do-initial-build() {
   echo "🏗️ Initial Build"
   pnpm install
+  (cd apps/cacvote-mark/backend && pnpm playwright install --with-deps chromium)
   cargo build
   pnpm -r build:rust-addon
+  pnpm --dir apps/cacvote-mark/frontend build
+  pnpm --dir apps/cacvote-jx-terminal/frontend build
 }
 
 setup-prereqs
