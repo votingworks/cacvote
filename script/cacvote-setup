@@ -365,6 +365,8 @@ do-initial-build() {
   pnpm install
   cargo build
   pnpm -r build:rust-addon
+  pnpm --dir apps/cacvote-mark/frontend build
+  pnpm --dir apps/cacvote-jx-terminal/frontend build
 }
 
 setup-prereqs
