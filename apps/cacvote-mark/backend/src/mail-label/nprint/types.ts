@@ -8,6 +8,7 @@ export const LengthSchema = z.union([
 export type Length = z.infer<typeof LengthSchema>;
 
 export const RequestSchema = z.union([
+  z.object({ request: z.literal('listPrinters') }),
   z.object({ request: z.literal('connect'), printer: z.string().min(1) }),
   z.object({ request: z.literal('disconnect') }),
   z.object({ request: z.literal('init') }),
@@ -26,12 +27,31 @@ export const IncomingMessageSchema = z.object({
 });
 export type IncomingMessage = z.infer<typeof IncomingMessageSchema>;
 
+export const CommunicationTypeSchema = z.union([
+  z.literal('USB'),
+  z.literal('Serial'),
+]);
+
+export type CommunicationType = z.infer<typeof CommunicationTypeSchema>;
+
+export const PrinterConfigurationSchema = z.object({
+  name: z.string().min(1),
+  communicationType: CommunicationTypeSchema,
+  devicePath: z.string().min(1),
+});
+
+export type PrinterConfiguration = z.infer<typeof PrinterConfigurationSchema>;
+
 export const ResponseSchema = z.discriminatedUnion('response', [
   z.object({ response: z.literal('ok') }),
   z.object({
     response: z.literal('error'),
     message: z.string().min(1),
     cause: z.unknown(),
+  }),
+  z.object({
+    response: z.literal('printers'),
+    printers: z.array(PrinterConfigurationSchema),
   }),
 ]);
 export type Response = z.infer<typeof ResponseSchema>;
