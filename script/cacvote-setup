@@ -332,6 +332,7 @@ EOF
   # Create `/usr/npi` and make `lp` group owner
   sudo mkdir -p /usr/npi
   sudo chown lp:lp /usr/npi
+  sudo chmod 770 /usr/npi
 
   # Add the current user to the lp group
   sudo usermod -aG lp "$(whoami)"
