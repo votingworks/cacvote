@@ -5,7 +5,7 @@ use std::{future::pending, path::PathBuf, time::Duration};
 use anyhow::Context;
 use futures_lite::FutureExt;
 use libc::{c_int, c_uint};
-use nprint::{CallbackMessage, Error, Length, Printer};
+use nprint::{CallbackMessage, Error, Length, Printer, PrinterConfiguration};
 use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
@@ -90,7 +90,7 @@ impl From<c_int> for Status {
 enum Response {
     Ok,
     Printers {
-        printers: Vec<String>,
+        printers: Vec<PrinterConfiguration>,
     },
     Error {
         message: String,
@@ -151,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
                             .await
                             .context("Listing printers")?;
 
-                        if printers.into_iter().any(|p| p == name) {
+                        if printers.into_iter().any(|p| p.name == name) {
                             let new_printer =
                                 Printer::open(name).await.context("Opening printer")?;
                             event_rx = Some(new_printer.watch_events());
@@ -160,7 +160,7 @@ async fn main() -> anyhow::Result<()> {
                             Response::Ok
                         } else {
                             Response::Error {
-                                message: format!("Printer '{}' not found", name),
+                                message: format!("Printer '{name}' not found"),
                                 cause: None,
                             }
                         }

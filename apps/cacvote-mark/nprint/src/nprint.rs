@@ -5,6 +5,7 @@
 
 use std::{
     ffi::{CStr, CString},
+    io::BufRead,
     path::PathBuf,
     ptr::null_mut,
     sync::{Arc, Mutex, Once},
@@ -444,13 +445,79 @@ const IMG_RASTER_BLOCK: u8 = 0x01;
 const IMG_RASTER_GRADATION: u8 = 0x02;
 const IMG_BITIMG: u8 = 0x10;
 
+/// Path to the configuration file managed by `libNPrint`.
+const CONFIG_PATH: &str = "/usr/npi/NPrinterInf.inf";
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrinterConfiguration {
+    pub name: String,
+    pub communication_type: CommunicationType,
+    pub device_path: String,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize)]
+pub enum CommunicationType {
+    #[serde(rename = "Serial")]
+    Serial = 0,
+    #[serde(rename = "USB")]
+    Usb = 1,
+}
+
+impl PrinterConfiguration {
+    /// Returns a list of all printer configurations.
+    ///
+    /// NOTE: This function reads a configuration file owned by `libNPrint`
+    /// which is only written after `NEnumPrinters` is called. Therefore, you
+    /// must call this function after `NEnumPrinters` to ensure that the
+    /// configuration file is up-to-date.
+    fn all() -> Result<Vec<Self>, Error> {
+        let mut printers = Vec::new();
+        let file = std::fs::File::open(CONFIG_PATH)?;
+        let reader = std::io::BufReader::new(file);
+
+        for line in reader.lines() {
+            let line = line?;
+            let parts: Vec<&str> = line.split(',').collect();
+            if parts.len() == 3 {
+                let name = parts[0].trim().to_string();
+                let communication_type = match parts[1].trim() {
+                    "0" => CommunicationType::Serial,
+                    "1" => CommunicationType::Usb,
+                    value => {
+                        return Err(Error::Config(format!(
+                            "Invalid communication type: {value}"
+                        )))
+                    }
+                };
+                let device_path = parts[2].trim().to_string();
+                printers.push(Self {
+                    name,
+                    communication_type,
+                    device_path,
+                });
+            }
+        }
+
+        Ok(printers)
+    }
+
+    pub fn is_usb(&self) -> bool {
+        self.communication_type == CommunicationType::Usb
+    }
+
+    pub fn is_connected(&self) -> bool {
+        std::path::Path::new(&self.device_path).exists()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Printer {
     name: CString,
 }
 
 impl Printer {
-    pub async fn enumerate_printers() -> Result<Vec<String>, Error> {
+    pub async fn enumerate_printers() -> Result<Vec<PrinterConfiguration>, Error> {
         const BUFFER_SIZE: usize = 1024;
         let mut printers_buffer = [0u8; BUFFER_SIZE];
 
@@ -465,11 +532,16 @@ impl Printer {
                 .into_owned()
         };
 
-        Ok(printers_str
+        let printer_names = printers_str
             .split(',')
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
             .map(|s| s.to_owned())
+            .collect::<Vec<String>>();
+
+        Ok(PrinterConfiguration::all()?
+            .into_iter()
+            .filter(|config| printer_names.contains(&config.name))
             .collect())
     }
 
