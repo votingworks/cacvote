@@ -55,7 +55,8 @@ export class Client {
       throw new Error('Failed to list printers');
     }
 
-    const printer = iter(response.printers)
+    const printer = await iter(response.printers)
+      .async()
       .filter(
         async ({ communicationType, devicePath }) =>
           communicationType === 'USB' && (await exists(devicePath))
