@@ -364,6 +364,7 @@ setup-electionguard() {
 do-initial-build() {
   echo "🏗️ Initial Build"
   pnpm install
+  pnpm --dir apps/cacvote-mark/backend playwright install --with-deps chromium
   cargo build
   pnpm -r build:rust-addon
   pnpm --dir apps/cacvote-mark/frontend build
