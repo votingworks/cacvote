@@ -364,7 +364,6 @@ setup-electionguard() {
 do-initial-build() {
   echo "🏗️ Initial Build"
   pnpm install
-  pnpx playwright install
   cargo build
   pnpm -r build:rust-addon
   pnpm --dir apps/cacvote-mark/frontend build

@@ -1,8 +1,9 @@
 import { Buffer } from 'buffer';
+import { writeFile } from 'fs/promises';
 import { chromium } from 'playwright';
 import React from 'react';
 import ReactDomServer from 'react-dom/server';
-import { writeFile } from 'fs/promises';
+import { OPTIONAL_EXECUTABLE_PATH_OVERRIDE } from '../../chromium';
 import { QrCode } from './qrcode';
 
 export const SIZE_INCHES = {
@@ -206,6 +207,7 @@ async function renderToPdf(document: JSX.Element): Promise<Buffer> {
     // is on by default, but causes fonts to render more awkwardly at higher
     // resolutions, so we disable it
     args: ['--font-render-hinting=none'],
+    executablePath: OPTIONAL_EXECUTABLE_PATH_OVERRIDE,
   });
   const context = await browser.newContext();
   const page = await context.newPage();
