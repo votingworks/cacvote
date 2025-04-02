@@ -10,6 +10,12 @@ import { LIBNPRINT_WRAPPER_PATH } from '../globals';
 import { Workspace } from '../workspace';
 import { Client } from './nprint/client';
 
+/**
+ * This is the name `libNPrint` gives the default printer. In the future we may
+ * want to allow users to list available printers.
+ */
+export const DEFAULT_PRINTER_NAME = 'PRT001';
+
 export interface LabelPrinterInterface {
   printPdf(pdfData: Buffer): Promise<void>;
   close(): Promise<void>;
@@ -49,7 +55,11 @@ export class MockLabelPrinter implements LabelPrinterInterface {
 export async function getRealLabelPrinter(
   logger: Logger
 ): Promise<LabelPrinterInterface> {
-  const client = await Client.connect(LIBNPRINT_WRAPPER_PATH, logger);
+  const client = await Client.connect(
+    LIBNPRINT_WRAPPER_PATH,
+    logger,
+    DEFAULT_PRINTER_NAME
+  );
   return {
     printPdf: async (pdfData: Buffer) => {
       await client.printPdf(pdfData);

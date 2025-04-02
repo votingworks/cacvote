@@ -26,11 +26,16 @@ export class Client {
    *
    * @param bin The path to the `libNPrint` binary wrapper.
    * @param logger The logger to use for logging.
+   * @param printer The name of the printer to use.
    * @returns A promise that resolves to a `Client` instance once connected.
    */
-  static async connect(bin: string, logger: Logger): Promise<Client> {
+  static async connect(
+    bin: string,
+    logger: Logger,
+    printer: string
+  ): Promise<Client> {
     await logger.log(LogEventId.Info, 'system', {
-      message: `Connecting to nprint client via ${bin}`,
+      message: `Connecting to nprint printer ${printer} via ${bin}`,
     });
 
     const child = spawn(bin, { stdio: 'pipe' });
@@ -42,7 +47,7 @@ export class Client {
     });
 
     const client = new Client(new ChildProcessClient(child), logger);
-    await client.sendRequest({ request: 'connect' });
+    await client.sendRequest({ request: 'connect', printer });
     return client;
   }
 

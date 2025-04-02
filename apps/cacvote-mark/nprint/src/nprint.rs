@@ -5,7 +5,6 @@
 
 use std::{
     ffi::{CStr, CString},
-    io::BufRead,
     path::PathBuf,
     ptr::null_mut,
     sync::{Arc, Mutex, Once},
@@ -444,66 +443,6 @@ const IMG_RASTER_LINE: u8 = 0x00;
 const IMG_RASTER_BLOCK: u8 = 0x01;
 const IMG_RASTER_GRADATION: u8 = 0x02;
 const IMG_BITIMG: u8 = 0x10;
-
-const CONFIG_PATH: &str = "/usr/npi/NPrinterInf.inf";
-
-#[derive(Debug)]
-pub struct PrinterConfiguration {
-    pub name: String,
-    pub communication_type: CommunicationType,
-    pub device_path: String,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum CommunicationType {
-    Serial = 0,
-    Usb = 1,
-}
-
-impl PrinterConfiguration {
-    pub fn all() -> Result<Vec<Self>, Error> {
-        let mut printers = Vec::new();
-        let file = std::fs::File::open(CONFIG_PATH)?;
-        let reader = std::io::BufReader::new(file);
-
-        for line in reader.lines() {
-            let line = line?;
-            let parts: Vec<&str> = line.split(',').collect();
-            if parts.len() == 3 {
-                let name = parts[0].trim().to_string();
-                let communication_type = match parts[1].trim() {
-                    "0" => CommunicationType::Serial,
-                    "1" => CommunicationType::Usb,
-                    value => {
-                        return Err(Error::Config(format!(
-                            "Invalid communication type: {value}"
-                        )))
-                    }
-                };
-                let device_path = parts[2].trim().to_string();
-                printers.push(Self {
-                    name,
-                    communication_type,
-                    device_path,
-                });
-            }
-        }
-
-        Ok(printers)
-    }
-
-    pub fn is_usb(&self) -> bool {
-        self.communication_type == CommunicationType::Usb
-    }
-
-    pub fn is_connected(&self) -> bool {
-        std::path::Path::new(&self.device_path).exists()
-    }
-
-    pub async fn open(&self) -> Result<Printer, Error> {
-        Printer::open(self.name.clone()).await
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Printer {

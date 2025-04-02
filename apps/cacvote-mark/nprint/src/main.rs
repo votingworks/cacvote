@@ -5,7 +5,7 @@ use std::{future::pending, path::PathBuf, time::Duration};
 use anyhow::Context;
 use futures_lite::FutureExt;
 use libc::{c_int, c_uint};
-use nprint::{CallbackMessage, Error, Length, PrinterConfiguration};
+use nprint::{CallbackMessage, Error, Length, Printer};
 use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
@@ -27,7 +27,7 @@ struct IncomingMessage {
     rename_all_fields = "camelCase"
 )]
 enum Request {
-    Connect,
+    Connect { printer: String },
     Disconnect,
     Init,
     LineFeed,
@@ -99,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
     let stdin = tokio::io::stdin();
     let reader = BufReader::new(stdin);
     let mut lines = reader.lines();
-    let mut printer = None;
+    let mut printer: Option<Printer> = None;
     let mut event_rx: Option<broadcast::Receiver<CallbackMessage>> = None;
 
     enum RunLoopEvent {
@@ -136,14 +136,8 @@ async fn main() -> anyhow::Result<()> {
                     serde_json::from_str(&line).context("Parsing incoming message")?;
 
                 let response = match request {
-                    Request::Connect => {
-                        let configs = PrinterConfiguration::all().context("List printer")?;
-                        let config = configs
-                            .iter()
-                            .find(|p| p.is_usb() && p.is_connected())
-                            .context("No connected USB printer")?;
-
-                        let new_printer = config.open().await.context("Opening printer")?;
+                    Request::Connect { printer: name } => {
+                        let new_printer = Printer::open(name).await.context("Opening printer")?;
                         event_rx = Some(new_printer.watch_events());
                         printer = Some(new_printer);
 

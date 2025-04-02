@@ -8,7 +8,7 @@ export const LengthSchema = z.union([
 export type Length = z.infer<typeof LengthSchema>;
 
 export const RequestSchema = z.union([
-  z.object({ request: z.literal('connect') }),
+  z.object({ request: z.literal('connect'), printer: z.string().min(1) }),
   z.object({ request: z.literal('disconnect') }),
   z.object({ request: z.literal('init') }),
   z.object({ request: z.literal('lineFeed') }),
