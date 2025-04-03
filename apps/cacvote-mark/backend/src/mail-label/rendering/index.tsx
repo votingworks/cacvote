@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
-import { writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { chromium } from 'playwright';
 import React from 'react';
 import ReactDomServer from 'react-dom/server';
@@ -10,191 +11,94 @@ export const SIZE_INCHES = {
   height: 6,
 } as const;
 
-export const SIZE_POINTS = {
-  width: SIZE_INCHES.width * 96,
-  height: SIZE_INCHES.height * 96,
-} as const;
-
-export function buildSvg({
+export function build({
   mailingAddress,
   qrCodeData,
 }: {
   mailingAddress: string;
   qrCodeData: Uint8Array;
 }): JSX.Element {
-  const padding = {
-    x: 5.76,
-    y: 12.48,
-  } as const;
-  const inner = {
-    width: SIZE_POINTS.width - padding.x * 2,
-    height: SIZE_POINTS.height - padding.y * 2,
-  } as const;
-  const thickBorderSize = 4;
-  const mediumBorderSize = 3;
-
   const mailingAddressLines = mailingAddress.split('\n').map((l) => l.trim());
 
   return (
-    <svg width={SIZE_POINTS.width} height={SIZE_POINTS.height}>
-      <g transform={`translate(${padding.x}, ${padding.y})`}>
-        <svg width={inner.width} height={inner.height}>
-          <rect
-            x={2}
-            y={2}
-            width={inner.width - thickBorderSize}
-            height={inner.height - thickBorderSize}
-            fill="white"
-            stroke="black"
-            strokeWidth={thickBorderSize}
-          />
-          <line
-            x1={0}
-            y1={83.52}
-            x2={inner.width - thickBorderSize}
-            y2={83.52}
-            stroke="black"
-            strokeWidth={mediumBorderSize}
-          />
-          <line
-            x1={0}
-            y1={'4in'}
-            x2={inner.width - thickBorderSize}
-            y2={'4in'}
-            stroke="black"
-            strokeWidth={mediumBorderSize}
-          />
-        </svg>
-        <g transform="translate(1, 2)">
-          <svg width={63} height={80}>
-            <text
-              x="50%"
-              y={73}
-              textAnchor="middle"
-              fontSize="92"
-              fontFamily="open-sans, sans-serif"
-              fill="white"
-              stroke="black"
-              strokeWidth={mediumBorderSize}
-            >
-              E
-            </text>
-          </svg>
-        </g>
-        <g transform="translate(64, 0)">
-          <line
-            x1={0}
-            y1={0}
-            x2={0}
-            y2={83.52}
-            stroke="black"
-            strokeWidth={mediumBorderSize}
-          />
-          <g transform="translate(9.6, 0)">
-            <text
-              x={0}
-              y={22.08}
-              dominantBaseline="middle"
-              fontSize={24}
-              fontFamily="open-sans, sans-serif"
-              fill="black"
-            >
-              Official
-            </text>
-            <text
-              x={0}
-              y={45.12}
-              dominantBaseline="middle"
-              fontSize={24}
-              fontFamily="open-sans, sans-serif"
-              fill="black"
-            >
-              Election
-            </text>
-            <text
-              x={0}
-              y={68.16}
-              dominantBaseline="middle"
-              fontSize={24}
-              fontFamily="open-sans, sans-serif"
-              fill="black"
-            >
-              Mail
-            </text>
-          </g>
-        </g>
-
-        {/* QR Code */}
-        <g transform="translate(270, 425)">
-          <QrCode data={qrCodeData} />
-        </g>
-
-        {/* USPS Priority Mail */}
-        <g transform="translate(0, 84)">
-          <svg width={inner.width} height={32}>
-            <text
-              x="50%"
-              y="50%"
-              dominantBaseline="middle"
-              textAnchor="middle"
-              fontSize={20}
-              fontFamily="open-sans, sans-serif"
-              fill="black"
-              fontWeight={600}
-            >
-              USPS PRIORITY MAIL®
-            </text>
-            <line
-              x1={0}
-              y1={28}
-              x2="100%"
-              y2={28}
-              stroke="black"
-              strokeWidth={mediumBorderSize}
-            />
-          </svg>
-        </g>
-
-        {/* Shipping Address */}
-        <g transform={`translate(12, ${84 + 35 + 39 + 13 + 55})`}>
-          <svg width={inner.width} height={96}>
-            <text
-              x={0}
-              y={0}
-              dominantBaseline="hanging"
-              fontSize={12}
-              fontFamily="open-sans, sans-serif"
-              fill="black"
-            >
-              Ship
-            </text>
-            <text
-              x={0}
-              y={11}
-              dominantBaseline="hanging"
-              fontSize={12}
-              fontFamily="open-sans, sans-serif"
-              fill="black"
-            >
-              to:
-            </text>
-            {mailingAddressLines.map((l, i) => (
-              <text
-                key={`line-${i}`}
-                x={55}
-                y={i * 16}
-                dominantBaseline="hanging"
-                fontSize={14}
-                fontFamily="open-sans, sans-serif"
-                fill="black"
-              >
-                {l}
-              </text>
-            ))}
-          </svg>
-        </g>
-      </g>
-    </svg>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        border: '4px solid black',
+        width: `${SIZE_INCHES.width}in`,
+        height: `${SIZE_INCHES.height}in`,
+        fontFamily: 'Arial, sans-serif',
+      }}
+    >
+      <div
+        id="header"
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          width: '100%',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '6em',
+            WebkitTextStroke: '2px black',
+            color: 'white',
+            flexGrow: 0,
+            padding: '0 10px',
+            fontWeight: 'bold',
+          }}
+        >
+          E
+        </div>
+        <div style={{ fontSize: '1.3em' }}>
+          Official
+          <br />
+          Election
+          <br />
+          Mail
+        </div>
+      </div>
+      <div
+        id="content"
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          flexGrow: 1,
+          alignItems: 'center',
+          alignContent: 'center',
+          borderTop: '4px solid black',
+          borderBottom: '4px solid black',
+          width: '100%',
+          padding: '3em',
+          gap: '2em',
+        }}
+      >
+        <div>
+          Ship
+          <br />
+          to:
+        </div>
+        <div style={{ flexDirection: 'column', fontSize: '1.4em' }}>
+          {mailingAddressLines.map((line, index) => (
+            <div key={index}>{line}</div>
+          ))}
+        </div>
+      </div>
+      <div
+        id="footer"
+        style={{
+          display: 'flex',
+          width: '100%',
+          justifyContent: 'end',
+          padding: '1em',
+        }}
+      >
+        <QrCode data={qrCodeData} />
+      </div>
+    </div>
   );
 }
 
@@ -229,15 +133,12 @@ export async function buildPdf({
   mailingAddress: string;
   qrCodeData: Uint8Array;
 }): Promise<Buffer> {
-  return await renderToPdf(buildSvg({ mailingAddress, qrCodeData }));
-}
-
-if (require.main === module) {
-  void (async () => {
-    const qrCodeData = Buffer.from('hello, world');
-    const mailingAddress = `VotingWorks\n123 Main St\nAnytown, USA 12345`;
-
-    const pdfBuffer = await buildPdf({ mailingAddress, qrCodeData });
-    await writeFile('mailing_label.pdf', pdfBuffer);
-  })();
+  return await renderToPdf(
+    <body>
+      <style>
+        {await readFile(join(__dirname, 'modern-normalize.css'), 'utf8')}
+      </style>
+      {build({ mailingAddress, qrCodeData })}
+    </body>
+  );
 }
